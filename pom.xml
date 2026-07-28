@@ -32,6 +32,11 @@
     <module>minimall-merchant-service</module>
     <module>minimall-goods-service</module>
     <module>minimall-cart-service</module>
+    <module>minimall-stock-service</module>
+    <module>minimall-pay-service</module>
+    <module>minimall-order-service</module>
+    <module>minimall-notify-service</module>
+    <module>minimall-platform-service</module>
   </modules>
 
   <dependencyManagement>
@@ -97,6 +102,11 @@
               <path><groupId>org.projectlombok</groupId><artifactId>lombok</artifactId><version>${lombok.version}</version></path>
             </annotationProcessorPaths>
           </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>3.2.5</version>
         </plugin>
         <plugin>
           <groupId>org.springframework.boot</groupId>

@@ -28,6 +28,10 @@
     <module>minimall-gateway</module>
     <module>minimall-id-service</module>
     <module>minimall-auth-service</module>
+    <module>minimall-user-service</module>
+    <module>minimall-merchant-service</module>
+    <module>minimall-goods-service</module>
+    <module>minimall-cart-service</module>
   </modules>
 
   <dependencyManagement>

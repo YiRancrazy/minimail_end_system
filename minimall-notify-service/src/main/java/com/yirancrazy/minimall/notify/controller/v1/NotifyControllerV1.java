@@ -21,7 +21,7 @@ public class NotifyControllerV1 {
     }
 
     @GetMapping
-    public Result<List<NotifyMessagePO>> list(@RequestParam Long userId) {
+    public Result<List<NotifyMessagePO>> list(@RequestParam("userId") Long userId) {
         return Result.success(notifyService.listByUser(userId));
     }
 }

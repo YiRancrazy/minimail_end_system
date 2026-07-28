@@ -1,6 +1,8 @@
 # CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+## 语言
+- 模型使用中文思考并回复
 
 > 下方正文为 **V1.0 项目级硬约束**（命名 / 分层 / 日志 / 异常 / 实体 / 测试），速查够用时无需展开任何 `.dev/docs/` 链接。Commands 与 Architecture 总览见下方两个速查小节，其他细节按需加载 §7「加载触发矩阵」对应文档。
 
@@ -203,7 +205,6 @@ Profile → 中间件差异：dev 用本地 Docker Compose；prod 走 Nacos + KM
 ## 相关文档链接
 
 > **加载策略**：
-> - 本文件正文 = 始终在上下文，速查够用时**无需展开**任何链接
 > - 下方表格 = **唯一**导航；不在表中的文档**视为不存在**
 > - **按当前任务**在表里找到对应行，**只加载那一行指向的文档**，其他不读
 > - 表格内容已自审覆盖所有 Java 后端实现场景；缺哪条 → 提 PR 补表

@@ -23,7 +23,7 @@ public class UserControllerV1 {
     }
 
     @GetMapping("/{id}")
-    public Result<UserPO> get(@PathVariable Long id) {
+    public Result<UserPO> get(@PathVariable("id") Long id) {
         return Result.success(userService.getById(id));
     }
 
@@ -33,12 +33,12 @@ public class UserControllerV1 {
     }
 
     @PutMapping("/{id}")
-    public Result<Boolean> update(@PathVariable Long id, @RequestBody UserPO user) {
+    public Result<Boolean> update(@PathVariable("id") Long id, @RequestBody UserPO user) {
         return Result.success(userService.update(id, user));
     }
 
     @DeleteMapping("/{id}")
-    public Result<Boolean> delete(@PathVariable Long id) {
+    public Result<Boolean> delete(@PathVariable("id") Long id) {
         return Result.success(userService.delete(id));
     }
 }

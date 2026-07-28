@@ -21,7 +21,7 @@ public class SkuControllerV1 {
     }
 
     @GetMapping("/{id}")
-    public Result<SkuPO> get(@PathVariable Long id) {
+    public Result<SkuPO> get(@PathVariable("id") Long id) {
         return Result.success(skuService.getById(id));
     }
 

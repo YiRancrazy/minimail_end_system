@@ -20,19 +20,19 @@ public class OrderControllerV1 {
     }
 
     @PostMapping
-    public Result<Long> create(@RequestParam Long userId,
-                               @RequestParam Long skuId,
-                               @RequestParam Integer quantity) {
+    public Result<Long> create(@RequestParam("userId") Long userId,
+                               @RequestParam("skuId") Long skuId,
+                               @RequestParam("quantity") Integer quantity) {
         return Result.success(orderService.create(userId, skuId, quantity));
     }
 
     @PostMapping("/{id}/pay")
-    public Result<Boolean> pay(@PathVariable Long id) {
+    public Result<Boolean> pay(@PathVariable("id") Long id) {
         return Result.success(orderService.pay(id));
     }
 
     @GetMapping("/{id}")
-    public Result<String> status(@PathVariable Long id) {
+    public Result<String> status(@PathVariable("id") Long id) {
         return Result.success(orderService.status(id));
     }
 }

@@ -21,7 +21,7 @@ public class StockControllerV1 {
     }
 
     @GetMapping("/{skuId}")
-    public Result<Long> get(@PathVariable Long skuId) {
+    public Result<Long> get(@PathVariable("skuId") Long skuId) {
         return Result.success(stockService.query(skuId));
     }
 }

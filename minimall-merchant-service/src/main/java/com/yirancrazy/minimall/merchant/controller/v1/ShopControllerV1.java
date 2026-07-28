@@ -23,7 +23,7 @@ public class ShopControllerV1 {
     }
 
     @GetMapping("/{id}")
-    public Result<ShopPO> get(@PathVariable Long id) {
+    public Result<ShopPO> get(@PathVariable("id") Long id) {
         return Result.success(shopService.getById(id));
     }
 
@@ -33,12 +33,12 @@ public class ShopControllerV1 {
     }
 
     @PutMapping("/{id}")
-    public Result<Boolean> update(@PathVariable Long id, @RequestBody ShopPO shop) {
+    public Result<Boolean> update(@PathVariable("id") Long id, @RequestBody ShopPO shop) {
         return Result.success(shopService.update(id, shop));
     }
 
     @DeleteMapping("/{id}")
-    public Result<Boolean> delete(@PathVariable Long id) {
+    public Result<Boolean> delete(@PathVariable("id") Long id) {
         return Result.success(shopService.delete(id));
     }
 }

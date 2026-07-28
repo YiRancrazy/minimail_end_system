@@ -10,8 +10,8 @@ import com.yirancrazy.minimall.auth.vo.UserInfoVO;
 import com.yirancrazy.minimall.common.exception.BizException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
-import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -34,7 +34,7 @@ class AuthServiceImplTest {
     }
 
     @Test
-    void register_then_login_returns_token_and_validates_bcrypt() {
+    void register_returns_token_for_new_user() {
         when(manager.getOne(ArgumentMatchers.any())).thenReturn(null);
         when(manager.save(ArgumentMatchers.any(UserAuthPO.class)))
             .thenAnswer(inv -> {
@@ -46,15 +46,6 @@ class AuthServiceImplTest {
         TokenVO tok = service.register(new RegisterDTO("alice", "secret"));
         assertNotNull(tok.getAccessToken());
         assertEquals("Bearer", tok.getTokenType());
-
-        UserAuthPO stored = new UserAuthPO();
-        stored.setId(42L);
-        stored.setUsername("alice");
-        stored.setPasswordHash(BCrypt.hashpw("secret" + "", BCrypt.gensalt()));
-        when(manager.getOne(ArgumentMatchers.any())).thenReturn(stored);
-
-        TokenVO tok2 = service.login(new LoginDTO("alice", "secret"));
-        assertNotNull(tok2.getAccessToken());
     }
 
     @Test
@@ -65,8 +56,43 @@ class AuthServiceImplTest {
     }
 
     @Test
+    void login_existing_user_returns_token_after_register() {
+        // First call: capture the saved UserAuthPO so we have salt+hash.
+        ArgumentCaptor<UserAuthPO> cap = ArgumentCaptor.forClass(UserAuthPO.class);
+        when(manager.getOne(ArgumentMatchers.any())).thenReturn(null);
+        when(manager.save(cap.capture()))
+            .thenAnswer(inv -> {
+                UserAuthPO p = inv.getArgument(0);
+                p.setId(42L);
+                return true;
+            });
+        service.register(new RegisterDTO("alice", "secret"));
+        UserAuthPO saved = cap.getValue();
+        assertNotNull(saved.getSalt());
+
+        // Reset mock: register flow is irrelevant now, simulate "user already exists".
+        org.mockito.Mockito.reset(manager);
+        UserAuthPO existing = new UserAuthPO();
+        existing.setId(42L);
+        existing.setUsername("alice");
+        existing.setSalt(saved.getSalt());
+        existing.setPasswordHash(saved.getPasswordHash());
+        when(manager.getOne(ArgumentMatchers.any())).thenReturn(existing);
+
+        TokenVO tok = service.login(new LoginDTO("alice", "secret"));
+        assertNotNull(tok.getAccessToken());
+    }
+
+    @Test
     void me_parses_token_roundtrip() {
-        String token = service.register(new RegisterDTO() {{ setUsername("bob"); setPassword("pwd"); }}).getAccessToken();
+        when(manager.getOne(ArgumentMatchers.any())).thenReturn(null);
+        when(manager.save(ArgumentMatchers.any(UserAuthPO.class)))
+            .thenAnswer(inv -> {
+                UserAuthPO p = inv.getArgument(0);
+                p.setId(99L);
+                return true;
+            });
+        String token = service.register(new RegisterDTO("bob", "pwd")).getAccessToken();
         UserInfoVO info = service.me(token);
         assertEquals("bob", info.getUsername());
         assertEquals("USER", info.getRole());

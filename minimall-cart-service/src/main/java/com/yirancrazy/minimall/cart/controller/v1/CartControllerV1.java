@@ -25,7 +25,7 @@ public class CartControllerV1 {
     }
 
     @GetMapping
-    public Result<List<CartItemPO>> list(@RequestParam Long userId) {
+    public Result<List<CartItemPO>> list(@RequestParam("userId") Long userId) {
         return Result.success(cartService.listByUser(userId));
     }
 
@@ -35,7 +35,7 @@ public class CartControllerV1 {
     }
 
     @DeleteMapping("/{id}")
-    public Result<Boolean> delete(@PathVariable Long id) {
+    public Result<Boolean> delete(@PathVariable("id") Long id) {
         return Result.success(cartService.delete(id));
     }
 }

@@ -1,0 +1,10 @@
+spring:
+  cloud:
+    nacos:
+      discovery:
+        namespace: public
+      config:
+        namespace: public
+logging:
+  level:
+    org.springframework.cloud.gateway: INFO

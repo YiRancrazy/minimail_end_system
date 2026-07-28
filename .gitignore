@@ -1,3 +1,17 @@
-## CLAUDE
-.claude
-.trae
+target/
+.idea/
+.vscode/
+*.iml
+*.iws
+.classpath
+.project
+.settings/
+.mvn/wrapper/maven-wrapper.jar
+logs/
+*.log
+HELP.md
+.DS_Store
+
+# IDE / AI 配置（仓库外冗余）
+.claude/
+.trae/

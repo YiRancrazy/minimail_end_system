@@ -20,6 +20,8 @@
     <spring-cloud-alibaba.version>2023.0.1.0</spring-cloud-alibaba.version>
     <mybatis-plus.version>3.5.7</mybatis-plus.version>
     <lombok.version>1.18.32</lombok.version>
+    <flyway.version>9.22.3</flyway.version>
+    <knife4j.version>4.5.0</knife4j.version>
   </properties>
 
   <modules>
@@ -32,6 +34,7 @@
     <module>minimall-merchant-service</module>
     <module>minimall-goods-service</module>
     <module>minimall-cart-service</module>
+    <module>minimall-flyway-core</module>
     <module>minimall-stock-service</module>
     <module>minimall-pay-service</module>
     <module>minimall-order-service</module>
@@ -82,6 +85,21 @@
         <groupId>com.yirancrazy</groupId>
         <artifactId>minimall-api</artifactId>
         <version>${revision}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.yirancrazy</groupId>
+        <artifactId>minimall-flyway-core</artifactId>
+        <version>${revision}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.flywaydb</groupId>
+        <artifactId>flyway-core</artifactId>
+        <version>${flyway.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.github.xiaoymin</groupId>
+        <artifactId>knife4j-openapi3-jakarta-spring-boot-starter</artifactId>
+        <version>${knife4j.version}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>

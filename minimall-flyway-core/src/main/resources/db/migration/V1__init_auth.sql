@@ -1,0 +1,13 @@
+CREATE TABLE IF NOT EXISTS t_user_auth (
+  id BIGINT NOT NULL,
+  username VARCHAR(64) NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  salt VARCHAR(64) NOT NULL,
+  role VARCHAR(32) NOT NULL,
+  status INT NOT NULL DEFAULT 1,
+  create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+  update_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+  is_deleted TINYINT DEFAULT 0,
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_username (username)
+);

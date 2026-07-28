@@ -15,6 +15,14 @@ public class RouterConfig {
                 .uri("lb://minimall-id-service"))
             .route("auth-service", r -> r.path("/api/v1/auth/**")
                 .uri("lb://minimall-auth-service"))
+            .route("user-service", r -> r.path("/api/v1/user/**")
+                .uri("lb://minimall-user-service"))
+            .route("merchant-service", r -> r.path("/api/v1/merchant/**")
+                .uri("lb://minimall-merchant-service"))
+            .route("goods-service", r -> r.path("/api/v1/goods/**")
+                .uri("lb://minimall-goods-service"))
+            .route("cart-service", r -> r.path("/api/v1/cart/**")
+                .uri("lb://minimall-cart-service"))
             .build();
     }
 }

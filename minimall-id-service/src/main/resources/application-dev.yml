@@ -1,0 +1,12 @@
+spring:
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3306/id_db?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC
+    username: root
+    password: root
+  cloud:
+    nacos:
+      discovery:
+        namespace: public
+logging:
+  level:
+    com.yirancrazy.minimall: DEBUG

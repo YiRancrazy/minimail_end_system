@@ -4,6 +4,22 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 > 下方正文为 **V1.0 项目级硬约束**（命名 / 分层 / 日志 / 异常 / 实体 / 测试），速查够用时无需展开任何 `.dev/docs/` 链接。Commands 与 Architecture 总览见下方两个速查小节，其他细节按需加载 §7「加载触发矩阵」对应文档。
 
+## RTK Token 优化（强制）
+
+本仓库启用 [RTK (Rust Token Killer)](https://github.com/rtk-ai/rtk) 作为 Claude Code 的命令代理，节省 **60-90%** 输出 token，钩子已在用户级 `~/.claude/settings.json` 中配置。
+
+**强约束**：
+
+- 所有 `Bash` 工具调用**默认走 RTK**——钩子会自动把 `git status` 重写为 `rtk git status`、`./mvnw test` 重写为 `rtk ./mvnw test` 等；**不要**手动拼 `rtk` 前缀。
+- 文件 / 代码 / 目录读取**优先用专用工具**（`Read` / `Glob` / `Grep` / `Edit` / `Write`），**禁止**用 `cat` / `find` / `grep` / `head` / `tail` 等 shell 命令（专用工具更省 token 且支持行号定位）。
+- 需要原始输出 / 调试钩子：`rtk proxy <cmd>`（仅在确认钩子未生效时使用）。
+- 查看节省效果：`rtk gain` / `rtk gain --history`；分析历史遗漏：`rtk discover`。
+- 报告完成 / 跑测 / 构建 / 提交前，**主动**通过 `rtk git status` 与 `rtk git diff` 复核变更；不要被动等用户提醒。
+
+**⚠️ 名字冲突**：若 `rtk gain` 报错或返回 Rust Type Kit 的输出，请检查 `which rtk`——本项目要的是 Anthropic 的 token-killer 版，而非 reachingforthejack/rtk。
+
+**钩子未生效的兜底**：手动使用 `rtk <cmd>` 包装所有 git / mvnw / ls / cat / find / grep 调用；详见全局 `C:\Users\Yiran\.claude\RTK.md`。
+
 ## Quick reference
 
 - **Stack**: Java 17 · Spring Boot 3.2.x · Spring Cloud Alibaba · MyBatis-Plus 3.5.x · Maven 3.8.6 · Nacos · Seata · RocketMQ · SkyWalking

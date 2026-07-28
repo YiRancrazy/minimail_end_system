@@ -8,7 +8,7 @@
     <relativePath>../pom.xml</relativePath>
   </parent>
 
-  <artifactId>minimall-auth-service</artifactId>
+  <artifactId>minimall-cart-service</artifactId>
   <packaging>jar</packaging>
 
   <dependencies>
@@ -21,36 +21,20 @@
     <dependency><groupId>com.yirancrazy</groupId><artifactId>minimall-common</artifactId></dependency>
     <dependency><groupId>com.yirancrazy</groupId><artifactId>minimall-api</artifactId></dependency>
     <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-web</artifactId></dependency>
+    <dependency><groupId>com.baomidou</groupId><artifactId>mybatis-plus-spring-boot3-starter</artifactId></dependency>
     <dependency><groupId>com.alibaba.cloud</groupId><artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId></dependency>
     <dependency><groupId>com.h2database</groupId><artifactId>h2</artifactId><scope>runtime</scope></dependency>
-    <dependency>
-      <groupId>io.jsonwebtoken</groupId>
-      <artifactId>jjwt-api</artifactId>
-      <version>0.12.6</version>
-    </dependency>
-    <dependency>
-      <groupId>io.jsonwebtoken</groupId>
-      <artifactId>jjwt-impl</artifactId>
-      <version>0.12.6</version>
-      <scope>runtime</scope>
-    </dependency>
-    <dependency>
-      <groupId>io.jsonwebtoken</groupId>
-      <artifactId>jjwt-jackson</artifactId>
-      <version>0.12.6</version>
-      <scope>runtime</scope>
-    </dependency>
     <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-test</artifactId><scope>test</scope></dependency>
   </dependencies>
 
   <build>
-    <finalName>minimall-auth-service</finalName>
+    <finalName>minimall-cart-service</finalName>
     <plugins>
       <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
         <configuration>
-          <mainClass>com.yirancrazy.minimall.auth.AuthApplication</mainClass>
+          <mainClass>com.yirancrazy.minimall.cart.CartApplication</mainClass>
         </configuration>
       </plugin>
     </plugins>

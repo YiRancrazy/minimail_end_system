@@ -9,3 +9,12 @@ spring:
     nacos:
       discovery:
         server-addr: 127.0.0.1:8848
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3306/auth_db?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC
+    username: root
+    password: root
+
+minimall:
+  jwt:
+    secret: dev-secret-change-me-32bytes-min!!
+    ttl-seconds: 86400

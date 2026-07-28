@@ -7,7 +7,7 @@ import lombok.Getter;
 @Getter
 @AllArgsConstructor
 public enum AuthCodeEnum implements BaseEnum {
-    TOKEN_INVALID("14001", "TOKEN_INVALID", "Token 无效");
+    TOKEN_INVALID("14003", "TOKEN_INVALID", "Token 无效");
 
     private final String code;
     private final String alias;

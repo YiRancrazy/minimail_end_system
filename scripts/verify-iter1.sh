@@ -42,6 +42,9 @@ echo "$ME" | grep -q "\"username\":\"$USER\"" || fail "me: $ME"
 
 INVALID=$(curl -s -H "Authorization: Bearer xxx.yyy.zzz" \
   http://127.0.0.1:8201/api/v1/auth/me)
-echo "$INVALID" | grep -q '"14003"' || fail "expected token-invalid error code, got: $INVALID"
+echo "$INVALID" | grep -q '"14003"' || fail "expected token-invalid code 14003, got: $INVALID"
+
+NO_AUTH=$(curl -s http://127.0.0.1:8201/api/v1/auth/me)
+echo "$NO_AUTH" | grep -q '"14003"' || fail "expected 14003 for missing auth header, got: $NO_AUTH"
 
 printf '\nPASS\n'

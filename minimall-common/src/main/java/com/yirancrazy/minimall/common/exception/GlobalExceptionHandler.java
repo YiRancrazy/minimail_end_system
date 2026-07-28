@@ -7,6 +7,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -30,6 +31,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Result<Void>> base(BaseException e) {
         log.error("base error code={} msg={}", e.getCode(), e.getMessage(), e);
         return ResponseEntity.status(HttpStatus.OK).body(Result.fail(e.getCode(), e.getMessage()));
+    }
+
+    @ExceptionHandler(MissingRequestHeaderException.class)
+    public ResponseEntity<Result<Void>> missingHeader(MissingRequestHeaderException e) {
+        log.warn("missing required header: {}", e.getHeaderName());
+        return ResponseEntity.status(HttpStatus.OK).body(Result.fail("14003", "缺少请求头: " + e.getHeaderName()));
     }
 
     @ExceptionHandler(Throwable.class)

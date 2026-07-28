@@ -16,3 +16,6 @@ HELP.md
 .claude/
 .trae/
 .superpowers/
+
+# Maven flatten plugin 中间产物（运行时生成，不入库）
+.flattened-pom.xml

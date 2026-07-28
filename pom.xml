@@ -99,6 +99,33 @@
           <artifactId>spring-boot-maven-plugin</artifactId>
           <version>${spring-boot.version}</version>
         </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-checkstyle-plugin</artifactId>
+          <version>3.3.2</version>
+          <configuration>
+            <configLocation>config/checkstyle/checkstyle.xml</configLocation>
+            <includeTestSourceDirectory>true</includeTestSourceDirectory>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>com.github.spotbugs</groupId>
+          <artifactId>spotbugs-maven-plugin</artifactId>
+          <version>4.8.6.5</version>
+          <configuration>
+            <excludeFilterFile>config/spotbugs/spotbugs-exclude.xml</excludeFilterFile>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.owasp</groupId>
+          <artifactId>dependency-check-maven</artifactId>
+          <version>9.0.9</version>
+          <configuration>
+            <suppressionFiles>
+              <suppressionFile>config/owasp/dependency-check-suppression.xml</suppressionFile>
+            </suppressionFiles>
+          </configuration>
+        </plugin>
       </plugins>
     </pluginManagement>
   </build>

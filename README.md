@@ -4,11 +4,15 @@ Spring Cloud Alibaba 微服务，Java 17 + Spring Boot 3.2.x。
 
 ## 起步
 
+> Note: until Task 3 lands the five child modules, run `./mvnw -N ...` (non-recursive).
+
 ```bash
 ./mvnw clean verify                 # 全量编译 + 单测
 docker compose -f infra/docker-compose.yml up -d   # 起 Nacos + MySQL + Redis
 ./mvnw -pl minimall-id-service spring-boot:run    # 起 id-service
 ```
+
+> `infra/docker-compose.yml` 将在 Task 8（中间件搭建）落地，本目录当前不存在，属预期。
 
 ## 模块
 

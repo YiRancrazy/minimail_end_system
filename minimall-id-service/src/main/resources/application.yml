@@ -5,7 +5,16 @@ spring:
     name: minimall-id-service
   profiles:
     active: dev
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
   cloud:
     nacos:
       discovery:
         server-addr: 127.0.0.1:8848
+  knife4j:
+    enable: true
+  mvc:
+    pathmatch:
+      matching-strategy: ant_path_matcher

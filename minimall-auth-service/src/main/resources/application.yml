@@ -5,6 +5,10 @@ spring:
     name: minimall-auth-service
   profiles:
     active: dev
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
   cloud:
     nacos:
       discovery:
@@ -18,3 +22,8 @@ minimall:
   jwt:
     secret: dev-secret-change-me-32bytes-min!!
     ttl-seconds: 86400
+  knife4j:
+    enable: true
+  mvc:
+    pathmatch:
+      matching-strategy: ant_path_matcher

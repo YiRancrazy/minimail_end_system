@@ -2,9 +2,9 @@ package com.yirancrazy.minimall.pay.controller.v1;
 
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.pay.service.PayService;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -21,8 +21,8 @@ public class InternalPayControllerV1 {
         this.payService = payService;
     }
 
-    @PostMapping("/callback/{payId}")
-    public Result<Boolean> callback(@PathVariable Long payId) {
+    @PostMapping("/callback")
+    public Result<Boolean> callback(@RequestParam("payId") Long payId) {
         return Result.success(payService.callback(payId, true));
     }
 }

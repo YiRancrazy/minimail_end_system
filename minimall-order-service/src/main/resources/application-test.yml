@@ -9,3 +9,5 @@ spring:
     nacos:
       discovery:
         enabled: false
+    openfeign:
+      enabled: false

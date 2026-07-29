@@ -1,12 +1,14 @@
 package com.yirancrazy.minimall.order.controller.v1;
 
 import com.yirancrazy.minimall.common.result.Result;
+import com.yirancrazy.minimall.order.dto.OrderCreateDTO;
 import com.yirancrazy.minimall.order.service.OrderService;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -28,16 +30,12 @@ public class OrderControllerV1 {
     /**
      * 创建订单并完成库存锁定及支付流水初始化。
      *
-     * @param userId 下单用户标识
-     * @param skuId 商品 SKU 标识
-     * @param quantity 购买数量
+     * @param dto 订单创建请求参数
      * @return 新创建的订单标识
      */
     @PostMapping
-    public Result<Long> create(@RequestParam("userId") Long userId,
-                               @RequestParam("skuId") Long skuId,
-                               @RequestParam("quantity") Integer quantity) {
-        return Result.success(orderService.create(userId, skuId, quantity));
+    public Result<Long> create(@Valid @RequestBody OrderCreateDTO dto) {
+        return Result.success(orderService.create(dto.getUserId(), dto.getSkuId(), dto.getQuantity()));
     }
 
     /**

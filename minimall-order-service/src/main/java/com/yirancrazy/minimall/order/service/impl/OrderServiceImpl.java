@@ -23,6 +23,11 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
+ * @Author: yirancrazy@gmail.com
+ * @Description: 订单领域服务实现，编排库存锁定、支付流水、订单持久化、通知推送及支付事件发布流程。
+ * @Version: 1.0
+ * @DateTime: 2026/7/29
+ *
  * Iter-4: cross-process notify. pay() no longer relies on the in-process bus
  * for OrderPaid (which is in-process only). It instead synchronously calls
  * NotifyFeignClient.push() which targets the notify-service HTTP push endpoint.
@@ -51,6 +56,14 @@ public class OrderServiceImpl implements OrderService {
         this.eventBus = eventBus;
     }
 
+    /**
+     * 锁定商品库存、持久化待支付订单并创建对应支付流水。
+     *
+     * @param userId 下单用户标识
+     * @param skuId 商品 SKU 标识
+     * @param quantity 购买数量
+     * @return 新创建的订单标识
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long create(Long userId, Long skuId, Integer quantity) {
@@ -74,6 +87,12 @@ public class OrderServiceImpl implements OrderService {
         return order.getId();
     }
 
+    /**
+     * 完成支付回调后将待支付订单更新为已支付，并发送通知及订单支付事件。
+     *
+     * @param orderId 订单标识
+     * @return 支付成功返回 true，订单状态不允许支付时返回 false
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean pay(Long orderId) {
@@ -97,6 +116,12 @@ public class OrderServiceImpl implements OrderService {
         return true;
     }
 
+    /**
+     * 查询指定订单的当前业务状态。
+     *
+     * @param orderId 订单标识
+     * @return 订单状态；订单不存在时返回 UNKNOWN
+     */
     @Override
     public String status(Long orderId) {
         OrderPO order = orderManager.getById(orderId);

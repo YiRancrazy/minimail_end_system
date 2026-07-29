@@ -22,6 +22,12 @@ public class JwtVerifier {
         this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
 
+    /**
+     * 验签 JWT 并返回 Claims 载荷，供网关过滤器读取用户身份信息。
+     *
+     * @param token 客户端 Authorization 头中的 JWT 字符串
+     * @return 解析后的 Claims 载荷，包含 subject 与自定义声明
+     */
     public Claims verify(String token) {
         return Jwts.parser()
             .verifyWith(key)

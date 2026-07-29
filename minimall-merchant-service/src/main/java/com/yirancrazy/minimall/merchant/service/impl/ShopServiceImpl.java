@@ -8,6 +8,12 @@ import com.yirancrazy.minimall.merchant.manager.ShopManager;
 import com.yirancrazy.minimall.merchant.service.ShopService;
 import org.springframework.stereotype.Service;
 
+/**
+ * @Author: yirancrazy@gmail.com
+ * @Description: 店铺领域服务实现，编排 Manager 完成店铺 CRUD，并在数据缺失时抛出业务异常。
+ * @Version: 1.0
+ * @DateTime: 2026/7/29
+ */
 @Service
 public class ShopServiceImpl implements ShopService {
 
@@ -17,6 +23,12 @@ public class ShopServiceImpl implements ShopService {
         this.shopManager = shopManager;
     }
 
+    /**
+     * 根据主键 ID 查询店铺，未找到时抛出店铺不存在业务异常。
+     *
+     * @param id 店铺主键 ID
+     * @return 店铺实体对象
+     */
     @Override
     public ShopPO getById(Long id) {
         ShopPO s = shopManager.getById(id);
@@ -26,18 +38,37 @@ public class ShopServiceImpl implements ShopService {
         return s;
     }
 
+    /**
+     * 新增店铺记录，并返回持久化后的主键 ID。
+     *
+     * @param shop 待创建的店铺实体
+     * @return 新建店铺的主键 ID
+     */
     @Override
     public Long create(ShopPO shop) {
         shopManager.save(shop);
         return shop.getId();
     }
 
+    /**
+     * 根据主键 ID 更新店铺信息。
+     *
+     * @param id 店铺主键 ID
+     * @param shop 待更新的店铺实体
+     * @return 是否更新成功
+     */
     @Override
     public boolean update(Long id, ShopPO shop) {
         shop.setId(id);
         return shopManager.updateById(shop);
     }
 
+    /**
+     * 根据主键 ID 逻辑删除店铺记录。
+     *
+     * @param id 店铺主键 ID
+     * @return 是否删除成功
+     */
     @Override
     public boolean delete(Long id) {
         return shopManager.removeById(id);

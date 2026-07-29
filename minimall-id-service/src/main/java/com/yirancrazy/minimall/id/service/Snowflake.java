@@ -1,5 +1,11 @@
 package com.yirancrazy.minimall.id.service;
 
+/**
+ * @Author: yirancrazy@gmail.com
+ * @Description: 雪花 ID 算法工具类，根据 datacenterId 与 workerId 生成趋势递增的分布式唯一 ID，线程安全。
+ * @Version: 1.0
+ * @DateTime: 2026/7/29
+ */
 public class Snowflake {
     private final long epoch = 1700000000000L;
     private final long datacenterId;
@@ -23,6 +29,11 @@ public class Snowflake {
         this.workerId = workerId;
     }
 
+    /**
+     * 生成下一个雪花 ID，同一毫秒内通过自增序列区分；如时钟回拨则抛出异常，否则自旋至下一毫秒。
+     *
+     * @return 生成的分布式唯一 ID
+     */
     public synchronized long nextId() {
         long ts = System.currentTimeMillis();
         if (ts < lastTs) {

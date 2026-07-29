@@ -12,6 +12,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * @Author: yirancrazy@gmail.com
+ * @Description: 用户 C 端接口控制器，提供按 ID 查询、创建、更新与删除用户能力。
+ * @Version: 1.0
+ * @DateTime: 2026/7/29
+ */
 @RestController
 @RequestMapping("/api/v1/user")
 public class UserControllerV1 {
@@ -22,6 +28,12 @@ public class UserControllerV1 {
         this.userService = userService;
     }
 
+    /**
+     * 根据用户 ID 查询用户信息并返回用户持久化数据。
+     *
+     * @param id 用户唯一标识
+     * @return 查询到的用户信息
+     */
     @GetMapping("/{id}")
     public Result<UserPO> get(@PathVariable("id") Long id) {
         return Result.success(userService.getById(id));
@@ -32,6 +44,13 @@ public class UserControllerV1 {
         return Result.success(userService.create(user));
     }
 
+    /**
+     * 按指定用户 ID 更新用户信息并返回更新是否成功。
+     *
+     * @param id 用户唯一标识
+     * @param user 待更新的用户信息
+     * @return 更新是否成功
+     */
     @PutMapping("/{id}")
     public Result<Boolean> update(@PathVariable("id") Long id, @RequestBody UserPO user) {
         return Result.success(userService.update(id, user));

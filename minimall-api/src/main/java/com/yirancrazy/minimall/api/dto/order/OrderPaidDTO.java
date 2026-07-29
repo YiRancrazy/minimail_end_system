@@ -6,6 +6,12 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 
+/**
+ * @Author: yirancrazy@gmail.com
+ * @Description: 订单已支付事件 DTO，用于通知他服务订单已支付并消费后续动作。
+ * @Version: 1.0
+ * @DateTime: 2026/7/29
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

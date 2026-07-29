@@ -7,6 +7,12 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * @Author: yirancrazy@gmail.com
+ * @Description: 订单内部接口控制器，供其他服务通过订单标识查询订单当前业务状态。
+ * @Version: 1.0
+ * @DateTime: 2026/7/29
+ */
 @RestController
 @RequestMapping("/internal/order")
 public class InternalOrderControllerV1 {
@@ -17,6 +23,12 @@ public class InternalOrderControllerV1 {
         this.orderService = orderService;
     }
 
+    /**
+     * 查询指定订单的当前业务状态。
+     *
+     * @param id 订单标识
+     * @return 订单状态；订单不存在时返回 UNKNOWN
+     */
     @GetMapping("/{id}")
     public Result<String> status(@PathVariable Long id) {
         return Result.success(orderService.status(id));

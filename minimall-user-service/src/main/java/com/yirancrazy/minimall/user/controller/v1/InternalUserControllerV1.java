@@ -9,6 +9,12 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * @Author: yirancrazy@gmail.com
+ * @Description: 用户内部接口控制器，供其他服务查询用户快照等内部数据。
+ * @Version: 1.0
+ * @DateTime: 2026/7/29
+ */
 @RestController
 @RequestMapping("/internal/user")
 public class InternalUserControllerV1 {
@@ -19,6 +25,12 @@ public class InternalUserControllerV1 {
         this.userService = userService;
     }
 
+    /**
+     * 根据用户 ID 查询并组装供其他服务使用的用户快照。
+     *
+     * @param id 用户唯一标识
+     * @return 用户内部快照
+     */
     @GetMapping("/{id}")
     public Result<UserSnapshotDTO> snapshot(@PathVariable Long id) {
         UserPO u = userService.getById(id);

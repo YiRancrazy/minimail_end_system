@@ -25,6 +25,12 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+/**
+ * @Author: yirancrazy@gmail.com
+ * @Description: OrderPaidListener 单元测试，验证事件触发后消息持久化与 SSE 推送的协作逻辑。
+ * @Version: 1.0
+ * @DateTime: 2026/7/29
+ */
 public class OrderPaidListenerTest {
 
     private NotifyManager manager;
@@ -48,6 +54,9 @@ public class OrderPaidListenerTest {
         listener = new OrderPaidListener(notifyService, sseHub);
     }
 
+    /**
+     * 订单已支付事件触发后，应保存一条 notify 消息且用户 ID 正确，并向对应用户推送一次 SSE。
+     */
     @Test
     public void on_order_paid_saves_message_and_pushes_sse() {
         OrderPaidDTO ev = new OrderPaidDTO(99L, 7L, new BigDecimal("100.00"), "2026-07-29T10:00:00");

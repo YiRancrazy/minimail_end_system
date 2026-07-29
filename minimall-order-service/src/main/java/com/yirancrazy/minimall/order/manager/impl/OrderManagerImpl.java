@@ -7,6 +7,12 @@ import com.yirancrazy.minimall.order.manager.OrderManager;
 import com.yirancrazy.minimall.order.mapper.OrderMapper;
 import org.springframework.stereotype.Service;
 
+/**
+ * @Author: yirancrazy@gmail.com
+ * @Description: 订单数据访问管理实现，基于 MyBatis-Plus 与 OrderMapper 完成 OrderPO 的持久化操作。
+ * @Version: 1.0
+ * @DateTime: 2026/7/29
+ */
 @Service
 @Manager
 public class OrderManagerImpl extends ServiceImpl<OrderMapper, OrderPO>

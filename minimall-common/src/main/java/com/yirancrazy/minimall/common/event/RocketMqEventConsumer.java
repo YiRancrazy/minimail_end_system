@@ -30,6 +30,16 @@ public class RocketMqEventConsumer {
         this.group = group;
     }
 
+    /**
+     * Register a handler to be invoked whenever a message with the tag
+     * corresponding to {@code eventType} is received. The handler is stored
+     * eagerly so it can be replayed on {@link #start()}; if the consumer has
+     * already started, the handler is also attached to the live wrapper.
+     *
+     * @param eventType the event {@link Class} whose tag this handler should react to
+     * @param handler the typed {@link Consumer} invoked with the decoded payload
+     * @param <T> the event type handled by {@code handler}
+     */
     public <T> void subscribe(Class<T> eventType, Consumer<T> handler) {
         handlers.put(eventType, e -> handler.accept(eventType.cast(e)));
         if (wrapper != null) {
@@ -37,6 +47,12 @@ public class RocketMqEventConsumer {
         }
     }
 
+    /**
+     * Bring the underlying push consumer online and wire all previously
+     * registered handlers. When no handlers were registered this is a
+     * logged no-op; on startup failure the wrapper is dropped and events are
+     * silently ignored.
+     */
     public void start() {
         if (handlers.isEmpty()) {
             log.warn("RocketMqEventConsumer.start() called with no handlers registered; events will not be consumed");
@@ -52,6 +68,11 @@ public class RocketMqEventConsumer {
         }
     }
 
+    /**
+     * Shut down the underlying push consumer if it was started, releasing
+     * the RocketMQ client resources. Safe to call when the consumer never
+     * successfully started.
+     */
     public void stop() {
         if (wrapper != null) {
             wrapper.shutdown();

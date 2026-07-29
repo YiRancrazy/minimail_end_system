@@ -7,6 +7,12 @@ import com.yirancrazy.minimall.cart.mapper.CartItemMapper;
 import com.yirancrazy.minimall.common.annotation.Manager;
 import org.springframework.stereotype.Service;
 
+/**
+ * @Author: yirancrazy@gmail.com
+ * @Description: 购物车项数据访问管理实现，基于 MyBatis-Plus ServiceImpl 复用通用 CRUD。
+ * @Version: 1.0
+ * @DateTime: 2026/7/29
+ */
 @Service
 @Manager
 public class CartItemManagerImpl extends ServiceImpl<CartItemMapper, CartItemPO>

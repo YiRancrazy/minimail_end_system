@@ -16,6 +16,12 @@ public class LocalEventBus implements ApplicationEventPublisherAware, EventBus {
 
     private ApplicationEventPublisher publisher;
 
+    /**
+     * Spring {@link ApplicationEventPublisherAware} callback that injects the
+     * application-level event publisher used by {@link #publish(Object)}.
+     *
+     * @param publisher the Spring-managed {@link ApplicationEventPublisher} to delegate to; must not be {@code null}
+     */
     @Override
     public void setApplicationEventPublisher(@NonNull ApplicationEventPublisher publisher) {
         this.publisher = publisher;

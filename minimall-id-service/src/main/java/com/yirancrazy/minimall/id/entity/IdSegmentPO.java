@@ -4,6 +4,12 @@ import com.yirancrazy.minimall.common.base.BasePO;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+/**
+ * @Author: yirancrazy@gmail.com
+ * @Description: 号段持久化实体，对应 id_segment 表，记录各业务标签当前最大号与步长等元信息。
+ * @Version: 1.0
+ * @DateTime: 2026/7/29
+ */
 @Data
 @EqualsAndHashCode(callSuper = true)
 public class IdSegmentPO extends BasePO {

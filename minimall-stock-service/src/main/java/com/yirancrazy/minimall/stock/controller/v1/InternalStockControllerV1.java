@@ -8,6 +8,13 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * @Author: yirancrazy@gmail.com
+ * @Description: 库存内部接口控制器，挂载于 /internal/stock，仅供订单等内部服务经 Feign 调用，
+ *               提供下单时的库存预占与取消/超时后的库存释放能力，不对外网暴露。
+ * @Version: 1.0
+ * @DateTime: 2026/7/29
+ */
 @RestController
 @RequestMapping("/internal/stock")
 public class InternalStockControllerV1 {
@@ -18,6 +25,12 @@ public class InternalStockControllerV1 {
         this.stockService = stockService;
     }
 
+    /**
+     * 按 SKU 预占指定数量库存，库存不存在或不足时抛出业务异常。
+     *
+     * @param dto 库存预占入参，含 SKU 标识与预占数量
+     * @return 统一响应体，数据为预占是否成功
+     */
     @PostMapping("/reserve")
     public Result<Boolean> reserve(@RequestBody StockReserveDTO dto) {
         return Result.success(stockService.reserve(dto.getSkuId(), dto.getQuantity()));

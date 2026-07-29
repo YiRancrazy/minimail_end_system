@@ -21,6 +21,12 @@ public class InternalPayControllerV1 {
         this.payService = payService;
     }
 
+    /**
+     * 模拟支付回调入口，供订单服务内部调用以推进支付单状态。
+     *
+     * @param payId 支付单主键 ID
+     * @return 回调处理是否成功
+     */
     @PostMapping("/callback")
     public Result<Boolean> callback(@RequestParam("payId") Long payId) {
         return Result.success(payService.callback(payId, true));

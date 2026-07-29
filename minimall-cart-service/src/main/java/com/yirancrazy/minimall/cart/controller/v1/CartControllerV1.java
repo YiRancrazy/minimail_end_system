@@ -14,6 +14,12 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+/**
+ * @Author: yirancrazy@gmail.com
+ * @Description: 购物车 C 端接口控制器，按用户查询、添加与删除购物车项。
+ * @Version: 1.0
+ * @DateTime: 2026/7/29
+ */
 @RestController
 @RequestMapping("/api/v1/cart")
 public class CartControllerV1 {
@@ -24,6 +30,12 @@ public class CartControllerV1 {
         this.cartService = cartService;
     }
 
+    /**
+     * 按用户 ID 查询其购物车全部条目。
+     *
+     * @param userId 用户 ID
+     * @return 该用户购物车条目列表
+     */
     @GetMapping
     public Result<List<CartItemPO>> list(@RequestParam("userId") Long userId) {
         return Result.success(cartService.listByUser(userId));
@@ -34,6 +46,12 @@ public class CartControllerV1 {
         return Result.success(cartService.add(item));
     }
 
+    /**
+     * 根据购物车项 ID 逻辑删除该条目。
+     *
+     * @param id 购物车项 ID
+     * @return 是否删除成功
+     */
     @DeleteMapping("/{id}")
     public Result<Boolean> delete(@PathVariable("id") Long id) {
         return Result.success(cartService.delete(id));

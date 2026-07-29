@@ -24,6 +24,12 @@ public class SseHub {
 
     private final ConcurrentHashMap<Long, Set<SseEmitter>> emitters = new ConcurrentHashMap<>();
 
+    /**
+     * 为指定用户创建 SseEmitter 长连接并加入连接中心，完成/超时/异常时自动清理。
+     *
+     * @param userId 订阅用户主键
+     * @return 已初始化并发送 ready 事件的 SseEmitter
+     */
     public SseEmitter register(Long userId) {
         SseEmitter emitter = new SseEmitter(0L);
         emitters.computeIfAbsent(userId, k -> new CopyOnWriteArraySet<>()).add(emitter);
@@ -36,6 +42,12 @@ public class SseHub {
         return emitter;
     }
 
+    /**
+     * 向目标用户的所有在线连接推送 notify 事件，发送失败的连接自动清理。
+     *
+     * @param userId 目标用户主键
+     * @param payload 通知内容负载
+     */
     public void send(Long userId, String payload) {
         Set<SseEmitter> set = emitters.get(userId);
         if (set == null) return;
@@ -58,6 +70,12 @@ public class SseHub {
         }
     }
 
+    /**
+     * SSE 连接入口，接收前端订阅请求并复用 register 逻辑返回长连接 emitter。
+     *
+     * @param userId 订阅用户主键
+     * @return 用于流式响应的 SseEmitter
+     */
     @GetMapping(produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter open(@RequestParam Long userId) {
         return register(userId);

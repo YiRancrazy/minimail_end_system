@@ -8,6 +8,12 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.init.ScriptUtils;
 
+/**
+ * @Author: yirancrazy@gmail.com
+ * @Description: 商品服务 dev/test profile 数据库初始化配置，启动时按需执行 schema.sql 完成建表与种子数据准备。
+ * @Version: 1.0
+ * @DateTime: 2026/7/29
+ */
 @Slf4j
 @Configuration
 @Profile({"test", "dev"})
@@ -19,6 +25,11 @@ public class SchemaConfig implements CommandLineRunner {
         this.jdbcTemplate = jdbcTemplate;
     }
 
+    /**
+     * Spring Boot 启动回调，执行 classpath 下的 schema.sql 完成表结构与种子数据初始化。
+     *
+     * @param args 启动命令行参数，由 Spring Boot 传入，本实现未使用
+     */
     @Override
     public void run(String... args) {
         try {

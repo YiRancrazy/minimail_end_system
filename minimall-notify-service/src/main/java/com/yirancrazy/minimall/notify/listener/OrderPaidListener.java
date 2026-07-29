@@ -8,6 +8,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
+/**
+ * @Author: yirancrazy@gmail.com
+ * @Description: 订单已支付事件监听器，订阅 LocalEventBus 后保存通知并向在线用户 SSE 推送。
+ * @Version: 1.0
+ * @DateTime: 2026/7/29
+ */
 @Slf4j
 @Component
 public class OrderPaidListener {

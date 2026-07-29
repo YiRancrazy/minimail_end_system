@@ -26,6 +26,14 @@ public class H2SchemaConfig implements CommandLineRunner {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    /**
+     * Spring {@link CommandLineRunner} callback that applies the bundled
+     * {@code schema.sql} against the auto-configured H2 {@link DataSource} at
+     * application startup for the {@code test}/{@code dev} profiles. Failures
+     * are logged at WARN so a missing or malformed script does not abort boot.
+     *
+     * @param args the command-line arguments passed to the application; unused here
+     */
     @Override
     public void run(String... args) {
         try {

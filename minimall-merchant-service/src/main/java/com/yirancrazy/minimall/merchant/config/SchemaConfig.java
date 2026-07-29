@@ -8,6 +8,12 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.init.ScriptUtils;
 
+/**
+ * @Author: yirancrazy@gmail.com
+ * @Description: 商家服务 dev/test profile 数据库初始化配置，启动时加载 schema.sql 完成表结构初始化。
+ * @Version: 1.0
+ * @DateTime: 2026/7/29
+ */
 @Slf4j
 @Configuration
 @Profile({"test", "dev"})
@@ -19,6 +25,9 @@ public class SchemaConfig implements CommandLineRunner {
         this.jdbcTemplate = jdbcTemplate;
     }
 
+    /**
+     * 应用启动时执行，加载 classpath 下 schema.sql 完成店铺相关表结构初始化，异常时降级为警告日志。
+     */
     @Override
     public void run(String... args) {
         try {

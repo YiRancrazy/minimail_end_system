@@ -6,6 +6,12 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 
+/**
+ * @Author: yirancrazy@gmail.com
+ * @Description: 创建支付单入参 DTO，承载订单标识与金额。
+ * @Version: 1.0
+ * @DateTime: 2026/7/29
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

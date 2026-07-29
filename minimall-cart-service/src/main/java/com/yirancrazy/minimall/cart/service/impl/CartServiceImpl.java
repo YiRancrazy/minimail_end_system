@@ -8,6 +8,12 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+/**
+ * @Author: yirancrazy@gmail.com
+ * @Description: 购物车领域服务实现，委托 CartItemManager 完成数据访问并补充默认选中状态等业务规则。
+ * @Version: 1.0
+ * @DateTime: 2026/7/29
+ */
 @Service
 public class CartServiceImpl implements CartService {
 
@@ -17,12 +23,24 @@ public class CartServiceImpl implements CartService {
         this.cartItemManager = cartItemManager;
     }
 
+    /**
+     * 根据用户 ID 查询其购物车全部条目。
+     *
+     * @param userId 用户 ID
+     * @return 该用户购物车条目列表
+     */
     @Override
     public List<CartItemPO> listByUser(Long userId) {
         return cartItemManager.list(Wrappers.lambdaQuery(CartItemPO.class)
             .eq(CartItemPO::getUserId, userId));
     }
 
+    /**
+     * 新增一条购物车条目，若未设置选中状态则默认为选中。
+     *
+     * @param item 购物车条目实体
+     * @return 新增条目的主键 ID
+     */
     @Override
     public Long add(CartItemPO item) {
         if (item.getSelected() == null) {
@@ -32,6 +50,12 @@ public class CartServiceImpl implements CartService {
         return item.getId();
     }
 
+    /**
+     * 根据购物车项 ID 逻辑删除该条目。
+     *
+     * @param id 购物车项 ID
+     * @return 是否删除成功
+     */
     @Override
     public boolean delete(Long id) {
         return cartItemManager.removeById(id);

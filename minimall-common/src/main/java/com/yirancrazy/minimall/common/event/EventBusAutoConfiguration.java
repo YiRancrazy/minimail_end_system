@@ -12,6 +12,13 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class EventBusAutoConfiguration {
 
+    /**
+     * Expose the in-process {@link LocalEventBus} as the default {@link EventBus}
+     * bean when no other implementation is registered in the context.
+     *
+     * @param local the always-registered {@link LocalEventBus} candidate bean
+     * @return the same {@link LocalEventBus} instance, to be used as the fallback {@link EventBus}
+     */
     @Bean
     @ConditionalOnMissingBean(EventBus.class)
     public EventBus defaultEventBus(LocalEventBus local) {

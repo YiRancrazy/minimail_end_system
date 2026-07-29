@@ -6,6 +6,12 @@ import org.springframework.boot.autoconfigure.jackson.Jackson2ObjectMapperBuilde
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+/**
+ * @Author: yirancrazy@gmail.com
+ * @Description: Jackson 序列化配置，注册 JavaTimeModule 以支持 Java 8 时间类型，并关闭日期时间戳序列化，统一各服务的 JSON 出参格式。
+ * @Version: 1.0
+ * @DateTime: 2026/7/29
+ */
 @Configuration
 public class JacksonConfig {
 

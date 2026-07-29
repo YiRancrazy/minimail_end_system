@@ -8,6 +8,12 @@ import com.yirancrazy.minimall.user.manager.UserManager;
 import com.yirancrazy.minimall.user.service.UserService;
 import org.springframework.stereotype.Service;
 
+/**
+ * @Author: yirancrazy@gmail.com
+ * @Description: 用户领域服务实现，校验用户业务规则并委托 UserManager 完成数据操作。
+ * @Version: 1.0
+ * @DateTime: 2026/7/29
+ */
 @Service
 public class UserServiceImpl implements UserService {
 
@@ -17,6 +23,12 @@ public class UserServiceImpl implements UserService {
         this.userManager = userManager;
     }
 
+    /**
+     * 根据用户 ID 查询用户信息，不存在时抛出用户不存在业务异常。
+     *
+     * @param id 用户唯一标识
+     * @return 查询到的用户持久化实体
+     */
     @Override
     public UserPO getById(Long id) {
         UserPO u = userManager.getById(id);
@@ -26,18 +38,37 @@ public class UserServiceImpl implements UserService {
         return u;
     }
 
+    /**
+     * 保存新用户信息并返回持久化后生成的用户 ID。
+     *
+     * @param user 待创建的用户信息
+     * @return 新创建用户的唯一标识
+     */
     @Override
     public Long create(UserPO user) {
         userManager.save(user);
         return user.getId();
     }
 
+    /**
+     * 将指定用户 ID 写入待更新实体并执行用户信息更新。
+     *
+     * @param id 用户唯一标识
+     * @param user 待更新的用户信息
+     * @return 更新是否成功
+     */
     @Override
     public boolean update(Long id, UserPO user) {
         user.setId(id);
         return userManager.updateById(user);
     }
 
+    /**
+     * 根据用户 ID 删除用户记录并返回删除是否成功。
+     *
+     * @param id 用户唯一标识
+     * @return 删除是否成功
+     */
     @Override
     public boolean delete(Long id) {
         return userManager.removeById(id);

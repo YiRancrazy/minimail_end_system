@@ -9,6 +9,12 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * @Author: yirancrazy@gmail.com
+ * @Description: 店铺内部 RPC 接口控制器，供其他微服务通过 Feign 调用获取店铺快照数据。
+ * @Version: 1.0
+ * @DateTime: 2026/7/29
+ */
 @RestController
 @RequestMapping("/internal/merchant/shop")
 public class InternalShopControllerV1 {
@@ -19,6 +25,12 @@ public class InternalShopControllerV1 {
         this.shopService = shopService;
     }
 
+    /**
+     * 根据主键 ID 获取店铺快照信息，供其他微服务远程调用使用。
+     *
+     * @param id 店铺主键 ID
+     * @return 店铺快照数据传输对象
+     */
     @GetMapping("/{id}")
     public Result<ShopSnapshotDTO> snapshot(@PathVariable Long id) {
         ShopPO s = shopService.getById(id);

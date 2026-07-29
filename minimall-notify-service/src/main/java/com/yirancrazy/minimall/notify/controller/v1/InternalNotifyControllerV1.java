@@ -9,6 +9,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * @Author: yirancrazy@gmail.com
+ * @Description: 通知内部接口控制器，供他服务通过 HTTP 调用推送通知消息并触发 SSE。
+ * @Version: 1.0
+ * @DateTime: 2026/7/29
+ */
 @RestController
 @RequestMapping("/internal/notify")
 public class InternalNotifyControllerV1 {
@@ -21,6 +27,12 @@ public class InternalNotifyControllerV1 {
         this.sseHub = sseHub;
     }
 
+    /**
+     * 持久化通知消息，并通过 SSE Hub 向在线用户的连接推送实时通知。
+     *
+     * @param dto 事件负载，包含目标用户、标题与内容
+     * @return 持久化结果是否成功的 Result 包装
+     */
     @PostMapping("/push")
     public Result<Boolean> push(@RequestBody NotifyEventDTO dto) {
         boolean saved = notifyService.push(dto.getUserId(), dto.getTitle(), dto.getContent());

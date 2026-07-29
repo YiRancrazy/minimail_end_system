@@ -28,6 +28,12 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/**
+ * @Author: yirancrazy@gmail.com
+ * @Description: OrderServiceImpl 单元测试，覆盖订单创建、库存锁定失败、支付成功及订单缺失异常路径。
+ * @Version: 1.0
+ * @DateTime: 2026/7/29
+ */
 public class OrderServiceImplTest {
 
     private OrderManager manager;
@@ -56,6 +62,9 @@ public class OrderServiceImplTest {
         service = new OrderServiceImpl(manager, stockFeign, payFeign, notifyFeign, eventBus);
     }
 
+    /**
+     * 验证创建订单时依次锁定库存、创建支付流水并返回订单标识。
+     */
     @Test
     public void create_chain_calls_stock_and_pay() {
         when(stockFeign.reserve(any(StockReserveDTO.class))).thenReturn(true);
@@ -74,12 +83,18 @@ public class OrderServiceImplTest {
         assertEquals(orderId, payCap.getValue().getOrderId());
     }
 
+    /**
+     * 验证库存锁定失败时创建订单抛出业务异常且不继续支付流程。
+     */
     @Test
     public void create_falls_back_when_stock_unavailable() {
         when(stockFeign.reserve(any(StockReserveDTO.class))).thenReturn(false);
         assertThrows(BizException.class, () -> service.create(1L, 100L, 2));
     }
 
+    /**
+     * 验证支付成功后订单状态更新为已支付，并推送通知及发布支付事件。
+     */
     @Test
     public void pay_marks_paid_and_publishes_event() {
         OrderPO existing = new OrderPO();
@@ -100,6 +115,9 @@ public class OrderServiceImplTest {
         Mockito.verify(payFeign).callback(7777L);
     }
 
+    /**
+     * 验证支付不存在的订单时抛出订单不存在业务异常。
+     */
     @Test
     public void pay_missing_order_throws() {
         when(manager.getById(99L)).thenReturn(null);

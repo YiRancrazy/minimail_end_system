@@ -51,6 +51,14 @@ public class RocketMqEventBus implements EventBus {
         }
     }
 
+    /**
+     * Deliver the given event to the configured RocketMQ topic using the
+     * event's simple class name as the routing tag and its JSON encoding as
+     * the message body. Producer outages are logged at WARN and swallowed so
+     * the publish site is never blocked.
+     *
+     * @param event the domain event to send; encoded via {@link MqEventJsonCodec}
+     */
     @Override
     public void publish(Object event) {
         if (producer == null) {

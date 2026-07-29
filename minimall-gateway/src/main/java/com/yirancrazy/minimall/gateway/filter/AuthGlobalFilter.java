@@ -39,6 +39,13 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
         this.verifier = verifier;
     }
 
+    /**
+     * 网关 JWT 认证全局过滤器，校验令牌后向下游透传用户身份信息。
+     *
+     * @param exchange 当前请求与响应交换上下文
+     * @param chain 网关过滤器链，用于将请求转交给后续过滤器或目标路由
+     * @return 链路执行结果；白名单或验签失败时直接返回 401 JSON 响应
+     */
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         String path = exchange.getRequest().getPath().value();
@@ -83,6 +90,11 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
             body.getBytes(StandardCharsets.UTF_8))));
     }
 
+    /**
+     * 返回过滤器执行顺序，使其在 traceId 注入之后、其他业务过滤器之前执行。
+     *
+     * @return 排序值，固定为 -50
+     */
     @Override
     public int getOrder() {
         return -50;

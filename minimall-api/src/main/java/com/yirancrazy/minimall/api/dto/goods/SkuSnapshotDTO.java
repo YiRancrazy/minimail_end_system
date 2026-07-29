@@ -6,6 +6,12 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 
+/**
+ * @Author: yirancrazy@gmail.com
+ * @Description: 商品 SKU 跨服务快照 DTO，承载 SKU 标识、SPU 标识、名称、价格与库存。
+ * @Version: 1.0
+ * @DateTime: 2026/7/29
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

@@ -14,6 +14,13 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+/**
+ * @Author: yirancrazy@gmail.com
+ * @Description: StockServiceImpl 单元测试，基于 Mockito 打桩 StockManager，
+ *               覆盖库存预占成功与库存不足抛出 BizException、以及预占释放后可用量回补的场景。
+ * @Version: 1.0
+ * @DateTime: 2026/7/29
+ */
 public class StockServiceImplTest {
 
     private StockManager manager;
@@ -26,6 +33,9 @@ public class StockServiceImplTest {
         service = new StockServiceImpl(manager);
     }
 
+    /**
+     * 验证预占库存时按数量扣减可用量并等额增加预占量，且在可用量不足时抛出 BizException。
+     */
     @Test
     public void reserve_decrements_available_and_throws_when_insufficient() {
         StockPO s = new StockPO();
@@ -44,6 +54,9 @@ public class StockServiceImplTest {
         assertThrows(BizException.class, () -> service.reserve(100L, 100));
     }
 
+    /**
+     * 验证释放预占库存时按数量扣减预占量并等额回补可用量，且返回释放成功。
+     */
     @Test
     public void release_restores_available() {
         StockPO s = new StockPO();

@@ -8,6 +8,12 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.init.ScriptUtils;
 
+/**
+ * @Author: yirancrazy@gmail.com
+ * @Description: 订单服务开发与测试环境数据库初始化配置，应用启动时执行类路径下的 schema.sql 脚本。
+ * @Version: 1.0
+ * @DateTime: 2026/7/29
+ */
 @Slf4j
 @Configuration
 @Profile({"test", "dev"})
@@ -19,6 +25,11 @@ public class SchemaConfig implements CommandLineRunner {
         this.jdbcTemplate = jdbcTemplate;
     }
 
+    /**
+     * 在应用启动后执行数据库建表脚本，初始化失败时记录警告并继续启动。
+     *
+     * @param args 应用启动参数
+     */
     @Override
     public void run(String... args) {
         try {

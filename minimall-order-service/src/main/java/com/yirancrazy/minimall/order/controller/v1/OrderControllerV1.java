@@ -9,6 +9,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * @Author: yirancrazy@gmail.com
+ * @Description: 订单 C 端接口控制器，提供创建订单、发起支付及订单状态查询等对外业务接口。
+ * @Version: 1.0
+ * @DateTime: 2026/7/29
+ */
 @RestController
 @RequestMapping("/api/v1/order")
 public class OrderControllerV1 {
@@ -19,6 +25,14 @@ public class OrderControllerV1 {
         this.orderService = orderService;
     }
 
+    /**
+     * 创建订单并完成库存锁定及支付流水初始化。
+     *
+     * @param userId 下单用户标识
+     * @param skuId 商品 SKU 标识
+     * @param quantity 购买数量
+     * @return 新创建的订单标识
+     */
     @PostMapping
     public Result<Long> create(@RequestParam("userId") Long userId,
                                @RequestParam("skuId") Long skuId,
@@ -26,6 +40,12 @@ public class OrderControllerV1 {
         return Result.success(orderService.create(userId, skuId, quantity));
     }
 
+    /**
+     * 推进指定待支付订单的支付流程并返回处理结果。
+     *
+     * @param id 订单标识
+     * @return 支付成功返回 true，订单状态不允许支付时返回 false
+     */
     @PostMapping("/{id}/pay")
     public Result<Boolean> pay(@PathVariable("id") Long id) {
         return Result.success(orderService.pay(id));

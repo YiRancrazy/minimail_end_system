@@ -18,6 +18,12 @@ import org.springframework.stereotype.Service;
 
 import java.util.UUID;
 
+/**
+ * @Author: yirancrazy@gmail.com
+ * @Description: 认证领域服务实现，负责用户注册、密码校验与访问令牌签发。
+ * @Version: 1.0
+ * @DateTime: 2026/7/29
+ */
 @Service
 public class AuthServiceImpl implements AuthService {
 
@@ -33,6 +39,12 @@ public class AuthServiceImpl implements AuthService {
         this.ttlSeconds = ttlSeconds;
     }
 
+    /**
+     * 注册新用户：校验用户名唯一后生成随机盐，使用 BCrypt 加盐哈希密码入库，并签发访问令牌。
+     *
+     * @param dto 注册入参，包含 username 与 password
+     * @return 包含 JWT 访问令牌、Token 类型与过期秒数的视图
+     */
     @Override
     public TokenVO register(RegisterDTO dto) {
         UserAuthPO existing = userAuthManager.getOne(
@@ -53,6 +65,12 @@ public class AuthServiceImpl implements AuthService {
             "Bearer", ttlSeconds);
     }
 
+    /**
+     * 用户登录：按用户名查找账号并校验加盐哈希密码，成功后签发新的访问令牌。
+     *
+     * @param dto 登录入参，包含 username 与 password
+     * @return 包含 JWT 访问令牌、Token 类型与过期秒数的视图
+     */
     @Override
     public TokenVO login(LoginDTO dto) {
         UserAuthPO po = userAuthManager.getOne(
@@ -67,6 +85,12 @@ public class AuthServiceImpl implements AuthService {
             "Bearer", ttlSeconds);
     }
 
+    /**
+     * 解析 JWT 令牌并返回当前登录用户的基本信息（用户ID、用户名、角色）。
+     *
+     * @param token JWT 访问令牌字符串
+     * @return 包含 userId / username / role 的当前用户视图
+     */
     @Override
     public UserInfoVO me(String token) {
         Claims c;

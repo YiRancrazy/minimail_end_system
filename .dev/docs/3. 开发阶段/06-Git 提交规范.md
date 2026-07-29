@@ -1,105 +1,92 @@
-﻿# Git 提交规范与分支管理策略
+# Git 提交规范与分支管理策略
 
 ## 文档信息
 
 | 字段 | 内容 |
 |------|------|
 | 文档名称 | Git 提交规范与分支管理策略 |
-| 文档版本 | V1.0 |$
+| 文档版本 | V2.0 |
 | 所属阶段 | 开发阶段 |
 | 文档状态 | 已发布 |
 | 创建人 | yirancrazy@gmail.com |
 | 创建日期 | 2026-07-27 |
-| 最后更新 | 2026-07-28 |[\$]
+| 最后更新 | 2026-07-29 |
 
 ## 文档目的
 
-> 统一 Git 提交信息格式（type / scope / subject / body / footer）与分支管理策略（长期分支 / 主题分支 / 工作流），保证提交历史清晰、可追溯、可自动化。
-> 读者：全体研发、DevOps。
+> 统一 Git 提交信息格式与分支管理策略，保证提交历史清晰、可追溯、可自动化。
+> 本文件是仓库 Git 提交和分支命名的唯一规范源；其他文档只引用本文件，不重复定义另一套规则。
 
 ## 适用范围
 
-- **适用对象**：全体研发
-- **适用场景**：日常提交、PR、CI 校验、Changelog 生成
-- **适用版本**：V2.0
-- **不适用范围**：仓库托管平台配置（见 [构建与部署文档（CI/CD）](../5.%20部署阶段/01-构建与部署文档（CI-CD）.md)）
+- **适用对象**：所有研发与 DevOps 人员。
+- **适用场景**：日常提交、PR、CI 校验、Changelog 生成。
+- **不适用范围**：仓库托管平台的权限与流水线细节。
 
-> 依据《阿里巴巴 Java 开发手册（黄山版）》编程规约，结合 Conventional Commits 1.0.0，制定本规范。  
-> 核心原则：**一次提交只做一件事，提交信息清晰可追溯；分支短而具体，禁止长期悬挂**。
+> 本规范结合 Conventional Commits 1.0.0 制定。一次提交只做一个原子变更，分支短而具体，禁止长期悬挂。
 
 ---
 
 ## 1. 提交消息结构
 
-```
+```text
 <type>(<scope>): <subject>
-<空行>
+
 <body>
-<空行>
+
 <footer>
 ```
 
-- **type** – 提交类型（必填）
-- **scope** – 影响范围，如模块、层次、功能域（建议填写）
-- **subject** – 简短描述，不超过 72 字符（必填）
-- **body** – 详细描述，说明 **做了什么** 及 **为什么**（可选，复杂变更必填）
-- **footer** – 关联需求、缺陷、不兼容变更等（可选）
-
----
+- `type`：必填，使用英文固定类型。
+- `scope`：建议填写，使用英文小写 kebab-case。
+- `subject`：必填，使用中文动词开头的动作描述，≤72 字符，不加句号。
+- `body`：可选；复杂变更必须说明动机、实现要点和影响范围。
+- `footer`：可选；用于关联需求、缺陷或不兼容变更。
 
 ## 2. 提交类型（type）
 
-| type       | 说明                              | 触发示例                  |
-|------------|-----------------------------------|---------------------------|
-| `feat`     | 新功能                            | 新增 controller / 接口    |
-| `fix`      | 修复 bug                          | 修下单 500、字段映射错     |
-| `docs`     | 文档变更                          | 仅修改 CLAUDE.md / README |
-| `style`    | 格式调整（无逻辑变化）             | 调 import、格式化         |
-| `refactor` | 重构（非新功能、非修 bug）         | 抽公共 Manager 方法       |
-| `perf`     | 性能优化                          | 加缓存、改分页             |
-| `test`     | 测试相关                          | 新增 / 调整单测           |
-| `build`    | 构建系统或外部依赖                 | `pom.xml` 升级            |
-| `ci`       | CI 配置                           | GitHub Actions            |
-| `chore`    | 杂项（构建 / 工具 / 依赖）         | 调 `.gitignore`           |
-| `revert`   | 回滚                              | `revert: feat(...): ...`  |
-
----
+| type | 说明 | 示例 |
+|------|------|------|
+| `feat` | 新功能 | 新增接口或业务能力 |
+| `fix` | 缺陷修复 | 修复异常、错误映射或边界问题 |
+| `docs` | 文档变更 | 仅修改 Markdown、README 或注释文档 |
+| `style` | 格式调整 | 不改变逻辑的格式化、换行或 import 调整 |
+| `refactor` | 重构 | 不新增功能、不修复缺陷的结构调整 |
+| `perf` | 性能优化 | 缓存、分页或查询优化 |
+| `test` | 测试变更 | 新增或调整测试 |
+| `build` | 构建或依赖 | Maven、插件或外部依赖调整 |
+| `ci` | 流水线变更 | CI/CD 配置调整 |
+| `chore` | 其他工程维护 | gitignore、EOL、脚本或工具维护 |
+| `revert` | 回滚 | 回滚已有提交 |
 
 ## 3. 提交范围（scope）
 
-按业务域或技术域填写，**强烈建议**填。通用 scope 清单（按需扩展）：
+`scope` 使用英文小写 kebab-case，优先使用实际模块名或稳定技术域名。
 
-**业务域**
+**业务模块**：`auth`、`user`、`merchant`、`goods`、`cart`、`order`、`pay`、`stock`、`notify`、`platform`、`id`。
 
-- `用户`、`订单`、`支付`、`商品`、`库存`、`购物车`、`营销`、`优惠券`、`积分`、`通知`、`报表`、`审批`
+**技术模块**：`common`、`api`、`gateway`、`flyway`、`pom`、`ci`、`eol`、`gitignore`、`ai-guidelines`。
 
-**技术域**
+规则：
 
-- `权限`、`认证`、`网关`、`配置`、`日志`、`监控`、`告警`、`缓存`、`消息`、`任务`、`文件`、`审计`、`搜索`、`API`
-
-**工程域**
-
-- `依赖`、`文档`、`脚本`、`构建`、`部署`、`流水线`、`测试`、`数据`、`字典`
-
-**规则**
-
-- 全小写，单词间用 `-`
-- 简短清晰，不用拼音与生僻缩写
-- 一次提交跨多个 scope 时，优先拆成多条；实在无法分离再用并列：`feat(用户,订单): ...`
-
----
+- 禁止中文、拼音、作者名、时间戳和临时标识。
+- scope 应简短、稳定、可检索；不使用随意的 `misc`、`tmp` 或 `test1`。
+- 一次提交跨多个范围时优先拆分；确实无法拆分时使用逗号：`feat(order,pay): 新增支付后订单推进`。
+- 无法合理归类时允许省略 scope，不得为了填充而使用模糊 scope。
 
 ## 4. 主题行（subject）
 
-- **中文**，陈述句，描述**做了什么**而非"做了什么修改"
-- ≤ 72 字符；**不加句号**；动词开头：`新增` / `修复` / `调整` / `重构` / `移除` / `升级` / `回滚`
-- 首字母不大写（英文词也小写，除非专有名词）
+- 使用中文，描述做了什么，而不是“修改了什么”。
+- 以 `新增`、`修复`、`调整`、`重构`、`移除`、`升级`、`回滚` 等动词开头。
+- 不加句号，长度不超过 72 字符。
+- 类名、模块名、命令和其他专有名词可保留英文原文。
 
 正例：
 
 ```text
-feat(用户): 新增手机号验证码登录接口
-fix(订单): 修复订单金额精度丢失导致退款异常
+feat(order): 新增订单取消接口
+fix(pay): 修复支付回调验签失败
+docs(ai-guidelines): 更新协作约定
 ```
 
 反例：
@@ -107,178 +94,140 @@ fix(订单): 修复订单金额精度丢失导致退款异常
 ```text
 feat: update code
 fix: bug fixed
+feat(订单): 新增取消接口
 ```
-
----
 
 ## 5. 正文（body）
 
-变更较复杂时，**必须**填写 body，需包含：
+简单且单一的变更可以省略 body。复杂变更必须包含：
 
-- **变更动机**：为什么这样做
-- **实现要点**：关键设计或逻辑
-- **影响范围**：涉及的类、方法、配置等
-- 与上版差异点（如有）
-- 72 字符内换行；说明 *为什么*，不要重复 `description`
+- 变更动机：为什么要改。
+- 实现要点：关键设计、逻辑或配置。
+- 影响范围：涉及的模块、类、接口或部署影响。
+
+正文可使用简短散文或 bullet 列表；每行建议不超过 72 字符，不重复 subject。
+
+```text
+docs(ai-guidelines): 更新提交规范
+
+- 统一 type 使用英文 Conventional Commits 类型
+- 统一 scope 使用英文小写 kebab-case
+- 明确 body、footer 和分支命名规则
+```
+
+## 6. 脚注（footer）
+
+- 关联需求或缺陷：`Closes #12`、`Refs: TAPD-1001`。
+- 不兼容变更必须使用 `BREAKING CHANGE:`，说明冲突和迁移方式。
+- 也可在 type 后使用 `!`：`feat(api)!: 统一 Result.code 语义`。
+
+```text
+feat(api)!: 统一 Result.code 语义
+
+BREAKING CHANGE: 错误码改为五位字符串，客户端需要更新解析逻辑。
+```
+
+## 7. 提交禁用内容
+
+以下内容不得出现在提交标题或正文中：
+
+- 任何带 `iter` 的迭代标记。
+- `.dev/docs/...` 路径、其中的文件名，以及反向引用外部规范位置的文案。
+- `§`、`¶`、`Chapter`、`Section`、`Article`、`Appendix`、`Sec.`。
+- “第 N 章、第一节、第 N 条、第一项”等章节序号。
+- 密码、Token、密钥、内部地址等敏感信息。
+
+## 8. 分支管理策略
+
+仓库采用主题分支模型，`main` 是受保护的发布分支，只通过 PR 合入。
+
+### 8.1 分支命名
+
+格式：
+
+```text
+<type>/<scope>-<short-desc>
+```
 
 示例：
 
 ```text
-原先登录仅支持密码方式，为提高用户体验，
-新增短信验证码登录。遵循 RESTful 规范，
-在 LoginController 增加 /login/verify-code 端点，
-service 层复用原有 Token 生成逻辑。
+feat/order-add-cancel-api
+fix/pay-callback-signature
+refactor/common-event-bus
+hotfix/pay-callback-timeout
+release/v1.2.0
 ```
 
----
+规则：
 
-## 6. 脚注（footer）
+- type 使用提交规范中的英文类型。
+- scope 使用英文小写 kebab-case。
+- short-desc 使用英文小写 kebab-case，保留必要的功能编号但不得使用全大写。
+- 禁止作者名、时间戳和临时标识。
+- 已合并分支及时删除；远程分支使用 `git push origin --delete <branch>` 清理。
+- 工作分支原则上不超过 7 天；过期分支应重开或说明原因。
 
-- 关联需求/缺陷：`Closes #12` 或 `Refs: TAPD-1001`
-- **不兼容变更（BREAKING CHANGE）**：必须以 `BREAKING CHANGE:` 开头，说明与旧版的冲突及迁移方式
-- 亦可在 type 后加 `!` 简写：`feat(api)!: 统一 Result.code 语义`
+### 8.2 长期分支与紧急修复
 
-```text
-feat(认证): 升级 Token 格式为 JWT
-
-BREAKING CHANGE: 原有 Session 校验过滤器已移除，
-所有客户端需适配 JWT 校验。配置文件新增 jwt.secret 项。
-```
-
----
-
-## 7. 阿里规约映射
-
-| 规约章节             | 对应要求                                         |
-|----------------------|--------------------------------------------------|
-| 【命名风格】         | scope 使用全小写有意义单词，拒绝拼音与模糊命名   |
-| 【注释规约】         | subject 清晰准确，body 说明动机与思路            |
-| 【异常日志】         | fix 类型提交须记录修复的异常与影响，便于排查回溯 |
-| 【控制语句/代码结构】| 一次提交应只包含一个原子变更，便于 Code Review   |
-
----
-
-## 8. 分支管理策略
-
-仓库采用「主题分支」模型：`main` 为受保护的发布分支（PR 目标）。
-
-### 8.1 长期分支
-
-| 分支       | 作用          | 受保护 | 备注                                                       |
-|------------|---------------|--------|------------------------------------------------------------|
-| `main`     | 发布版本，对应线上   | 是     | 仅接收通过 PR 合入；禁止直推；发版后打 tag（如 `v1.2.0`）  |
-
-- 发版流程：`main` 累积稳定 → 提 PR 合入 → 通过后打 tag → 部署
-- 紧急修复：从 `main` 切 `hotfix/xxx`，合并后**同时回灌**目标分支
-
-### 8.2 主题分支命名
-
-格式：`<type>/<scope>-<short-desc>`，type / scope 与「提交规范」保持一致，**全小写**，词间用 `-`。
-
-| 前缀          | 用途                          | 示例                          |
-|---------------|-------------------------------|-------------------------------|
-| `feat/`       | 新功能                        | `feat/订单-新增取消接口`      |
-| `fix/`        | 修 bug                        | `fix/支付-回调验签失败`       |
-| `refactor/`   | 重构                          | `refactor/订单-抽状态机`      |
-| `perf/`       | 性能优化                      | `perf/商品-列表加Redis缓存`   |
-| `chore/`      | 杂项                          | `chore/升级-SpringBoot-3.5.9` |
-| `hotfix/`     | 线上紧急修复（从 `main` 切）  | `hotfix/支付-回调超时`        |
-| `release/`    | 发版预热（从 `main` 切）      | `release/v1.2.0`             |
-
-**规则**
-
-- `scope` 复用提交规范里的业务/技术域
-- 分支名**短而具体**，禁止带作者名 / 时间戳 / 临时标记（如 `tmp` / `test1`）
-- 已合并分支本地 `git branch -d <branch>` 删除；远程残枝 `git push origin --delete <branch>` 清理
+- `main`：发布分支，禁止直接推送和对共享分支强制推送。
+- `hotfix/<scope>-<short-desc>`：从 `main` 创建，修复后合入并回灌仍在维护的目标分支。
+- `release/<version>`：发版预热分支，完成验证后合入 `main` 并创建版本 tag。
 
 ### 8.3 工作流
 
 ```bash
-# 1. 切分支：始终从最新 main 出发
+# 从最新 main 创建主题分支
 git checkout main && git pull
-git checkout -b feat/订单-新增取消接口
+git checkout -b feat/order-add-cancel-api
 
-# 2. 长寿命分支定期 rebase main，避免 merge 噪音
+# 长期分支同步 main
 git fetch origin && git rebase origin/main
-
-# 3. 合回 main：保留分支历史，禁止 fast-forward / squash
-git checkout main
-git merge --no-ff feat/订单-新增取消接口
 ```
 
-- **禁止** `git push --force` 到 `main`；force-push 仅限**自己**的主题分支
-- PR 描述里写「关联 issue / 改动点 / 影响面」，便于 review
-- 涉及数据库 DDL / 配置文件 / 安全规则的改动，PR 必须至少一人复核
+合并方式按 PR 情况选择：
 
----
+- **Squash and merge**：常规功能或提交较多、需要压缩历史时使用。
+- **Rebase and merge**：提交原子且清晰、需要保留提交粒度时使用。
+- **Merge commit**：长期分支、复杂协作或需要保留分支拓扑时使用。
 
-## 9. 与 AI 协作
+合并后必须删除远程主题分支，main 保持可发布状态。
 
-- 动手前先 `git status` + `git branch --show-current`，确认在主题分支上；不要在 `main` 留未提交改动
-- 不要直推 `main`；若用户要求推送，先用 PR 流程
-- 改完分支先 `git fetch` 再决定 rebase / merge，避免误覆盖他人提交
-- 单次任务可能产生多条 commit，按逻辑边界**小步提交**，而非一坨提交
-- 提交前先 `git status` + `git diff --stat` 让用户复核改动范围
-- 改动跨越多个 scope 时，优先拆成多条；只有同一次提交确实无法分离，再并列：`feat(用户,订单): ...`
+## 9. AI 协作与提交前检查
 
----
+- 动手前检查 `git status` 和 `git branch --show-current`，确认不在 `main` 上直接修改。
+- 提交前复核 `git status --short`、`git diff --stat` 和完整 diff。
+- 改动跨多个 scope 时优先拆分提交。
+- 未经用户明确要求，不创建提交、不推送、不提 PR。
 
-## 10. 工具与自动化校验
+## 10. 自动化校验
 
-- **commitlint** 配置（`@commitlint/config-conventional`）
-- Git Hook：`commit-msg` 检测格式
-- IDE 插件：Git Commit Template
+- 使用 `commitlint` 与 `@commitlint/config-conventional` 校验格式。
+- 使用 `commit-msg` Hook 检查提交标题。
+- CI 至少校验 type 枚举、subject 长度和提交格式。
 
-示例 `commitlint.config.js`：
+示例：
 
 ```javascript
 module.exports = {
   extends: ['@commitlint/config-conventional'],
   rules: {
-    'type-enum': [2, 'always', ['feat','fix','docs','style','refactor','perf','test','build','ci','chore','revert']],
+    'type-enum': [2, 'always', ['feat', 'fix', 'docs', 'style', 'refactor', 'perf', 'test', 'build', 'ci', 'chore', 'revert']],
+    'subject-max-length': [2, 'always', 72],
     'subject-case': [0]
   }
 };
 ```
 
----
-
-## 11. 提交示例
-
-```text
-feat(商品): 新增商品库存预警通知
-
-当库存低于阈值时，通过消息队列异步发送钉钉通知。
-StockService 中新增 checkAndNotify 方法，
-阈值可通过配置中心动态配置（默认 10）。
-```
-
-```text
-fix(支付): 修复支付宝回调验签失败问题
-
-签名校验前未对参数排序导致验签失败。
-按照支付宝官方文档严格进行字典序排序并过滤 sign 字段，
-同步更新测试用例覆盖。
-```
-
-```text
-feat(API)!: 统一 Result.code 语义
-BREAKING CHANGE: 错误码由整数 (200/500) 改为 5 位字符串 (00000/1xxxx/2xxxx)，遵循《阿里规约 黄山版》
-```
-
----
-
 ## 相关文档链接
 
-- 上游：[系统架构设计文档](../2.%20设计阶段/01-系统架构设计文档.md)
-- 横向：[Java 编码规范](01-Java编码规范.md)、[代码评审标准](07-代码评审标准.md)
+- 横向：[代码评审标准](07-代码评审标准.md)
 - 下游：[构建与部署文档（CI/CD）](../5.%20部署阶段/01-构建与部署文档（CI-CD）.md)
-- 参考：Conventional Commits 1.0.0、阿里规约
+- 参考：Conventional Commits 1.0.0
 
 ## 变更记录
 
 | 日期 | 版本 | 变更人/角色 | 变更说明 |
 |------|------|-------------|----------|
-| 2026-07-27 | V1.0 | yirancrazy@gmail.com | 初稿创建（仅提交规范） |
-| 2026-07-27 | V2.0 | yirancrazy@gmail.com | 合并分支管理策略（§8 / §9），扩充 type 与 scope 列表，去除医疗领域专有术语 |
-|      |      |             |          |
+| 2026-07-29 | V2.0 | AI 协作 | 统一提交类型、范围、分支与合并策略 |
+| 2026-07-27 | V1.0 | yirancrazy@gmail.com | 初稿创建 |

@@ -10,7 +10,7 @@ import com.yirancrazy.minimall.api.dto.stock.StockReserveDTO;
 import com.yirancrazy.minimall.api.feign.NotifyFeignClient;
 import com.yirancrazy.minimall.api.feign.PayFeignClient;
 import com.yirancrazy.minimall.api.feign.StockFeignClient;
-import com.yirancrazy.minimall.common.event.LocalEventBus;
+import com.yirancrazy.minimall.common.event.EventBus;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.order.entity.OrderPO;
 import com.yirancrazy.minimall.order.manager.OrderManager;
@@ -23,11 +23,11 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * Iter-4: cross-process notify. pay() no longer relies on LocalEventBus for
- * OrderPaid (which is in-process only). It instead synchronously calls
+ * Iter-4: cross-process notify. pay() no longer relies on the in-process bus
+ * for OrderPaid (which is in-process only). It instead synchronously calls
  * NotifyFeignClient.push() which targets the notify-service HTTP push endpoint.
- * The LocalEventBus field is retained for any future in-process subscribers
- * but is intentionally unused here.
+ * Iter-6: the EventBus field is retained for any future in-process subscribers
+ * and is intentionally unused here.
  */
 @Slf4j
 @Service
@@ -37,13 +37,13 @@ public class OrderServiceImpl implements OrderService {
     private final StockFeignClient stockFeign;
     private final PayFeignClient payFeign;
     private final NotifyFeignClient notifyFeign;
-    private final LocalEventBus eventBus;
+    private final EventBus eventBus;
 
     public OrderServiceImpl(OrderManager orderManager,
                             StockFeignClient stockFeign,
                             PayFeignClient payFeign,
                             NotifyFeignClient notifyFeign,
-                            LocalEventBus eventBus) {
+                            EventBus eventBus) {
         this.orderManager = orderManager;
         this.stockFeign = stockFeign;
         this.payFeign = payFeign;

@@ -7,7 +7,7 @@ import com.yirancrazy.minimall.api.dto.stock.StockReserveDTO;
 import com.yirancrazy.minimall.api.feign.NotifyFeignClient;
 import com.yirancrazy.minimall.api.feign.PayFeignClient;
 import com.yirancrazy.minimall.api.feign.StockFeignClient;
-import com.yirancrazy.minimall.common.event.LocalEventBus;
+import com.yirancrazy.minimall.common.event.EventBus;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.order.entity.OrderPO;
 import com.yirancrazy.minimall.order.manager.OrderManager;
@@ -34,7 +34,7 @@ public class OrderServiceImplTest {
     private StockFeignClient stockFeign;
     private PayFeignClient payFeign;
     private NotifyFeignClient notifyFeign;
-    private LocalEventBus eventBus;
+    private EventBus eventBus;
     private OrderServiceImpl service;
 
     @BeforeEach
@@ -43,7 +43,7 @@ public class OrderServiceImplTest {
         stockFeign = mock(StockFeignClient.class);
         payFeign = mock(PayFeignClient.class);
         notifyFeign = mock(NotifyFeignClient.class);
-        eventBus = mock(LocalEventBus.class);
+        eventBus = mock(EventBus.class);
         lenient().when(manager.updateById(any(OrderPO.class))).thenReturn(true);
         lenient().when(notifyFeign.push(any(NotifyEventDTO.class))).thenReturn(true);
         doAnswer(inv -> {

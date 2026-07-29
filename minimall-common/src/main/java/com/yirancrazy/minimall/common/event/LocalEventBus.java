@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
  * Iter-3 替换为 RocketMQ 实现时，本类签名保持不变。
  */
 @Component
-public class LocalEventBus implements ApplicationEventPublisherAware {
+public class LocalEventBus implements ApplicationEventPublisherAware, EventBus {
 
     private ApplicationEventPublisher publisher;
 

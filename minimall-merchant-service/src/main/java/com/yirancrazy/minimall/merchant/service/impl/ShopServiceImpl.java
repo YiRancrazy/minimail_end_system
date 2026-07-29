@@ -1,5 +1,7 @@
 package com.yirancrazy.minimall.merchant.service.impl;
 
+import com.yirancrazy.minimall.merchant.constant.ShopCodeEnum;
+
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.merchant.entity.ShopPO;
 import com.yirancrazy.minimall.merchant.manager.ShopManager;
@@ -19,7 +21,7 @@ public class ShopServiceImpl implements ShopService {
     public ShopPO getById(Long id) {
         ShopPO s = shopManager.getById(id);
         if (s == null) {
-            throw new BizException("15001", "SHOP_NOT_FOUND", "店铺不存在");
+            throw new BizException(ShopCodeEnum.SHOP_NOT_FOUND);
         }
         return s;
     }

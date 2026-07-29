@@ -1,5 +1,7 @@
 package com.yirancrazy.minimall.user.service.impl;
 
+import com.yirancrazy.minimall.user.constant.UserCodeEnum;
+
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.user.entity.UserPO;
 import com.yirancrazy.minimall.user.manager.UserManager;
@@ -19,7 +21,7 @@ public class UserServiceImpl implements UserService {
     public UserPO getById(Long id) {
         UserPO u = userManager.getById(id);
         if (u == null) {
-            throw new BizException("12001", "USER_NOT_FOUND", "用户不存在");
+            throw new BizException(UserCodeEnum.USER_NOT_FOUND);
         }
         return u;
     }

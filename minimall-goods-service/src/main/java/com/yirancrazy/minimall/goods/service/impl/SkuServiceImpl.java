@@ -1,5 +1,7 @@
 package com.yirancrazy.minimall.goods.service.impl;
 
+import com.yirancrazy.minimall.goods.constant.SkuCodeEnum;
+
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.goods.entity.SkuPO;
 import com.yirancrazy.minimall.goods.manager.SkuManager;
@@ -21,7 +23,7 @@ public class SkuServiceImpl implements SkuService {
     public SkuPO getById(Long id) {
         SkuPO s = skuManager.getById(id);
         if (s == null) {
-            throw new BizException("13001", "SKU_NOT_FOUND", "SKU 不存在");
+            throw new BizException(SkuCodeEnum.SKU_NOT_FOUND);
         }
         return s;
     }

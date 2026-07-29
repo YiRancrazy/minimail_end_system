@@ -1,5 +1,7 @@
 package com.yirancrazy.minimall.stock.service.impl;
 
+import com.yirancrazy.minimall.stock.constant.StockCodeEnum;
+
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.stock.entity.StockPO;
@@ -23,10 +25,10 @@ public class StockServiceImpl implements StockService {
         StockPO s = stockManager.getOne(
             Wrappers.lambdaQuery(StockPO.class).eq(StockPO::getSkuId, skuId));
         if (s == null) {
-            throw new BizException("18001", "STOCK_NOT_FOUND", "SKU " + skuId + " 库存不存在");
+            throw new BizException(StockCodeEnum.STOCK_NOT_FOUND);
         }
         if (s.getAvailable() < quantity) {
-            throw new BizException("18002", "STOCK_INSUFFICIENT", "库存不足");
+            throw new BizException(StockCodeEnum.STOCK_INSUFFICIENT);
         }
         s.setAvailable(s.getAvailable() - quantity);
         s.setReserved(s.getReserved() + quantity);

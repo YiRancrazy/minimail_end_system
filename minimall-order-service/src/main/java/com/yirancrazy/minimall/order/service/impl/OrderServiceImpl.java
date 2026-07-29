@@ -1,5 +1,7 @@
 package com.yirancrazy.minimall.order.service.impl;
 
+import com.yirancrazy.minimall.order.constant.OrderCodeEnum;
+
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.yirancrazy.minimall.api.dto.notify.NotifyEventDTO;
 import com.yirancrazy.minimall.api.dto.order.OrderPaidDTO;
@@ -54,7 +56,7 @@ public class OrderServiceImpl implements OrderService {
     public Long create(Long userId, Long skuId, Integer quantity) {
         boolean reserved = stockFeign.reserve(new StockReserveDTO(skuId, quantity));
         if (!reserved) {
-            throw new BizException("11001", "STOCK_RESERVE_FAIL", "库存锁定失败");
+            throw new BizException(OrderCodeEnum.STOCK_RESERVE_FAIL);
         }
 
         OrderPO order = new OrderPO();
@@ -77,7 +79,7 @@ public class OrderServiceImpl implements OrderService {
     public boolean pay(Long orderId) {
         OrderPO order = orderManager.getById(orderId);
         if (order == null) {
-            throw new BizException("11002", "ORDER_NOT_FOUND", "订单不存在");
+            throw new BizException(OrderCodeEnum.ORDER_NOT_FOUND);
         }
         if (!"PENDING_PAY".equals(order.getStatus())) {
             log.warn("order {} status={}, skip pay", orderId, order.getStatus());
@@ -85,7 +87,7 @@ public class OrderServiceImpl implements OrderService {
         }
         Boolean callbackOk = payFeign.callback(order.getPayId());
         if (callbackOk == null || !callbackOk) {
-            throw new BizException("11003", "PAY_FAIL", "支付失败");
+            throw new BizException(OrderCodeEnum.PAY_FAIL);
         }
         order.setStatus("PAID");
         orderManager.updateById(order);

@@ -38,7 +38,7 @@ public class AuthServiceImpl implements AuthService {
         UserAuthPO existing = userAuthManager.getOne(
             Wrappers.lambdaQuery(UserAuthPO.class).eq(UserAuthPO::getUsername, dto.getUsername()));
         if (existing != null) {
-            throw new BizException("14005", "USER_EXISTS", "用户已存在");
+            throw new BizException(AuthCodeEnum.USER_EXISTS);
         }
         String salt = UUID.randomUUID().toString().replace("-", "");
         String hash = BCrypt.hashpw(dto.getPassword() + salt, BCrypt.gensalt());
@@ -58,10 +58,10 @@ public class AuthServiceImpl implements AuthService {
         UserAuthPO po = userAuthManager.getOne(
             Wrappers.lambdaQuery(UserAuthPO.class).eq(UserAuthPO::getUsername, dto.getUsername()));
         if (po == null) {
-            throw new BizException("14001", "USER_NOT_FOUND", "用户不存在");
+            throw new BizException(AuthCodeEnum.USER_NOT_FOUND);
         }
         if (!BCrypt.checkpw(dto.getPassword() + po.getSalt(), po.getPasswordHash())) {
-            throw new BizException("14002", "PWD_INVALID", "密码错误");
+            throw new BizException(AuthCodeEnum.PWD_INVALID);
         }
         return new TokenVO(jwtUtil.sign(po.getId(), po.getUsername(), po.getRole()),
             "Bearer", ttlSeconds);

@@ -1,5 +1,7 @@
 package com.yirancrazy.minimall.pay.service.impl;
 
+import com.yirancrazy.minimall.pay.constant.PayCodeEnum;
+
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.pay.entity.PayRecordPO;
@@ -33,7 +35,7 @@ public class PayServiceImpl implements PayService {
         PayRecordPO p = payManager.getOne(
             Wrappers.lambdaQuery(PayRecordPO.class).eq(PayRecordPO::getId, payId));
         if (p == null) {
-            throw new BizException("17001", "PAY_NOT_FOUND", "支付单不存在");
+            throw new BizException(PayCodeEnum.PAY_NOT_FOUND);
         }
         p.setStatus(ok ? "PAID" : "FAILED");
         return payManager.updateById(p);

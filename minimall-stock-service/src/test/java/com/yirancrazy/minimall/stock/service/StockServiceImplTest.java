@@ -71,4 +71,65 @@ public class StockServiceImplTest {
         assertEquals(3L, s.getAvailable());
         assertEquals(2L, s.getReserved());
     }
+
+    /**
+     * 验证预占不存在的 SKU 时抛出 STOCK_NOT_FOUND 业务异常。
+     */
+    @Test
+    public void reserve_missing_throws_biz() {
+        when(manager.getOne(any())).thenReturn(null);
+        assertThrows(BizException.class, () -> service.reserve(999L, 1));
+    }
+
+    /**
+     * 验证释放不存在的 SKU 库存时返回 false 而非抛出异常。
+     */
+    @Test
+    public void release_missing_returns_false() {
+        when(manager.getOne(any())).thenReturn(null);
+        boolean ok = service.release(999L, 1);
+        assertEquals(false, ok);
+    }
+
+    /**
+     * 验证释放数量超过预占数量时返回 false。
+     */
+    @Test
+    public void release_exceeds_reserved_returns_false() {
+        StockPO s = new StockPO();
+        s.setId(1L);
+        s.setSkuId(100L);
+        s.setAvailable(0L);
+        s.setReserved(2L);
+        when(manager.getOne(any())).thenReturn(s);
+
+        boolean ok = service.release(100L, 5);
+        assertEquals(false, ok);
+    }
+
+    /**
+     * 验证查询存在的 SKU 库存返回正确的可用数量。
+     */
+    @Test
+    public void query_returns_available() {
+        StockPO s = new StockPO();
+        s.setId(1L);
+        s.setSkuId(100L);
+        s.setAvailable(10L);
+        s.setReserved(2L);
+        when(manager.getOne(any())).thenReturn(s);
+
+        long available = service.query(100L);
+        assertEquals(10L, available);
+    }
+
+    /**
+     * 验证查询不存在的 SKU 库存返回 0。
+     */
+    @Test
+    public void query_missing_returns_zero() {
+        when(manager.getOne(any())).thenReturn(null);
+        long available = service.query(999L);
+        assertEquals(0L, available);
+    }
 }

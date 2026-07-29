@@ -123,4 +123,62 @@ public class OrderServiceImplTest {
         when(manager.getById(99L)).thenReturn(null);
         assertThrows(BizException.class, () -> service.pay(99L));
     }
+
+    /**
+     * 验证支付回调失败时抛出支付失败业务异常。
+     */
+    @Test
+    public void pay_callback_fail_throws() {
+        OrderPO existing = new OrderPO();
+        existing.setId(99L);
+        existing.setUserId(1L);
+        existing.setPayId(7777L);
+        existing.setStatus("PENDING_PAY");
+        when(manager.getById(99L)).thenReturn(existing);
+        when(payFeign.callback(7777L)).thenReturn(false);
+
+        assertThrows(BizException.class, () -> service.pay(99L));
+    }
+
+    /**
+     * 验证支付已完成订单时返回 false 且不更新状态。
+     */
+    @Test
+    public void pay_already_paid_returns_false() {
+        OrderPO existing = new OrderPO();
+        existing.setId(99L);
+        existing.setUserId(1L);
+        existing.setPayId(7777L);
+        existing.setStatus("PAID");
+        when(manager.getById(99L)).thenReturn(existing);
+
+        boolean ok = service.pay(99L);
+        assertEquals(false, ok);
+        assertEquals("PAID", existing.getStatus());
+    }
+
+    /**
+     * 验证查询存在的订单状态返回正确状态值。
+     */
+    @Test
+    public void status_returns_order_status() {
+        OrderPO existing = new OrderPO();
+        existing.setId(99L);
+        existing.setStatus("PAID");
+        when(manager.getById(99L)).thenReturn(existing);
+
+        String status = service.status(99L);
+        assertEquals("PAID", status);
+    }
+
+    /**
+     * 验证查询不存在的订单状态返回 UNKNOWN。
+     */
+    @Test
+    public void status_missing_returns_unknown() {
+        when(manager.getById(99L)).thenReturn(null);
+
+        String status = service.status(99L);
+        assertEquals("UNKNOWN", status);
+    }
 }

@@ -80,4 +80,31 @@ public class PayServiceImplTest {
         when(manager.getOne(any())).thenReturn(null);
         assertThrows(BizException.class, () -> service.callback(99L, true));
     }
+
+    /**
+     * 验证 callback 在支付失败时将支付单状态推进为 FAILED。
+     */
+    @Test
+    public void callback_marks_failed() {
+        PayRecordPO rec = new PayRecordPO();
+        rec.setId(1L);
+        rec.setStatus("PENDING");
+        when(manager.getOne(any())).thenReturn(rec);
+
+        boolean ok = service.callback(1L, false);
+        assertEquals(true, ok);
+        assertEquals("FAILED", rec.getStatus());
+    }
+
+    /**
+     * 验证 create 在金额为 null 时按 0 处理。
+     */
+    @Test
+    public void create_with_null_amount() {
+        Long id = service.create(100L, null);
+        assertNotNull(id);
+        ArgumentCaptor<PayRecordPO> cap = ArgumentCaptor.forClass(PayRecordPO.class);
+        org.mockito.Mockito.verify(manager).save(cap.capture());
+        assertEquals(0, BigDecimal.ZERO.compareTo(cap.getValue().getAmount()));
+    }
 }

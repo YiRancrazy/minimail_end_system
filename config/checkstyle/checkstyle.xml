@@ -6,7 +6,7 @@
   <module name="TreeWalker">
     <module name="Indentation"><property name="basicOffset" value="4"/></module>
     <module name="LeftCurly"><property name="option" value="nl"/></module>
-    <module name="RightCurly"><property name="option" value="alone_or_single_line"/></module>
+    <module name="RightCurly"><property name="option" value="alone"/></module>
     <module name="ImportOrder">
       <property name="groups" value="java,javax,org,com,*,/^com\.yirancrazy\./"/>
       <property name="sortStaticImportsAlphabetically" value="true"/>

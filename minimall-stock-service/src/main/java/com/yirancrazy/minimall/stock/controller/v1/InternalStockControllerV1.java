@@ -3,6 +3,7 @@ package com.yirancrazy.minimall.stock.controller.v1;
 import com.yirancrazy.minimall.api.dto.stock.StockReserveDTO;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.stock.service.StockService;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -32,12 +33,12 @@ public class InternalStockControllerV1 {
      * @return 统一响应体，数据为预占是否成功
      */
     @PostMapping("/reserve")
-    public Result<Boolean> reserve(@RequestBody StockReserveDTO dto) {
+    public Result<Boolean> reserve(@Valid @RequestBody StockReserveDTO dto) {
         return Result.success(stockService.reserve(dto.getSkuId(), dto.getQuantity()));
     }
 
     @PostMapping("/release")
-    public Result<Boolean> release(@RequestBody StockReserveDTO dto) {
+    public Result<Boolean> release(@Valid @RequestBody StockReserveDTO dto) {
         return Result.success(stockService.release(dto.getSkuId(), dto.getQuantity()));
     }
 }

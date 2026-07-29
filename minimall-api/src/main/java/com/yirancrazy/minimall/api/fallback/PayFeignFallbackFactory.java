@@ -18,6 +18,16 @@ public class PayFeignFallbackFactory implements FallbackFactory<PayFeignClient> 
     @Override
     public PayFeignClient create(Throwable cause) {
         log.warn("pay-service unreachable: {}", cause.getMessage());
-        return (PayCreateDTO dto) -> -1L;
+        return new PayFeignClient() {
+            @Override
+            public Long create(PayCreateDTO dto) {
+                return -1L;
+            }
+
+            @Override
+            public Boolean callback(Long payId) {
+                return false;
+            }
+        };
     }
 }

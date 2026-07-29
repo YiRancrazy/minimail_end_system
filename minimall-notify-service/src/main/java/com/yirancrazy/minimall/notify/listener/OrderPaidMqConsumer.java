@@ -1,6 +1,5 @@
 package com.yirancrazy.minimall.notify.listener;
 
-import com.yirancrazy.minimall.api.dto.notify.NotifyEventDTO;
 import com.yirancrazy.minimall.api.dto.order.OrderPaidDTO;
 import com.yirancrazy.minimall.common.event.RocketMqEventConsumer;
 import com.yirancrazy.minimall.notify.service.NotifyService;
@@ -55,13 +54,13 @@ public class OrderPaidMqConsumer {
         if (consumer != null) consumer.stop();
     }
 
-    private void onPaid(OrderPaidDTO event) {
+    /** Package-private for direct invocation from unit tests. */
+    void onPaid(OrderPaidDTO event) {
         if (event == null || event.getOrderId() == null) return;
-        NotifyEventDTO dto = new NotifyEventDTO(event.getUserId(),
-            "订单支付成功",
-            "订单 " + event.getOrderId() + " 已支付，金额 " + event.getAmount());
-        notifyService.push(dto.getUserId(), dto.getTitle(), dto.getContent());
-        sseHub.send(dto.getUserId(), dto.getTitle() + ": " + dto.getContent());
-        log.info("notified user {} of order {} via mq", dto.getUserId(), event.getOrderId());
+        String title = "订单支付成功";
+        String content = "订单 " + event.getOrderId() + " 已支付，金额 " + event.getAmount();
+        notifyService.push(event.getUserId(), title, content);
+        sseHub.send(event.getUserId(), title + ": " + content);
+        log.info("notified user {} of order {} via mq", event.getUserId(), event.getOrderId());
     }
 }

@@ -1,0 +1,18 @@
+# Normalize Java sources to LF (workaround for current mixed CRLF/LF tree).
+# When this file is in place, future checkouts will write Java files as LF on
+# Windows, and `git add --renormalize` will normalize mixed EOL back to LF.
+*.java          text eol=lf
+
+# Common script/config files
+*.sh            text eol=lf
+*.yml           text eol=lf
+*.yaml          text eol=lf
+*.md            text eol=lf
+*.xml           text eol=lf
+
+# Binary assets (explicit)
+*.png           binary
+*.jpg           binary
+*.jpeg          binary
+*.gif           binary
+*.ico           binary

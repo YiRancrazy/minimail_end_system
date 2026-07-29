@@ -38,15 +38,17 @@ public class RocketMqEventConsumer {
     }
 
     public void start() {
-        if (!handlers.isEmpty()) {
-            try {
-                wrapper = new DefaultMQConsumerWrapper(namesrvAddr, topic, group, handlers);
-                wrapper.start();
-                log.info("rocketmq consumer started, group={}, topic={}", group, topic);
-            } catch (Exception e) {
-                log.warn("rocketmq consumer start failed (events ignored): {}", e.getMessage());
-                wrapper = null;
-            }
+        if (handlers.isEmpty()) {
+            log.warn("RocketMqEventConsumer.start() called with no handlers registered; events will not be consumed");
+            return;
+        }
+        try {
+            wrapper = new DefaultMQConsumerWrapper(namesrvAddr, topic, group, handlers);
+            wrapper.start();
+            log.info("rocketmq consumer started, group={}, topic={}", group, topic);
+        } catch (Exception e) {
+            log.warn("rocketmq consumer start failed (events ignored): {}", e.getMessage());
+            wrapper = null;
         }
     }
 
@@ -77,11 +79,18 @@ public class RocketMqEventConsumer {
                         }
                     }
                     if (matched == null) continue;
+                    Object payload;
                     try {
-                        Object payload = MqEventJsonCodec.decode(msg.getBody(), matched);
+                        payload = MqEventJsonCodec.decode(msg.getBody(), matched);
+                    } catch (Exception ex) {
+                        log.warn("rocketmq consumer decode failed for tag={}: {}", tag, ex.getMessage());
+                        continue;
+                    }
+                    try {
                         handlers.get(matched).accept(payload);
                     } catch (Exception ex) {
-                        log.warn("rocketmq consumer decode failed: {}", ex.getMessage());
+                        log.warn("rocketmq handler failed for tag={}: {}", tag, ex.getMessage());
+                        return ConsumeConcurrentlyStatus.RECONSUME_LATER;
                     }
                 }
                 return ConsumeConcurrentlyStatus.CONSUME_SUCCESS;

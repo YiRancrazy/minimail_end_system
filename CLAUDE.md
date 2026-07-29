@@ -68,11 +68,95 @@ common / api 禁反向依赖任何服务；服务间 只能 走 Feign（client �
 
 ---
 
-## 3. 代码现实（2026-07-29 盘点）
+## 3. 提交信息规范
+
+仓库统一使用中文 commit 信息，规范全在 CLAUDE.md 内，**不再另立文档**。
+
+### 3.1 标题格式
+
+格式：`类型(范围): 描述`
+
+- **类型（必选，动名词）**：见表 1
+- **范围（可选）**：
+  - 业务子域用中文：订单 / 商品 / 用户 / 库存 / 支付 / 商户 / 通知 / 认证
+  - 技术子系统名保留英文：gitignore / eol / pom / jwt / api / gateway / ci
+- **描述**：≤ 50 字，一个完整动宾短语，主语隐含为本仓库
+
+**表 1 — 中文类型映射**
+
+| 中文类型 | 语义等价 | 中文类型 | 语义等价 |
+|----------|----------|----------|----------|
+| 新增     | feat     | 测试     | test     |
+| 修复     | fix      | 杂项     | chore    |
+| 重构     | refactor | 回滚     | revert   |
+| 文档     | docs     | 构建     | build    |
+| 格式     | style    | 优化     | perf     |
+| 流水线   | ci       |          |          |
+
+### 3.2 body 排版
+
+- 标题与 body 之间**空一行**
+- 一项改动可用一两句散文说明
+- ≥ 3 处实质改动时**强制**用 `- 一行改动摘要` 的 bullet 列表
+- 代码块 / 命令用 Markdown ` ``` ` 围栏
+- 段落之间空一行，body 不限总长度
+
+### 3.3 禁词库
+
+下列内容禁止出现在 commit 标题或 body 中：
+
+- **迭代标记**：`iter` / `iter-1` / `iter-7` / `Iter-6` 等任何带 `iter` 的字样
+- **源码外文档路径**：`.dev/docs/...` 字面路径，及其下任一文件名（如 `01-Java编码规范.md`）
+- **指向源码外文档的词**：`开发规范` / `编码规范` / `设计文档` / `API 文档` 等
+- **英文文档术语标记**：`§` / `¶` / `Chapter` / `Section` / `Article` / `Appendix` / `Sec.`
+- **中文章节序号**：`第 N 章` / `第一节` / `第 N 条` / `第一项` 等
+
+原因：commit 是不可变快照，反向引用外部文档会让历史快照与文档版本脱钩。
+
+### 3.4 样例
+
+**新增 + 业务域中文 scope**（含 bullet body）
+
+```
+新增(订单): 引入 OrderExpireScheduler，定时关单
+
+- 新增 30 分钟超时关单调度器
+- 复用 OrderService.cancel 的状态校验
+- 联动库存释放，自动触发 StockService.release
+```
+
+**修复 + 技术英文 scope**
+
+```
+修复(库存): reserve 在 quantity≤0 时不再抛 NPE
+```
+
+**重构 + 业务域中文 scope**
+
+```
+重构(订单): 用 EventBus 抽象替换 LocalEventBus 具体类型
+```
+
+**杂项 + 技术英文 scope**
+
+```
+杂项(gitignore): 排除本地脚本不入库
+
+将 7 个本地辅助脚本从仓库中剔除：
+- 启动 / 停止开发环境的 shell 脚本
+- 多阶段验证脚本
+- Javadoc 占位文本重写器与换行符规范化器
+
+scripts/ 目录及全部文件保留在硬盘上，仅本机使用。
+```
+
+---
+
+## 4. 代码现实（2026-07-29 盘点）
 
 **这节是为了让规则贴近代码，不是粉饰。** 读这一节能立刻知道哪些是"理想规范"、哪些是"现状就这么写"。
 
-### 3.1 分层（实际落地版）
+### 4.1 分层（实际落地版）
 
 ```
 <svc>-service/src/main/java/com/yirancrazy/minimall/<svc>/
@@ -97,7 +181,7 @@ common / api 禁反向依赖任何服务；服务间 只能 走 Feign（client �
 
 ⚠️ **CLAUDE.md 历史版本写过 `bo/` 目录**——仓库里**0 个**，新代码**不要**创建。
 
-### 3.2 ✅ 已遵守的规则（不要回退）
+### 4.2 ✅ 已遵守的规则（不要回退）
 
 | 规则 | 证据 |
 |------|------|
@@ -112,7 +196,7 @@ common / api 禁反向依赖任何服务；服务间 只能 走 Feign（client �
 | `@TableLogic` 逻辑删除 | 由 BasePO 全局开启 |
 | Controller 禁止 try-catch | 全部符合 |
 
-### 3.3 ⚠️ 实际没遵守的规则（要修）
+### 4.3 ⚠️ 实际没遵守的规则（要修）
 
 | 规则 | 实际差距 | 修法 |
 |------|----------|------|
@@ -126,9 +210,9 @@ common / api 禁反向依赖任何服务；服务间 只能 走 Feign（client �
 
 ---
 
-## 4. 硬约束（必须遵守，违反直接拒绝合入）
+## 5. 硬约束（必须遵守，违反直接拒绝合入）
 
-### 4.1 命名 & 分层
+### 5.1 命名 & 分层
 
 - **Controller**：`XxxControllerV1`（对外）/ `InternalXxxControllerV1`（服务间，`/internal/<svc>`），统一返 `Result<T>`
 - **Service**：`XxxService` 接口 + `XxxServiceImpl`（**禁止**继承 `IService` / `ServiceImpl`）
@@ -138,27 +222,27 @@ common / api 禁反向依赖任何服务；服务间 只能 走 Feign（client �
 - **实体类**：必须继承 `BasePO`（自带 `id / createTime / updateTime / isDeleted`）
 - **API 路径**：业务服务不暴露非 `V1` 的 Controller 类
 
-### 4.2 统一返回 & 异常
+### 5.2 统一返回 & 异常
 
 - 用 `Result.success(data)` / `Result.fail(code, msg)` 构造；code 遵循 `00000` 成功 / `1xxxx` 业务错误 / `2xxxx` 系统错误
 - **业务异常**：`throw new BizException(XxxCodeEnum.ALIAS)`，**禁止**在 Service 返回 error 码（`return false` / `-1` / `null` 等）
 - **Controller 禁止 try-catch**——`GlobalExceptionHandler`（在 `minimall-common`）统一抓 `BizException / BaseException / MethodArgumentNotValidException / MissingRequestHeaderException / Throwable`
 - 任何未知异常回到 `CommonCode.SYS_ERROR`（"系统繁忙"），**禁止**在 Controller 里 `try { ... } catch (Exception e) { return Result.fail(...) }`
 
-### 4.3 日志
+### 5.3 日志
 
 - 所有业务类（Service / Manager / Listener / Consumer）加 `@Slf4j`
 - 占位符：`log.info("user={}, skuId={}", userId, skuId)`，**禁止**字符串拼接
 - 异常日志：`log.error("xxx failed", e)`（带完整堆栈）
 - 敏感字段脱敏：手机号 `138****8001` / 身份证 `3201****1234`；密码、银行卡、盐、Token **禁止**落日志
 
-### 4.4 依赖方向
+### 5.4 依赖方向
 
 - `minimall-common` / `minimall-api` **禁止**反向依赖任何服务模块
 - 业务服务之间**只能**通过 `minimall-api/feign/XxxFeignClient` + `XxxFeignFallbackFactory` 通信
 - 不允许在 Service / Manager 里直接 new HttpClient / RestTemplate 调别的服务
 
-### 4.5 安全 & 配置
+### 5.5 安全 & 配置
 
 - DB 密码 / 支付密钥 / KMS 走 Nacos `application-prod.yml` 加密配置，**禁止**明文写 `application.yml`
 - 本地 dev 用 `application-dev.yml`；测试自动 `application-test.yml` + H2（无需 Docker）
@@ -166,11 +250,11 @@ common / api 禁反向依赖任何服务；服务间 只能 走 Feign（client �
 
 ---
 
-## 5. 反模式检查清单（来自真实代码）
+## 6. 反模式检查清单（来自真实代码）
 
 > 新代码合入前过一遍；命中任意一项 → 改完再提。
 
-**5.1 🚫 全局 Javadoc 模板（IDE 自动生成，仓库里 100+ 处）**
+**6.1 🚫 全局 Javadoc 模板（IDE 自动生成，仓库里 100+ 处）**
 
 ```java
 /**
@@ -183,7 +267,7 @@ common / api 禁反向依赖任何服务；服务间 只能 走 Feign（client �
 
 **禁止**写、**禁止**复制粘贴。已有类用一次性 PR 删干净。同时**改 IDE Live Template**（IntelliJ：`Settings → Editor → File and Code Templates → Class`），把头 4 行删掉。
 
-**5.2 🚫 空的 Javadoc 占位**
+**6.2 🚫 空的 Javadoc 占位**
 
 ```java
 /**
@@ -195,7 +279,7 @@ common / api 禁反向依赖任何服务；服务间 只能 走 Feign（client �
 
 **禁止**写、**禁止**复制粘贴。
 
-**5.3 🚫 Service 双重注解**
+**6.3 🚫 Service 双重注解**
 
 ```java
 @Service
@@ -205,7 +289,7 @@ public class XxxManagerImpl extends ServiceImpl<M, T> implements XxxManager { }
 
 `@Manager` 本身已 `@Service`，**只保留 `@Manager`**，否则 Spring 容器可能出现重复 Bean 警告。
 
-**5.4 🚫 String 状态字段**
+**6.4 🚫 String 状态字段**
 
 ```java
 po.setStatus("PENDING_PAY");   // ❌
@@ -214,7 +298,7 @@ po.setStatus("PENDING");       // ❌
 
 应改为 `enum`：定义 `OrderStatusEnum { PENDING_PAY, PAID, FAILED, REFUNDED }`，存 `po.setStatus(OrderStatusEnum.PENDING_PAY.name())`。
 
-**5.5 🚫 裸 PO 进出 Controller**
+**6.5 🚫 裸 PO 进出 Controller**
 
 ```java
 // Service
@@ -226,7 +310,7 @@ public Result<List<CartItemPO>> list(...) { ... }  // ❌ 直接暴露数据库�
 
 应改为 `List<CartItemVO>`，PO → VO 的映射在 `XxxServiceImpl` 里写静态工厂或 `MapStruct`。
 
-**5.6 🚫 路径参数 / `@RequestParam` 拼业务入参**
+**6.6 🚫 路径参数 / `@RequestParam` 拼业务入参**
 
 ```java
 @PostMapping
@@ -247,11 +331,11 @@ public Result<Long> create(@RequestParam("userId") Long userId,
 public Result<Long> create(@Valid @RequestBody OrderCreateDTO dto) { ... }
 ```
 
-**5.7 🚫 业务路径用 `@RequestParam` 携带身份字段**
+**6.7 🚫 业务路径用 `@RequestParam` 携带身份字段**
 
 `userId / userName / role` 取自 JWT claim，**禁止**从前端 `@RequestParam` 拼。同理所有 `InternalXxxControllerV1` 调用方必须从 `SecurityContext` / Feign Header 注入身份，**禁止** `?userId=xxx`。
 
-**5.8 🚫 Service 吞异常 / 业务失败返回布尔**
+**6.8 🚫 Service 吞异常 / 业务失败返回布尔**
 
 ```java
 if (!reserved) return false;  // ❌ 吞掉语义
@@ -259,17 +343,17 @@ if (!reserved) return false;  // ❌ 吞掉语义
 
 应：`throw new BizException(OrderCodeEnum.STOCK_RESERVE_FAIL);` —— 由 `GlobalExceptionHandler` 转 `Result.fail("11001", "库存锁定失败")`。
 
-**5.9 🚫 NotifyService 写法（仅此一处不一致）**
+**6.9 🚫 NotifyService 写法（仅此一处不一致）**
 
 `NotifyService` 是裸 class，没有接口、没有 `service/impl/` 分离。**改**成 `NotifyService` interface + `NotifyServiceImpl` impl，对齐其他服务。
 
-**5.10 🚫 `Internal*` 路径无鉴权**
+**6.10 🚫 `Internal*` 路径无鉴权**
 
 目前 `/internal/*` 直接裸暴露。Gateway 必须在 `application.yml` + 路由白名单里限定内部 IP 段，**不要**给公网开。
 
 ---
 
-## 6. 测试约定
+## 7. 测试约定
 
 | 频率 | 要求 |
 |------|------|
@@ -281,7 +365,7 @@ if (!reserved) return false;  // ❌ 吞掉语义
 
 ---
 
-## 7. 加载触发矩阵（按需就地下钻）
+## 8. 加载触发矩阵（按需就地下钻）
 
 > **规则**：表中没有的文档**视为不存在**，**不要**擅自加载。
 
@@ -317,9 +401,9 @@ if (!reserved) return false;  // ❌ 吞掉语义
 
 ---
 
-## 8. 已知待清理清单（下一波迭代）
+## 9. 已知待清理清单（下一波迭代）
 
-> 这些是 §3.3 的衍生 Action Item，按模块分桶追踪。一个 PR 一个桶。
+> 这些是 §4.3 的衍生 Action Item，按模块分桶追踪。一个 PR 一个桶。
 
 - [ ] **cart-service**：补 `dto/vo/` + 全部 Service 加 `@Slf4j` + 用 `BizException` 替换所有 `return false`
 - [ ] **order-service / pay-service / stock-service**：`status` 字段 enum 化 + Controller 入参改 DTO
@@ -332,7 +416,7 @@ if (!reserved) return false;  // ❌ 吞掉语义
 
 ---
 
-## 9. 协作约定
+## 10. 协作约定
 
 - **功能设计 / 创意发散** → 走 `brainstorming` skill
 - **设计落地 / 跨文件决策 / 本文件改动** → 走 `grilling` skill
@@ -340,4 +424,4 @@ if (!reserved) return false;  // ❌ 吞掉语义
 - 跨模块改动 / 根因不明的 bug：先看目录结构 + 调一遍调用链，再动手；别只盯单个文件
 - 方案设计类任务（新功能、重构）：先理清模块边界再写
 - 报告完成 / 跑测 / 构建 / 提交前，**主动**通过 `rtk git status` 与 `rtk git diff` 复核变更
-- 提交信息遵循 `.dev/docs/3. 开发阶段/06-Git 提交规范.md`（Conventional Commits + scope）
+- 提交信息遵循本文档 §3 《提交信息规范》（**优先于**仓库内任何外部研发资料）

@@ -19,6 +19,3 @@ HELP.md
 
 # Maven flatten plugin 中间产物（运行时生成，不入库）
 .flattened-pom.xml
-
-# DOCS
-docs/

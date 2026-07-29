@@ -4,6 +4,7 @@ import com.yirancrazy.minimall.api.dto.notify.NotifyEventDTO;
 import com.yirancrazy.minimall.api.dto.order.OrderPaidDTO;
 import com.yirancrazy.minimall.api.dto.pay.PayCreateDTO;
 import com.yirancrazy.minimall.api.dto.stock.StockReserveDTO;
+import com.yirancrazy.minimall.api.feign.NotifyFeignClient;
 import com.yirancrazy.minimall.api.feign.PayFeignClient;
 import com.yirancrazy.minimall.api.feign.StockFeignClient;
 import com.yirancrazy.minimall.common.event.LocalEventBus;
@@ -32,6 +33,7 @@ public class OrderServiceImplTest {
     private OrderManager manager;
     private StockFeignClient stockFeign;
     private PayFeignClient payFeign;
+    private NotifyFeignClient notifyFeign;
     private LocalEventBus eventBus;
     private OrderServiceImpl service;
 
@@ -40,8 +42,10 @@ public class OrderServiceImplTest {
         manager = mock(OrderManager.class);
         stockFeign = mock(StockFeignClient.class);
         payFeign = mock(PayFeignClient.class);
+        notifyFeign = mock(NotifyFeignClient.class);
         eventBus = mock(LocalEventBus.class);
         lenient().when(manager.updateById(any(OrderPO.class))).thenReturn(true);
+        lenient().when(notifyFeign.push(any(NotifyEventDTO.class))).thenReturn(true);
         doAnswer(inv -> {
             OrderPO p = inv.getArgument(0);
             if (p.getId() == null) {
@@ -49,7 +53,7 @@ public class OrderServiceImplTest {
             }
             return true;
         }).when(manager).save(any(OrderPO.class));
-        service = new OrderServiceImpl(manager, stockFeign, payFeign, eventBus);
+        service = new OrderServiceImpl(manager, stockFeign, payFeign, notifyFeign, eventBus);
     }
 
     @Test
@@ -85,15 +89,14 @@ public class OrderServiceImplTest {
         existing.setStatus("PENDING_PAY");
         when(manager.getById(99L)).thenReturn(existing);
         when(payFeign.callback(7777L)).thenReturn(true);
+        when(notifyFeign.push(any(NotifyEventDTO.class))).thenReturn(true);
 
         boolean ok = service.pay(99L);
         assertEquals(true, ok);
         assertEquals("PAID", existing.getStatus());
 
-        ArgumentCaptor<Object> cap = ArgumentCaptor.forClass(Object.class);
-        verify(eventBus, times(1)).publish(cap.capture());
-        assertNotNull(cap.getValue());
-        assertEquals(99L, ((OrderPaidDTO) cap.getValue()).getOrderId());
+        verify(notifyFeign, times(1)).push(any(NotifyEventDTO.class));
+        verify(eventBus, times(1)).publish(any(OrderPaidDTO.class));
         Mockito.verify(payFeign).callback(7777L);
     }
 

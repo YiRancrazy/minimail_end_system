@@ -22,3 +22,10 @@ spring:
   mvc:
     pathmatch:
       matching-strategy: ant_path_matcher
+minimall:
+  eventbus:
+    rocketmq:
+      enabled: false
+      namesrv-addr: 127.0.0.1:9876
+      topic: minimall-events
+      group: minimall-notify

@@ -30,6 +30,7 @@ minimall-cart-service   :8205 购物车
 |------|------|
 | Iter-0 | `./scripts/verify-iter0.sh` |
 | Iter-1 | `./scripts/verify-iter1.sh` |
+| Iter-6 | `./scripts/verify-iter6.sh`（事件总线冒烟） |
 
 末尾输出 `PASS`。失败时容器/进程保留供排查（`docker ps` / `tail /tmp/auth.log`）。
 

@@ -1,5 +1,7 @@
 package com.yirancrazy.minimall.merchant.service;
 
+import com.yirancrazy.minimall.merchant.dto.ShopCreateDTO;
+import com.yirancrazy.minimall.merchant.dto.ShopUpdateDTO;
 import com.yirancrazy.minimall.merchant.entity.ShopPO;
 
 /**
@@ -11,9 +13,9 @@ import com.yirancrazy.minimall.merchant.entity.ShopPO;
 public interface ShopService {
     ShopPO getById(Long id);
 
-    Long create(ShopPO shop);
+    Long create(ShopCreateDTO dto);
 
-    boolean update(Long id, ShopPO shop);
+    boolean update(Long id, ShopUpdateDTO dto);
 
     boolean delete(Long id);
 }

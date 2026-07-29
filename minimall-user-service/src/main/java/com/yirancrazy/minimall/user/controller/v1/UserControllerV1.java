@@ -1,8 +1,11 @@
 package com.yirancrazy.minimall.user.controller.v1;
 
 import com.yirancrazy.minimall.common.result.Result;
+import com.yirancrazy.minimall.user.dto.UserCreateDTO;
+import com.yirancrazy.minimall.user.dto.UserUpdateDTO;
 import com.yirancrazy.minimall.user.entity.UserPO;
 import com.yirancrazy.minimall.user.service.UserService;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -40,20 +43,20 @@ public class UserControllerV1 {
     }
 
     @PostMapping
-    public Result<Long> create(@RequestBody UserPO user) {
-        return Result.success(userService.create(user));
+    public Result<Long> create(@Valid @RequestBody UserCreateDTO dto) {
+        return Result.success(userService.create(dto));
     }
 
     /**
      * 按指定用户 ID 更新用户信息并返回更新是否成功。
      *
      * @param id 用户唯一标识
-     * @param user 待更新的用户信息
+     * @param dto 待更新的用户信息
      * @return 更新是否成功
      */
     @PutMapping("/{id}")
-    public Result<Boolean> update(@PathVariable("id") Long id, @RequestBody UserPO user) {
-        return Result.success(userService.update(id, user));
+    public Result<Boolean> update(@PathVariable("id") Long id, @Valid @RequestBody UserUpdateDTO dto) {
+        return Result.success(userService.update(id, dto));
     }
 
     @DeleteMapping("/{id}")

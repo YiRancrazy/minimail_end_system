@@ -1,6 +1,8 @@
 package com.yirancrazy.minimall.cart.service.impl;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.yirancrazy.minimall.cart.dto.CartItemAddDTO;
+import com.yirancrazy.minimall.cart.dto.CartItemListDTO;
 import com.yirancrazy.minimall.cart.entity.CartItemPO;
 import com.yirancrazy.minimall.cart.manager.CartItemManager;
 import com.yirancrazy.minimall.cart.service.CartService;
@@ -26,26 +28,28 @@ public class CartServiceImpl implements CartService {
     /**
      * 根据用户 ID 查询其购物车全部条目。
      *
-     * @param userId 用户 ID
+     * @param dto 查询条件
      * @return 该用户购物车条目列表
      */
     @Override
-    public List<CartItemPO> listByUser(Long userId) {
+    public List<CartItemPO> listByUser(CartItemListDTO dto) {
         return cartItemManager.list(Wrappers.lambdaQuery(CartItemPO.class)
-            .eq(CartItemPO::getUserId, userId));
+            .eq(CartItemPO::getUserId, dto.getUserId()));
     }
 
     /**
      * 新增一条购物车条目，若未设置选中状态则默认为选中。
      *
-     * @param item 购物车条目实体
+     * @param dto 购物车条目信息
      * @return 新增条目的主键 ID
      */
     @Override
-    public Long add(CartItemPO item) {
-        if (item.getSelected() == null) {
-            item.setSelected(1);
-        }
+    public Long add(CartItemAddDTO dto) {
+        CartItemPO item = new CartItemPO();
+        item.setUserId(dto.getUserId());
+        item.setSkuId(dto.getSkuId());
+        item.setQuantity(dto.getQuantity());
+        item.setSelected(dto.getSelected() != null ? dto.getSelected() : 1);
         cartItemManager.save(item);
         return item.getId();
     }

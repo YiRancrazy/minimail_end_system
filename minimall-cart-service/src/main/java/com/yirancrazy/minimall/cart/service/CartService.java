@@ -1,5 +1,7 @@
 package com.yirancrazy.minimall.cart.service;
 
+import com.yirancrazy.minimall.cart.dto.CartItemAddDTO;
+import com.yirancrazy.minimall.cart.dto.CartItemListDTO;
 import com.yirancrazy.minimall.cart.entity.CartItemPO;
 
 import java.util.List;
@@ -11,9 +13,9 @@ import java.util.List;
  * @DateTime: 2026/7/29
  */
 public interface CartService {
-    List<CartItemPO> listByUser(Long userId);
+    List<CartItemPO> listByUser(CartItemListDTO dto);
 
-    Long add(CartItemPO item);
+    Long add(CartItemAddDTO dto);
 
     boolean delete(Long id);
 

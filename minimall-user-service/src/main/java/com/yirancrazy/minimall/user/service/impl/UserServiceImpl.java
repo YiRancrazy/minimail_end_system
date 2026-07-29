@@ -3,6 +3,8 @@ package com.yirancrazy.minimall.user.service.impl;
 import com.yirancrazy.minimall.user.constant.UserCodeEnum;
 
 import com.yirancrazy.minimall.common.exception.BizException;
+import com.yirancrazy.minimall.user.dto.UserCreateDTO;
+import com.yirancrazy.minimall.user.dto.UserUpdateDTO;
 import com.yirancrazy.minimall.user.entity.UserPO;
 import com.yirancrazy.minimall.user.manager.UserManager;
 import com.yirancrazy.minimall.user.service.UserService;
@@ -41,11 +43,16 @@ public class UserServiceImpl implements UserService {
     /**
      * 保存新用户信息并返回持久化后生成的用户 ID。
      *
-     * @param user 待创建的用户信息
+     * @param dto 待创建的用户信息
      * @return 新创建用户的唯一标识
      */
     @Override
-    public Long create(UserPO user) {
+    public Long create(UserCreateDTO dto) {
+        UserPO user = new UserPO();
+        user.setUsername(dto.getUsername());
+        user.setNickname(dto.getNickname());
+        user.setPhone(dto.getPhone());
+        user.setEmail(dto.getEmail());
         userManager.save(user);
         return user.getId();
     }
@@ -54,12 +61,17 @@ public class UserServiceImpl implements UserService {
      * 将指定用户 ID 写入待更新实体并执行用户信息更新。
      *
      * @param id 用户唯一标识
-     * @param user 待更新的用户信息
+     * @param dto 待更新的用户信息
      * @return 更新是否成功
      */
     @Override
-    public boolean update(Long id, UserPO user) {
+    public boolean update(Long id, UserUpdateDTO dto) {
+        UserPO user = new UserPO();
         user.setId(id);
+        user.setUsername(dto.getUsername());
+        user.setNickname(dto.getNickname());
+        user.setPhone(dto.getPhone());
+        user.setEmail(dto.getEmail());
         return userManager.updateById(user);
     }
 

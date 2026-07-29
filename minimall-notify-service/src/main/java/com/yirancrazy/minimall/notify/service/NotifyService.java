@@ -1,6 +1,7 @@
 package com.yirancrazy.minimall.notify.service;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.yirancrazy.minimall.notify.dto.NotifyListDTO;
 import com.yirancrazy.minimall.notify.entity.NotifyMessagePO;
 import com.yirancrazy.minimall.notify.manager.NotifyManager;
 import org.springframework.stereotype.Service;
@@ -43,11 +44,11 @@ public class NotifyService {
     /**
      * 查询指定用户全部通知消息，按持久化顺序返回列表。
      *
-     * @param userId 目标用户主键
+     * @param dto 查询条件
      * @return 通知消息列表
      */
-    public List<NotifyMessagePO> listByUser(Long userId) {
+    public List<NotifyMessagePO> listByUser(NotifyListDTO dto) {
         return notifyManager.list(Wrappers.lambdaQuery(NotifyMessagePO.class)
-            .eq(NotifyMessagePO::getUserId, userId));
+            .eq(NotifyMessagePO::getUserId, dto.getUserId()));
     }
 }

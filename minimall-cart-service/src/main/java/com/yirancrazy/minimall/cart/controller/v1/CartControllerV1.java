@@ -1,15 +1,17 @@
 package com.yirancrazy.minimall.cart.controller.v1;
 
+import com.yirancrazy.minimall.cart.dto.CartItemAddDTO;
+import com.yirancrazy.minimall.cart.dto.CartItemListDTO;
 import com.yirancrazy.minimall.cart.entity.CartItemPO;
 import com.yirancrazy.minimall.cart.service.CartService;
 import com.yirancrazy.minimall.common.result.Result;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -33,17 +35,17 @@ public class CartControllerV1 {
     /**
      * 按用户 ID 查询其购物车全部条目。
      *
-     * @param userId 用户 ID
+     * @param dto 查询条件
      * @return 该用户购物车条目列表
      */
     @GetMapping
-    public Result<List<CartItemPO>> list(@RequestParam("userId") Long userId) {
-        return Result.success(cartService.listByUser(userId));
+    public Result<List<CartItemPO>> list(@Valid CartItemListDTO dto) {
+        return Result.success(cartService.listByUser(dto));
     }
 
     @PostMapping
-    public Result<Long> add(@RequestBody CartItemPO item) {
-        return Result.success(cartService.add(item));
+    public Result<Long> add(@Valid @RequestBody CartItemAddDTO dto) {
+        return Result.success(cartService.add(dto));
     }
 
     /**

@@ -1,6 +1,6 @@
 package com.yirancrazy.minimall.cart.controller.v1;
 
-import com.yirancrazy.minimall.cart.entity.CartItemPO;
+import com.yirancrazy.minimall.cart.dto.CartItemAddDTO;
 import com.yirancrazy.minimall.cart.service.CartService;
 import com.yirancrazy.minimall.common.result.Result;
 import org.junit.jupiter.api.Test;
@@ -29,11 +29,11 @@ class CartControllerV1Test {
 
     @Test
     void add_then_list() {
-        CartItemPO item = new CartItemPO();
-        item.setUserId(1L);
-        item.setSkuId(100L);
-        item.setQuantity(2);
-        Long id = cartService.add(item);
+        CartItemAddDTO dto = new CartItemAddDTO();
+        dto.setUserId(1L);
+        dto.setSkuId(100L);
+        dto.setQuantity(2);
+        Long id = cartService.add(dto);
 
         ResponseEntity<Result> r = rest.getForEntity(
             "http://localhost:" + port + "/api/v1/cart?userId=1", Result.class);

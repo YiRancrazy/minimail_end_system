@@ -4,6 +4,7 @@ import com.yirancrazy.minimall.api.dto.notify.NotifyEventDTO;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.notify.service.NotifyService;
 import com.yirancrazy.minimall.notify.sse.SseHub;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -34,7 +35,7 @@ public class InternalNotifyControllerV1 {
      * @return 持久化结果是否成功的 Result 包装
      */
     @PostMapping("/push")
-    public Result<Boolean> push(@RequestBody NotifyEventDTO dto) {
+    public Result<Boolean> push(@Valid @RequestBody NotifyEventDTO dto) {
         boolean saved = notifyService.push(dto.getUserId(), dto.getTitle(), dto.getContent());
         sseHub.send(dto.getUserId(), dto.getTitle() + ": " + dto.getContent());
         return Result.success(saved);

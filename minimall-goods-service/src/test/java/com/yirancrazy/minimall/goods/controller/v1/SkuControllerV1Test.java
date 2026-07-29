@@ -1,7 +1,7 @@
 package com.yirancrazy.minimall.goods.controller.v1;
 
 import com.yirancrazy.minimall.common.result.Result;
-import com.yirancrazy.minimall.goods.entity.SkuPO;
+import com.yirancrazy.minimall.goods.dto.SkuCreateDTO;
 import com.yirancrazy.minimall.goods.service.SkuService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,12 +31,12 @@ class SkuControllerV1Test {
 
     @Test
     void create_then_get() {
-        SkuPO s = new SkuPO();
-        s.setSpuId(1L);
-        s.setSkuName("TestSKU");
-        s.setPrice(new BigDecimal("99.90"));
-        s.setStock(100);
-        Long id = skuService.create(s);
+        SkuCreateDTO dto = new SkuCreateDTO();
+        dto.setSpuId(1L);
+        dto.setSkuName("TestSKU");
+        dto.setPrice(new BigDecimal("99.90"));
+        dto.setStock(100);
+        Long id = skuService.create(dto);
 
         ResponseEntity<Result> r = rest.getForEntity(
             "http://localhost:" + port + "/api/v1/goods/sku/" + id, Result.class);

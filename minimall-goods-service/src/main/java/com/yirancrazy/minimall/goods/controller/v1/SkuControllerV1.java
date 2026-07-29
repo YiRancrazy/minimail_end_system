@@ -1,8 +1,10 @@
 package com.yirancrazy.minimall.goods.controller.v1;
 
 import com.yirancrazy.minimall.common.result.Result;
+import com.yirancrazy.minimall.goods.dto.SkuCreateDTO;
 import com.yirancrazy.minimall.goods.entity.SkuPO;
 import com.yirancrazy.minimall.goods.service.SkuService;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -38,7 +40,7 @@ public class SkuControllerV1 {
     }
 
     @PostMapping
-    public Result<Long> create(@RequestBody SkuPO sku) {
-        return Result.success(skuService.create(sku));
+    public Result<Long> create(@Valid @RequestBody SkuCreateDTO dto) {
+        return Result.success(skuService.create(dto));
     }
 }

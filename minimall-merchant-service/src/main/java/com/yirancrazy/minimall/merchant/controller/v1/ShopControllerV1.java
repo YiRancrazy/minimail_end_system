@@ -1,8 +1,11 @@
 package com.yirancrazy.minimall.merchant.controller.v1;
 
 import com.yirancrazy.minimall.common.result.Result;
+import com.yirancrazy.minimall.merchant.dto.ShopCreateDTO;
+import com.yirancrazy.minimall.merchant.dto.ShopUpdateDTO;
 import com.yirancrazy.minimall.merchant.entity.ShopPO;
 import com.yirancrazy.minimall.merchant.service.ShopService;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -40,20 +43,20 @@ public class ShopControllerV1 {
     }
 
     @PostMapping
-    public Result<Long> create(@RequestBody ShopPO shop) {
-        return Result.success(shopService.create(shop));
+    public Result<Long> create(@Valid @RequestBody ShopCreateDTO dto) {
+        return Result.success(shopService.create(dto));
     }
 
     /**
      * 根据主键 ID 更新店铺信息。
      *
      * @param id 店铺主键 ID
-     * @param shop 待更新的店铺实体
+     * @param dto 待更新的店铺信息
      * @return 是否更新成功
      */
     @PutMapping("/{id}")
-    public Result<Boolean> update(@PathVariable("id") Long id, @RequestBody ShopPO shop) {
-        return Result.success(shopService.update(id, shop));
+    public Result<Boolean> update(@PathVariable("id") Long id, @Valid @RequestBody ShopUpdateDTO dto) {
+        return Result.success(shopService.update(id, dto));
     }
 
     @DeleteMapping("/{id}")

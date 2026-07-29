@@ -1,7 +1,7 @@
 package com.yirancrazy.minimall.merchant.controller.v1;
 
 import com.yirancrazy.minimall.common.result.Result;
-import com.yirancrazy.minimall.merchant.entity.ShopPO;
+import com.yirancrazy.minimall.merchant.dto.ShopCreateDTO;
 import com.yirancrazy.minimall.merchant.service.ShopService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,11 +29,11 @@ class ShopControllerV1Test {
 
     @Test
     void create_then_get() {
-        ShopPO s = new ShopPO();
-        s.setShopName("MyShop");
-        s.setLicenseNo("L123");
-        s.setStatus("ACTIVE");
-        Long id = shopService.create(s);
+        ShopCreateDTO dto = new ShopCreateDTO();
+        dto.setShopName("MyShop");
+        dto.setLicenseNo("L123456789012345");
+        dto.setStatus("ACTIVE");
+        Long id = shopService.create(dto);
 
         ResponseEntity<Result> r = rest.getForEntity(
             "http://localhost:" + port + "/api/v1/merchant/shop/" + id, Result.class);

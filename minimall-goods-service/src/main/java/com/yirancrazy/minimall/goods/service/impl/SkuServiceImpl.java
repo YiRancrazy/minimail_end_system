@@ -3,6 +3,7 @@ package com.yirancrazy.minimall.goods.service.impl;
 import com.yirancrazy.minimall.goods.constant.SkuCodeEnum;
 
 import com.yirancrazy.minimall.common.exception.BizException;
+import com.yirancrazy.minimall.goods.dto.SkuCreateDTO;
 import com.yirancrazy.minimall.goods.entity.SkuPO;
 import com.yirancrazy.minimall.goods.manager.SkuManager;
 import com.yirancrazy.minimall.goods.service.SkuService;
@@ -43,17 +44,16 @@ public class SkuServiceImpl implements SkuService {
     /**
      * 创建 SKU 记录，并对价格、库存等字段做缺省值兜底后落库。
      *
-     * @param sku 待保存的 SKU 实体
+     * @param dto 待保存的 SKU 信息
      * @return 新建 SKU 的主键 ID
      */
     @Override
-    public Long create(SkuPO sku) {
-        if (sku.getPrice() == null) {
-            sku.setPrice(BigDecimal.ZERO);
-        }
-        if (sku.getStock() == null) {
-            sku.setStock(0);
-        }
+    public Long create(SkuCreateDTO dto) {
+        SkuPO sku = new SkuPO();
+        sku.setSpuId(dto.getSpuId());
+        sku.setSkuName(dto.getSkuName());
+        sku.setPrice(dto.getPrice() != null ? dto.getPrice() : BigDecimal.ZERO);
+        sku.setStock(dto.getStock() != null ? dto.getStock() : 0);
         skuManager.save(sku);
         return sku.getId();
     }

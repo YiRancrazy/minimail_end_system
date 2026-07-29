@@ -1,14 +1,12 @@
 package com.yirancrazy.minimall.common.event;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
@@ -17,21 +15,30 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * @Version: 1.0
  * @DateTime: 2026/7/29
  */
-public class LocalEventBusTest {
+public class LocalEventBusTest
+{
 
-    public static class SampleEvent {
+    public static class SampleEvent
+    {
         private final String payload;
-        public SampleEvent(String p) { this.payload = p; }
+        public SampleEvent(String p)
+        {
+            this.payload = p;
+        }
         /**
          * 获取测试事件携带的字符串载荷。
          *
          * @return 构造时传入的载荷内容
          */
-        public String getPayload() { return payload; }
+        public String getPayload()
+        {
+            return payload;
+        }
     }
 
     @Component
-    public static class Recorder {
+    public static class Recorder
+    {
         public final List<String> received = new ArrayList<>();
         public final AtomicInteger calls = new AtomicInteger();
         /**
@@ -40,7 +47,8 @@ public class LocalEventBusTest {
          * @param e 由事件总线发布的测试事件
          */
         @EventListener
-        public void onSample(SampleEvent e) {
+        public void onSample(SampleEvent e)
+        {
             received.add(e.getPayload());
             calls.incrementAndGet();
         }
@@ -50,7 +58,8 @@ public class LocalEventBusTest {
      * 验证事件总线发布事件后，监听方法被按序调用且接收到正确载荷。
      */
     @Test
-    public void publish_invokes_event_listener() {
+    public void publish_invokes_event_listener()
+    {
         AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
         ctx.register(LocalEventBus.class, Recorder.class);
         ctx.refresh();

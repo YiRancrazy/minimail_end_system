@@ -1,14 +1,13 @@
 package com.yirancrazy.minimall.common.base;
 
+import java.io.Serializable;
+import java.time.LocalDateTime;
 import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import lombok.Data;
-
-import java.io.Serializable;
-import java.time.LocalDateTime;
 
 /**
  * @Author: yirancrazy@gmail.com
@@ -17,7 +16,8 @@ import java.time.LocalDateTime;
  * @DateTime: 2026/7/29
  */
 @Data
-public abstract class BasePO implements Serializable {
+public abstract class BasePO implements Serializable
+{
     @TableId(type = IdType.ASSIGN_ID)
     private Long id;
 

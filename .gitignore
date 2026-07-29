@@ -22,3 +22,6 @@ HELP.md
 
 # 本地脚本（不进库，脚本本机跑就行）
 scripts/
+
+# docs
+docs/

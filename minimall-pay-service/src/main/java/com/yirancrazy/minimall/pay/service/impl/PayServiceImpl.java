@@ -4,19 +4,13 @@ import com.yirancrazy.minimall.pay.constant.PayCodeEnum;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.yirancrazy.minimall.common.exception.BizException;
-import com.yirancrazy.minimall.pay.entity.PayRecordPO;
+import com.yirancrazy.minimall.pay.entity.PayTransactionPO;
 import com.yirancrazy.minimall.pay.manager.PayManager;
 import com.yirancrazy.minimall.pay.service.PayService;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 
-/**
- * @Author: yirancrazy@gmail.com
- * @Description: 支付领域服务实现，负责创建支付单并将其状态置为待支付，以及处理支付回调推进支付单状态。
- * @Version: 1.0
- * @DateTime: 2026/7/29
- */
 @Service
 public class PayServiceImpl implements PayService {
 
@@ -35,10 +29,10 @@ public class PayServiceImpl implements PayService {
      */
     @Override
     public Long create(Long orderId, BigDecimal amount) {
-        PayRecordPO p = new PayRecordPO();
-        p.setOrderId(orderId);
+        PayTransactionPO p = new PayTransactionPO();
+        p.setOrderNo(String.valueOf(orderId));
         p.setAmount(amount == null ? BigDecimal.ZERO : amount);
-        p.setStatus("PENDING");
+        p.setStatus(10);
         payManager.save(p);
         return p.getId();
     }
@@ -52,12 +46,12 @@ public class PayServiceImpl implements PayService {
      */
     @Override
     public boolean callback(Long payId, boolean ok) {
-        PayRecordPO p = payManager.getOne(
-            Wrappers.lambdaQuery(PayRecordPO.class).eq(PayRecordPO::getId, payId));
+        PayTransactionPO p = payManager.getOne(
+            Wrappers.lambdaQuery(PayTransactionPO.class).eq(PayTransactionPO::getId, payId));
         if (p == null) {
             throw new BizException(PayCodeEnum.PAY_NOT_FOUND);
         }
-        p.setStatus(ok ? "PAID" : "FAILED");
+        p.setStatus(ok ? 20 : 30);
         return payManager.updateById(p);
     }
 }

@@ -1,5 +1,6 @@
 package com.yirancrazy.minimall.auth.controller.v1;
 
+import com.yirancrazy.minimall.api.dto.auth.RefreshTokenDTO;
 import com.yirancrazy.minimall.api.dto.auth.TokenVO;
 import com.yirancrazy.minimall.auth.dto.LoginDTO;
 import com.yirancrazy.minimall.auth.dto.RegisterDTO;
@@ -14,12 +15,6 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * @Author: yirancrazy@gmail.com
- * @Description: 认证 V1 接口控制器，提供注册 / 登录 / 注销 / 当前用户查询接口，统一 Result<T> 响应。
- * @Version: 1.0
- * @DateTime: 2026/7/29
- */
 @RestController
 @RequestMapping("/api/v1/auth")
 public class AuthControllerV1 {
@@ -30,12 +25,6 @@ public class AuthControllerV1 {
         this.authService = authService;
     }
 
-    /**
-     * 处理用户注册请求，校验用户名不重复后创建账号并签发访问令牌。
-     *
-     * @param dto 注册入参，包含 username 与 password
-     * @return 注册成功后的访问令牌视图
-     */
     @PostMapping("/register")
     public Result<TokenVO> register(@Valid @RequestBody RegisterDTO dto) {
         return Result.success(authService.register(dto));
@@ -46,11 +35,15 @@ public class AuthControllerV1 {
         return Result.success(authService.login(dto));
     }
 
-    /**
-     * 处理用户注销请求，当前为无状态 JWT 模式下的占位实现。
-     */
+    @PostMapping("/refresh-token")
+    public Result<TokenVO> refreshToken(@Valid @RequestBody RefreshTokenDTO dto) {
+        return Result.success(authService.refreshToken(dto.getRefreshToken()));
+    }
+
     @PostMapping("/logout")
-    public Result<Void> logout() {
+    public Result<Void> logout(@RequestHeader("X-User-Id") Long userId,
+                               @RequestHeader("X-User-Jti") String jti) {
+        authService.signOut(userId, jti);
         return Result.success();
     }
 

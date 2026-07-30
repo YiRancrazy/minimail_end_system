@@ -5,7 +5,9 @@ import com.alipay.api.AlipayClient;
 import com.alipay.api.internal.util.AlipaySignature;
 import com.alipay.api.request.AlipayTradePagePayRequest;
 import com.alipay.api.request.AlipayTradeQueryRequest;
+import com.alipay.api.request.AlipayTradeRefundRequest;
 import com.alipay.api.response.AlipayTradeQueryResponse;
+import com.alipay.api.response.AlipayTradeRefundResponse;
 import com.yirancrazy.minimall.pay.config.AlipayConfig;
 import com.yirancrazy.minimall.pay.gateway.AlipayGateway;
 import lombok.extern.slf4j.Slf4j;
@@ -70,6 +72,24 @@ public class AlipayGatewayImpl implements AlipayGateway {
         } catch (AlipayApiException e) {
             log.error("query payment failed, paymentNo={}", paymentNo, e);
             return null;
+        }
+    }
+
+    @Override
+    public String refund(String paymentNo, String refundNo, BigDecimal amount, String reason) {
+        AlipayTradeRefundRequest request = new AlipayTradeRefundRequest();
+        request.setBizContent(String.format(
+            "{\"out_trade_no\":\"%s\",\"refund_amount\":\"%s\",\"refund_reason\":\"%s\",\"out_request_no\":\"%s\"}",
+            paymentNo, amount.toPlainString(), reason, refundNo));
+        try {
+            AlipayTradeRefundResponse response = alipayClient.execute(request);
+            if (response.isSuccess()) {
+                return response.getTradeNo();
+            }
+            throw new RuntimeException("Alipay refund failed: " + response.getSubMsg());
+        } catch (AlipayApiException e) {
+            log.error("refund failed, paymentNo={}, refundNo={}", paymentNo, refundNo, e);
+            throw new RuntimeException("Alipay refund failed", e);
         }
     }
 }

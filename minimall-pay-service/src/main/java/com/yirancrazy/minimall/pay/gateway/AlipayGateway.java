@@ -19,4 +19,9 @@ public interface AlipayGateway {
      * Query payment status from Alipay
      */
     String queryPayment(String paymentNo);
+
+    /**
+     * Refund payment
+     */
+    String refund(String paymentNo, String refundNo, BigDecimal amount, String reason);
 }

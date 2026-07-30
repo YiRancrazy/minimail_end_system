@@ -22,3 +22,11 @@ spring:
   mvc:
     pathmatch:
       matching-strategy: ant_path_matcher
+minimall:
+  alipay:
+    app-id: ${ALIPAY_APP_ID:}
+    private-key: ${ALIPAY_PRIVATE_KEY:}
+    alipay-public-key: ${ALIPAY_PUBLIC_KEY:}
+    gateway-url: https://openapi.alipay.com/gateway.do
+    notify-url: ${ALIPAY_NOTIFY_URL:https://mall.example.com/api/v1/pay/callback/alipay}
+    return-url: ${ALIPAY_RETURN_URL:https://mall.example.com/pay/result}

@@ -33,7 +33,7 @@ public class AuthServiceImpl implements AuthService {
 
     public AuthServiceImpl(UserAuthManager userAuthManager,
                            JwtUtil jwtUtil,
-                           @Value("${minimall.jwt.ttl-seconds:86400}") long ttlSeconds) {
+                           @Value("${minimall.jwt.ttl-seconds:900}") long ttlSeconds) {
         this.userAuthManager = userAuthManager;
         this.jwtUtil = jwtUtil;
         this.ttlSeconds = ttlSeconds;
@@ -61,7 +61,8 @@ public class AuthServiceImpl implements AuthService {
         po.setRole("USER");
         po.setStatus(1);
         userAuthManager.save(po);
-        String accessToken = jwtUtil.sign(po.getId(), po.getUsername(), po.getRole());
+        String jti = jwtUtil.generateRefreshToken();
+        String accessToken = jwtUtil.sign(po.getId(), po.getUsername(), po.getRole(), jti);
         return new TokenVO(accessToken, null, "Bearer", ttlSeconds);
     }
 
@@ -81,7 +82,8 @@ public class AuthServiceImpl implements AuthService {
         if (!BCrypt.checkpw(dto.getPassword() + po.getSalt(), po.getPasswordHash())) {
             throw new BizException(AuthCodeEnum.PWD_INVALID);
         }
-        String accessToken = jwtUtil.sign(po.getId(), po.getUsername(), po.getRole());
+        String jti = jwtUtil.generateRefreshToken();
+        String accessToken = jwtUtil.sign(po.getId(), po.getUsername(), po.getRole(), jti);
         return new TokenVO(accessToken, null, "Bearer", ttlSeconds);
     }
 

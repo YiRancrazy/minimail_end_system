@@ -1,5 +1,9 @@
 package com.yirancrazy.minimall.notify.sse;
 
+import java.io.IOException;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArraySet;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -7,11 +11,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
-
-import java.io.IOException;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArraySet;
 
 /**
  * Iter-2 push 模型：每用户最多 1 条 SseEmitter 长连接。新连接覆盖旧连接。
@@ -34,11 +33,16 @@ public class SseHub {
         SseEmitter emitter = new SseEmitter(0L);
         emitters.computeIfAbsent(userId, k -> new CopyOnWriteArraySet<>()).add(emitter);
         emitter.onCompletion(() -> remove(userId, emitter));
-        emitter.onTimeout(() -> { emitter.complete(); remove(userId, emitter); });
+        emitter.onTimeout(() -> {
+            emitter.complete();
+            remove(userId, emitter);
+        });
         emitter.onError(t -> remove(userId, emitter));
         try {
             emitter.send(SseEmitter.event().name("ready").data("connected"));
-        } catch (IOException ignored) {}
+        }
+        catch (IOException ignored) {
+        }
         return emitter;
     }
 
@@ -50,11 +54,14 @@ public class SseHub {
      */
     public void send(Long userId, String payload) {
         Set<SseEmitter> set = emitters.get(userId);
-        if (set == null) return;
+        if (set == null) {
+            return;
+        }
         for (SseEmitter e : set) {
             try {
                 e.send(SseEmitter.event().name("notify").data(payload));
-            } catch (IOException ex) {
+            }
+            catch (IOException ex) {
                 remove(userId, e);
             }
         }

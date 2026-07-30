@@ -1,19 +1,10 @@
 package com.yirancrazy.minimall.notify.listener;
 
-import com.baomidou.mybatisplus.core.conditions.Wrapper;
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.yirancrazy.minimall.api.dto.order.OrderPaidDTO;
-import com.yirancrazy.minimall.notify.entity.NotifyMessagePO;
-import com.yirancrazy.minimall.notify.manager.NotifyManager;
-import com.yirancrazy.minimall.notify.sse.SseHub;
-import com.yirancrazy.minimall.notify.service.NotifyService;
+import java.math.BigDecimal;
+import java.util.Collections;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-
-import java.math.BigDecimal;
-import java.util.Collections;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
@@ -24,6 +15,13 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import com.baomidou.mybatisplus.core.conditions.Wrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.yirancrazy.minimall.api.dto.order.OrderPaidDTO;
+import com.yirancrazy.minimall.notify.entity.NotifyMessagePO;
+import com.yirancrazy.minimall.notify.manager.NotifyManager;
+import com.yirancrazy.minimall.notify.service.NotifyService;
+import com.yirancrazy.minimall.notify.sse.SseHub;
 
 /**
 * OrderPaidListener 单元测试，验证事件触发后消息持久化与 SSE 推送的协作逻辑。

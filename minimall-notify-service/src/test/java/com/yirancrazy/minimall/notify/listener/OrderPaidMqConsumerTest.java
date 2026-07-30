@@ -1,16 +1,14 @@
 package com.yirancrazy.minimall.notify.listener;
 
-import com.yirancrazy.minimall.api.dto.order.OrderPaidDTO;
-import com.yirancrazy.minimall.notify.service.NotifyService;
-import com.yirancrazy.minimall.notify.sse.SseHub;
+import java.math.BigDecimal;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import java.math.BigDecimal;
-
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import com.yirancrazy.minimall.api.dto.order.OrderPaidDTO;
+import com.yirancrazy.minimall.notify.service.NotifyService;
+import com.yirancrazy.minimall.notify.sse.SseHub;
 
 class OrderPaidMqConsumerTest {
 

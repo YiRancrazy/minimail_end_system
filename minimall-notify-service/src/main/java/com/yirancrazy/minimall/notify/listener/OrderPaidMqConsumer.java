@@ -1,15 +1,15 @@
 package com.yirancrazy.minimall.notify.listener;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.stereotype.Component;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
+import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.api.dto.order.OrderPaidDTO;
 import com.yirancrazy.minimall.common.event.RocketMqEventConsumer;
 import com.yirancrazy.minimall.notify.service.NotifyService;
 import com.yirancrazy.minimall.notify.sse.SseHub;
-import jakarta.annotation.PostConstruct;
-import jakarta.annotation.PreDestroy;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.stereotype.Component;
 
 /**
  * Iter-6 RocketMQ consumer for OrderPaidDTO events. Activated only when

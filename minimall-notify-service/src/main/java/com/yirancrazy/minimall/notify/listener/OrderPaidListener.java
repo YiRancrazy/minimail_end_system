@@ -1,12 +1,12 @@
 package com.yirancrazy.minimall.notify.listener;
 
+import org.springframework.context.event.EventListener;
+import org.springframework.stereotype.Component;
+import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.api.dto.notify.NotifyEventDTO;
 import com.yirancrazy.minimall.api.dto.order.OrderPaidDTO;
 import com.yirancrazy.minimall.notify.service.NotifyService;
 import com.yirancrazy.minimall.notify.sse.SseHub;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.event.EventListener;
-import org.springframework.stereotype.Component;
 
 /**
 * 订单已支付事件监听器，订阅 LocalEventBus 后保存通知并向在线用户 SSE 推送。

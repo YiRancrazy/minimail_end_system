@@ -1,14 +1,14 @@
 package com.yirancrazy.minimall.notify.controller.v1;
 
-import com.yirancrazy.minimall.api.dto.notify.NotifyEventDTO;
-import com.yirancrazy.minimall.common.result.Result;
-import com.yirancrazy.minimall.notify.service.NotifyService;
-import com.yirancrazy.minimall.notify.sse.SseHub;
-import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import jakarta.validation.Valid;
+import com.yirancrazy.minimall.api.dto.notify.NotifyEventDTO;
+import com.yirancrazy.minimall.common.result.Result;
+import com.yirancrazy.minimall.notify.service.NotifyService;
+import com.yirancrazy.minimall.notify.sse.SseHub;
 
 /**
 * 通知内部接口控制器，供他服务通过 HTTP 调用推送通知消息并触发 SSE。

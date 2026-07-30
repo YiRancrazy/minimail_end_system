@@ -1,15 +1,14 @@
 package com.yirancrazy.minimall.notify.controller.v1;
 
+import java.util.List;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import jakarta.validation.Valid;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.notify.dto.NotifyListDTO;
 import com.yirancrazy.minimall.notify.entity.NotifyMessagePO;
 import com.yirancrazy.minimall.notify.service.NotifyService;
-import jakarta.validation.Valid;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
 
 /**
 * 通知 C 端接口控制器，提供按用户拉取消息列表能力，供前端消息中心展示。

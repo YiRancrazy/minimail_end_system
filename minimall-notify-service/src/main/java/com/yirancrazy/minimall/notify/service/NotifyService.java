@@ -1,12 +1,11 @@
 package com.yirancrazy.minimall.notify.service;
 
+import java.util.List;
+import org.springframework.stereotype.Service;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.yirancrazy.minimall.notify.dto.NotifyListDTO;
 import com.yirancrazy.minimall.notify.entity.NotifyMessagePO;
 import com.yirancrazy.minimall.notify.manager.NotifyManager;
-import org.springframework.stereotype.Service;
-
-import java.util.List;
 
 /**
 * 通知领域服务，封装消息持久化、按用户查询等业务逻辑并委托 Manager 落地。

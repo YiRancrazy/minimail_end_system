@@ -1,6 +1,12 @@
 package com.yirancrazy.minimall.pay.service.impl;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.UUID;
+import org.springframework.stereotype.Service;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.pay.constant.PayChannelEnum;
 import com.yirancrazy.minimall.pay.constant.PayCodeEnum;
@@ -15,13 +21,6 @@ import com.yirancrazy.minimall.pay.manager.PayManager;
 import com.yirancrazy.minimall.pay.mapper.PayRefundMapper;
 import com.yirancrazy.minimall.pay.service.PayService;
 import com.yirancrazy.minimall.pay.vo.RefundVO;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.UUID;
 
 @Slf4j
 @Service
@@ -73,7 +72,8 @@ public class PayServiceImpl implements PayService {
         }
 
         po.setTradeNo(dto.getTradeNo());
-        po.setStatus(Integer.parseInt(dto.isSuccess() ? PayStatusEnum.SUCCESS.getCode() : PayStatusEnum.FAILED.getCode()));
+        po.setStatus(Integer.parseInt(
+            dto.isSuccess() ? PayStatusEnum.SUCCESS.getCode() : PayStatusEnum.FAILED.getCode()));
         po.setChannelResponse(dto.getChannelResponse());
         po.setPaidAt(LocalDateTime.now());
         payManager.updateById(po);
@@ -126,7 +126,8 @@ public class PayServiceImpl implements PayService {
             payManager.updateById(payTx);
 
             log.info("refund success, refundNo={}, paymentNo={}", refundNo, dto.getPaymentNo());
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             refund.setStatus(Integer.parseInt(RefundStatusEnum.FAILED.getCode()));
             payRefundMapper.updateById(refund);
             payTx.setStatus(Integer.parseInt(PayStatusEnum.SUCCESS.getCode()));

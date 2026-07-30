@@ -1,8 +1,8 @@
 package com.yirancrazy.minimall.pay.constant;
 
-import com.yirancrazy.minimall.common.base.BaseEnum;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import com.yirancrazy.minimall.common.base.BaseEnum;
 
 /**
 * 支付服务业务错误码枚举，遵循 17xxx 段，统一 code/alias/message 三元组。

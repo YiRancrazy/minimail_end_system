@@ -1,11 +1,11 @@
 package com.yirancrazy.minimall.pay.config;
 
-import com.alipay.api.AlipayClient;
-import com.alipay.api.DefaultAlipayClient;
-import lombok.Getter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import com.alipay.api.AlipayClient;
+import com.alipay.api.DefaultAlipayClient;
+import lombok.Getter;
 
 @Getter
 @Configuration
@@ -22,12 +22,29 @@ public class AlipayConfig {
     private String charset = "UTF-8";
     private String signType = "RSA2";
 
-    public void setAppId(String appId) { this.appId = appId; }
-    public void setPrivateKey(String privateKey) { this.privateKey = privateKey; }
-    public void setAlipayPublicKey(String alipayPublicKey) { this.alipayPublicKey = alipayPublicKey; }
-    public void setGatewayUrl(String gatewayUrl) { this.gatewayUrl = gatewayUrl; }
-    public void setNotifyUrl(String notifyUrl) { this.notifyUrl = notifyUrl; }
-    public void setReturnUrl(String returnUrl) { this.returnUrl = returnUrl; }
+    public void setAppId(String appId) {
+        this.appId = appId;
+    }
+
+    public void setPrivateKey(String privateKey) {
+        this.privateKey = privateKey;
+    }
+
+    public void setAlipayPublicKey(String alipayPublicKey) {
+        this.alipayPublicKey = alipayPublicKey;
+    }
+
+    public void setGatewayUrl(String gatewayUrl) {
+        this.gatewayUrl = gatewayUrl;
+    }
+
+    public void setNotifyUrl(String notifyUrl) {
+        this.notifyUrl = notifyUrl;
+    }
+
+    public void setReturnUrl(String returnUrl) {
+        this.returnUrl = returnUrl;
+    }
 
     @Bean
     public AlipayClient alipayClient() {

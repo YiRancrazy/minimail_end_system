@@ -1,8 +1,8 @@
 package com.yirancrazy.minimall.pay.constant;
 
-import com.yirancrazy.minimall.common.base.BaseEnum;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import com.yirancrazy.minimall.common.base.BaseEnum;
 
 @Getter
 @AllArgsConstructor

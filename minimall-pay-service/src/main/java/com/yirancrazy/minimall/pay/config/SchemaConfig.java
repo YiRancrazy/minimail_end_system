@@ -1,6 +1,5 @@
 package com.yirancrazy.minimall.pay.config;
 
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
@@ -8,6 +7,7 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.init.ScriptException;
 import org.springframework.jdbc.datasource.init.ScriptUtils;
+import lombok.extern.slf4j.Slf4j;
 
 /**
 * 支付服务 dev/test profile 数据库初始化配置，启动时加载 schema.sql 完成建表与种子数据。
@@ -32,7 +32,8 @@ public class SchemaConfig implements CommandLineRunner {
             ScriptUtils.executeSqlScript(jdbcTemplate.getDataSource().getConnection(),
                 new ClassPathResource("schema.sql"));
             log.info("schema.sql applied");
-        } catch (ScriptException e) {
+        }
+        catch (ScriptException e) {
             log.warn("schema.sql init skipped: {}", e.getMessage());
         }
     }

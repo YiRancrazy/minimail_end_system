@@ -1,19 +1,9 @@
 package com.yirancrazy.minimall.pay.service;
 
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.yirancrazy.minimall.common.exception.BizException;
-import com.yirancrazy.minimall.pay.dto.PayCallbackDTO;
-import com.yirancrazy.minimall.pay.entity.PayTransactionPO;
-import com.yirancrazy.minimall.pay.gateway.AlipayGateway;
-import com.yirancrazy.minimall.pay.manager.PayManager;
-import com.yirancrazy.minimall.pay.mapper.PayRefundMapper;
-import com.yirancrazy.minimall.pay.service.impl.PayServiceImpl;
+import java.math.BigDecimal;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-
-import java.math.BigDecimal;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -24,6 +14,14 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.yirancrazy.minimall.common.exception.BizException;
+import com.yirancrazy.minimall.pay.dto.PayCallbackDTO;
+import com.yirancrazy.minimall.pay.entity.PayTransactionPO;
+import com.yirancrazy.minimall.pay.gateway.AlipayGateway;
+import com.yirancrazy.minimall.pay.manager.PayManager;
+import com.yirancrazy.minimall.pay.mapper.PayRefundMapper;
+import com.yirancrazy.minimall.pay.service.impl.PayServiceImpl;
 
 public class PayServiceImplTest {
 
@@ -38,7 +36,8 @@ public class PayServiceImplTest {
         alipayGateway = mock(AlipayGateway.class);
         payRefundMapper = mock(PayRefundMapper.class);
         lenient().when(manager.updateById(any(PayTransactionPO.class))).thenReturn(true);
-        lenient().when(alipayGateway.createPayment(anyString(), any(BigDecimal.class), anyString(), anyString())).thenReturn("http://pay.url");
+        lenient().when(alipayGateway.createPayment(anyString(), any(BigDecimal.class), anyString(), anyString()))
+            .thenReturn("http://pay.url");
         doAnswer(inv -> {
             PayTransactionPO p = inv.getArgument(0);
             if (p.getId() == null) {

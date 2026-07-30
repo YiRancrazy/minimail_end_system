@@ -1,8 +1,11 @@
 package com.yirancrazy.minimall.order.service.impl;
 
-import com.yirancrazy.minimall.order.constant.OrderCodeEnum;
-
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.api.dto.notify.NotifyEventDTO;
 import com.yirancrazy.minimall.api.dto.order.OrderPaidDTO;
 import com.yirancrazy.minimall.api.dto.pay.PayCreateDTO;
@@ -12,15 +15,10 @@ import com.yirancrazy.minimall.api.feign.PayFeignClient;
 import com.yirancrazy.minimall.api.feign.StockFeignClient;
 import com.yirancrazy.minimall.common.event.EventBus;
 import com.yirancrazy.minimall.common.exception.BizException;
+import com.yirancrazy.minimall.order.constant.OrderCodeEnum;
 import com.yirancrazy.minimall.order.entity.OrderPO;
 import com.yirancrazy.minimall.order.manager.OrderManager;
 import com.yirancrazy.minimall.order.service.OrderService;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
 /**
 * 订单领域服务实现，编排库存锁定、支付流水、订单持久化、通知推送及支付事件发布流程。
@@ -78,7 +76,11 @@ public class OrderServiceImpl implements OrderService {
         order.setStatus("PENDING_PAY");
         orderManager.save(order);
 
-        Long payId = payFeign.create(new PayCreateDTO(order.getId().toString(), order.getUserId(), order.getMerchantId(), order.getAmount()));
+        Long payId = payFeign.create(new PayCreateDTO(
+            order.getId().toString(),
+            order.getUserId(),
+            order.getMerchantId(),
+            order.getAmount()));
         order.setPayId(payId);
         orderManager.updateById(order);
 
@@ -139,7 +141,8 @@ public class OrderServiceImpl implements OrderService {
         Boolean ok = notifyFeign.push(dto);
         if (ok == null || !ok) {
             log.warn("notify push failed for order {}, user={}", order.getId(), order.getUserId());
-        } else {
+        }
+        else {
             log.info("notify pushed for order {}", order.getId());
         }
         OrderPaidDTO event = new OrderPaidDTO(order.getId(), order.getUserId(),

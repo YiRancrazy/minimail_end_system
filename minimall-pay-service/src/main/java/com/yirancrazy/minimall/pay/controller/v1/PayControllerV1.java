@@ -1,19 +1,22 @@
 package com.yirancrazy.minimall.pay.controller.v1;
 
+import java.math.BigDecimal;
+import java.util.HashMap;
+import java.util.Map;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
+import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.pay.dto.PayCallbackDTO;
 import com.yirancrazy.minimall.pay.dto.RefundCreateDTO;
 import com.yirancrazy.minimall.pay.service.PayService;
 import com.yirancrazy.minimall.pay.vo.RefundVO;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.validation.Valid;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.*;
-
-import java.math.BigDecimal;
-import java.util.HashMap;
-import java.util.Map;
 
 @Slf4j
 @RestController
@@ -49,7 +52,8 @@ public class PayControllerV1 {
             PayCallbackDTO dto = new PayCallbackDTO(paymentNo, tradeNo, success, params.toString());
             payService.handleCallback(dto);
             return "success";
-        } catch (BizException e) {
+        }
+        catch (BizException e) {
             log.error("callback failed: {}", e.getMessage());
             return "fail";
         }

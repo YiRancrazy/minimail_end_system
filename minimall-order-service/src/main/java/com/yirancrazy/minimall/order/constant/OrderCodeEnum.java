@@ -1,8 +1,8 @@
 package com.yirancrazy.minimall.order.constant;
 
-import com.yirancrazy.minimall.common.base.BaseEnum;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import com.yirancrazy.minimall.common.base.BaseEnum;
 
 /**
 * 订单服务错误码枚举，定义库存锁定失败、订单不存在及支付失败等业务异常信息。

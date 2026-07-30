@@ -1,12 +1,11 @@
 package com.yirancrazy.minimall.pay.entity;
 
-import com.baomidou.mybatisplus.annotation.TableName;
-import com.yirancrazy.minimall.common.base.BasePO;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import com.baomidou.mybatisplus.annotation.TableName;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import com.yirancrazy.minimall.common.base.BasePO;
 
 @Data
 @EqualsAndHashCode(callSuper = true)

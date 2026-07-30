@@ -1,11 +1,11 @@
 package com.yirancrazy.minimall.order.controller.v1;
 
-import com.yirancrazy.minimall.common.result.Result;
-import com.yirancrazy.minimall.order.service.OrderService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import com.yirancrazy.minimall.common.result.Result;
+import com.yirancrazy.minimall.order.service.OrderService;
 
 /**
 * 订单内部接口控制器，供其他服务通过订单标识查询订单当前业务状态。

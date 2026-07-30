@@ -1,5 +1,19 @@
 package com.yirancrazy.minimall.order.service;
 
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import com.yirancrazy.minimall.api.dto.notify.NotifyEventDTO;
 import com.yirancrazy.minimall.api.dto.order.OrderPaidDTO;
 import com.yirancrazy.minimall.api.dto.pay.PayCreateDTO;
@@ -12,21 +26,6 @@ import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.order.entity.OrderPO;
 import com.yirancrazy.minimall.order.manager.OrderManager;
 import com.yirancrazy.minimall.order.service.impl.OrderServiceImpl;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Mockito;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 /**
 * OrderServiceImpl 单元测试，覆盖订单创建、库存锁定失败、支付成功及订单缺失异常路径。

@@ -1,5 +1,8 @@
 package com.yirancrazy.minimall.pay.gateway.impl;
 
+import java.math.BigDecimal;
+import java.util.Map;
+import org.springframework.stereotype.Component;
 import com.alipay.api.AlipayApiException;
 import com.alipay.api.AlipayClient;
 import com.alipay.api.internal.util.AlipaySignature;
@@ -8,13 +11,9 @@ import com.alipay.api.request.AlipayTradeQueryRequest;
 import com.alipay.api.request.AlipayTradeRefundRequest;
 import com.alipay.api.response.AlipayTradeQueryResponse;
 import com.alipay.api.response.AlipayTradeRefundResponse;
+import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.pay.config.AlipayConfig;
 import com.yirancrazy.minimall.pay.gateway.AlipayGateway;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
-
-import java.math.BigDecimal;
-import java.util.Map;
 
 @Slf4j
 @Component
@@ -33,12 +32,13 @@ public class AlipayGatewayImpl implements AlipayGateway {
         AlipayTradePagePayRequest request = new AlipayTradePagePayRequest();
         request.setReturnUrl(config.getReturnUrl());
         request.setNotifyUrl(config.getNotifyUrl());
-        request.setBizContent(String.format(
-            "{\"out_trade_no\":\"%s\",\"total_amount\":\"%s\",\"subject\":\"%s\",\"product_code\":\"FAST_INSTANT_TRADE_PAY\",\"time_expire\":\"%s\"}",
+        request.setBizContent(String.format("{\"out_trade_no\":\"%s\",\"total_amount\":\"%s\",\"subject\":\"%s\"," +
+                "\"product_code\":\"FAST_INSTANT_TRADE_PAY\",\"time_expire\":\"%s\"}",
             paymentNo, amount.toPlainString(), subject, expireTime));
         try {
             return alipayClient.pageExecute(request).getBody();
-        } catch (AlipayApiException e) {
+        }
+        catch (AlipayApiException e) {
             log.error("create payment failed, paymentNo={}", paymentNo, e);
             throw new RuntimeException("Alipay create payment failed", e);
         }
@@ -53,7 +53,8 @@ public class AlipayGatewayImpl implements AlipayGateway {
                 throw new RuntimeException("Alipay callback signature verification failed");
             }
             return params.get("trade_no");
-        } catch (AlipayApiException e) {
+        }
+        catch (AlipayApiException e) {
             log.error("verify callback failed", e);
             throw new RuntimeException("Alipay callback verification failed", e);
         }
@@ -69,7 +70,8 @@ public class AlipayGatewayImpl implements AlipayGateway {
                 return response.getTradeStatus();
             }
             return null;
-        } catch (AlipayApiException e) {
+        }
+        catch (AlipayApiException e) {
             log.error("query payment failed, paymentNo={}", paymentNo, e);
             return null;
         }
@@ -87,7 +89,8 @@ public class AlipayGatewayImpl implements AlipayGateway {
                 return response.getTradeNo();
             }
             throw new RuntimeException("Alipay refund failed: " + response.getSubMsg());
-        } catch (AlipayApiException e) {
+        }
+        catch (AlipayApiException e) {
             log.error("refund failed, paymentNo={}, refundNo={}", paymentNo, refundNo, e);
             throw new RuntimeException("Alipay refund failed", e);
         }

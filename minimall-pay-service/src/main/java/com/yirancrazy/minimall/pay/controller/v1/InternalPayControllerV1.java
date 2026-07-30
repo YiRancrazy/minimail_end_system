@@ -1,14 +1,15 @@
 package com.yirancrazy.minimall.pay.controller.v1;
 
-import com.yirancrazy.minimall.api.dto.pay.PayCreateDTO;
-import com.yirancrazy.minimall.common.result.Result;
-import com.yirancrazy.minimall.pay.dto.PayCallbackDTO;
-import com.yirancrazy.minimall.pay.service.PayService;
-import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import jakarta.validation.Valid;
+import lombok.extern.slf4j.Slf4j;
+import com.yirancrazy.minimall.api.dto.pay.PayCreateDTO;
+import com.yirancrazy.minimall.common.result.Result;
+import com.yirancrazy.minimall.pay.dto.PayCallbackDTO;
+import com.yirancrazy.minimall.pay.service.PayService;
 
 /**
  * 伪支付宝异步回调。真实场景由支付宝 POST 异步通知，此处由 order-service
@@ -32,7 +33,8 @@ public class InternalPayControllerV1 {
      */
     @PostMapping("/create")
     public Result<Long> create(@Valid @RequestBody PayCreateDTO dto) {
-        Long paymentId = payService.createPayment(dto.getOrderNo(), dto.getUserId(), dto.getMerchantId(), dto.getAmount());
+        Long paymentId = payService.createPayment(
+            dto.getOrderNo(), dto.getUserId(), dto.getMerchantId(), dto.getAmount());
         return Result.success(paymentId);
     }
 

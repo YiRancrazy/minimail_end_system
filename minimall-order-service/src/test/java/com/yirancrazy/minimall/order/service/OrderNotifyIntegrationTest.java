@@ -1,12 +1,7 @@
 package com.yirancrazy.minimall.order.service;
 
-import com.yirancrazy.minimall.api.dto.notify.NotifyEventDTO;
-import com.yirancrazy.minimall.api.dto.order.OrderPaidDTO;
-import com.yirancrazy.minimall.api.dto.pay.PayCreateDTO;
-import com.yirancrazy.minimall.api.dto.stock.StockReserveDTO;
-import com.yirancrazy.minimall.api.feign.NotifyFeignClient;
-import com.yirancrazy.minimall.api.feign.PayFeignClient;
-import com.yirancrazy.minimall.api.feign.StockFeignClient;
+import java.math.BigDecimal;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,14 +11,17 @@ import org.springframework.context.annotation.Import;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.springframework.test.context.ActiveProfiles;
-
-import java.math.BigDecimal;
-import java.util.concurrent.atomic.AtomicReference;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import com.yirancrazy.minimall.api.dto.notify.NotifyEventDTO;
+import com.yirancrazy.minimall.api.dto.order.OrderPaidDTO;
+import com.yirancrazy.minimall.api.dto.pay.PayCreateDTO;
+import com.yirancrazy.minimall.api.dto.stock.StockReserveDTO;
+import com.yirancrazy.minimall.api.feign.NotifyFeignClient;
+import com.yirancrazy.minimall.api.feign.PayFeignClient;
+import com.yirancrazy.minimall.api.feign.StockFeignClient;
 
 /**
  * Iter-6 集成测试：验证 LocalEventBus 工作。

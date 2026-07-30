@@ -12,39 +12,40 @@ import com.yirancrazy.minimall.auth.util.JwtUtil;
 import com.yirancrazy.minimall.auth.vo.UserInfoVO;
 import com.yirancrazy.minimall.common.exception.BizException;
 import io.jsonwebtoken.Claims;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
-/**
- * @Author: yirancrazy@gmail.com
- * @Description: 认证领域服务实现，负责用户注册、密码校验与访问令牌签发。
- * @Version: 1.0
- * @DateTime: 2026/7/29
- */
+@Slf4j
 @Service
 public class AuthServiceImpl implements AuthService {
 
+    private static final String REFRESH_KEY_PREFIX = "refresh:";
+    private static final String BLACKLIST_KEY_PREFIX = "blacklist:jti:";
+
     private final UserAuthManager userAuthManager;
     private final JwtUtil jwtUtil;
+    private final StringRedisTemplate redisTemplate;
     private final long ttlSeconds;
+    private final long refreshTtlSeconds;
 
     public AuthServiceImpl(UserAuthManager userAuthManager,
                            JwtUtil jwtUtil,
-                           @Value("${minimall.jwt.ttl-seconds:900}") long ttlSeconds) {
+                           StringRedisTemplate redisTemplate,
+                           @Value("${minimall.jwt.ttl-seconds:900}") long ttlSeconds,
+                           @Value("${minimall.jwt.refresh-ttl-seconds:604800}") long refreshTtlSeconds) {
         this.userAuthManager = userAuthManager;
         this.jwtUtil = jwtUtil;
+        this.redisTemplate = redisTemplate;
         this.ttlSeconds = ttlSeconds;
+        this.refreshTtlSeconds = refreshTtlSeconds;
     }
 
-    /**
-     * 注册新用户：校验用户名唯一后生成随机盐，使用 BCrypt 加盐哈希密码入库，并签发访问令牌。
-     *
-     * @param dto 注册入参，包含 username 与 password
-     * @return 包含 JWT 访问令牌、Token 类型与过期秒数的视图
-     */
     @Override
     public TokenVO register(RegisterDTO dto) {
         UserAuthPO existing = userAuthManager.getOne(
@@ -61,17 +62,9 @@ public class AuthServiceImpl implements AuthService {
         po.setRole("USER");
         po.setStatus(1);
         userAuthManager.save(po);
-        String jti = jwtUtil.generateRefreshToken();
-        String accessToken = jwtUtil.sign(po.getId(), po.getUsername(), po.getRole(), jti);
-        return new TokenVO(accessToken, null, "Bearer", ttlSeconds);
+        return issueTokens(po.getId(), po.getUsername(), po.getRole());
     }
 
-    /**
-     * 用户登录：按用户名查找账号并校验加盐哈希密码，成功后签发新的访问令牌。
-     *
-     * @param dto 登录入参，包含 username 与 password
-     * @return 包含 JWT 访问令牌、Token 类型与过期秒数的视图
-     */
     @Override
     public TokenVO login(LoginDTO dto) {
         UserAuthPO po = userAuthManager.getOne(
@@ -82,17 +75,52 @@ public class AuthServiceImpl implements AuthService {
         if (!BCrypt.checkpw(dto.getPassword() + po.getSalt(), po.getPasswordHash())) {
             throw new BizException(AuthCodeEnum.PWD_INVALID);
         }
-        String jti = jwtUtil.generateRefreshToken();
-        String accessToken = jwtUtil.sign(po.getId(), po.getUsername(), po.getRole(), jti);
-        return new TokenVO(accessToken, null, "Bearer", ttlSeconds);
+        return issueTokens(po.getId(), po.getUsername(), po.getRole());
     }
 
-    /**
-     * 解析 JWT 令牌并返回当前登录用户的基本信息（用户ID、用户名、角色）。
-     *
-     * @param token JWT 访问令牌字符串
-     * @return 包含 userId / username / role 的当前用户视图
-     */
+    @Override
+    public TokenVO refreshToken(String refreshToken) {
+        var keys = redisTemplate.keys(REFRESH_KEY_PREFIX + "*");
+        if (keys == null || keys.isEmpty()) {
+            throw new BizException(AuthCodeEnum.REFRESH_TOKEN_INVALID);
+        }
+        String matchedKey = null;
+        for (String key : keys) {
+            String stored = redisTemplate.opsForValue().get(key);
+            if (refreshToken.equals(stored)) {
+                matchedKey = key;
+                break;
+            }
+        }
+        if (matchedKey == null) {
+            throw new BizException(AuthCodeEnum.REFRESH_TOKEN_INVALID);
+        }
+        redisTemplate.delete(matchedKey);
+        String[] parts = matchedKey.split(":");
+        Long userId = Long.parseLong(parts[1]);
+        String oldJti = parts[2];
+        redisTemplate.opsForValue().set(
+            BLACKLIST_KEY_PREFIX + oldJti, "1", ttlSeconds, TimeUnit.SECONDS);
+
+        UserAuthPO po = userAuthManager.getById(userId);
+        if (po == null) {
+            throw new BizException(AuthCodeEnum.USER_NOT_FOUND);
+        }
+        log.info("refresh token rotated, userId={}", userId);
+        return issueTokens(po.getId(), po.getUsername(), po.getRole());
+    }
+
+    @Override
+    public void signOut(Long userId, String jti) {
+        var keys = redisTemplate.keys(REFRESH_KEY_PREFIX + userId + ":*");
+        if (keys != null) {
+            redisTemplate.delete(keys);
+        }
+        redisTemplate.opsForValue().set(
+            BLACKLIST_KEY_PREFIX + jti, "1", ttlSeconds, TimeUnit.SECONDS);
+        log.info("user signed out, userId={}", userId);
+    }
+
     @Override
     public UserInfoVO me(String token) {
         Claims c;
@@ -105,5 +133,15 @@ public class AuthServiceImpl implements AuthService {
         }
         return new UserInfoVO(Long.parseLong(c.getSubject()), c.get("username", String.class),
             c.get("role", String.class));
+    }
+
+    private TokenVO issueTokens(Long userId, String username, String role) {
+        String jti = UUID.randomUUID().toString().replace("-", "");
+        String accessToken = jwtUtil.sign(userId, username, role, jti);
+        String refreshToken = jwtUtil.generateRefreshToken();
+        redisTemplate.opsForValue().set(
+            REFRESH_KEY_PREFIX + userId + ":" + jti,
+            refreshToken, refreshTtlSeconds, TimeUnit.SECONDS);
+        return new TokenVO(accessToken, refreshToken, "Bearer", ttlSeconds);
     }
 }

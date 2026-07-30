@@ -6,10 +6,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * JSON codec for RocketMQ message bodies. Tags use event simpleName;
  * keys use the same convention.
  */
-public final class MqEventJsonCodec {
+public final class MqEventJsonCodec
+{
     private static final ObjectMapper M = new ObjectMapper().findAndRegisterModules();
 
-    private MqEventJsonCodec() {}
+    private MqEventJsonCodec()
+    {
+    }
 
     /**
      * Serialize the given event object into a JSON byte array suitable for use
@@ -19,10 +22,14 @@ public final class MqEventJsonCodec {
      * @return the UTF-8 JSON encoding of {@code event}
      * @throws IllegalStateException if Jackson fails to serialize the event
      */
-    public static byte[] encode(Object event) {
-        try {
+    public static byte[] encode(Object event)
+    {
+        try
+        {
             return M.writeValueAsBytes(event);
-        } catch (Exception e) {
+        }
+        catch (Exception e)
+        {
             throw new IllegalStateException("encode failed: " + event.getClass(), e);
         }
     }
@@ -37,10 +44,14 @@ public final class MqEventJsonCodec {
      * @return a populated instance of {@code type}
      * @throws IllegalStateException if Jackson fails to read or bind the body
      */
-    public static <T> T decode(byte[] body, Class<T> type) {
-        try {
+    public static <T> T decode(byte[] body, Class<T> type)
+    {
+        try
+        {
             return M.readValue(body, type);
-        } catch (Exception e) {
+        }
+        catch (Exception e)
+        {
             throw new IllegalStateException("decode failed: " + type, e);
         }
     }
@@ -52,7 +63,8 @@ public final class MqEventJsonCodec {
      * @param eventType the event {@link Class} to derive the tag for
      * @return the simple class name of {@code eventType}, used as the RocketMQ tag
      */
-    public static String tagFor(Class<?> eventType) {
+    public static String tagFor(Class<?> eventType)
+    {
         return eventType.getSimpleName();
     }
 }

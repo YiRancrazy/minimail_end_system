@@ -10,7 +10,8 @@ import org.springframework.context.annotation.Configuration;
  * exposed only when its @ConditionalOnProperty triggers.
  */
 @Configuration
-public class EventBusAutoConfiguration {
+public class EventBusAutoConfiguration
+{
 
     /**
      * Expose the in-process {@link LocalEventBus} as the default {@link EventBus}
@@ -21,7 +22,8 @@ public class EventBusAutoConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean(EventBus.class)
-    public EventBus defaultEventBus(LocalEventBus local) {
+    public EventBus defaultEventBus(LocalEventBus local)
+    {
         return local;
     }
 }

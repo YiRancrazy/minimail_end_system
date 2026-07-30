@@ -8,9 +8,11 @@ import com.yirancrazy.minimall.common.result.ResultCode;
  * @Version: 1.0
  * @DateTime: 2026/7/29
  */
-public interface BaseEnum extends ResultCode {
+public interface BaseEnum extends ResultCode
+{
     @Override
-    default String getCode() {
+    default String getCode()
+    {
         return ((Enum<?>) this).name();
     }
 }

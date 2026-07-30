@@ -6,7 +6,8 @@ package com.yirancrazy.minimall.common.result;
  * @Version: 1.0
  * @DateTime: 2026/7/29
  */
-public interface ResultCode {
+public interface ResultCode
+{
     String getCode();
     String getAlias();
     String getMessage();

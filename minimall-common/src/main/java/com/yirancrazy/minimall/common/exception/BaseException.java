@@ -9,10 +9,12 @@ import lombok.Getter;
  * @DateTime: 2026/7/29
  */
 @Getter
-public class BaseException extends RuntimeException {
+public class BaseException extends RuntimeException
+{
     private final String code;
 
-    public BaseException(String code, String message) {
+    public BaseException(String code, String message)
+    {
         super(message);
         this.code = code;
     }

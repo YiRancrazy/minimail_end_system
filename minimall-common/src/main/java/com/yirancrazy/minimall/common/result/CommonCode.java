@@ -6,7 +6,8 @@ package com.yirancrazy.minimall.common.result;
  * @Version: 1.0
  * @DateTime: 2026/7/29
  */
-public final class CommonCode {
+public final class CommonCode
+{
     private CommonCode() {}
 
     public static final String SUCCESS = "00000";

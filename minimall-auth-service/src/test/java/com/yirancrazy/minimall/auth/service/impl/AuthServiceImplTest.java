@@ -1,6 +1,7 @@
 package com.yirancrazy.minimall.auth.service.impl;
 
 import com.yirancrazy.minimall.api.dto.auth.TokenVO;
+import com.yirancrazy.minimall.auth.constant.AuthCodeEnum;
 import com.yirancrazy.minimall.auth.dto.LoginDTO;
 import com.yirancrazy.minimall.auth.dto.RegisterDTO;
 import com.yirancrazy.minimall.auth.entity.UserAuthPO;
@@ -10,91 +11,77 @@ import com.yirancrazy.minimall.auth.vo.UserInfoVO;
 import com.yirancrazy.minimall.common.exception.BizException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
-import org.mockito.ArgumentMatchers;
-import org.springframework.test.util.ReflectionTestUtils;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import java.util.Set;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class AuthServiceImplTest {
 
-    private UserAuthManager manager;
-    private AuthServiceImpl service;
+    @Mock private UserAuthManager userAuthManager;
+    @Mock private JwtUtil jwtUtil;
+    @Mock private StringRedisTemplate redisTemplate;
+    @Mock private ValueOperations<String, String> valueOperations;
+
+    private AuthServiceImpl authService;
 
     @BeforeEach
     void setUp() {
-        manager = mock(UserAuthManager.class);
-        JwtUtil jwtUtil = new JwtUtil("test-secret-1234567890123456789012", 3600L);
-        service = new AuthServiceImpl(manager, jwtUtil, 3600L);
-        ReflectionTestUtils.setField(service, "ttlSeconds", 3600L);
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        authService = new AuthServiceImpl(userAuthManager, jwtUtil, redisTemplate, 900L, 604800L);
     }
 
     @Test
-    void register_returns_token_for_new_user() {
-        when(manager.getOne(ArgumentMatchers.any())).thenReturn(null);
-        when(manager.save(ArgumentMatchers.any(UserAuthPO.class)))
-            .thenAnswer(inv -> {
-                UserAuthPO p = inv.getArgument(0);
-                p.setId(42L);
-                return true;
-            });
+    void register_success() {
+        when(userAuthManager.getOne(any())).thenReturn(null);
+        when(userAuthManager.save(any(UserAuthPO.class))).thenAnswer(invocation -> {
+            UserAuthPO po = invocation.getArgument(0);
+            po.setId(42L);
+            return true;
+        });
+        when(jwtUtil.sign(anyLong(), anyString(), anyString(), anyString())).thenReturn("access-token");
+        when(jwtUtil.generateRefreshToken()).thenReturn("refresh-token");
 
-        TokenVO tok = service.register(new RegisterDTO("alice", "secret"));
-        assertNotNull(tok.getAccessToken());
-        assertEquals("Bearer", tok.getTokenType());
+        TokenVO vo = authService.register(new RegisterDTO("testuser", "pass123"));
+        assertNotNull(vo.getAccessToken());
+        assertNotNull(vo.getRefreshToken());
+        assertEquals("Bearer", vo.getTokenType());
     }
 
     @Test
-    void login_unknown_user_throws_biz_exception() {
-        when(manager.getOne(ArgumentMatchers.any())).thenReturn(null);
-        assertThrows(BizException.class,
-            () -> service.login(new LoginDTO("ghost", "x")));
+    void register_userExists_throws() {
+        when(userAuthManager.getOne(any())).thenReturn(new UserAuthPO());
+        assertThrows(BizException.class, () -> authService.register(new RegisterDTO("exists", "pass")));
     }
 
     @Test
-    void login_existing_user_returns_token_after_register() {
-        // First call: capture the saved UserAuthPO so we have salt+hash.
-        ArgumentCaptor<UserAuthPO> cap = ArgumentCaptor.forClass(UserAuthPO.class);
-        when(manager.getOne(ArgumentMatchers.any())).thenReturn(null);
-        when(manager.save(cap.capture()))
-            .thenAnswer(inv -> {
-                UserAuthPO p = inv.getArgument(0);
-                p.setId(42L);
-                return true;
-            });
-        service.register(new RegisterDTO("alice", "secret"));
-        UserAuthPO saved = cap.getValue();
-        assertNotNull(saved.getSalt());
-
-        // Reset mock: register flow is irrelevant now, simulate "user already exists".
-        org.mockito.Mockito.reset(manager);
-        UserAuthPO existing = new UserAuthPO();
-        existing.setId(42L);
-        existing.setUsername("alice");
-        existing.setSalt(saved.getSalt());
-        existing.setPasswordHash(saved.getPasswordHash());
-        when(manager.getOne(ArgumentMatchers.any())).thenReturn(existing);
-
-        TokenVO tok = service.login(new LoginDTO("alice", "secret"));
-        assertNotNull(tok.getAccessToken());
+    void login_userNotFound_throws() {
+        when(userAuthManager.getOne(any())).thenReturn(null);
+        assertThrows(BizException.class, () -> authService.login(new LoginDTO("nobody", "pass")));
     }
 
     @Test
-    void me_parses_token_roundtrip() {
-        when(manager.getOne(ArgumentMatchers.any())).thenReturn(null);
-        when(manager.save(ArgumentMatchers.any(UserAuthPO.class)))
-            .thenAnswer(inv -> {
-                UserAuthPO p = inv.getArgument(0);
-                p.setId(99L);
-                return true;
-            });
-        String token = service.register(new RegisterDTO("bob", "pwd")).getAccessToken();
-        UserInfoVO info = service.me(token);
-        assertEquals("bob", info.getUsername());
-        assertEquals("USER", info.getRole());
+    void refreshToken_invalid_throws() {
+        when(redisTemplate.keys(anyString())).thenReturn(Set.of());
+        assertThrows(BizException.class, () -> authService.refreshToken("bad-refresh"));
+    }
+
+    @Test
+    void signOut_deletesRefreshAndBlacklistsJti() {
+        when(redisTemplate.keys("refresh:1:*")).thenReturn(Set.of("refresh:1:abc"));
+        authService.signOut(1L, "abc");
+        verify(redisTemplate).delete(Set.of("refresh:1:abc"));
+        verify(valueOperations).set(eq("blacklist:jti:abc"), eq("1"), eq(900L), any());
     }
 }

@@ -3,12 +3,18 @@ package com.yirancrazy.minimall.gateway.filter;
 import com.yirancrazy.minimall.gateway.config.JwtVerifier;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.mock.http.server.reactive.MockServerHttpRequest;
 import org.springframework.mock.web.server.MockServerWebExchange;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
@@ -16,48 +22,63 @@ import java.util.Date;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.when;
 
+@ExtendWith(MockitoExtension.class)
 class AuthGlobalFilterTest {
 
     private static final String SECRET = "test-secret-1234567890123456789012";
 
+    @Mock
+    private ReactiveStringRedisTemplate redisTemplate;
+
+    private JwtVerifier verifier;
+    private AuthGlobalFilter filter;
+
+    @BeforeEach
+    void setUp() {
+        verifier = new JwtVerifier(SECRET);
+        filter = new AuthGlobalFilter(verifier, redisTemplate);
+    }
+
     @Test
     void whitelist_path_passes_through() {
-        JwtVerifier v = new JwtVerifier(SECRET);
-        AuthGlobalFilter f = new AuthGlobalFilter(v);
         ServerWebExchange ex = MockServerWebExchange.from(
             MockServerHttpRequest.post("/api/v1/auth/login"));
-        Mono<Void> r = f.filter(ex, e -> Mono.empty());
+        Mono<Void> r = filter.filter(ex, e -> Mono.empty());
         assertNotNull(r);
     }
 
     @Test
     void missing_authorization_returns_401() {
-        JwtVerifier v = new JwtVerifier(SECRET);
-        AuthGlobalFilter f = new AuthGlobalFilter(v);
         ServerWebExchange ex = MockServerWebExchange.from(
             MockServerHttpRequest.get("/api/v1/user/1"));
-        f.filter(ex, e -> Mono.empty()).block();
+        StepVerifier.create(filter.filter(ex, e -> Mono.empty()))
+            .verifyComplete();
         assertEquals(HttpStatus.UNAUTHORIZED, ex.getResponse().getStatusCode());
     }
 
     @Test
     void valid_token_passes_through_and_sets_headers() {
-        JwtVerifier v = new JwtVerifier(SECRET);
-        AuthGlobalFilter f = new AuthGlobalFilter(v);
         SecretKey key = Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8));
         String token = Jwts.builder()
             .subject("42")
             .claim("username", "alice")
             .claim("role", "USER")
+            .claim("jti", "test-jti")
             .issuedAt(new Date())
             .expiration(new Date(System.currentTimeMillis() + 3600_000))
             .signWith(key)
             .compact();
+
+        when(redisTemplate.hasKey(anyString())).thenReturn(Mono.just(false));
+
         ServerWebExchange ex = MockServerWebExchange.from(
             MockServerHttpRequest.get("/api/v1/user/42")
                 .header("Authorization", "Bearer " + token));
-        f.filter(ex, e -> Mono.empty()).block();
+        StepVerifier.create(filter.filter(ex, e -> Mono.empty()))
+            .verifyComplete();
         assertEquals("42", ex.getRequest().getHeaders().getFirst("X-User-Id"));
         assertEquals("USER", ex.getRequest().getHeaders().getFirst("X-User-Role"));
     }

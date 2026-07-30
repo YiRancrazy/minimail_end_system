@@ -6,6 +6,7 @@ import com.yirancrazy.minimall.pay.dto.PayCallbackDTO;
 import com.yirancrazy.minimall.pay.entity.PayTransactionPO;
 import com.yirancrazy.minimall.pay.gateway.AlipayGateway;
 import com.yirancrazy.minimall.pay.manager.PayManager;
+import com.yirancrazy.minimall.pay.mapper.PayRefundMapper;
 import com.yirancrazy.minimall.pay.service.impl.PayServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,12 +29,14 @@ public class PayServiceImplTest {
 
     private PayManager manager;
     private AlipayGateway alipayGateway;
+    private PayRefundMapper payRefundMapper;
     private PayServiceImpl service;
 
     @BeforeEach
     void setUp() {
         manager = mock(PayManager.class);
         alipayGateway = mock(AlipayGateway.class);
+        payRefundMapper = mock(PayRefundMapper.class);
         lenient().when(manager.updateById(any(PayTransactionPO.class))).thenReturn(true);
         lenient().when(alipayGateway.createPayment(anyString(), any(BigDecimal.class), anyString(), anyString())).thenReturn("http://pay.url");
         doAnswer(inv -> {
@@ -43,7 +46,7 @@ public class PayServiceImplTest {
             }
             return true;
         }).when(manager).save(any(PayTransactionPO.class));
-        service = new PayServiceImpl(manager, alipayGateway);
+        service = new PayServiceImpl(manager, alipayGateway, payRefundMapper);
     }
 
     /**

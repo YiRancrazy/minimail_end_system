@@ -22,6 +22,13 @@ import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.pay.dto.PayCallbackDTO;
 import com.yirancrazy.minimall.pay.service.PayService;
 
+
+/**
+ * @Author: yirancrazy@gmail.com
+ * @Description: PayControllerV1 的单元测试类。
+ * @Version: 1.0
+ * @DateTime: 2026/7/31
+ **/
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 class PayControllerV1Test {

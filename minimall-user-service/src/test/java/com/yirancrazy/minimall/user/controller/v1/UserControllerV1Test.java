@@ -13,6 +13,13 @@ import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.user.dto.UserCreateDTO;
 import com.yirancrazy.minimall.user.service.UserService;
 
+
+/**
+ * @Author: yirancrazy@gmail.com
+ * @Description: UserControllerV1 的单元测试类。
+ * @Version: 1.0
+ * @DateTime: 2026/7/31
+ **/
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 class UserControllerV1Test {

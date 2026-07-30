@@ -21,6 +21,13 @@ import com.yirancrazy.minimall.auth.util.JwtUtil;
 import com.yirancrazy.minimall.auth.vo.UserInfoVO;
 import com.yirancrazy.minimall.common.exception.BizException;
 
+
+/**
+ * @Author: yirancrazy@gmail.com
+ * @Description: 业务服务实现，处理核心业务逻辑。
+ * @Version: 1.0
+ * @DateTime: 2026/7/31
+ **/
 @Slf4j
 @Service
 public class AuthServiceImpl implements AuthService {

@@ -7,6 +7,13 @@ import com.alipay.api.AlipayClient;
 import com.alipay.api.DefaultAlipayClient;
 import lombok.Getter;
 
+
+/**
+ * @Author: yirancrazy@gmail.com
+ * @Description: 配置类，定义 Spring Bean 和相关配置。
+ * @Version: 1.0
+ * @DateTime: 2026/7/31
+ **/
 @Getter
 @Configuration
 @ConfigurationProperties(prefix = "minimall.alipay")

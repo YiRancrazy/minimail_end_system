@@ -23,6 +23,13 @@ import com.yirancrazy.minimall.pay.manager.PayManager;
 import com.yirancrazy.minimall.pay.mapper.PayRefundMapper;
 import com.yirancrazy.minimall.pay.service.impl.PayServiceImpl;
 
+
+/**
+ * @Author: yirancrazy@gmail.com
+ * @Description: PayServiceImpl 的单元测试类。
+ * @Version: 1.0
+ * @DateTime: 2026/7/31
+ **/
 public class PayServiceImplTest {
 
     private PayManager manager;

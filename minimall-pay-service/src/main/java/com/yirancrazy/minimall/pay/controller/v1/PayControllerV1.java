@@ -18,6 +18,13 @@ import com.yirancrazy.minimall.pay.dto.RefundCreateDTO;
 import com.yirancrazy.minimall.pay.service.PayService;
 import com.yirancrazy.minimall.pay.vo.RefundVO;
 
+
+/**
+ * @Author: yirancrazy@gmail.com
+ * @Description: PayControllerV1 类。
+ * @Version: 1.0
+ * @DateTime: 2026/7/31
+ **/
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/pay")

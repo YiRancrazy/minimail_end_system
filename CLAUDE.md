@@ -163,7 +163,7 @@ docs(ai-guidelines): 更新提交规范
 - 禁 `@SneakyThrows`（掩盖异常）
 
 **注释**：
-- **类注释**：说明类职责、核心方法；禁类头模板（见 §7 禁止复制）；示例：
+- **类注释**：必须包含 `@Author`、`@Description`、`@Version`、`@DateTime`；示例：
 
    ```java
    /**
@@ -245,13 +245,12 @@ docs(ai-guidelines): 更新提交规范
 
 **禁止复制的历史写法**：
 
-1. `@Author/@Description/@Version/@DateTime` 类头模板。
-2. `TODO(spec): describe ...` 等空 Javadoc。
-3. `@Service` 与 `@Manager` 叠加。
-4. `po.setStatus("PENDING")` 或 `enum.name()` 持久化新状态。
-5. Controller 直接返回 `XxxPO`。
-6. Service 以 `return false/null/-1` 表达业务失败。
-7. 裸 class 形式的 Service；接口与 `service/impl/` 必须分离。
+1. `TODO(spec): describe ...` 等空 Javadoc。
+2. `@Service` 与 `@Manager` 叠加。
+3. `po.setStatus("PENDING")` 或 `enum.name()` 持久化新状态。
+4. Controller 直接返回 `XxxPO`。
+5. Service 以 `return false/null/-1` 表达业务失败。
+6. 裸 class 形式的 Service；接口与 `service/impl/` 必须分离。
 
 ---
 

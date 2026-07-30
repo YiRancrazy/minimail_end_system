@@ -26,6 +26,13 @@ import com.yirancrazy.minimall.api.feign.StockFeignClient;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.order.dto.OrderCreateDTO;
 
+
+/**
+ * @Author: yirancrazy@gmail.com
+ * @Description: OrderControllerV1 的单元测试类。
+ * @Version: 1.0
+ * @DateTime: 2026/7/31
+ **/
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 class OrderControllerV1Test {

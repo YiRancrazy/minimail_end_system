@@ -13,6 +13,13 @@ import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.merchant.dto.ShopCreateDTO;
 import com.yirancrazy.minimall.merchant.service.ShopService;
 
+
+/**
+ * @Author: yirancrazy@gmail.com
+ * @Description: ShopControllerV1 的单元测试类。
+ * @Version: 1.0
+ * @DateTime: 2026/7/31
+ **/
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 class ShopControllerV1Test {

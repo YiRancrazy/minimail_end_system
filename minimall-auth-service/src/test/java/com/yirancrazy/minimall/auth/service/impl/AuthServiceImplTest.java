@@ -29,6 +29,13 @@ import com.yirancrazy.minimall.auth.util.JwtUtil;
 import com.yirancrazy.minimall.auth.vo.UserInfoVO;
 import com.yirancrazy.minimall.common.exception.BizException;
 
+
+/**
+ * @Author: yirancrazy@gmail.com
+ * @Description: AuthServiceImpl 的单元测试类。
+ * @Version: 1.0
+ * @DateTime: 2026/7/31
+ **/
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class AuthServiceImplTest {

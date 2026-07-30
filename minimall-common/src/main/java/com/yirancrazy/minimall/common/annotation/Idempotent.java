@@ -7,6 +7,13 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.util.concurrent.TimeUnit;
 
+
+/**
+ * @Author: yirancrazy@gmail.com
+ * @Description: Idempotent 类。
+ * @Version: 1.0
+ * @DateTime: 2026/7/31
+ **/
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
 @Documented

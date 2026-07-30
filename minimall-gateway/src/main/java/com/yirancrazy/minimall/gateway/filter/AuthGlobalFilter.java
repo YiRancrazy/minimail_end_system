@@ -20,6 +20,13 @@ import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 import com.yirancrazy.minimall.gateway.config.JwtVerifier;
 
+
+/**
+ * @Author: yirancrazy@gmail.com
+ * @Description: AuthGlobalFilter 类。
+ * @Version: 1.0
+ * @DateTime: 2026/7/31
+ **/
 @Slf4j
 @Component
 public class AuthGlobalFilter implements GlobalFilter, Ordered {

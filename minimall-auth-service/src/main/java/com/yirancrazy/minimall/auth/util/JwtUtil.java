@@ -10,6 +10,13 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 
+
+/**
+ * @Author: yirancrazy@gmail.com
+ * @Description: 工具类，提供静态工具方法。
+ * @Version: 1.0
+ * @DateTime: 2026/7/31
+ **/
 @Component
 public class JwtUtil {
 

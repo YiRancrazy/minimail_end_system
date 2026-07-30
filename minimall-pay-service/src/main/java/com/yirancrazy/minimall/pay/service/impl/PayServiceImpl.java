@@ -22,6 +22,13 @@ import com.yirancrazy.minimall.pay.mapper.PayRefundMapper;
 import com.yirancrazy.minimall.pay.service.PayService;
 import com.yirancrazy.minimall.pay.vo.RefundVO;
 
+
+/**
+ * @Author: yirancrazy@gmail.com
+ * @Description: 业务服务实现，处理核心业务逻辑。
+ * @Version: 1.0
+ * @DateTime: 2026/7/31
+ **/
 @Slf4j
 @Service
 public class PayServiceImpl implements PayService {

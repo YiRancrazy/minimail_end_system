@@ -3,6 +3,13 @@ package com.yirancrazy.minimall.pay.gateway;
 import java.math.BigDecimal;
 import java.util.Map;
 
+
+/**
+ * @Author: yirancrazy@gmail.com
+ * @Description: 网关实现类，处理支付等外部接口调用。
+ * @Version: 1.0
+ * @DateTime: 2026/7/31
+ **/
 public interface AlipayGateway {
 
     /**

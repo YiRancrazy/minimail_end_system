@@ -2,6 +2,13 @@ package com.yirancrazy.minimall.common.result;
 
 import java.util.List;
 import org.junit.jupiter.api.Test;
+
+/**
+ * @Author: yirancrazy@gmail.com
+ * @Description: Result 的单元测试类。
+ * @Version: 1.0
+ * @DateTime: 2026/7/31
+ **/
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 

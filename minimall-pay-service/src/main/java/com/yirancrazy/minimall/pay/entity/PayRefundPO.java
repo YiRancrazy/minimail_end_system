@@ -7,6 +7,13 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import com.yirancrazy.minimall.common.base.BasePO;
 
+
+/**
+ * @Author: yirancrazy@gmail.com
+ * @Description: 持久化对象，对应数据库表结构。
+ * @Version: 1.0
+ * @DateTime: 2026/7/31
+ **/
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName("t_pay_refund")

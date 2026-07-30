@@ -15,6 +15,13 @@ import com.yirancrazy.minimall.auth.service.AuthService;
 import com.yirancrazy.minimall.auth.vo.UserInfoVO;
 import com.yirancrazy.minimall.common.result.Result;
 
+
+/**
+ * @Author: yirancrazy@gmail.com
+ * @Description: AuthControllerV1 类。
+ * @Version: 1.0
+ * @DateTime: 2026/7/31
+ **/
 @RestController
 @RequestMapping("/api/v1/auth")
 public class AuthControllerV1 {

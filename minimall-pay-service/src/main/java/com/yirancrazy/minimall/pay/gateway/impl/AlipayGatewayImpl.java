@@ -15,6 +15,13 @@ import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.pay.config.AlipayConfig;
 import com.yirancrazy.minimall.pay.gateway.AlipayGateway;
 
+
+/**
+ * @Author: yirancrazy@gmail.com
+ * @Description: AlipayGatewayImpl 类。
+ * @Version: 1.0
+ * @DateTime: 2026/7/31
+ **/
 @Slf4j
 @Component
 public class AlipayGatewayImpl implements AlipayGateway {

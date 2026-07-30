@@ -10,6 +10,13 @@ import com.yirancrazy.minimall.api.dto.order.OrderPaidDTO;
 import com.yirancrazy.minimall.notify.service.NotifyService;
 import com.yirancrazy.minimall.notify.sse.SseHub;
 
+
+/**
+ * @Author: yirancrazy@gmail.com
+ * @Description: OrderPaidMqConsumer 的单元测试类。
+ * @Version: 1.0
+ * @DateTime: 2026/7/31
+ **/
 class OrderPaidMqConsumerTest {
 
     private NotifyService notifyService;

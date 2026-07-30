@@ -23,6 +23,13 @@ import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 import com.yirancrazy.minimall.gateway.config.JwtVerifier;
 
+
+/**
+ * @Author: yirancrazy@gmail.com
+ * @Description: AuthGlobalFilter 的单元测试类。
+ * @Version: 1.0
+ * @DateTime: 2026/7/31
+ **/
 @ExtendWith(MockitoExtension.class)
 class AuthGlobalFilterTest {
 

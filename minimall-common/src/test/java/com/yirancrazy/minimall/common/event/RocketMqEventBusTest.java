@@ -2,7 +2,6 @@ package com.yirancrazy.minimall.common.event;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.runner.WebApplicationContextRunner;
-
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**

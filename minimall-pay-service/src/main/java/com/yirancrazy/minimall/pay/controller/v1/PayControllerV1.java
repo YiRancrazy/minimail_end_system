@@ -1,19 +1,17 @@
 package com.yirancrazy.minimall.pay.controller.v1;
 
-import com.yirancrazy.minimall.api.dto.pay.PayCreateDTO;
 import com.yirancrazy.minimall.common.result.Result;
+import com.yirancrazy.minimall.pay.dto.PayCallbackDTO;
 import com.yirancrazy.minimall.pay.service.PayService;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.bind.annotation.*;
 
-/**
- * @Author: yirancrazy@gmail.com
- * @Description: 支付 C 端接口控制器，对外暴露创建支付单等支付能力，前端发起支付前调用。
- * @Version: 1.0
- * @DateTime: 2026/7/29
- */
+import java.math.BigDecimal;
+import java.util.HashMap;
+import java.util.Map;
+
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/pay")
 public class PayControllerV1 {
@@ -24,14 +22,32 @@ public class PayControllerV1 {
         this.payService = payService;
     }
 
-    /**
-     * 创建支付单。
-     *
-     * @param dto 创建支付单请求参数，包含订单号与金额
-     * @return 新建支付单的主键 ID
-     */
     @PostMapping("/create")
-    public Result<Long> create(@RequestBody PayCreateDTO dto) {
-        return Result.success(payService.create(dto.getOrderId(), dto.getAmount()));
+    public Result<String> create(@RequestParam String orderNo,
+                                  @RequestParam Long userId,
+                                  @RequestParam Long merchantId,
+                                  @RequestParam BigDecimal amount) {
+        String payUrl = payService.createPayment(orderNo, userId, merchantId, amount);
+        return Result.success(payUrl);
+    }
+
+    @PostMapping("/callback/alipay")
+    public String callback(HttpServletRequest request) {
+        Map<String, String> params = new HashMap<>();
+        request.getParameterMap().forEach((key, values) -> params.put(key, values[0]));
+
+        try {
+            String tradeNo = params.get("trade_no");
+            String paymentNo = params.get("out_trade_no");
+            String tradeStatus = params.get("trade_status");
+            boolean success = "TRADE_SUCCESS".equals(tradeStatus) || "TRADE_FINISHED".equals(tradeStatus);
+
+            PayCallbackDTO dto = new PayCallbackDTO(paymentNo, tradeNo, success, params.toString());
+            payService.handleCallback(dto);
+            return "success";
+        } catch (Exception e) {
+            log.error("callback failed", e);
+            return "fail";
+        }
     }
 }

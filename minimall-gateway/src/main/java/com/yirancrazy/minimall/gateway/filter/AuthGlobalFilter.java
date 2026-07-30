@@ -1,9 +1,12 @@
 package com.yirancrazy.minimall.gateway.filter;
 
 import com.yirancrazy.minimall.gateway.config.JwtVerifier;
+import io.jsonwebtoken.Claims;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
+import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpResponse;
@@ -12,16 +15,12 @@ import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
-/**
- * Iter-1 JWT global filter. White-list login/register routes; for everything else
- * parse `Authorization: Bearer xxx` and forward userId / role as X-User-Id /
- * X-User-Role headers. On failure respond 401. Inline-validates JWT signature
- * with the same secret the auth-service uses.
- */
+@Slf4j
 @Component
 public class AuthGlobalFilter implements GlobalFilter, Ordered {
 
@@ -30,22 +29,26 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
 
     private static final Set<String> WHITELIST = Set.of(
         "/api/v1/auth/login",
-        "/api/v1/auth/register"
+        "/api/v1/auth/register",
+        "/api/v1/auth/refresh-token",
+        "/actuator/health"
     );
 
-    private final JwtVerifier verifier;
+    private static final Map<String, Set<String>> ROLE_PATHS = Map.of(
+        "/api/v1/merchant", Set.of("MERCHANT", "PLATFORM"),
+        "/api/v1/platform", Set.of("PLATFORM")
+    );
 
-    public AuthGlobalFilter(JwtVerifier verifier) {
+    private static final Set<String> ALL_ROLES = Set.of("USER", "MERCHANT", "PLATFORM");
+
+    private final JwtVerifier verifier;
+    private final ReactiveStringRedisTemplate redisTemplate;
+
+    public AuthGlobalFilter(JwtVerifier verifier, ReactiveStringRedisTemplate redisTemplate) {
         this.verifier = verifier;
+        this.redisTemplate = redisTemplate;
     }
 
-    /**
-     * 网关 JWT 认证全局过滤器，校验令牌后向下游透传用户身份信息。
-     *
-     * @param exchange 当前请求与响应交换上下文
-     * @param chain 网关过滤器链，用于将请求转交给后续过滤器或目标路由
-     * @return 链路执行结果；白名单或验签失败时直接返回 401 JSON 响应
-     */
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         String path = exchange.getRequest().getPath().value();
@@ -56,45 +59,77 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
 
         String auth = exchange.getRequest().getHeaders().getFirst("Authorization");
         if (auth == null || !auth.startsWith("Bearer ")) {
-            return reject(exchange, "missing token");
+            return reject(exchange, HttpStatus.UNAUTHORIZED, "missing token");
         }
         String token = auth.substring(7);
         if (!JWT_PATTERN.matcher(token).matches()) {
-            return reject(exchange, "malformed token");
+            return reject(exchange, HttpStatus.UNAUTHORIZED, "malformed token");
         }
 
+        Claims claims;
         try {
-            var claims = verifier.verify(token);
-            String userId = claims.getSubject();
-            String role = claims.get("role", String.class);
-            ServerHttpRequest mutated = exchange.getRequest().mutate()
-                .header("X-User-Id", userId)
-                .header("X-User-Role", role == null ? "USER" : role)
-                .header("X-Trace-Id",
-                    exchange.getRequest().getHeaders().getFirst("X-Trace-Id") == null
-                        ? UUID.randomUUID().toString().replace("-", "")
-                        : exchange.getRequest().getHeaders().getFirst("X-Trace-Id"))
-                .build();
-            return chain.filter(exchange.mutate().request(mutated).build());
+            claims = verifier.verify(token);
         } catch (Exception ex) {
-            return reject(exchange, ex.getMessage());
+            return reject(exchange, HttpStatus.UNAUTHORIZED, "token invalid");
         }
+
+        String jti = claims.get("jti", String.class);
+        String role = claims.get("role", String.class);
+        if (role == null) {
+            role = "USER";
+        }
+
+        if (!isAuthorized(path, role)) {
+            return reject(exchange, HttpStatus.FORBIDDEN, "access denied");
+        }
+
+        if (jti != null) {
+            return redisTemplate.hasKey("blacklist:jti:" + jti)
+                .flatMap(blacklisted -> {
+                    if (Boolean.TRUE.equals(blacklisted)) {
+                        return reject(exchange, HttpStatus.UNAUTHORIZED, "token revoked");
+                    }
+                    return chain.filter(mutateWithHeaders(exchange, claims, jti));
+                });
+        }
+
+        return chain.filter(mutateWithHeaders(exchange, claims, jti));
     }
 
-    private Mono<Void> reject(ServerWebExchange exchange, String reason) {
+    private boolean isAuthorized(String path, String role) {
+        for (Map.Entry<String, Set<String>> entry : ROLE_PATHS.entrySet()) {
+            if (path.startsWith(entry.getKey())) {
+                return entry.getValue().contains(role);
+            }
+        }
+        return ALL_ROLES.contains(role);
+    }
+
+    private ServerWebExchange mutateWithHeaders(ServerWebExchange exchange, Claims claims, String jti) {
+        String userId = claims.getSubject();
+        String role = claims.get("role", String.class);
+        ServerHttpRequest mutated = exchange.getRequest().mutate()
+            .header("X-User-Id", userId)
+            .header("X-User-Role", role == null ? "USER" : role)
+            .header("X-User-Jti", jti == null ? "" : jti)
+            .header("X-Trace-Id",
+                exchange.getRequest().getHeaders().getFirst("X-Trace-Id") == null
+                    ? UUID.randomUUID().toString().replace("-", "")
+                    : exchange.getRequest().getHeaders().getFirst("X-Trace-Id"))
+            .build();
+        return exchange.mutate().request(mutated).build();
+    }
+
+    private Mono<Void> reject(ServerWebExchange exchange, HttpStatus status, String reason) {
         ServerHttpResponse res = exchange.getResponse();
-        res.setStatusCode(HttpStatus.UNAUTHORIZED);
+        res.setStatusCode(status);
         res.getHeaders().add("Content-Type", "application/json;charset=UTF-8");
-        String body = "{\"code\":\"14003\",\"message\":\"Token 无效: " + reason + "\"}";
+        String code = status == HttpStatus.FORBIDDEN ? "14007" : "14003";
+        String body = "{\"code\":\"" + code + "\",\"message\":\"" + reason + "\"}";
         return res.writeWith(Mono.just(res.bufferFactory().wrap(
             body.getBytes(StandardCharsets.UTF_8))));
     }
 
-    /**
-     * 返回过滤器执行顺序，使其在 traceId 注入之后、其他业务过滤器之前执行。
-     *
-     * @return 排序值，固定为 -50
-     */
     @Override
     public int getOrder() {
         return -50;

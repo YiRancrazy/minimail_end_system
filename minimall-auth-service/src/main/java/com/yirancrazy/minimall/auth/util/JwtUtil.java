@@ -29,6 +29,14 @@ public class JwtUtil {
         this.ttlMillis = ttlSeconds * 1000L;
     }
 
+    /**
+     * 生成JWT令牌。
+     * @param userId 用户ID
+     * @param username 用户名
+     * @param role 角色
+     * @param jti 令牌唯一标识
+     * @return JWT令牌
+     */
     public String sign(Long userId, String username, String role, String jti) {
         long now = System.currentTimeMillis();
         return Jwts.builder()
@@ -42,10 +50,19 @@ public class JwtUtil {
             .compact();
     }
 
+    /**
+     * 生成刷新令牌。
+     * @return 刷新令牌
+     */
     public String generateRefreshToken() {
         return UUID.randomUUID().toString().replace("-", "");
     }
 
+    /**
+     * 解析JWT令牌。
+     * @param token JWT令牌
+     * @return JWT声明
+     */
     public Claims parse(String token) {
         return Jwts.parser()
             .verifyWith(key)

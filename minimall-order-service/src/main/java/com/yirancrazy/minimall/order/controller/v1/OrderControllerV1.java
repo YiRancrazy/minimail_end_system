@@ -46,6 +46,11 @@ public class OrderControllerV1 {
         return Result.success(orderService.pay(id));
     }
 
+    /**
+     * 查询订单状态。
+     * @param id 订单ID
+     * @return 订单状态
+     */
     @GetMapping("/{id}")
     public Result<String> status(@PathVariable("id") Long id) {
         return Result.success(orderService.status(id));

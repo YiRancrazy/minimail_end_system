@@ -56,6 +56,12 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
         this.redisTemplate = redisTemplate;
     }
 
+    /**
+     * 全局认证过滤器，验证JWT令牌并注入用户信息到请求头。
+     * @param exchange 服务端交换上下文
+     * @param chain 过滤器链
+     * @return 过滤器执行结果
+     */
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         String path = exchange.getRequest().getPath().value();
@@ -138,6 +144,10 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
             body.getBytes(StandardCharsets.UTF_8))));
     }
 
+    /**
+     * 获取过滤器执行顺序。
+     * @return 排序值
+     */
     @Override
     public int getOrder() {
         return -50;

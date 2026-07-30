@@ -39,6 +39,11 @@ public class ShopControllerV1 {
         return Result.success(shopService.getById(id));
     }
 
+    /**
+     * 创建店铺。
+     * @param dto 店铺创建DTO
+     * @return 店铺ID
+     */
     @PostMapping
     public Result<Long> create(@Valid @RequestBody ShopCreateDTO dto) {
         return Result.success(shopService.create(dto));
@@ -56,6 +61,11 @@ public class ShopControllerV1 {
         return Result.success(shopService.update(id, dto));
     }
 
+    /**
+     * 删除店铺。
+     * @param id 店铺ID
+     * @return 删除是否成功
+     */
     @DeleteMapping("/{id}")
     public Result<Boolean> delete(@PathVariable("id") Long id) {
         return Result.success(shopService.delete(id));

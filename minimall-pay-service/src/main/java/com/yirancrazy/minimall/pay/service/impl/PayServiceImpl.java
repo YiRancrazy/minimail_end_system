@@ -46,6 +46,14 @@ public class PayServiceImpl implements PayService {
         this.payRefundMapper = payRefundMapper;
     }
 
+    /**
+     * 创建支付流水。
+     * @param orderNo 订单号
+     * @param userId 用户ID
+     * @param merchantId 商户ID
+     * @param amount 支付金额
+     * @return 支付流水ID
+     */
     @Override
     public Long createPayment(String orderNo, Long userId, Long merchantId, BigDecimal amount) {
         String paymentNo = generatePaymentNo();
@@ -70,6 +78,10 @@ public class PayServiceImpl implements PayService {
         return po.getId();
     }
 
+    /**
+     * 处理支付回调。
+     * @param dto 支付回调DTO
+     */
     @Override
     public void handleCallback(PayCallbackDTO dto) {
         PayTransactionPO po = payManager.getOne(
@@ -92,6 +104,11 @@ public class PayServiceImpl implements PayService {
         return PAYMENT_NO_PREFIX + System.currentTimeMillis() + (int)(Math.random() * 1000);
     }
 
+    /**
+     * 创建退款。
+     * @param dto 退款创建DTO
+     * @return 退款VO
+     */
     @Override
     public RefundVO createRefund(RefundCreateDTO dto) {
         PayTransactionPO payTx = payManager.getOne(

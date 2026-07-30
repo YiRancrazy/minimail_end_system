@@ -61,6 +61,11 @@ public class CartServiceImpl implements CartService {
         return cartItemManager.removeById(id);
     }
 
+    /**
+     * 统计用户购物车项数量。
+     * @param userId 用户ID
+     * @return 购物车项数量
+     */
     @Override
     public long countByUser(Long userId) {
         return cartItemManager.count(Wrappers.lambdaQuery(CartItemPO.class)

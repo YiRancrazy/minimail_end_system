@@ -39,6 +39,11 @@ public class UserControllerV1 {
         return Result.success(userService.getById(id));
     }
 
+    /**
+     * 创建用户。
+     * @param dto 用户创建DTO
+     * @return 用户ID
+     */
     @PostMapping
     public Result<Long> create(@Valid @RequestBody UserCreateDTO dto) {
         return Result.success(userService.create(dto));
@@ -56,6 +61,11 @@ public class UserControllerV1 {
         return Result.success(userService.update(id, dto));
     }
 
+    /**
+     * 删除用户。
+     * @param id 用户ID
+     * @return 删除是否成功
+     */
     @DeleteMapping("/{id}")
     public Result<Boolean> delete(@PathVariable("id") Long id) {
         return Result.success(userService.delete(id));

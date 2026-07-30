@@ -36,6 +36,14 @@ public class PayControllerV1 {
         this.payService = payService;
     }
 
+    /**
+     * 创建支付流水。
+     * @param orderNo 订单号
+     * @param userId 用户ID
+     * @param merchantId 商户ID
+     * @param amount 支付金额
+     * @return 支付流水ID
+     */
     @PostMapping("/create")
     public Result<Long> create(@RequestParam String orderNo,
                                 @RequestParam Long userId,
@@ -45,6 +53,11 @@ public class PayControllerV1 {
         return Result.success(paymentId);
     }
 
+    /**
+     * 处理支付宝回调。
+     * @param request HTTP请求
+     * @return 回调结果
+     */
     @PostMapping("/callback/alipay")
     public String callback(HttpServletRequest request) {
         Map<String, String> params = new HashMap<>();
@@ -66,6 +79,11 @@ public class PayControllerV1 {
         }
     }
 
+    /**
+     * 创建退款。
+     * @param dto 退款创建DTO
+     * @return 退款VO
+     */
     @PostMapping("/refunds")
     public Result<RefundVO> createRefund(@Valid @RequestBody RefundCreateDTO dto) {
         RefundVO vo = payService.createRefund(dto);

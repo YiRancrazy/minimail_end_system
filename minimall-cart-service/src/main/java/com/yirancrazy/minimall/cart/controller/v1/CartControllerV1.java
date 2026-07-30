@@ -39,6 +39,11 @@ public class CartControllerV1 {
         return Result.success(cartService.listByUser(dto));
     }
 
+    /**
+     * 添加购物车项。
+     * @param dto 购物车添加DTO
+     * @return 购物车项ID
+     */
     @PostMapping
     public Result<Long> add(@Valid @RequestBody CartItemAddDTO dto) {
         return Result.success(cartService.add(dto));

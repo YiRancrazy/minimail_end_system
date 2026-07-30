@@ -36,6 +36,11 @@ public class SkuControllerV1 {
         return Result.success(skuService.getById(id));
     }
 
+    /**
+     * 创建SKU。
+     * @param dto SKU创建DTO
+     * @return SKU ID
+     */
     @PostMapping
     public Result<Long> create(@Valid @RequestBody SkuCreateDTO dto) {
         return Result.success(skuService.create(dto));

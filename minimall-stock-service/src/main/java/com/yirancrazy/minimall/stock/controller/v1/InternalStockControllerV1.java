@@ -34,6 +34,12 @@ public class InternalStockControllerV1 {
         return Result.success(stockService.reserve(dto.getSkuId(), dto.getQuantity()));
     }
 
+    /**
+     * 按 SKU 释放指定数量库存，用于取消订单或超时回滚场景。
+     *
+     * @param dto 库存释放入参，含 SKU 标识与释放数量
+     * @return 统一响应体，数据为释放是否成功
+     */
     @PostMapping("/release")
     public Result<Boolean> release(@Valid @RequestBody StockReserveDTO dto) {
         return Result.success(stockService.release(dto.getSkuId(), dto.getQuantity()));

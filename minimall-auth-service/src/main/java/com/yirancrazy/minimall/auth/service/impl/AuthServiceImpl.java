@@ -53,6 +53,11 @@ public class AuthServiceImpl implements AuthService {
         this.refreshTtlSeconds = refreshTtlSeconds;
     }
 
+    /**
+     * 用户注册。
+     * @param dto 注册DTO
+     * @return 令牌VO
+     */
     @Override
     public TokenVO register(RegisterDTO dto) {
         UserAuthPO existing = userAuthManager.getOne(
@@ -72,6 +77,11 @@ public class AuthServiceImpl implements AuthService {
         return issueTokens(po.getId(), po.getUsername(), po.getRole());
     }
 
+    /**
+     * 用户登录。
+     * @param dto 登录DTO
+     * @return 令牌VO
+     */
     @Override
     public TokenVO login(LoginDTO dto) {
         UserAuthPO po = userAuthManager.getOne(
@@ -85,6 +95,11 @@ public class AuthServiceImpl implements AuthService {
         return issueTokens(po.getId(), po.getUsername(), po.getRole());
     }
 
+    /**
+     * 刷新令牌。
+     * @param refreshToken 刷新令牌
+     * @return 新的令牌VO
+     */
     @Override
     public TokenVO refreshToken(String refreshToken) {
         var keys = redisTemplate.keys(REFRESH_KEY_PREFIX + "*");
@@ -117,6 +132,11 @@ public class AuthServiceImpl implements AuthService {
         return issueTokens(po.getId(), po.getUsername(), po.getRole());
     }
 
+    /**
+     * 用户登出。
+     * @param userId 用户ID
+     * @param jti 令牌唯一标识
+     */
     @Override
     public void signOut(Long userId, String jti) {
         var keys = redisTemplate.keys(REFRESH_KEY_PREFIX + userId + ":*");
@@ -128,6 +148,11 @@ public class AuthServiceImpl implements AuthService {
         log.info("user signed out, userId={}", userId);
     }
 
+    /**
+     * 获取当前用户信息。
+     * @param token 令牌
+     * @return 用户信息VO
+     */
     @Override
     public UserInfoVO me(String token) {
         Claims c;

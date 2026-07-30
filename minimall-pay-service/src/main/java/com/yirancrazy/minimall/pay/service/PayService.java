@@ -13,7 +13,26 @@ import com.yirancrazy.minimall.pay.vo.RefundVO;
  * @DateTime: 2026/7/31
  **/
 public interface PayService {
+    /**
+     * 创建支付流水。
+     * @param orderNo 订单号
+     * @param userId 用户ID
+     * @param merchantId 商户ID
+     * @param amount 支付金额
+     * @return 支付流水ID
+     */
     Long createPayment(String orderNo, Long userId, Long merchantId, BigDecimal amount);
+
+    /**
+     * 处理支付回调。
+     * @param dto 支付回调DTO
+     */
     void handleCallback(PayCallbackDTO dto);
+
+    /**
+     * 创建退款。
+     * @param dto 退款创建DTO
+     * @return 退款VO
+     */
     RefundVO createRefund(RefundCreateDTO dto);
 }

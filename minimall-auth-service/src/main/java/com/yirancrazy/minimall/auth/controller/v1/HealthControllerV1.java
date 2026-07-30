@@ -12,6 +12,10 @@ import com.yirancrazy.minimall.common.result.Result;
 @RequestMapping("/internal/auth")
 public class HealthControllerV1 {
 
+    /**
+     * 健康检查。
+     * @return 健康状态
+     */
     @GetMapping("/health")
     public Result<String> health() {
         return Result.success("auth-ok");

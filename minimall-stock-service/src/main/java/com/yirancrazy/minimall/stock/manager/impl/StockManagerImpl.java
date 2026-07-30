@@ -8,11 +8,8 @@ import com.yirancrazy.minimall.stock.mapper.StockMapper;
 import org.springframework.stereotype.Service;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: 库存数据访问管理实现，基于 MyBatis-Plus ServiceImpl 绑定 StockMapper 与 StockPO，
+* 库存数据访问管理实现，基于 MyBatis-Plus ServiceImpl 绑定 StockMapper 与 StockPO，
  *               为上层提供库存记录的查询与更新等通用 CRUD 支撑。
- * @Version: 1.0
- * @DateTime: 2026/7/29
  */
 @Service
 @Manager

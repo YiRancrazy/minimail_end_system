@@ -6,12 +6,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: 库存服务 Spring Boot 启动入口。扫描 com.yirancrazy.minimall 下的组件，
+* 库存服务 Spring Boot 启动入口。扫描 com.yirancrazy.minimall 下的组件，
  *               开启服务发现向 Nacos 注册实例，并注册 stock.mapper 包下的 MyBatis-Plus Mapper，
  *               对外提供 SKU 库存查询、预占与释放能力。
- * @Version: 1.0
- * @DateTime: 2026/7/29
  */
 @SpringBootApplication(scanBasePackages = "com.yirancrazy.minimall")
 @EnableDiscoveryClient

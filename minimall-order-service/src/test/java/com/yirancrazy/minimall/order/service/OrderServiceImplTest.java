@@ -29,10 +29,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: OrderServiceImpl 单元测试，覆盖订单创建、库存锁定失败、支付成功及订单缺失异常路径。
- * @Version: 1.0
- * @DateTime: 2026/7/29
+* OrderServiceImpl 单元测试，覆盖订单创建、库存锁定失败、支付成功及订单缺失异常路径。
  */
 public class OrderServiceImplTest {
 

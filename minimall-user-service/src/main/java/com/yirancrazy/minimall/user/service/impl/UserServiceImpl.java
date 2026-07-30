@@ -11,10 +11,7 @@ import com.yirancrazy.minimall.user.service.UserService;
 import org.springframework.stereotype.Service;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: 用户领域服务实现，校验用户业务规则并委托 UserManager 完成数据操作。
- * @Version: 1.0
- * @DateTime: 2026/7/29
+* 用户领域服务实现，校验用户业务规则并委托 UserManager 完成数据操作。
  */
 @Service
 public class UserServiceImpl implements UserService {

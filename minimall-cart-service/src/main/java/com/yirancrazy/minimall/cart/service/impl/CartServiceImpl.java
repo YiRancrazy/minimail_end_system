@@ -11,10 +11,7 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: 购物车领域服务实现，委托 CartItemManager 完成数据访问并补充默认选中状态等业务规则。
- * @Version: 1.0
- * @DateTime: 2026/7/29
+* 购物车领域服务实现，委托 CartItemManager 完成数据访问并补充默认选中状态等业务规则。
  */
 @Service
 public class CartServiceImpl implements CartService {

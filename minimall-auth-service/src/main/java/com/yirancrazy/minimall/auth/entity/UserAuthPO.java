@@ -6,10 +6,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: 用户认证持久化实体，对应 UserAuth 表，承载用户名、密码哈希、盐与角色。
- * @Version: 1.0
- * @DateTime: 2026/7/29
+* 用户认证持久化实体，对应 UserAuth 表，承载用户名、密码哈希、盐与角色。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

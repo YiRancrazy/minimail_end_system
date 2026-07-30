@@ -3,6 +3,7 @@ package com.yirancrazy.minimall.common.event;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
+import org.apache.rocketmq.client.exception.MQClientException;
 import org.apache.rocketmq.client.consumer.DefaultMQPushConsumer;
 import org.apache.rocketmq.client.consumer.listener.ConsumeConcurrentlyStatus;
 import org.apache.rocketmq.client.consumer.listener.MessageListenerConcurrently;
@@ -69,7 +70,7 @@ public class RocketMqEventConsumer
             wrapper.start();
             log.info("rocketmq consumer started, group={}, topic={}", group, topic);
         }
-        catch (Exception e)
+        catch (MQClientException e)
         {
             log.warn("rocketmq consumer start failed (events ignored): {}", e.getMessage());
             wrapper = null;

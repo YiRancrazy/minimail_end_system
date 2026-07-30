@@ -8,10 +8,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: 通知事件 DTO，承载接收者、类型、标题与内容，供 notify-service 跨域消费。
- * @Version: 1.0
- * @DateTime: 2026/7/29
+* 通知事件 DTO，承载接收者、类型、标题与内容，供 notify-service 跨域消费。
  */
 @Data
 @NoArgsConstructor

@@ -8,10 +8,7 @@ import com.yirancrazy.minimall.common.annotation.Manager;
 import org.springframework.stereotype.Service;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: 认证数据访问管理实现，基于 MyBatis-Plus 操作 UserAuthPO。
- * @Version: 1.0
- * @DateTime: 2026/7/29
+* 认证数据访问管理实现，基于 MyBatis-Plus 操作 UserAuthPO。
  */
 @Service
 @Manager

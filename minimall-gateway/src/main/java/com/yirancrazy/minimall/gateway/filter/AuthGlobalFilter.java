@@ -2,6 +2,7 @@ package com.yirancrazy.minimall.gateway.filter;
 
 import com.yirancrazy.minimall.gateway.config.JwtVerifier;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
@@ -69,7 +70,7 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
         Claims claims;
         try {
             claims = verifier.verify(token);
-        } catch (Exception ex) {
+        } catch (JwtException ex) {
             return reject(exchange, HttpStatus.UNAUTHORIZED, "token invalid");
         }
 

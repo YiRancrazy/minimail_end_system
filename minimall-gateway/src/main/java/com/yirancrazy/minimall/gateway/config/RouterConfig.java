@@ -6,10 +6,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: 网关路由配置，定义服务发现负载均衡路径。
- * @Version: 1.0
- * @DateTime: 2026/7/29
+* 网关路由配置，定义服务发现负载均衡路径。
  */
 @Configuration
 public class RouterConfig {

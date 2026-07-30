@@ -5,10 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: 商品服务错误码枚举，统一定义 SKU 域业务异常码（如 SKU_NOT_FOUND）及国际化文案。
- * @Version: 1.0
- * @DateTime: 2026/7/29
+* 商品服务错误码枚举，统一定义 SKU 域业务异常码（如 SKU_NOT_FOUND）及国际化文案。
  */
 @Getter
 @AllArgsConstructor

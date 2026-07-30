@@ -5,12 +5,9 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: 库存服务错误码枚举，实现 BaseEnum 并按 (code, alias, message) 三元组定义，
+* 库存服务错误码枚举，实现 BaseEnum 并按 (code, alias, message) 三元组定义，
  *               覆盖 SKU 库存不存在 STOCK_NOT_FOUND 与库存不足 STOCK_INSUFFICIENT，
  *               供 BizException 抛出并由全局异常处理转为 Result.fail。
- * @Version: 1.0
- * @DateTime: 2026/7/29
  */
 @Getter
 @AllArgsConstructor

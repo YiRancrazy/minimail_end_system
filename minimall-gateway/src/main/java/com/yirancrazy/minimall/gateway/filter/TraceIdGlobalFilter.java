@@ -11,10 +11,7 @@ import reactor.core.publisher.Mono;
 import java.util.UUID;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: 网关链路追踪全局过滤器，为每个请求生成/透传 traceId。
- * @Version: 1.0
- * @DateTime: 2026/7/29
+* 网关链路追踪全局过滤器，为每个请求生成/透传 traceId。
  */
 @Component
 public class TraceIdGlobalFilter implements GlobalFilter, Ordered {

@@ -7,10 +7,7 @@ import lombok.NoArgsConstructor;
 import com.yirancrazy.minimall.common.exception.BizException;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: 统一接口响应对象，封装响应码、消息、业务数据和链路标识，供所有 Controller 出参使用；提供成功与失败的静态构造方法，null 字段不参与序列化。
- * @Version: 1.0
- * @DateTime: 2026/7/29
+ * 统一接口响应对象，封装响应码、消息、业务数据和链路标识，供所有 Controller 出参使用。
  */
 @Getter
 @NoArgsConstructor

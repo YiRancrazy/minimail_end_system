@@ -13,10 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: 商品 C 端接口控制器，提供 SKU 查询与创建能力，供前台商品维护与展示使用。
- * @Version: 1.0
- * @DateTime: 2026/7/29
+* 商品 C 端接口控制器，提供 SKU 查询与创建能力，供前台商品维护与展示使用。
  */
 @RestController
 @RequestMapping("/api/v1/goods/sku")

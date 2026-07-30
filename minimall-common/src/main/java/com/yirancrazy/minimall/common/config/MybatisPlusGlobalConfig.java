@@ -11,10 +11,7 @@ import com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInt
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: MyBatis-Plus 全局配置，注册 MySQL 分页插件与乐观锁插件，并统一实现创建时间、更新时间和逻辑删除标记的字段自动填充。
- * @Version: 1.0
- * @DateTime: 2026/7/29
+* MyBatis-Plus 全局配置，注册 MySQL 分页插件与乐观锁插件，并统一实现创建时间、更新时间和逻辑删除标记的字段自动填充。
  */
 @Configuration
 public class MybatisPlusGlobalConfig

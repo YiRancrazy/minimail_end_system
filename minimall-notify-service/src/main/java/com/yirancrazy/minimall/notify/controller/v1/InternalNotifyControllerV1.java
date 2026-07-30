@@ -11,10 +11,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: 通知内部接口控制器，供他服务通过 HTTP 调用推送通知消息并触发 SSE。
- * @Version: 1.0
- * @DateTime: 2026/7/29
+* 通知内部接口控制器，供他服务通过 HTTP 调用推送通知消息并触发 SSE。
  */
 @RestController
 @RequestMapping("/internal/notify")

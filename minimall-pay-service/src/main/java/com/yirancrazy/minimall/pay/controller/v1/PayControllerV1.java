@@ -1,5 +1,6 @@
 package com.yirancrazy.minimall.pay.controller.v1;
 
+import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.pay.dto.PayCallbackDTO;
 import com.yirancrazy.minimall.pay.dto.RefundCreateDTO;
@@ -48,8 +49,8 @@ public class PayControllerV1 {
             PayCallbackDTO dto = new PayCallbackDTO(paymentNo, tradeNo, success, params.toString());
             payService.handleCallback(dto);
             return "success";
-        } catch (Exception e) {
-            log.error("callback failed", e);
+        } catch (BizException e) {
+            log.error("callback failed: {}", e.getMessage());
             return "fail";
         }
     }

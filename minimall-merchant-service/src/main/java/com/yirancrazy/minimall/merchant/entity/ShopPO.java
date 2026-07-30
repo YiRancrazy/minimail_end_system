@@ -6,10 +6,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: 店铺持久化实体，对应 t_shop 表，承载店铺名称、营业执照号与状态等基础字段。
- * @Version: 1.0
- * @DateTime: 2026/7/29
+* 店铺持久化实体，对应 t_shop 表，承载店铺名称、营业执照号与状态等基础字段。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

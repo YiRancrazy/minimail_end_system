@@ -12,6 +12,7 @@ import com.yirancrazy.minimall.auth.util.JwtUtil;
 import com.yirancrazy.minimall.auth.vo.UserInfoVO;
 import com.yirancrazy.minimall.common.exception.BizException;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -126,7 +127,7 @@ public class AuthServiceImpl implements AuthService {
         Claims c;
         try {
             c = jwtUtil.parse(token);
-        } catch (Exception ex) {
+        } catch (JwtException ex) {
             throw new BizException(AuthCodeEnum.TOKEN_INVALID.getCode(),
                 AuthCodeEnum.TOKEN_INVALID.getAlias(),
                 AuthCodeEnum.TOKEN_INVALID.getMessage());

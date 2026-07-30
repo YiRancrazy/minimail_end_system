@@ -10,10 +10,7 @@ import org.springframework.stereotype.Component;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: 本地事件总线单元测试，验证事件发布后能被 @EventListener 监听方法按序接收，并校验调用次数与载荷内容。
- * @Version: 1.0
- * @DateTime: 2026/7/29
+* 本地事件总线单元测试，验证事件发布后能被 @EventListener 监听方法按序接收，并校验调用次数与载荷内容。
  */
 public class LocalEventBusTest
 {

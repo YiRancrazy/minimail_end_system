@@ -4,10 +4,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.yirancrazy.minimall.order.entity.OrderPO;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: 订单数据访问管理接口，统一提供订单持久化实体的 MyBatis-Plus 通用数据操作能力。
- * @Version: 1.0
- * @DateTime: 2026/7/29
+* 订单数据访问管理接口，统一提供订单持久化实体的 MyBatis-Plus 通用数据操作能力。
  */
 public interface OrderManager extends IService<OrderPO> {
 }

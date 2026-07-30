@@ -13,10 +13,7 @@ import org.springframework.test.context.ActiveProfiles;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: HealthControllerV1 单元测试，验证健康检查返回 `platform-ok`。
- * @Version: 1.0
- * @DateTime: 2026/7/29
+* HealthControllerV1 单元测试，验证健康检查返回 `platform-ok`。
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")

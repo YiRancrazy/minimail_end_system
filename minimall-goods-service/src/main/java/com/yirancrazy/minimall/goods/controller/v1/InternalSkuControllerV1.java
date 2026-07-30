@@ -10,10 +10,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: 商品内部接口控制器，供其他微服务（如订单、库存）按 ID 查询 SKU 快照数据。
- * @Version: 1.0
- * @DateTime: 2026/7/29
+* 商品内部接口控制器，供其他微服务（如订单、库存）按 ID 查询 SKU 快照数据。
  */
 @RestController
 @RequestMapping("/internal/goods/sku")

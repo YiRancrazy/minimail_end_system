@@ -6,10 +6,7 @@ import org.springframework.cloud.openfeign.FallbackFactory;
 import org.springframework.stereotype.Component;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: ID 服务 Feign 降级工厂，在 ID 服务不可用时返回受控降级结果（按当前实现：nextId 返回 null）。
- * @Version: 1.0
- * @DateTime: 2026/7/29
+* ID 服务 Feign 降级工厂，在 ID 服务不可用时返回受控降级结果（按当前实现：nextId 返回 null）。
  */
 @Slf4j
 @Component

@@ -1,5 +1,6 @@
 package com.yirancrazy.minimall.common.event;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
@@ -28,7 +29,7 @@ public final class MqEventJsonCodec
         {
             return M.writeValueAsBytes(event);
         }
-        catch (Exception e)
+        catch (JsonProcessingException e)
         {
             throw new IllegalStateException("encode failed: " + event.getClass(), e);
         }
@@ -50,7 +51,7 @@ public final class MqEventJsonCodec
         {
             return M.readValue(body, type);
         }
-        catch (Exception e)
+        catch (JsonProcessingException e)
         {
             throw new IllegalStateException("decode failed: " + type, e);
         }

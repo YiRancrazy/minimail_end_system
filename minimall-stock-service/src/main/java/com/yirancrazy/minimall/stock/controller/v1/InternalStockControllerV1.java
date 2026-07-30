@@ -10,11 +10,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: 库存内部接口控制器，挂载于 /internal/stock，仅供订单等内部服务经 Feign 调用，
+* 库存内部接口控制器，挂载于 /internal/stock，仅供订单等内部服务经 Feign 调用，
  *               提供下单时的库存预占与取消/超时后的库存释放能力，不对外网暴露。
- * @Version: 1.0
- * @DateTime: 2026/7/29
  */
 @RestController
 @RequestMapping("/internal/stock")

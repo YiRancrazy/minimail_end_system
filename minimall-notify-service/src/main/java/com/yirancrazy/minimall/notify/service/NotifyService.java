@@ -9,10 +9,7 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: 通知领域服务，封装消息持久化、按用户查询等业务逻辑并委托 Manager 落地。
- * @Version: 1.0
- * @DateTime: 2026/7/29
+* 通知领域服务，封装消息持久化、按用户查询等业务逻辑并委托 Manager 落地。
  */
 @Service
 public class NotifyService {

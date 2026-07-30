@@ -7,10 +7,7 @@ import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 import org.springframework.cloud.openfeign.EnableFeignClients;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: 订单服务 Spring Boot 启动入口，负责启用服务发现、Feign 客户端扫描及 MyBatis Mapper 扫描。
- * @Version: 1.0
- * @DateTime: 2026/7/29
+* 订单服务 Spring Boot 启动入口，负责启用服务发现、Feign 客户端扫描及 MyBatis Mapper 扫描。
  */
 @SpringBootApplication(scanBasePackages = "com.yirancrazy.minimall")
 @EnableDiscoveryClient

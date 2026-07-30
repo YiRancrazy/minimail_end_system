@@ -6,10 +6,7 @@ import org.springframework.cloud.openfeign.FallbackFactory;
 import org.springframework.stereotype.Component;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: 购物车服务 Feign 降级工厂，在购物车服务不可用时返回受控降级结果（按当前实现：购物车项计数返回 -1L 哨兵值）。
- * @Version: 1.0
- * @DateTime: 2026/7/29
+* 购物车服务 Feign 降级工厂，在购物车服务不可用时返回受控降级结果（按当前实现：购物车项计数返回 -1L 哨兵值）。
  */
 @Slf4j
 @Component

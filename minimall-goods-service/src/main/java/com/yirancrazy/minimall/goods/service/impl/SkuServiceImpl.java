@@ -12,10 +12,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: 商品领域服务实现，负责 SKU 业务规则校验、异常转换与对 SkuManager 的调用编排。
- * @Version: 1.0
- * @DateTime: 2026/7/29
+* 商品领域服务实现，负责 SKU 业务规则校验、异常转换与对 SkuManager 的调用编排。
  */
 @Service
 public class SkuServiceImpl implements SkuService {

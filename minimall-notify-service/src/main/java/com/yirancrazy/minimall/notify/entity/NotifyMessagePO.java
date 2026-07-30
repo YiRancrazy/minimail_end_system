@@ -6,10 +6,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: 通知消息持久化实体，承载用户、类型、标题、内容与已读状态，映射至 t_notify_message 表。
- * @Version: 1.0
- * @DateTime: 2026/7/29
+* 通知消息持久化实体，承载用户、类型、标题、内容与已读状态，映射至 t_notify_message 表。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

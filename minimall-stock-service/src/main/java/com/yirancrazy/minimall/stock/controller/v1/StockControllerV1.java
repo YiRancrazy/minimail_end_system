@@ -11,11 +11,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: 库存 C 端接口控制器，挂载于 /api/v1/stock，对外提供按 SKU 查询当前
+* 库存 C 端接口控制器，挂载于 /api/v1/stock，对外提供按 SKU 查询当前
  *               可用库存数量的能力，结果统一包装为 Result 返回。
- * @Version: 1.0
- * @DateTime: 2026/7/29
  */
 @RestController
 @RequestMapping("/api/v1/stock")

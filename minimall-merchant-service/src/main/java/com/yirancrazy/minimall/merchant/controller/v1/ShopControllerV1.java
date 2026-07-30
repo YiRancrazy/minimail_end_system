@@ -16,10 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: 店铺 C 端 HTTP 接口控制器，提供店铺基础信息的查询、创建、更新与删除等 REST 能力。
- * @Version: 1.0
- * @DateTime: 2026/7/29
+* 店铺 C 端 HTTP 接口控制器，提供店铺基础信息的查询、创建、更新与删除等 REST 能力。
  */
 @RestController
 @RequestMapping("/api/v1/merchant/shop")

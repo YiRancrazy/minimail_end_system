@@ -5,10 +5,7 @@ import com.yirancrazy.minimall.id.service.Snowflake;
 import org.springframework.stereotype.Service;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: ID 领域服务实现，封装 Snowflake 算法对外下发全局唯一 ID，供内部各业务服务调用。
- * @Version: 1.0
- * @DateTime: 2026/7/29
+* ID 领域服务实现，封装 Snowflake 算法对外下发全局唯一 ID，供内部各业务服务调用。
  */
 @Service
 public class IdServiceImpl implements IdService {

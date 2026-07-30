@@ -6,13 +6,11 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.init.ScriptException;
 import org.springframework.jdbc.datasource.init.ScriptUtils;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: 购物车服务 dev/test profile 数据库初始化配置，应用启动时执行 classpath 下的 schema.sql。
- * @Version: 1.0
- * @DateTime: 2026/7/29
+* 购物车服务 dev/test profile 数据库初始化配置，应用启动时执行 classpath 下的 schema.sql。
  */
 @Slf4j
 @Configuration
@@ -36,7 +34,7 @@ public class SchemaConfig implements CommandLineRunner {
             ScriptUtils.executeSqlScript(jdbcTemplate.getDataSource().getConnection(),
                 new ClassPathResource("schema.sql"));
             log.info("schema.sql applied");
-        } catch (Exception e) {
+        } catch (ScriptException e) {
             log.warn("schema.sql init skipped: {}", e.getMessage());
         }
     }

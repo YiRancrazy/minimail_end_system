@@ -6,10 +6,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: ID 服务 Spring Boot 启动入口，负责引导容器加载并注册到 Nacos 注册中心。
- * @Version: 1.0
- * @DateTime: 2026/7/29
+* ID 服务 Spring Boot 启动入口，负责引导容器加载并注册到 Nacos 注册中心。
  */
 @SpringBootApplication(scanBasePackages = "com.yirancrazy.minimall")
 @EnableDiscoveryClient

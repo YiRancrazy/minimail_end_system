@@ -5,10 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: 用户服务错误码枚举，定义用户不存在等领域业务错误及其提示信息。
- * @Version: 1.0
- * @DateTime: 2026/7/29
+* 用户服务错误码枚举，定义用户不存在等领域业务错误及其提示信息。
  */
 @Getter
 @AllArgsConstructor

@@ -10,10 +10,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: 店铺内部 RPC 接口控制器，供其他微服务通过 Feign 调用获取店铺快照数据。
- * @Version: 1.0
- * @DateTime: 2026/7/29
+* 店铺内部 RPC 接口控制器，供其他微服务通过 Feign 调用获取店铺快照数据。
  */
 @RestController
 @RequestMapping("/internal/merchant/shop")

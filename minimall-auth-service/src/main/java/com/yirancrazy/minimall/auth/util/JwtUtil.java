@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
-import java.util.Date;
+import java.time.Instant;
 import java.util.UUID;
 
 @Component
@@ -30,8 +30,8 @@ public class JwtUtil {
             .claim("username", username)
             .claim("role", role)
             .claim("jti", jti)
-            .issuedAt(new Date(now))
-            .expiration(new Date(now + ttlMillis))
+            .issuedAt(Instant.ofEpochMilli(now))
+            .expiration(Instant.ofEpochMilli(now + ttlMillis))
             .signWith(key)
             .compact();
     }

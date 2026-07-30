@@ -8,10 +8,7 @@ import com.yirancrazy.minimall.user.mapper.UserMapper;
 import org.springframework.stereotype.Service;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: 用户数据访问管理实现，继承 MyBatis-Plus 通用能力执行用户持久化操作。
- * @Version: 1.0
- * @DateTime: 2026/7/29
+* 用户数据访问管理实现，继承 MyBatis-Plus 通用能力执行用户持久化操作。
  */
 @Service
 @Manager

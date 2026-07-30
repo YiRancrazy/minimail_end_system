@@ -7,6 +7,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.init.ScriptException;
 import org.springframework.jdbc.datasource.init.ScriptUtils;
 
 import javax.sql.DataSource;
@@ -40,7 +41,7 @@ public class H2SchemaConfig implements CommandLineRunner {
             ScriptUtils.executeSqlScript(jdbcTemplate.getDataSource().getConnection(),
                 new ClassPathResource("schema.sql"));
             log.info("schema.sql applied via H2SchemaConfig");
-        } catch (Exception e) {
+        } catch (ScriptException e) {
             log.warn("schema.sql init skipped: {}", e.getMessage());
         }
     }

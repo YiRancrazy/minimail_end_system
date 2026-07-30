@@ -12,10 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: 通知 C 端接口控制器，提供按用户拉取消息列表能力，供前端消息中心展示。
- * @Version: 1.0
- * @DateTime: 2026/7/29
+* 通知 C 端接口控制器，提供按用户拉取消息列表能力，供前端消息中心展示。
  */
 @RestController
 @RequestMapping("/api/v1/notify")

@@ -8,10 +8,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: 订单内部接口控制器，供其他服务通过订单标识查询订单当前业务状态。
- * @Version: 1.0
- * @DateTime: 2026/7/29
+* 订单内部接口控制器，供其他服务通过订单标识查询订单当前业务状态。
  */
 @RestController
 @RequestMapping("/internal/order")

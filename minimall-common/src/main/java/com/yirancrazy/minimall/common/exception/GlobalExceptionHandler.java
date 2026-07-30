@@ -12,10 +12,7 @@ import com.yirancrazy.minimall.common.result.CommonCode;
 import com.yirancrazy.minimall.common.result.Result;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: 全局异常处理器，基于 RestControllerAdvice 拦截业务异常、参数校验异常、缺失请求头及未知异常，统一转换为 Result 失败响应并按级别记录日志。
- * @Version: 1.0
- * @DateTime: 2026/7/29
+ * 全局异常处理器，基于 RestControllerAdvice 拦截业务异常、参数校验异常、缺失请求头及未知异常。
  */
 @Slf4j
 @RestControllerAdvice

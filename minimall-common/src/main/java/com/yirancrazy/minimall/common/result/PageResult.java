@@ -8,10 +8,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: 分页响应对象，封装记录列表与总条数、总页数、当前页、每页大小等分页元数据，并支持由 MyBatis-Plus 的 IPage 直接转换。
- * @Version: 1.0
- * @DateTime: 2026/7/29
+ * 分页响应对象，封装记录列表与总条数、总页数、当前页、每页大小等分页元数据。
  */
 @Data
 @NoArgsConstructor

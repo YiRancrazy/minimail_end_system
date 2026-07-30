@@ -18,7 +18,7 @@ import reactor.test.StepVerifier;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
-import java.util.Date;
+import java.time.Instant;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -67,8 +67,8 @@ class AuthGlobalFilterTest {
             .claim("username", "alice")
             .claim("role", "USER")
             .claim("jti", "test-jti")
-            .issuedAt(new Date())
-            .expiration(new Date(System.currentTimeMillis() + 3600_000))
+            .issuedAt(Instant.now())
+            .expiration(Instant.now().plusSeconds(3600))
             .signWith(key)
             .compact();
 

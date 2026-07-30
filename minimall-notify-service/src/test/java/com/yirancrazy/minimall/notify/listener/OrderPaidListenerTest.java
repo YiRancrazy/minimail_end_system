@@ -26,10 +26,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: OrderPaidListener 单元测试，验证事件触发后消息持久化与 SSE 推送的协作逻辑。
- * @Version: 1.0
- * @DateTime: 2026/7/29
+* OrderPaidListener 单元测试，验证事件触发后消息持久化与 SSE 推送的协作逻辑。
  */
 public class OrderPaidListenerTest {
 

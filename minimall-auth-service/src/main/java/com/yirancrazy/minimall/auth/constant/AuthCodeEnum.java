@@ -5,10 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: 认证服务错误码枚举（USER_NOT_FOUND / PWD_INVALID / TOKEN_INVALID / ...）。
- * @Version: 1.0
- * @DateTime: 2026/7/29
+* 认证服务错误码枚举（USER_NOT_FOUND / PWD_INVALID / TOKEN_INVALID / ...）。
  */
 @Getter
 @AllArgsConstructor

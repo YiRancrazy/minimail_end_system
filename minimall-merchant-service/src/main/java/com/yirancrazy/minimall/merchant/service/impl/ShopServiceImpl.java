@@ -11,10 +11,7 @@ import com.yirancrazy.minimall.merchant.service.ShopService;
 import org.springframework.stereotype.Service;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: 店铺领域服务实现，编排 Manager 完成店铺 CRUD，并在数据缺失时抛出业务异常。
- * @Version: 1.0
- * @DateTime: 2026/7/29
+* 店铺领域服务实现，编排 Manager 完成店铺 CRUD，并在数据缺失时抛出业务异常。
  */
 @Service
 public class ShopServiceImpl implements ShopService {

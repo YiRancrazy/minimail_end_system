@@ -9,10 +9,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: ID 内部接口控制器，提供基于业务标签的号段下发能力，仅供服务间内部调用。
- * @Version: 1.0
- * @DateTime: 2026/7/29
+* ID 内部接口控制器，提供基于业务标签的号段下发能力，仅供服务间内部调用。
  */
 @RestController
 @RequestMapping("/internal/id")

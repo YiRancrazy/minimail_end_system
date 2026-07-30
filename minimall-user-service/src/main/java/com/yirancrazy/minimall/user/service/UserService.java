@@ -5,10 +5,7 @@ import com.yirancrazy.minimall.user.dto.UserUpdateDTO;
 import com.yirancrazy.minimall.user.entity.UserPO;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: 用户领域服务接口，定义用户查询、创建、更新与删除的业务契约。
- * @Version: 1.0
- * @DateTime: 2026/7/29
+* 用户领域服务接口，定义用户查询、创建、更新与删除的业务契约。
  */
 public interface UserService {
     UserPO getById(Long id);

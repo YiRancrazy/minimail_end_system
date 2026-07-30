@@ -8,10 +8,7 @@ import com.yirancrazy.minimall.notify.mapper.NotifyMessageMapper;
 import org.springframework.stereotype.Service;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: 通知消息数据访问管理实现，基于 MyBatis-Plus ServiceImpl 完成对 t_notify_message 表的持久化。
- * @Version: 1.0
- * @DateTime: 2026/7/29
+* 通知消息数据访问管理实现，基于 MyBatis-Plus ServiceImpl 完成对 t_notify_message 表的持久化。
  */
 @Service
 @Manager

@@ -15,11 +15,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: StockServiceImpl 单元测试，基于 Mockito 打桩 StockManager，
+* StockServiceImpl 单元测试，基于 Mockito 打桩 StockManager，
  *               覆盖库存预占成功与库存不足抛出 BizException、以及预占释放后可用量回补的场景。
- * @Version: 1.0
- * @DateTime: 2026/7/29
  */
 public class StockServiceImplTest {
 

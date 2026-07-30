@@ -9,10 +9,7 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: 商品服务 Feign 降级工厂，在商品服务不可用时返回受控降级结果。
- * @Version: 1.0
- * @DateTime: 2026/7/29
+* 商品服务 Feign 降级工厂，在商品服务不可用时返回受控降级结果。
  */
 @Slf4j
 @Component

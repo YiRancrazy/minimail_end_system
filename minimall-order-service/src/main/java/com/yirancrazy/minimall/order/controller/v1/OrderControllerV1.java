@@ -12,10 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: 订单 C 端接口控制器，提供创建订单、发起支付及订单状态查询等对外业务接口。
- * @Version: 1.0
- * @DateTime: 2026/7/29
+* 订单 C 端接口控制器，提供创建订单、发起支付及订单状态查询等对外业务接口。
  */
 @RestController
 @RequestMapping("/api/v1/order")

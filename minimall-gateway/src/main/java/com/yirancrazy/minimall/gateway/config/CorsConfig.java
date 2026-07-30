@@ -9,10 +9,7 @@ import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 import java.util.List;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: 网关跨域配置，统一处理 CORS 预检与响应头。
- * @Version: 1.0
- * @DateTime: 2026/7/29
+* 网关跨域配置，统一处理 CORS 预检与响应头。
  */
 @Configuration
 public class CorsConfig {

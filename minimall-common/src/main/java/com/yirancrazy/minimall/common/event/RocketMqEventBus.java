@@ -1,8 +1,10 @@
 package com.yirancrazy.minimall.common.event;
 
+import org.apache.rocketmq.client.exception.MQClientException;
 import org.apache.rocketmq.client.producer.DefaultMQProducer;
 import org.apache.rocketmq.client.producer.SendResult;
 import org.apache.rocketmq.common.message.Message;
+import org.apache.rocketmq.remoting.exception.RemotingException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Primary;
@@ -45,7 +47,7 @@ public class RocketMqEventBus implements EventBus
             producer.start();
             log.info("rocketmq producer started, namesrv={}, topic={}", namesrvAddr, topic);
         }
-        catch (Exception e)
+        catch (MQClientException e)
         {
             log.warn("rocketmq producer start failed, publish will be no-op: {}", e.getMessage());
             producer = null;
@@ -84,9 +86,14 @@ public class RocketMqEventBus implements EventBus
             SendResult r = producer.send(msg);
             log.debug("rocketmq send ok, msgId={}", r.getMsgId());
         }
-        catch (Exception e)
+        catch (MQClientException | RemotingException e)
         {
             log.warn("rocketmq send failed for {}: {}", event.getClass().getSimpleName(), e.getMessage());
+        }
+        catch (InterruptedException e)
+        {
+            Thread.currentThread().interrupt();
+            log.warn("rocketmq send interrupted for {}", event.getClass().getSimpleName());
         }
     }
 }

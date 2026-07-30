@@ -17,10 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: 购物车 C 端接口控制器，按用户查询、添加与删除购物车项。
- * @Version: 1.0
- * @DateTime: 2026/7/29
+* 购物车 C 端接口控制器，按用户查询、添加与删除购物车项。
  */
 @RestController
 @RequestMapping("/api/v1/cart")

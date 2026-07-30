@@ -6,11 +6,8 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: 库存持久化实体，对应库存表 t_stock，以 SKU 为维度记录可用数量 available
+* 库存持久化实体，对应库存表 t_stock，以 SKU 为维度记录可用数量 available
  *               与已预占数量 reserved；公共主键与审计字段继承自 BasePO。
- * @Version: 1.0
- * @DateTime: 2026/7/29
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

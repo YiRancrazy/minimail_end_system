@@ -6,10 +6,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: 认证服务 Spring Boot 启动入口，负责启动服务发现、Mapper 扫描与 JWT 配置装载。
- * @Version: 1.0
- * @DateTime: 2026/7/29
+* 认证服务 Spring Boot 启动入口，负责启动服务发现、Mapper 扫描与 JWT 配置装载。
  */
 @SpringBootApplication(scanBasePackages = "com.yirancrazy.minimall")
 @EnableDiscoveryClient

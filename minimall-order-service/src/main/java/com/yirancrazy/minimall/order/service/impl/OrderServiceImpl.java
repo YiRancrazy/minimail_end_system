@@ -23,10 +23,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: 订单领域服务实现，编排库存锁定、支付流水、订单持久化、通知推送及支付事件发布流程。
- * @Version: 1.0
- * @DateTime: 2026/7/29
+* 订单领域服务实现，编排库存锁定、支付流水、订单持久化、通知推送及支付事件发布流程。
  *
  * Iter-4: cross-process notify. pay() no longer relies on the in-process bus
  * for OrderPaid (which is in-process only). It instead synchronously calls

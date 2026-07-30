@@ -8,10 +8,7 @@ import com.yirancrazy.minimall.goods.mapper.SkuMapper;
 import org.springframework.stereotype.Service;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: 商品数据访问管理实现，基于 MyBatis-Plus ServiceImpl 暴露 SKU 表的通用持久化能力。
- * @Version: 1.0
- * @DateTime: 2026/7/29
+* 商品数据访问管理实现，基于 MyBatis-Plus ServiceImpl 暴露 SKU 表的通用持久化能力。
  */
 @Service
 @Manager

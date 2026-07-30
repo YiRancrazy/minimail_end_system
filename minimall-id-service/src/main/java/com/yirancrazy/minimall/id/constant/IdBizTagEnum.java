@@ -5,10 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: 业务标签枚举，定义订单、支付、库存、用户等业务域对应的号段 key，统一管理系统全局号段类型。
- * @Version: 1.0
- * @DateTime: 2026/7/29
+* 业务标签枚举，定义订单、支付、库存、用户等业务域对应的号段 key，统一管理系统全局号段类型。
  */
 @Getter
 @AllArgsConstructor

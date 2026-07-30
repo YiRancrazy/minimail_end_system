@@ -16,10 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: 用户 C 端接口控制器，提供按 ID 查询、创建、更新与删除用户能力。
- * @Version: 1.0
- * @DateTime: 2026/7/29
+* 用户 C 端接口控制器，提供按 ID 查询、创建、更新与删除用户能力。
  */
 @RestController
 @RequestMapping("/api/v1/user")

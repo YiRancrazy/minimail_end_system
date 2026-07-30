@@ -6,13 +6,11 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.init.ScriptException;
 import org.springframework.jdbc.datasource.init.ScriptUtils;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: 商家服务 dev/test profile 数据库初始化配置，启动时加载 schema.sql 完成表结构初始化。
- * @Version: 1.0
- * @DateTime: 2026/7/29
+* 商家服务 dev/test profile 数据库初始化配置，启动时加载 schema.sql 完成表结构初始化。
  */
 @Slf4j
 @Configuration
@@ -34,7 +32,7 @@ public class SchemaConfig implements CommandLineRunner {
             ScriptUtils.executeSqlScript(jdbcTemplate.getDataSource().getConnection(),
                 new ClassPathResource("schema.sql"));
             log.info("schema.sql applied");
-        } catch (Exception e) {
+        } catch (ScriptException e) {
             log.warn("schema.sql init skipped: {}", e.getMessage());
         }
     }

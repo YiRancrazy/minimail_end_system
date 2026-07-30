@@ -7,10 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: StockFeignFallbackFactory 单元测试，验证服务不可用时返回的降级结果。
- * @Version: 1.0
- * @DateTime: 2026/7/29
+* StockFeignFallbackFactory 单元测试，验证服务不可用时返回的降级结果。
  */
 public class StockFeignFallbackFactoryTest {
 

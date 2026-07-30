@@ -11,11 +11,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: 库存领域服务实现，承载 SKU 库存预占与释放的业务规则：预占前校验库存存在且充足，
+* 库存领域服务实现，承载 SKU 库存预占与释放的业务规则：预占前校验库存存在且充足，
  *               将数量从可用转入预占；释放则做反向回冲。写操作以本地事务保证可用量与预占量同增同减。
- * @Version: 1.0
- * @DateTime: 2026/7/29
  */
 @Service
 public class StockServiceImpl implements StockService {

@@ -10,10 +10,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * @Author: yirancrazy@gmail.com
- * @Description: 用户内部接口控制器，供其他服务查询用户快照等内部数据。
- * @Version: 1.0
- * @DateTime: 2026/7/29
+* 用户内部接口控制器，供其他服务查询用户快照等内部数据。
  */
 @RestController
 @RequestMapping("/internal/user")

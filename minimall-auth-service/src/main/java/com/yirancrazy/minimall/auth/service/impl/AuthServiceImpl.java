@@ -61,8 +61,8 @@ public class AuthServiceImpl implements AuthService {
         po.setRole("USER");
         po.setStatus(1);
         userAuthManager.save(po);
-        return new TokenVO(jwtUtil.sign(po.getId(), po.getUsername(), po.getRole()),
-            "Bearer", ttlSeconds);
+        String accessToken = jwtUtil.sign(po.getId(), po.getUsername(), po.getRole());
+        return new TokenVO(accessToken, null, "Bearer", ttlSeconds);
     }
 
     /**
@@ -81,8 +81,8 @@ public class AuthServiceImpl implements AuthService {
         if (!BCrypt.checkpw(dto.getPassword() + po.getSalt(), po.getPasswordHash())) {
             throw new BizException(AuthCodeEnum.PWD_INVALID);
         }
-        return new TokenVO(jwtUtil.sign(po.getId(), po.getUsername(), po.getRole()),
-            "Bearer", ttlSeconds);
+        String accessToken = jwtUtil.sign(po.getId(), po.getUsername(), po.getRole());
+        return new TokenVO(accessToken, null, "Bearer", ttlSeconds);
     }
 
     /**

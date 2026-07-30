@@ -60,7 +60,6 @@ public class UserService {
 ```java
 /**
  * 根据用户ID查询用户信息。
- *
  * @param userId 用户ID，必须 > 0
  * @return 用户VO；若不存在返回 null
  * @throws BizException 当 userId 非法时

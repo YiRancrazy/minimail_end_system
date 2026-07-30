@@ -2,8 +2,11 @@ package com.yirancrazy.minimall.pay.controller.v1;
 
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.pay.dto.PayCallbackDTO;
+import com.yirancrazy.minimall.pay.dto.RefundCreateDTO;
 import com.yirancrazy.minimall.pay.service.PayService;
+import com.yirancrazy.minimall.pay.vo.RefundVO;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
@@ -49,5 +52,11 @@ public class PayControllerV1 {
             log.error("callback failed", e);
             return "fail";
         }
+    }
+
+    @PostMapping("/refunds")
+    public Result<RefundVO> createRefund(@Valid @RequestBody RefundCreateDTO dto) {
+        RefundVO vo = payService.createRefund(dto);
+        return Result.success(vo);
     }
 }

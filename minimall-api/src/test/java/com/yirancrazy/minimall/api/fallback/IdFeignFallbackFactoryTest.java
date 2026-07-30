@@ -1,10 +1,9 @@
 package com.yirancrazy.minimall.api.fallback;
 
-import com.yirancrazy.minimall.api.feign.IdFeignClient;
 import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import com.yirancrazy.minimall.api.feign.IdFeignClient;
 
 class IdFeignFallbackFactoryTest {
 

@@ -1,9 +1,9 @@
 package com.yirancrazy.minimall.api.fallback;
 
-import com.yirancrazy.minimall.api.feign.OrderFeignClient;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.openfeign.FallbackFactory;
 import org.springframework.stereotype.Component;
+import lombok.extern.slf4j.Slf4j;
+import com.yirancrazy.minimall.api.feign.OrderFeignClient;
 
 /**
 * 订单服务 Feign 降级工厂，在订单服务不可用时返回受控降级结果。

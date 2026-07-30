@@ -1,12 +1,11 @@
 package com.yirancrazy.minimall.api.fallback;
 
-import com.yirancrazy.minimall.api.dto.goods.SkuSnapshotDTO;
-import com.yirancrazy.minimall.api.feign.GoodsFeignClient;
-import lombok.extern.slf4j.Slf4j;
+import java.math.BigDecimal;
 import org.springframework.cloud.openfeign.FallbackFactory;
 import org.springframework.stereotype.Component;
-
-import java.math.BigDecimal;
+import lombok.extern.slf4j.Slf4j;
+import com.yirancrazy.minimall.api.dto.goods.SkuSnapshotDTO;
+import com.yirancrazy.minimall.api.feign.GoodsFeignClient;
 
 /**
 * 商品服务 Feign 降级工厂，在商品服务不可用时返回受控降级结果。

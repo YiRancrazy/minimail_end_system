@@ -1,10 +1,9 @@
 package com.yirancrazy.minimall.api.dto.goods;
 
+import java.math.BigDecimal;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.math.BigDecimal;
 
 /**
 * 商品 SKU 跨服务快照 DTO，承载 SKU 标识、SPU 标识、名称、价格与库存。

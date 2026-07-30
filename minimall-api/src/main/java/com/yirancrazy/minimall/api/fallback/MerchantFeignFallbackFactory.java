@@ -1,10 +1,10 @@
 package com.yirancrazy.minimall.api.fallback;
 
-import com.yirancrazy.minimall.api.dto.merchant.ShopSnapshotDTO;
-import com.yirancrazy.minimall.api.feign.MerchantFeignClient;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.openfeign.FallbackFactory;
 import org.springframework.stereotype.Component;
+import lombok.extern.slf4j.Slf4j;
+import com.yirancrazy.minimall.api.dto.merchant.ShopSnapshotDTO;
+import com.yirancrazy.minimall.api.feign.MerchantFeignClient;
 
 /**
 * 商家服务 Feign 降级工厂，在商家服务不可用时返回受控降级结果。

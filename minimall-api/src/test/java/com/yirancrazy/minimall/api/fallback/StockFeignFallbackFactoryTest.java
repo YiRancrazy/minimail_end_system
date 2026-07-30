@@ -1,10 +1,9 @@
 package com.yirancrazy.minimall.api.fallback;
 
-import com.yirancrazy.minimall.api.feign.StockFeignClient;
 import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import com.yirancrazy.minimall.api.feign.StockFeignClient;
 
 /**
 * StockFeignFallbackFactory 单元测试，验证服务不可用时返回的降级结果。

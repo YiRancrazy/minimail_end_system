@@ -1,11 +1,11 @@
 package com.yirancrazy.minimall.api.feign;
 
-import com.yirancrazy.minimall.api.dto.pay.PayCreateDTO;
-import com.yirancrazy.minimall.api.fallback.PayFeignFallbackFactory;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
+import com.yirancrazy.minimall.api.dto.pay.PayCreateDTO;
+import com.yirancrazy.minimall.api.fallback.PayFeignFallbackFactory;
 
 /**
 * 支付服务 Feign 客户端，提供跨服务支付推进与回调查询能力。

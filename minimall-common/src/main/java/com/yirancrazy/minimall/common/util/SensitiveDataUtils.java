@@ -3,11 +3,9 @@ package com.yirancrazy.minimall.common.util;
 /**
  * 敏感数据脱敏工具类
  */
-public final class SensitiveDataUtils
-{
+public final class SensitiveDataUtils {
 
-    private SensitiveDataUtils()
-    {
+    private SensitiveDataUtils() {
     }
 
     /**
@@ -17,16 +15,13 @@ public final class SensitiveDataUtils
      * @param phone 手机号
      * @return 脱敏后的手机号
      */
-    public static String maskPhone(String phone)
-    {
-        if (phone == null || phone.isEmpty())
-        {
+    public static String maskPhone(String phone) {
+        if (phone == null || phone.isEmpty()) {
             return phone;
         }
 
         String digits = phone.replaceAll("[^0-9]", "");
-        if (digits.length() < 7)
-        {
+        if (digits.length() < 7) {
             return phone;
         }
 
@@ -40,16 +35,13 @@ public final class SensitiveDataUtils
      * @param idCard 身份证号
      * @return 脱敏后的身份证号
      */
-    public static String maskIdCard(String idCard)
-    {
-        if (idCard == null || idCard.isEmpty())
-        {
+    public static String maskIdCard(String idCard) {
+        if (idCard == null || idCard.isEmpty()) {
             return idCard;
         }
 
         String digits = idCard.replaceAll("[^0-9]", "");
-        if (digits.length() < 8)
-        {
+        if (digits.length() < 8) {
             return idCard;
         }
 
@@ -65,16 +57,13 @@ public final class SensitiveDataUtils
      * @param bankCard 银行卡号
      * @return 脱敏后的银行卡号
      */
-    public static String maskBankCard(String bankCard)
-    {
-        if (bankCard == null || bankCard.isEmpty())
-        {
+    public static String maskBankCard(String bankCard) {
+        if (bankCard == null || bankCard.isEmpty()) {
             return bankCard;
         }
 
         String digits = bankCard.replaceAll("[^0-9]", "");
-        if (digits.length() < 8)
-        {
+        if (digits.length() < 8) {
             return bankCard;
         }
 
@@ -90,10 +79,8 @@ public final class SensitiveDataUtils
      * @param password 密码
      * @return 固定长度的遮蔽字符串
      */
-    public static String maskPassword(String password)
-    {
-        if (password == null || password.isEmpty())
-        {
+    public static String maskPassword(String password) {
+        if (password == null || password.isEmpty()) {
             return password;
         }
         return "******";
@@ -106,15 +93,12 @@ public final class SensitiveDataUtils
      * @param token Token
      * @return 脱敏后的Token
      */
-    public static String maskToken(String token)
-    {
-        if (token == null || token.isEmpty())
-        {
+    public static String maskToken(String token) {
+        if (token == null || token.isEmpty()) {
             return token;
         }
 
-        if (token.length() <= 8)
-        {
+        if (token.length() <= 8) {
             return token;
         }
 

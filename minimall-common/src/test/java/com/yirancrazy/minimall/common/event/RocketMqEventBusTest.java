@@ -8,8 +8,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * RocketMQ EventBus 条件装配测试。验证在启用 RocketMQ 配置时，
  * EventBus 实现为 RocketMqEventBus。使用虚拟 namesrv 地址以避免依赖真实 broker。
  */
-public class RocketMqEventBusTest
-{
+public class RocketMqEventBusTest {
 
     private final WebApplicationContextRunner runner = new WebApplicationContextRunner()
         .withConfiguration(
@@ -26,10 +25,8 @@ public class RocketMqEventBusTest
      * 容器注入的 EventBus 为 RocketMqEventBus 实例。
      */
     @Test
-    public void shouldUseRocketMqEventBus()
-    {
-        runner.run(ctx ->
-        {
+    public void shouldUseRocketMqEventBus() {
+        runner.run(ctx -> {
             EventBus eventBus = ctx.getBean(EventBus.class);
             assertThat(eventBus).isInstanceOf(RocketMqEventBus.class);
         });

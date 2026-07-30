@@ -16,12 +16,10 @@ import org.springframework.test.util.ReflectionTestUtils;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @ExtendWith(OutputCaptureExtension.class)
-class RocketMqEventConsumerTest
-{
+class RocketMqEventConsumerTest {
 
     @Test
-    void start_givenNoHandlers_thenLogsWarning(CapturedOutput output)
-    {
+    void start_givenNoHandlers_thenLogsWarning(CapturedOutput output) {
         RocketMqEventConsumer consumer = new RocketMqEventConsumer("localhost:9876", "test-topic", "test-group");
 
         consumer.start();
@@ -31,11 +29,9 @@ class RocketMqEventConsumerTest
     }
 
     @Test
-    void consumeMessage_givenHandlerFailure_thenReconsumeLater() throws Exception
-    {
+    void consumeMessage_givenHandlerFailure_thenReconsumeLater() throws Exception {
         Map<Class<?>, Consumer<Object>> handlers = new ConcurrentHashMap<>();
-        handlers.put(SampleEvent.class, event ->
-        {
+        handlers.put(SampleEvent.class, event -> {
             throw new IllegalStateException("handler failed");
         });
         RocketMqEventConsumer.DefaultMQConsumerWrapper wrapper = new RocketMqEventConsumer.DefaultMQConsumerWrapper(
@@ -48,11 +44,9 @@ class RocketMqEventConsumerTest
     }
 
     @Test
-    void consumeMessage_givenDecodeFailure_thenConsumesSuccessfully() throws Exception
-    {
+    void consumeMessage_givenDecodeFailure_thenConsumesSuccessfully() throws Exception {
         Map<Class<?>, Consumer<Object>> handlers = new ConcurrentHashMap<>();
-        handlers.put(SampleEvent.class, event ->
-        {
+        handlers.put(SampleEvent.class, event -> {
         });
         RocketMqEventConsumer.DefaultMQConsumerWrapper wrapper = new RocketMqEventConsumer.DefaultMQConsumerWrapper(
             "localhost:9876", "test-topic", "test-group", handlers);
@@ -64,22 +58,19 @@ class RocketMqEventConsumerTest
     }
 
     private static MessageListenerConcurrently listenerFrom(
-        RocketMqEventConsumer.DefaultMQConsumerWrapper wrapper)
-    {
+        RocketMqEventConsumer.DefaultMQConsumerWrapper wrapper) {
         DefaultMQPushConsumer consumer = (DefaultMQPushConsumer) ReflectionTestUtils.getField(wrapper, "consumer");
         assertThat(consumer).isNotNull();
         return (MessageListenerConcurrently) consumer.getMessageListener();
     }
 
-    private static MessageExt message(byte[] body)
-    {
+    private static MessageExt message(byte[] body) {
         MessageExt message = new MessageExt();
         message.setTags(MqEventJsonCodec.tagFor(SampleEvent.class));
         message.setBody(body);
         return message;
     }
 
-    private record SampleEvent(String payload)
-    {
+    private record SampleEvent(String payload) {
     }
 }

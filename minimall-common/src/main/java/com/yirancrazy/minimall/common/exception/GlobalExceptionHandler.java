@@ -16,12 +16,10 @@ import com.yirancrazy.minimall.common.result.Result;
  */
 @Slf4j
 @RestControllerAdvice
-public class GlobalExceptionHandler
-{
+public class GlobalExceptionHandler {
 
     @ExceptionHandler(BizException.class)
-    public ResponseEntity<Result<Void>> biz(BizException e)
-    {
+    public ResponseEntity<Result<Void>> biz(BizException e) {
         log.warn("biz exception code={} alias={} msg={}", e.getCode(), e.getAlias(), e.getMessage());
         return ResponseEntity.status(HttpStatus.OK).body(Result.fail(e.getCode(), e.getMessage()));
     }
@@ -33,8 +31,7 @@ public class GlobalExceptionHandler
      * @return HTTP 200 包装的失败响应，错误码为 {@link CommonCode#PARAM_INVALID}
      */
     @ExceptionHandler({MethodArgumentNotValidException.class, BindException.class})
-    public ResponseEntity<Result<Void>> validation(Exception e)
-    {
+    public ResponseEntity<Result<Void>> validation(Exception e) {
         log.warn("validation failed: {}", e.getMessage());
         return ResponseEntity.status(HttpStatus.OK).body(Result.fail(CommonCode.PARAM_INVALID, "请求参数校验失败"));
     }
@@ -46,8 +43,7 @@ public class GlobalExceptionHandler
      * @return HTTP 200 包装的失败响应，错误码取自异常本身
      */
     @ExceptionHandler(BaseException.class)
-    public ResponseEntity<Result<Void>> base(BaseException e)
-    {
+    public ResponseEntity<Result<Void>> base(BaseException e) {
         log.error("base error code={} msg={}", e.getCode(), e.getMessage(), e);
         return ResponseEntity.status(HttpStatus.OK).body(Result.fail(e.getCode(), e.getMessage()));
     }
@@ -59,8 +55,7 @@ public class GlobalExceptionHandler
      * @return HTTP 200 包装的失败响应，错误码为 {@code 14003}，消息含缺失的请求头名
      */
     @ExceptionHandler(MissingRequestHeaderException.class)
-    public ResponseEntity<Result<Void>> missingHeader(MissingRequestHeaderException e)
-    {
+    public ResponseEntity<Result<Void>> missingHeader(MissingRequestHeaderException e) {
         log.warn("missing required header: {}", e.getHeaderName());
         return ResponseEntity.status(HttpStatus.OK).body(Result.fail("14003", "缺少请求头: " + e.getHeaderName()));
     }
@@ -72,8 +67,7 @@ public class GlobalExceptionHandler
      * @return HTTP 200 包装的失败响应，错误码为 {@link CommonCode#SYS_ERROR}，不对外暴露内部细节
      */
     @ExceptionHandler(Throwable.class)
-    public ResponseEntity<Result<Void>> unknown(Throwable e)
-    {
+    public ResponseEntity<Result<Void>> unknown(Throwable e) {
         log.error("unknown error", e);
         return ResponseEntity.status(HttpStatus.OK).body(Result.fail(CommonCode.SYS_ERROR, "系统繁忙"));
     }

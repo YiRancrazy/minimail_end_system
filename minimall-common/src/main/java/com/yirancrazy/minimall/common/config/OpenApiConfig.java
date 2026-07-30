@@ -12,12 +12,10 @@ import io.swagger.v3.oas.models.info.License;
  * 包扫描自动拾取。Knife4j UI 入口：{@code /doc.html}。
  */
 @Configuration
-public class OpenApiConfig
-{
+public class OpenApiConfig {
 
     @Bean
-    public OpenAPI minimallOpenAPI()
-    {
+    public OpenAPI minimallOpenAPI() {
         return new OpenAPI()
             .info(new Info()
                 .title("Minimall API")

@@ -13,8 +13,7 @@ import com.yirancrazy.minimall.common.exception.BizException;
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class Result<T>
-{
+public class Result<T> {
     private String code;
     private String message;
     private T data;
@@ -25,13 +24,11 @@ public class Result<T>
      *
      * @return 响应码为 {@code 00000} 的成功结果，message、data、traceId 均为 null
      */
-    public static <T> Result<T> success()
-    {
+    public static <T> Result<T> success() {
         return new Result<>("00000", null, null, null);
     }
 
-    public static <T> Result<T> success(T data)
-    {
+    public static <T> Result<T> success(T data) {
         return new Result<>("00000", null, data, null);
     }
 
@@ -42,13 +39,11 @@ public class Result<T>
      * @param msg  面向调用方的错误提示消息
      * @return 携带错误码与消息的失败结果，data 为 null
      */
-    public static <T> Result<T> fail(String code, String msg)
-    {
+    public static <T> Result<T> fail(String code, String msg) {
         return new Result<>(code, msg, null, null);
     }
 
-    public static <T> Result<T> fail(BizException e)
-    {
+    public static <T> Result<T> fail(BizException e) {
         return new Result<>(e.getCode(), e.getMessage(), null, null);
     }
 }

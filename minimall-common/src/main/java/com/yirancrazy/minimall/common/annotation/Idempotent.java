@@ -10,8 +10,7 @@ import java.util.concurrent.TimeUnit;
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-public @interface Idempotent
-{
+public @interface Idempotent {
     String key();
 
     long expire() default 24;

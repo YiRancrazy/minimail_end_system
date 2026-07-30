@@ -13,8 +13,7 @@ import lombok.Data;
 * 持久化实体基类，统一定义雪花算法主键、创建时间、更新时间和逻辑删除标记四个公共字段，并配置自动填充与逻辑删除注解。
  */
 @Data
-public abstract class BasePO implements Serializable
-{
+public abstract class BasePO implements Serializable {
     @TableId(type = IdType.ASSIGN_ID)
     private Long id;
 

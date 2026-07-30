@@ -22,8 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 @Primary
 @ConditionalOnProperty(prefix = "minimall.eventbus.rocketmq", name = "enabled", havingValue = "true")
-public class RocketMqEventBus implements EventBus
-{
+public class RocketMqEventBus implements EventBus {
 
     private final String namesrvAddr;
     private final String topic;
@@ -31,34 +30,28 @@ public class RocketMqEventBus implements EventBus
 
     public RocketMqEventBus(
         @Value("${minimall.eventbus.rocketmq.namesrv-addr:127.0.0.1:9876}") String namesrvAddr,
-        @Value("${minimall.eventbus.rocketmq.topic:minimall-events}") String topic)
-    {
+        @Value("${minimall.eventbus.rocketmq.topic:minimall-events}") String topic) {
         this.namesrvAddr = namesrvAddr;
         this.topic = topic;
     }
 
     @PostConstruct
-    void start()
-    {
+    void start() {
         producer = new DefaultMQProducer("minimall-producer");
         producer.setNamesrvAddr(namesrvAddr);
-        try
-        {
+        try {
             producer.start();
             log.info("rocketmq producer started, namesrv={}, topic={}", namesrvAddr, topic);
         }
-        catch (MQClientException e)
-        {
+        catch (MQClientException e) {
             log.warn("rocketmq producer start failed, publish will be no-op: {}", e.getMessage());
             producer = null;
         }
     }
 
     @PreDestroy
-    void stop()
-    {
-        if (producer != null)
-        {
+    void stop() {
+        if (producer != null) {
             producer.shutdown();
         }
     }
@@ -72,26 +65,21 @@ public class RocketMqEventBus implements EventBus
      * @param event the domain event to send; encoded via {@link MqEventJsonCodec}
      */
     @Override
-    public void publish(Object event)
-    {
-        if (producer == null)
-        {
+    public void publish(Object event) {
+        if (producer == null) {
             log.warn("rocketmq producer not started; event {} dropped", event.getClass().getSimpleName());
             return;
         }
-        try
-        {
+        try {
             Message msg = new Message(topic, MqEventJsonCodec.tagFor(event.getClass()),
                 MqEventJsonCodec.encode(event));
             SendResult r = producer.send(msg);
             log.debug("rocketmq send ok, msgId={}", r.getMsgId());
         }
-        catch (MQClientException | RemotingException e)
-        {
+        catch (MQClientException | RemotingException e) {
             log.warn("rocketmq send failed for {}: {}", event.getClass().getSimpleName(), e.getMessage());
         }
-        catch (InterruptedException e)
-        {
+        catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             log.warn("rocketmq send interrupted for {}", event.getClass().getSimpleName());
         }

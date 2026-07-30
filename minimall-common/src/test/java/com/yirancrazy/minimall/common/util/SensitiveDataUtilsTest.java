@@ -2,151 +2,132 @@ package com.yirancrazy.minimall.common.util;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 @DisplayName("脱敏工具类测试")
-class SensitiveDataUtilsTest
-{
+class SensitiveDataUtilsTest {
 
     @Test
     @DisplayName("手机号脱敏 - null输入")
-    void maskPhone_nullInput()
-    {
+    void maskPhone_nullInput() {
         assertNull(SensitiveDataUtils.maskPhone(null));
     }
 
     @Test
     @DisplayName("手机号脱敏 - 空字符串")
-    void maskPhone_emptyString()
-    {
+    void maskPhone_emptyString() {
         assertEquals("", SensitiveDataUtils.maskPhone(""));
     }
 
     @Test
     @DisplayName("手机号脱敏 - 短字符串")
-    void maskPhone_shortString()
-    {
+    void maskPhone_shortString() {
         assertEquals("138", SensitiveDataUtils.maskPhone("138"));
         assertEquals("12345", SensitiveDataUtils.maskPhone("12345"));
     }
 
     @Test
     @DisplayName("手机号脱敏 - 正常11位手机号")
-    void maskPhone_normalPhone()
-    {
+    void maskPhone_normalPhone() {
         assertEquals("138****5678", SensitiveDataUtils.maskPhone("13812345678"));
         assertEquals("159****0000", SensitiveDataUtils.maskPhone("15912340000"));
     }
 
     @Test
     @DisplayName("手机号脱敏 - 包含非数字字符")
-    void maskPhone_nonDigitCharacters()
-    {
+    void maskPhone_nonDigitCharacters() {
         assertEquals("138****5678", SensitiveDataUtils.maskPhone("138-1234-5678"));
         assertEquals("138****5678", SensitiveDataUtils.maskPhone("138 1234 5678"));
     }
 
     @Test
     @DisplayName("身份证脱敏 - null输入")
-    void maskIdCard_nullInput()
-    {
+    void maskIdCard_nullInput() {
         assertNull(SensitiveDataUtils.maskIdCard(null));
     }
 
     @Test
     @DisplayName("身份证脱敏 - 空字符串")
-    void maskIdCard_emptyString()
-    {
+    void maskIdCard_emptyString() {
         assertEquals("", SensitiveDataUtils.maskIdCard(""));
     }
 
     @Test
     @DisplayName("身份证脱敏 - 短字符串")
-    void maskIdCard_shortString()
-    {
+    void maskIdCard_shortString() {
         assertEquals("320", SensitiveDataUtils.maskIdCard("320"));
         assertEquals("320106", SensitiveDataUtils.maskIdCard("320106"));
     }
 
     @Test
     @DisplayName("身份证脱敏 - 正常18位身份证")
-    void maskIdCard_normal18DigitIdCard()
-    {
+    void maskIdCard_normal18DigitIdCard() {
         assertEquals("320106********1234", SensitiveDataUtils.maskIdCard("320106199001011234"));
         assertEquals("110101********5678", SensitiveDataUtils.maskIdCard("110101199001015678"));
     }
 
     @Test
     @DisplayName("身份证脱敏 - 15位老身份证")
-    void maskIdCard_old15DigitIdCard()
-    {
+    void maskIdCard_old15DigitIdCard() {
         assertEquals("320106*****1123", SensitiveDataUtils.maskIdCard("320106900101123"));
         assertEquals("110101*****1567", SensitiveDataUtils.maskIdCard("110101900101567"));
     }
 
     @Test
     @DisplayName("身份证脱敏 - 包含非数字字符")
-    void maskIdCard_nonDigitCharacters()
-    {
+    void maskIdCard_nonDigitCharacters() {
         assertEquals("320106********1234", SensitiveDataUtils.maskIdCard("320106199001011234"));
     }
 
     @Test
     @DisplayName("银行卡号脱敏 - null输入")
-    void maskBankCard_nullInput()
-    {
+    void maskBankCard_nullInput() {
         assertNull(SensitiveDataUtils.maskBankCard(null));
     }
 
     @Test
     @DisplayName("银行卡号脱敏 - 空字符串")
-    void maskBankCard_emptyString()
-    {
+    void maskBankCard_emptyString() {
         assertEquals("", SensitiveDataUtils.maskBankCard(""));
     }
 
     @Test
     @DisplayName("银行卡号脱敏 - 短字符串")
-    void maskBankCard_shortString()
-    {
+    void maskBankCard_shortString() {
         assertEquals("6222", SensitiveDataUtils.maskBankCard("6222"));
         assertEquals("622202", SensitiveDataUtils.maskBankCard("622202"));
     }
 
     @Test
     @DisplayName("银行卡号脱敏 - 正常16位银行卡号")
-    void maskBankCard_normal16DigitBankCard()
-    {
+    void maskBankCard_normal16DigitBankCard() {
         assertEquals("6222********1234", SensitiveDataUtils.maskBankCard("6222021234561234"));
         assertEquals("6225********5678", SensitiveDataUtils.maskBankCard("6225881234565678"));
     }
 
     @Test
     @DisplayName("银行卡号脱敏 - 包含非数字字符")
-    void maskBankCard_nonDigitCharacters()
-    {
+    void maskBankCard_nonDigitCharacters() {
         assertEquals("6222********1234", SensitiveDataUtils.maskBankCard("6222-0212-3456-1234"));
         assertEquals("6222********1234", SensitiveDataUtils.maskBankCard("6222 0212 3456 1234"));
     }
 
     @Test
     @DisplayName("密码脱敏 - null输入")
-    void maskPassword_nullInput()
-    {
+    void maskPassword_nullInput() {
         assertNull(SensitiveDataUtils.maskPassword(null));
     }
 
     @Test
     @DisplayName("密码脱敏 - 空字符串")
-    void maskPassword_emptyString()
-    {
+    void maskPassword_emptyString() {
         assertEquals("", SensitiveDataUtils.maskPassword(""));
     }
 
     @Test
     @DisplayName("密码脱敏 - 正常密码")
-    void maskPassword_normalPassword()
-    {
+    void maskPassword_normalPassword() {
         assertEquals("******", SensitiveDataUtils.maskPassword("password123"));
         assertEquals("******", SensitiveDataUtils.maskPassword("abc"));
         assertEquals("******", SensitiveDataUtils.maskPassword("verylongpassword"));
@@ -154,30 +135,26 @@ class SensitiveDataUtilsTest
 
     @Test
     @DisplayName("Token脱敏 - null输入")
-    void maskToken_nullInput()
-    {
+    void maskToken_nullInput() {
         assertNull(SensitiveDataUtils.maskToken(null));
     }
 
     @Test
     @DisplayName("Token脱敏 - 空字符串")
-    void maskToken_emptyString()
-    {
+    void maskToken_emptyString() {
         assertEquals("", SensitiveDataUtils.maskToken(""));
     }
 
     @Test
     @DisplayName("Token脱敏 - 短字符串")
-    void maskToken_shortString()
-    {
+    void maskToken_shortString() {
         assertEquals("abc123", SensitiveDataUtils.maskToken("abc123"));
         assertEquals("12345678", SensitiveDataUtils.maskToken("12345678"));
     }
 
     @Test
     @DisplayName("Token脱敏 - 正常Token")
-    void maskToken_normalToken()
-    {
+    void maskToken_normalToken() {
         assertEquals("eyJhbGci******", SensitiveDataUtils.maskToken("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"));
         assertEquals("abcd1234******", SensitiveDataUtils.maskToken("abcd1234567890xyz"));
     }

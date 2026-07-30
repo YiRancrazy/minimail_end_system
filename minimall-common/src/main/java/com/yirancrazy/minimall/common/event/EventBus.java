@@ -5,7 +5,6 @@ package com.yirancrazy.minimall.common.event;
  * in-process LocalEventBus with a RocketMQ-backed implementation behind
  * this interface. Local impl is kept as the default for dev/test profiles.
  */
-public interface EventBus
-{
+public interface EventBus {
     void publish(Object event);
 }

@@ -12,14 +12,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 /**
 * 本地事件总线单元测试，验证事件发布后能被 @EventListener 监听方法按序接收，并校验调用次数与载荷内容。
  */
-public class LocalEventBusTest
-{
+public class LocalEventBusTest {
 
-    public static class SampleEvent
-    {
+    public static class SampleEvent {
         private final String payload;
-        public SampleEvent(String p)
-        {
+        public SampleEvent(String p) {
             this.payload = p;
         }
         /**
@@ -27,15 +24,13 @@ public class LocalEventBusTest
          *
          * @return 构造时传入的载荷内容
          */
-        public String getPayload()
-        {
+        public String getPayload() {
             return payload;
         }
     }
 
     @Component
-    public static class Recorder
-    {
+    public static class Recorder {
         public final List<String> received = new ArrayList<>();
         public final AtomicInteger calls = new AtomicInteger();
         /**
@@ -44,8 +39,7 @@ public class LocalEventBusTest
          * @param e 由事件总线发布的测试事件
          */
         @EventListener
-        public void onSample(SampleEvent e)
-        {
+        public void onSample(SampleEvent e) {
             received.add(e.getPayload());
             calls.incrementAndGet();
         }
@@ -55,8 +49,7 @@ public class LocalEventBusTest
      * 验证事件总线发布事件后，监听方法被按序调用且接收到正确载荷。
      */
     @Test
-    public void publish_invokes_event_listener()
-    {
+    public void publish_invokes_event_listener() {
         AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
         ctx.register(LocalEventBus.class, Recorder.class);
         ctx.refresh();

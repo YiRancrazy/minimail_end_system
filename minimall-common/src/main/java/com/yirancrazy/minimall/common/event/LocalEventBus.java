@@ -12,8 +12,7 @@ import org.springframework.stereotype.Component;
  * Iter-3 替换为 RocketMQ 实现时，本类签名保持不变。
  */
 @Component
-public class LocalEventBus implements ApplicationEventPublisherAware, EventBus
-{
+public class LocalEventBus implements ApplicationEventPublisherAware, EventBus {
 
     private ApplicationEventPublisher publisher;
 
@@ -24,15 +23,12 @@ public class LocalEventBus implements ApplicationEventPublisherAware, EventBus
      * @param publisher the Spring-managed {@link ApplicationEventPublisher} to delegate to; must not be {@code null}
      */
     @Override
-    public void setApplicationEventPublisher(@NonNull ApplicationEventPublisher publisher)
-    {
+    public void setApplicationEventPublisher(@NonNull ApplicationEventPublisher publisher) {
         this.publisher = publisher;
     }
 
-    public void publish(Object event)
-    {
-        if (publisher == null)
-        {
+    public void publish(Object event) {
+        if (publisher == null) {
             throw new IllegalStateException("LocalEventBus not initialized");
         }
         publisher.publishEvent(event);

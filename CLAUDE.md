@@ -130,6 +130,68 @@ docs(ai-guidelines): 更新提交规范
 - **实体**：必须继承 `BasePO`，复用 `id/createTime/updateTime/isDeleted`；数据库列由驼峰转下划线映射。
 - **枚举**：放在 `constant/`，业务枚举字段为 `(code, alias, message)` 并实现 `BaseEnum`；持久化状态使用 `code(int)`，不得用裸字符串或 `enum.name()` 作为新方案。
 
+### 4.1 Java 编码硬约束
+
+**命名**：
+- 包名全小写点分隔：`com.yirancrazy.minimall.user`
+- 类名大驼峰名词：`UserService`、`OrderControllerV1`
+- 方法名小驼峰动词+名词：`getUserById`
+- 常量全大写下划线：`MAX_RETRY_COUNT`
+- 异常类以 `Exception` 结尾，必须含错误码+消息
+
+**格式**：
+- 缩进 4 空格，禁 Tab；行宽 ≤ 120 字符
+- K&R 括号风格；禁通配符 `.*` import
+- 类成员序：常量 → 静态变量 → 实例变量 → 构造 → 静态方法 → 实例方法 → 内部类
+
+**集合与泛型**：
+- 禁裸 `List list = new ArrayList()`，必须泛型
+- 初始化指定容量：`new ArrayList<>(16)`
+- `Map` 遍历用 `entrySet()`；禁 `foreach` 内增删元素
+
+**字符串与日期**：
+- 拼接用 `StringBuilder` 或 `String.format`；禁循环内 `+=`
+- 日期统一 `java.time`（`LocalDateTime`、`Instant`）；禁 `Date` / `Calendar`
+
+**并发**：
+- 线程池显式命名；禁 `Executors.newFixedThreadPool` 等无界队列
+- 共享变量加 `volatile` 或锁；高并发计数用 `LongAdder`
+- 禁锁内调用 RPC / DB
+
+**Lombok**：
+- 用 `@Data`、`@RequiredArgsConstructor`、`@Builder`、`@Slf4j`
+- 禁 `@SneakyThrows`（掩盖异常）
+
+**注释**：
+- **类注释**：说明类职责、核心方法；禁类头模板（见 §7 禁止复制）；示例：
+
+   ```java
+   /**
+    * @Author: 张三
+    * @Description: 用户服务，提供用户注册、登录、信息查询等能力。
+    * @Version: 1.0
+    * @DateTime: 2026/7/28 16:21
+    **/
+   public class UserService {
+   }
+   ```
+
+- **方法注释**：公开方法必须 Javadoc，含 `@param`、`@return`、`@throws`；示例：
+
+   ```java
+   /**
+    * 根据用户ID查询用户信息。
+    * @param userId 用户ID，必须 > 0
+    * @return 用户VO；若不存在返回 null
+    * @throws BizException 当 userId 非法时
+    */
+   public UserVO getById(Long userId) {
+   }
+   ```
+
+- 关键算法/复杂逻辑注释解释 **why** 非 what
+- 禁长期遗留 `TODO`；及时关闭或转 Issue
+
 ---
 
 ## 5. 返回、异常与接口

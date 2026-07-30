@@ -80,7 +80,7 @@ public class OrderServiceImplTest {
 
         ArgumentCaptor<PayCreateDTO> payCap = ArgumentCaptor.forClass(PayCreateDTO.class);
         verify(payFeign).create(payCap.capture());
-        assertEquals(orderId, payCap.getValue().getOrderId());
+        assertEquals(orderId.toString(), payCap.getValue().getOrderNo());
     }
 
     /**

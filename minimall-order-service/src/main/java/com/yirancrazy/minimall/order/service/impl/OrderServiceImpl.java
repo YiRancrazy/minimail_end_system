@@ -74,13 +74,14 @@ public class OrderServiceImpl implements OrderService {
 
         OrderPO order = new OrderPO();
         order.setUserId(userId);
+        order.setMerchantId(1L);
         order.setSkuId(skuId);
         order.setQuantity(quantity);
         order.setAmount(new BigDecimal("100.00"));
         order.setStatus("PENDING_PAY");
         orderManager.save(order);
 
-        Long payId = payFeign.create(new PayCreateDTO(order.getId(), order.getAmount()));
+        Long payId = payFeign.create(new PayCreateDTO(order.getId().toString(), order.getUserId(), order.getMerchantId(), order.getAmount()));
         order.setPayId(payId);
         orderManager.updateById(order);
 

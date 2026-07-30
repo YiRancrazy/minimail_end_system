@@ -23,12 +23,12 @@ public class PayControllerV1 {
     }
 
     @PostMapping("/create")
-    public Result<String> create(@RequestParam String orderNo,
-                                  @RequestParam Long userId,
-                                  @RequestParam Long merchantId,
-                                  @RequestParam BigDecimal amount) {
-        String payUrl = payService.createPayment(orderNo, userId, merchantId, amount);
-        return Result.success(payUrl);
+    public Result<Long> create(@RequestParam String orderNo,
+                                @RequestParam Long userId,
+                                @RequestParam Long merchantId,
+                                @RequestParam BigDecimal amount) {
+        Long paymentId = payService.createPayment(orderNo, userId, merchantId, amount);
+        return Result.success(paymentId);
     }
 
     @PostMapping("/callback/alipay")

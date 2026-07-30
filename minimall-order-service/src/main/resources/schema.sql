@@ -1,6 +1,7 @@
 CREATE TABLE IF NOT EXISTS t_order (
   id BIGINT NOT NULL,
   user_id BIGINT NOT NULL,
+  merchant_id BIGINT,
   pay_id BIGINT,
   sku_id BIGINT NOT NULL,
   quantity INT DEFAULT 1,

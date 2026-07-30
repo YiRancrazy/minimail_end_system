@@ -19,8 +19,8 @@ import org.springframework.test.context.ActiveProfiles;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -41,12 +41,12 @@ class PayControllerV1Test {
     @BeforeEach
     void setUp() {
         baseUrl = "http://localhost:" + port + "/internal/pay/callback";
-        when(payService.callback(anyLong(), anyBoolean())).thenReturn(true);
+        doNothing().when(payService).handleCallback(any(PayCallbackDTO.class));
     }
 
     @Test
     void callback_should_success_with_valid_params() {
-        PayCallbackDTO dto = new PayCallbackDTO(1L);
+        PayCallbackDTO dto = new PayCallbackDTO("PAY123", "TRADE123", true, "response");
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -60,7 +60,7 @@ class PayControllerV1Test {
 
     @Test
     void callback_should_fail_when_payId_is_null() {
-        PayCallbackDTO dto = new PayCallbackDTO(null);
+        PayCallbackDTO dto = new PayCallbackDTO(null, "TRADE123", true, "response");
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);

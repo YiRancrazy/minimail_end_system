@@ -34,7 +34,7 @@ public class PayServiceImpl implements PayService {
     }
 
     @Override
-    public String createPayment(String orderNo, Long userId, Long merchantId, BigDecimal amount) {
+    public Long createPayment(String orderNo, Long userId, Long merchantId, BigDecimal amount) {
         String paymentNo = generatePaymentNo();
         LocalDateTime expireAt = LocalDateTime.now().plusMinutes(15);
 
@@ -52,9 +52,9 @@ public class PayServiceImpl implements PayService {
         payManager.save(po);
 
         String expireTime = expireAt.format(EXPIRE_FORMATTER);
-        String payUrl = alipayGateway.createPayment(paymentNo, amount, "Order " + orderNo, expireTime);
+        alipayGateway.createPayment(paymentNo, amount, "Order " + orderNo, expireTime);
         log.info("payment created, paymentNo={}, orderNo={}", paymentNo, orderNo);
-        return payUrl;
+        return po.getId();
     }
 
     @Override

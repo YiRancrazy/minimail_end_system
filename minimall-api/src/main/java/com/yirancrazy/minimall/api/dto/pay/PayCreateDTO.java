@@ -16,6 +16,8 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PayCreateDTO {
-    private Long orderId;
+    private String orderNo;
+    private Long userId;
+    private Long merchantId;
     private BigDecimal amount;
 }

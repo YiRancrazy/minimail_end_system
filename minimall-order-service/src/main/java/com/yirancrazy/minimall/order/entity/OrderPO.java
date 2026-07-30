@@ -18,6 +18,7 @@ import java.math.BigDecimal;
 @TableName("t_order")
 public class OrderPO extends BasePO {
     private Long userId;
+    private Long merchantId;
     private Long payId;
     private Long skuId;
     private Integer quantity;

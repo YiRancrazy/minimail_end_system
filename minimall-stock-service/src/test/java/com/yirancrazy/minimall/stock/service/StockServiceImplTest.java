@@ -1,18 +1,17 @@
 package com.yirancrazy.minimall.stock.service;
 
-import com.yirancrazy.minimall.common.exception.BizException;
-import com.yirancrazy.minimall.stock.entity.StockPO;
-import com.yirancrazy.minimall.stock.manager.StockManager;
-import com.yirancrazy.minimall.stock.service.impl.StockServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import com.yirancrazy.minimall.common.exception.BizException;
+import com.yirancrazy.minimall.stock.entity.StockPO;
+import com.yirancrazy.minimall.stock.manager.StockManager;
+import com.yirancrazy.minimall.stock.service.impl.StockServiceImpl;
 
 /**
 * StockServiceImpl 单元测试，基于 Mockito 打桩 StockManager，

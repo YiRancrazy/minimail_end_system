@@ -1,8 +1,8 @@
 package com.yirancrazy.minimall.user.constant;
 
-import com.yirancrazy.minimall.common.base.BaseEnum;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import com.yirancrazy.minimall.common.base.BaseEnum;
 
 /**
 * 用户服务错误码枚举，定义用户不存在等领域业务错误及其提示信息。

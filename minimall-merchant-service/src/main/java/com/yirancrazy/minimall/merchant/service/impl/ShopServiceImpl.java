@@ -1,14 +1,13 @@
 package com.yirancrazy.minimall.merchant.service.impl;
 
-import com.yirancrazy.minimall.merchant.constant.ShopCodeEnum;
-
+import org.springframework.stereotype.Service;
 import com.yirancrazy.minimall.common.exception.BizException;
+import com.yirancrazy.minimall.merchant.constant.ShopCodeEnum;
 import com.yirancrazy.minimall.merchant.dto.ShopCreateDTO;
 import com.yirancrazy.minimall.merchant.dto.ShopUpdateDTO;
 import com.yirancrazy.minimall.merchant.entity.ShopPO;
 import com.yirancrazy.minimall.merchant.manager.ShopManager;
 import com.yirancrazy.minimall.merchant.service.ShopService;
-import org.springframework.stereotype.Service;
 
 /**
 * 店铺领域服务实现，编排 Manager 完成店铺 CRUD，并在数据缺失时抛出业务异常。

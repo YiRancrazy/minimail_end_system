@@ -1,14 +1,13 @@
 package com.yirancrazy.minimall.cart.service.impl;
 
+import java.util.List;
+import org.springframework.stereotype.Service;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.yirancrazy.minimall.cart.dto.CartItemAddDTO;
 import com.yirancrazy.minimall.cart.dto.CartItemListDTO;
 import com.yirancrazy.minimall.cart.entity.CartItemPO;
 import com.yirancrazy.minimall.cart.manager.CartItemManager;
 import com.yirancrazy.minimall.cart.service.CartService;
-import org.springframework.stereotype.Service;
-
-import java.util.List;
 
 /**
 * 购物车领域服务实现，委托 CartItemManager 完成数据访问并补充默认选中状态等业务规则。

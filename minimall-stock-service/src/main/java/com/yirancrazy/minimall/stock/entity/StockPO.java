@@ -1,9 +1,9 @@
 package com.yirancrazy.minimall.stock.entity;
 
 import com.baomidou.mybatisplus.annotation.TableName;
-import com.yirancrazy.minimall.common.base.BasePO;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import com.yirancrazy.minimall.common.base.BasePO;
 
 /**
 * 库存持久化实体，对应库存表 t_stock，以 SKU 为维度记录可用数量 available

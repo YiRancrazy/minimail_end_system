@@ -1,6 +1,6 @@
 package com.yirancrazy.minimall.auth.config;
 
-import lombok.extern.slf4j.Slf4j;
+import javax.sql.DataSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Configuration;
@@ -9,8 +9,7 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.init.ScriptException;
 import org.springframework.jdbc.datasource.init.ScriptUtils;
-
-import javax.sql.DataSource;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Iter-1 dev/test profile schema initializer. Runs schema.sql via JDBC at app
@@ -41,7 +40,8 @@ public class H2SchemaConfig implements CommandLineRunner {
             ScriptUtils.executeSqlScript(jdbcTemplate.getDataSource().getConnection(),
                 new ClassPathResource("schema.sql"));
             log.info("schema.sql applied via H2SchemaConfig");
-        } catch (ScriptException e) {
+        }
+        catch (ScriptException e) {
             log.warn("schema.sql init skipped: {}", e.getMessage());
         }
     }

@@ -1,8 +1,8 @@
 package com.yirancrazy.minimall.goods.constant;
 
-import com.yirancrazy.minimall.common.base.BaseEnum;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import com.yirancrazy.minimall.common.base.BaseEnum;
 
 /**
 * 商品服务错误码枚举，统一定义 SKU 域业务异常码（如 SKU_NOT_FOUND）及国际化文案。

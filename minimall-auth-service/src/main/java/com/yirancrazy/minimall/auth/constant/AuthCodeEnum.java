@@ -1,8 +1,8 @@
 package com.yirancrazy.minimall.auth.constant;
 
-import com.yirancrazy.minimall.common.base.BaseEnum;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import com.yirancrazy.minimall.common.base.BaseEnum;
 
 /**
 * 认证服务错误码枚举（USER_NOT_FOUND / PWD_INVALID / TOKEN_INVALID / ...）。

@@ -41,7 +41,8 @@ public class Snowflake {
             if (sequence == 0) {
                 ts = waitNextMillis(lastTs);
             }
-        } else {
+        }
+        else {
             sequence = 0L;
         }
         lastTs = ts;

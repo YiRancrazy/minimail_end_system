@@ -1,9 +1,9 @@
 package com.yirancrazy.minimall.auth.entity;
 
 import com.baomidou.mybatisplus.annotation.TableName;
-import com.yirancrazy.minimall.common.base.BasePO;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import com.yirancrazy.minimall.common.base.BasePO;
 
 /**
 * 用户认证持久化实体，对应 UserAuth 表，承载用户名、密码哈希、盐与角色。

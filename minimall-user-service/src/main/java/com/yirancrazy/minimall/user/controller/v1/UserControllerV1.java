@@ -1,11 +1,5 @@
 package com.yirancrazy.minimall.user.controller.v1;
 
-import com.yirancrazy.minimall.common.result.Result;
-import com.yirancrazy.minimall.user.dto.UserCreateDTO;
-import com.yirancrazy.minimall.user.dto.UserUpdateDTO;
-import com.yirancrazy.minimall.user.entity.UserPO;
-import com.yirancrazy.minimall.user.service.UserService;
-import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -14,6 +8,12 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import jakarta.validation.Valid;
+import com.yirancrazy.minimall.common.result.Result;
+import com.yirancrazy.minimall.user.dto.UserCreateDTO;
+import com.yirancrazy.minimall.user.dto.UserUpdateDTO;
+import com.yirancrazy.minimall.user.entity.UserPO;
+import com.yirancrazy.minimall.user.service.UserService;
 
 /**
 * 用户 C 端接口控制器，提供按 ID 查询、创建、更新与删除用户能力。

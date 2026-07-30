@@ -1,14 +1,13 @@
 package com.yirancrazy.minimall.stock.service.impl;
 
-import com.yirancrazy.minimall.stock.constant.StockCodeEnum;
-
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.yirancrazy.minimall.common.exception.BizException;
+import com.yirancrazy.minimall.stock.constant.StockCodeEnum;
 import com.yirancrazy.minimall.stock.entity.StockPO;
 import com.yirancrazy.minimall.stock.manager.StockManager;
 import com.yirancrazy.minimall.stock.service.StockService;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 /**
 * 库存领域服务实现，承载 SKU 库存预占与释放的业务规则：预占前校验库存存在且充足，

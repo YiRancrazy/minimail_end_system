@@ -1,13 +1,13 @@
 package com.yirancrazy.minimall.user.controller.v1;
 
-import com.yirancrazy.minimall.api.dto.user.UserSnapshotDTO;
-import com.yirancrazy.minimall.common.result.Result;
-import com.yirancrazy.minimall.user.entity.UserPO;
-import com.yirancrazy.minimall.user.service.UserService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import com.yirancrazy.minimall.api.dto.user.UserSnapshotDTO;
+import com.yirancrazy.minimall.common.result.Result;
+import com.yirancrazy.minimall.user.entity.UserPO;
+import com.yirancrazy.minimall.user.service.UserService;
 
 /**
 * 用户内部接口控制器，供其他服务查询用户快照等内部数据。

@@ -1,8 +1,8 @@
 package com.yirancrazy.minimall.id.constant;
 
-import com.yirancrazy.minimall.common.base.BaseEnum;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import com.yirancrazy.minimall.common.base.BaseEnum;
 
 /**
 * 业务标签枚举，定义订单、支付、库存、用户等业务域对应的号段 key，统一管理系统全局号段类型。

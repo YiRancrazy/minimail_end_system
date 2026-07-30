@@ -1,8 +1,8 @@
 package com.yirancrazy.minimall.id.service.impl;
 
+import org.springframework.stereotype.Service;
 import com.yirancrazy.minimall.id.service.IdService;
 import com.yirancrazy.minimall.id.service.Snowflake;
-import org.springframework.stereotype.Service;
 
 /**
 * ID 领域服务实现，封装 Snowflake 算法对外下发全局唯一 ID，供内部各业务服务调用。

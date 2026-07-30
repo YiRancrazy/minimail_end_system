@@ -1,14 +1,13 @@
 package com.yirancrazy.minimall.user.service.impl;
 
-import com.yirancrazy.minimall.user.constant.UserCodeEnum;
-
+import org.springframework.stereotype.Service;
 import com.yirancrazy.minimall.common.exception.BizException;
+import com.yirancrazy.minimall.user.constant.UserCodeEnum;
 import com.yirancrazy.minimall.user.dto.UserCreateDTO;
 import com.yirancrazy.minimall.user.dto.UserUpdateDTO;
 import com.yirancrazy.minimall.user.entity.UserPO;
 import com.yirancrazy.minimall.user.manager.UserManager;
 import com.yirancrazy.minimall.user.service.UserService;
-import org.springframework.stereotype.Service;
 
 /**
 * 用户领域服务实现，校验用户业务规则并委托 UserManager 完成数据操作。

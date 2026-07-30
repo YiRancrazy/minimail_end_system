@@ -1,8 +1,5 @@
 package com.yirancrazy.minimall.stock.controller.v1;
 
-import com.yirancrazy.minimall.api.dto.stock.StockReserveDTO;
-import com.yirancrazy.minimall.common.result.Result;
-import com.yirancrazy.minimall.stock.service.StockService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,11 +13,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import com.yirancrazy.minimall.api.dto.stock.StockReserveDTO;
+import com.yirancrazy.minimall.common.result.Result;
+import com.yirancrazy.minimall.stock.service.StockService;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")

@@ -1,13 +1,13 @@
 package com.yirancrazy.minimall.stock.controller.v1;
 
-import com.yirancrazy.minimall.api.dto.stock.StockReserveDTO;
-import com.yirancrazy.minimall.common.result.Result;
-import com.yirancrazy.minimall.stock.service.StockService;
-import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import jakarta.validation.Valid;
+import com.yirancrazy.minimall.api.dto.stock.StockReserveDTO;
+import com.yirancrazy.minimall.common.result.Result;
+import com.yirancrazy.minimall.stock.service.StockService;
 
 /**
 * 库存内部接口控制器，挂载于 /internal/stock，仅供订单等内部服务经 Feign 调用，

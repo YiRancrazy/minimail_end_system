@@ -1,6 +1,15 @@
 package com.yirancrazy.minimall.auth.service.impl;
 
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.security.crypto.bcrypt.BCrypt;
+import org.springframework.stereotype.Service;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
+import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.api.dto.auth.TokenVO;
 import com.yirancrazy.minimall.auth.constant.AuthCodeEnum;
 import com.yirancrazy.minimall.auth.dto.LoginDTO;
@@ -11,16 +20,6 @@ import com.yirancrazy.minimall.auth.service.AuthService;
 import com.yirancrazy.minimall.auth.util.JwtUtil;
 import com.yirancrazy.minimall.auth.vo.UserInfoVO;
 import com.yirancrazy.minimall.common.exception.BizException;
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.JwtException;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.security.crypto.bcrypt.BCrypt;
-import org.springframework.stereotype.Service;
-
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
@@ -127,7 +126,8 @@ public class AuthServiceImpl implements AuthService {
         Claims c;
         try {
             c = jwtUtil.parse(token);
-        } catch (JwtException ex) {
+        }
+        catch (JwtException ex) {
             throw new BizException(AuthCodeEnum.TOKEN_INVALID.getCode(),
                 AuthCodeEnum.TOKEN_INVALID.getAlias(),
                 AuthCodeEnum.TOKEN_INVALID.getMessage());

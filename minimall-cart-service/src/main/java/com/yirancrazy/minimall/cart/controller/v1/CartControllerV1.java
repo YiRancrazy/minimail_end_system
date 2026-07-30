@@ -1,11 +1,6 @@
 package com.yirancrazy.minimall.cart.controller.v1;
 
-import com.yirancrazy.minimall.cart.dto.CartItemAddDTO;
-import com.yirancrazy.minimall.cart.dto.CartItemListDTO;
-import com.yirancrazy.minimall.cart.entity.CartItemPO;
-import com.yirancrazy.minimall.cart.service.CartService;
-import com.yirancrazy.minimall.common.result.Result;
-import jakarta.validation.Valid;
+import java.util.List;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -13,8 +8,12 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
+import jakarta.validation.Valid;
+import com.yirancrazy.minimall.cart.dto.CartItemAddDTO;
+import com.yirancrazy.minimall.cart.dto.CartItemListDTO;
+import com.yirancrazy.minimall.cart.entity.CartItemPO;
+import com.yirancrazy.minimall.cart.service.CartService;
+import com.yirancrazy.minimall.common.result.Result;
 
 /**
 * 购物车 C 端接口控制器，按用户查询、添加与删除购物车项。

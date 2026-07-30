@@ -1,12 +1,12 @@
 package com.yirancrazy.minimall.id.controller.v1;
 
-import com.yirancrazy.minimall.common.result.Result;
-import com.yirancrazy.minimall.id.dto.IdNextDTO;
-import com.yirancrazy.minimall.id.service.IdService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import com.yirancrazy.minimall.common.result.Result;
+import com.yirancrazy.minimall.id.dto.IdNextDTO;
+import com.yirancrazy.minimall.id.service.IdService;
 
 /**
 * ID 内部接口控制器，提供基于业务标签的号段下发能力，仅供服务间内部调用。

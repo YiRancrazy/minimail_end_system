@@ -1,8 +1,8 @@
 package com.yirancrazy.minimall.stock.constant;
 
-import com.yirancrazy.minimall.common.base.BaseEnum;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import com.yirancrazy.minimall.common.base.BaseEnum;
 
 /**
 * 库存服务错误码枚举，实现 BaseEnum 并按 (code, alias, message) 三元组定义，

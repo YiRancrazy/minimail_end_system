@@ -1,8 +1,6 @@
 package com.yirancrazy.minimall.goods.controller.v1;
 
-import com.yirancrazy.minimall.common.result.Result;
-import com.yirancrazy.minimall.goods.dto.SkuCreateDTO;
-import com.yirancrazy.minimall.goods.service.SkuService;
+import java.math.BigDecimal;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -11,10 +9,10 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
-
-import java.math.BigDecimal;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import com.yirancrazy.minimall.common.result.Result;
+import com.yirancrazy.minimall.goods.dto.SkuCreateDTO;
+import com.yirancrazy.minimall.goods.service.SkuService;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")

@@ -1,8 +1,8 @@
 package com.yirancrazy.minimall.gateway.filter;
 
-import com.yirancrazy.minimall.gateway.config.JwtVerifier;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.Keys;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import javax.crypto.SecretKey;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -13,17 +13,15 @@ import org.springframework.http.HttpStatus;
 import org.springframework.mock.http.server.reactive.MockServerHttpRequest;
 import org.springframework.mock.web.server.MockServerWebExchange;
 import org.springframework.web.server.ServerWebExchange;
-import reactor.core.publisher.Mono;
-import reactor.test.StepVerifier;
-
-import javax.crypto.SecretKey;
-import java.nio.charset.StandardCharsets;
-import java.time.Instant;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
+import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
+import com.yirancrazy.minimall.gateway.config.JwtVerifier;
 
 @ExtendWith(MockitoExtension.class)
 class AuthGlobalFilterTest {

@@ -1,14 +1,14 @@
 package com.yirancrazy.minimall.stock.controller.v1;
 
-import com.yirancrazy.minimall.api.dto.stock.StockReserveDTO;
-import com.yirancrazy.minimall.common.result.Result;
-import com.yirancrazy.minimall.stock.service.StockService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import com.yirancrazy.minimall.api.dto.stock.StockReserveDTO;
+import com.yirancrazy.minimall.common.result.Result;
+import com.yirancrazy.minimall.stock.service.StockService;
 
 /**
 * 库存 C 端接口控制器，挂载于 /api/v1/stock，对外提供按 SKU 查询当前

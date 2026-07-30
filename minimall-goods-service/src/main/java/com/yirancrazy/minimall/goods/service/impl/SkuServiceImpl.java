@@ -1,15 +1,13 @@
 package com.yirancrazy.minimall.goods.service.impl;
 
-import com.yirancrazy.minimall.goods.constant.SkuCodeEnum;
-
+import java.math.BigDecimal;
+import org.springframework.stereotype.Service;
 import com.yirancrazy.minimall.common.exception.BizException;
+import com.yirancrazy.minimall.goods.constant.SkuCodeEnum;
 import com.yirancrazy.minimall.goods.dto.SkuCreateDTO;
 import com.yirancrazy.minimall.goods.entity.SkuPO;
 import com.yirancrazy.minimall.goods.manager.SkuManager;
 import com.yirancrazy.minimall.goods.service.SkuService;
-import org.springframework.stereotype.Service;
-
-import java.math.BigDecimal;
 
 /**
 * 商品领域服务实现，负责 SKU 业务规则校验、异常转换与对 SkuManager 的调用编排。

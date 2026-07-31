@@ -10,9 +10,13 @@ import com.yirancrazy.minimall.common.base.BasePO;
  * @Description: Stock持久化对象，映射stock表
  * @Version: 1.0
  * @DateTime: 2026/07/31
- */
+ **/
+@Data
+@EqualsAndHashCode(callSuper = true)
+@TableName("t_stock")
 public class StockPO extends BasePO {
     private Long skuId;
     private Long available;
     private Long reserved;
+    private Long alertThreshold;
 }

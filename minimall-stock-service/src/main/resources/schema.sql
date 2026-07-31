@@ -3,9 +3,23 @@ CREATE TABLE IF NOT EXISTS t_stock (
   sku_id BIGINT NOT NULL,
   available BIGINT DEFAULT 0,
   reserved BIGINT DEFAULT 0,
+  alert_threshold BIGINT DEFAULT 10,
   create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
   update_time DATETIME DEFAULT CURRENT_TIMESTAMP,
   is_deleted TINYINT DEFAULT 0,
   PRIMARY KEY (id),
   UNIQUE KEY uk_sku (sku_id)
+);
+
+CREATE TABLE IF NOT EXISTS t_stock_journal (
+  id BIGINT NOT NULL AUTO_INCREMENT,
+  sku_id BIGINT NOT NULL,
+  quantity BIGINT NOT NULL,
+  type TINYINT NOT NULL,
+  reason VARCHAR(255),
+  order_no VARCHAR(32),
+  create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+  update_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+  is_deleted TINYINT DEFAULT 0,
+  PRIMARY KEY (id)
 );

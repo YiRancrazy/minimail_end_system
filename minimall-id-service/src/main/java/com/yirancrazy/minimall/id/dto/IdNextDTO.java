@@ -9,6 +9,8 @@ import lombok.Data;
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */
+@Data
+@AllArgsConstructor
 public class IdNextDTO {
     private String bizTag;
     private Long id;

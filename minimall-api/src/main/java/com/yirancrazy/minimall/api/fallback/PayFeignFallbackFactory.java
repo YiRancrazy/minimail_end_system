@@ -12,6 +12,8 @@ import com.yirancrazy.minimall.api.feign.PayFeignClient;
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */
+@Slf4j
+@Component
 public class PayFeignFallbackFactory implements FallbackFactory<PayFeignClient> {
     @Override
     public PayFeignClient create(Throwable cause) {

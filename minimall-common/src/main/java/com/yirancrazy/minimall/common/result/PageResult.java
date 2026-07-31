@@ -4,7 +4,7 @@ import java.util.Collections;
 import java.util.List;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 /**
@@ -13,6 +13,9 @@ import lombok.NoArgsConstructor;
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */
+@Getter
+@AllArgsConstructor
+@NoArgsConstructor
 public class PageResult<T> {
     private Long total;
     private Long pages;

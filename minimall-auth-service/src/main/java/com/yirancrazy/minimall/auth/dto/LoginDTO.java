@@ -11,6 +11,11 @@ import lombok.NoArgsConstructor;
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */
+@Data
+
+@AllArgsConstructor
+
+@NoArgsConstructor
 public class LoginDTO {
     @NotBlank
     private String username;

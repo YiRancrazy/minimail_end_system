@@ -11,6 +11,8 @@ import com.yirancrazy.minimall.api.feign.CartFeignClient;
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */
+@Slf4j
+@Component
 public class CartFeignFallbackFactory implements FallbackFactory<CartFeignClient> {
     @Override
     public CartFeignClient create(Throwable cause) {

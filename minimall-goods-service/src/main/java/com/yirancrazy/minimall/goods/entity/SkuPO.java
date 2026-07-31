@@ -12,6 +12,7 @@ import com.yirancrazy.minimall.common.base.BasePO;
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */
+@Data
 public class SkuPO extends BasePO {
     private Long spuId;
     private String skuName;

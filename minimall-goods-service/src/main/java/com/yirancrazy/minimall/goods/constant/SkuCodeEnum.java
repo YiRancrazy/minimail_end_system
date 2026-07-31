@@ -10,6 +10,9 @@ import com.yirancrazy.minimall.common.base.BaseEnum;
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */
+@Getter
+
+@AllArgsConstructor
 public enum SkuCodeEnum implements BaseEnum {
     SKU_NOT_FOUND("13001", "SKU_NOT_FOUND", "SKU 不存在");
 

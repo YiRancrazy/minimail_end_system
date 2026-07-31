@@ -1,8 +1,8 @@
 package com.yirancrazy.minimall.stock.mapper;
 
+import org.apache.ibatis.annotations.Mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.yirancrazy.minimall.stock.entity.StockJournalPO;
-import org.apache.ibatis.annotations.Mapper;
 
 /**
  * @Author: yirancrazy@gmail.com

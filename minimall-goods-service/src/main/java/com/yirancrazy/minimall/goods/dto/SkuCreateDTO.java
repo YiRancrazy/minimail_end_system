@@ -13,6 +13,7 @@ import lombok.Data;
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */
+@Data
 public class SkuCreateDTO {
 
     @NotNull(message = "spuId cannot be null")

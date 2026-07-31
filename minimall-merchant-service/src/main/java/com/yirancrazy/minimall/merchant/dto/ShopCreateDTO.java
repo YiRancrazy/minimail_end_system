@@ -11,6 +11,7 @@ import lombok.Data;
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */
+@Data
 public class ShopCreateDTO {
 
     @NotBlank(message = "shopName cannot be blank")

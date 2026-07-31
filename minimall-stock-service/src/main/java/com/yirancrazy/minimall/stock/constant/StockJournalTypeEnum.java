@@ -1,8 +1,8 @@
 package com.yirancrazy.minimall.stock.constant;
 
-import com.yirancrazy.minimall.common.base.BaseEnum;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import com.yirancrazy.minimall.common.base.BaseEnum;
 
 /**
  * @Author: yirancrazy@gmail.com

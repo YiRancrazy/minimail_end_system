@@ -9,6 +9,9 @@ import lombok.Data;
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */
+@Data
+
+@AllArgsConstructor
 public class UserInfoVO {
     private Long userId;
     private String username;

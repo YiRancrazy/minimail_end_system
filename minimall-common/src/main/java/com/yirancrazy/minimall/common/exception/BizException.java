@@ -9,6 +9,7 @@ import com.yirancrazy.minimall.common.result.ResultCode;
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */
+@Getter
 public class BizException extends RuntimeException {
     private final String code;
     private final String alias;

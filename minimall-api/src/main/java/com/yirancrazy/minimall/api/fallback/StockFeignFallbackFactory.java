@@ -12,6 +12,8 @@ import com.yirancrazy.minimall.api.feign.StockFeignClient;
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */
+@Slf4j
+@Component
 public class StockFeignFallbackFactory implements FallbackFactory<StockFeignClient> {
     @Override
     public StockFeignClient create(Throwable cause) {

@@ -12,6 +12,11 @@ import lombok.NoArgsConstructor;
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */
+@Data
+
+@AllArgsConstructor
+
+@NoArgsConstructor
 public class StockReserveDTO {
     @NotNull(message = "SKU ID不能为空")
     private Long skuId;

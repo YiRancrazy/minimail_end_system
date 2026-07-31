@@ -10,6 +10,9 @@ import com.yirancrazy.minimall.common.base.BaseEnum;
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */
+@Getter
+
+@AllArgsConstructor
 public enum OrderCodeEnum implements BaseEnum {
     STOCK_RESERVE_FAIL("11001", "STOCK_RESERVE_FAIL", "库存锁定失败"),
     ORDER_NOT_FOUND("11002", "ORDER_NOT_FOUND", "订单不存在"),

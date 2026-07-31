@@ -12,6 +12,8 @@ import com.yirancrazy.minimall.api.feign.NotifyFeignClient;
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */
+@Slf4j
+@Component
 public class NotifyFeignFallbackFactory implements FallbackFactory<NotifyFeignClient> {
     @Override
     public NotifyFeignClient create(Throwable cause) {

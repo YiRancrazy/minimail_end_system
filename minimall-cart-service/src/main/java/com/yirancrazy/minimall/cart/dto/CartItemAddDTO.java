@@ -10,6 +10,7 @@ import lombok.Data;
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */
+@Data
 public class CartItemAddDTO {
 
     @NotNull(message = "userId cannot be null")

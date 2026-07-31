@@ -11,6 +11,9 @@ import lombok.NoArgsConstructor;
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
 public class SkuSnapshotDTO {
     private Long skuId;
     private Long spuId;

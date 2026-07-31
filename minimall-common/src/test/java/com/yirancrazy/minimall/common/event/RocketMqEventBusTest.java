@@ -27,8 +27,7 @@ public class RocketMqEventBusTest {
     @Test
     public void shouldUseRocketMqEventBus() {
         runner.run(ctx -> {
-            EventBus eventBus = ctx.getBean(EventBus.class);
-            assertThat(eventBus).isInstanceOf(RocketMqEventBus.class);
+            assertThat(ctx.getBean(RocketMqEventBus.class)).isInstanceOf(EventBus.class);
         });
     }
 }

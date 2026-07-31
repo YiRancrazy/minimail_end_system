@@ -10,6 +10,9 @@ import com.yirancrazy.minimall.common.base.BaseEnum;
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */
+@Getter
+
+@AllArgsConstructor
 public enum PayCodeEnum implements BaseEnum {
     PAY_NOT_FOUND("17001", "PAY_NOT_FOUND", "支付单不存在"),
     PAY_NOT_SUCCESS("40002", "PAY_NOT_SUCCESS", "Payment not successful"),

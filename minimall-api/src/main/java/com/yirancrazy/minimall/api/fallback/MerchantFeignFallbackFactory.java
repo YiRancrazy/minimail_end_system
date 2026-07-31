@@ -12,6 +12,8 @@ import com.yirancrazy.minimall.api.feign.MerchantFeignClient;
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */
+@Slf4j
+@Component
 public class MerchantFeignFallbackFactory implements FallbackFactory<MerchantFeignClient> {
     @Override
     public MerchantFeignClient create(Throwable cause) {

@@ -4,6 +4,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.stock.constant.StockCodeEnum;
 import com.yirancrazy.minimall.stock.constant.StockJournalTypeEnum;
@@ -12,7 +13,6 @@ import com.yirancrazy.minimall.stock.entity.StockPO;
 import com.yirancrazy.minimall.stock.manager.StockManager;
 import com.yirancrazy.minimall.stock.mapper.StockJournalMapper;
 import com.yirancrazy.minimall.stock.service.StockService;
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * @Author: yirancrazy@gmail.com

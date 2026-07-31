@@ -1,9 +1,9 @@
 package com.yirancrazy.minimall.stock.entity;
 
 import com.baomidou.mybatisplus.annotation.TableName;
-import com.yirancrazy.minimall.common.base.BasePO;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import com.yirancrazy.minimall.common.base.BasePO;
 
 /**
  * @Author: yirancrazy@gmail.com

@@ -20,6 +20,7 @@ import lombok.extern.slf4j.Slf4j;
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */
+@Slf4j
 public class RocketMqEventBus implements EventBus {
 
     private final String namesrvAddr;

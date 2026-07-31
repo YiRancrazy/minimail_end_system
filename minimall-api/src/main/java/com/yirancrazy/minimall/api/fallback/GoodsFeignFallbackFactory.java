@@ -13,6 +13,8 @@ import com.yirancrazy.minimall.api.feign.GoodsFeignClient;
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */
+@Slf4j
+@Component
 public class GoodsFeignFallbackFactory implements FallbackFactory<GoodsFeignClient> {
     @Override
     public GoodsFeignClient create(Throwable cause) {

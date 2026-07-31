@@ -1,7 +1,7 @@
 package com.yirancrazy.minimall.stock.service;
 
-import com.yirancrazy.minimall.stock.entity.StockJournalPO;
 import java.util.List;
+import com.yirancrazy.minimall.stock.entity.StockJournalPO;
 
 /**
  * @Author: yirancrazy@gmail.com

@@ -10,6 +10,9 @@ import lombok.NoArgsConstructor;
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
 public class UserSnapshotDTO {
     private Long userId;
     private String username;

@@ -8,6 +8,7 @@ import lombok.Getter;
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */
+@Getter
 public class BaseException extends RuntimeException {
     private final String code;
 

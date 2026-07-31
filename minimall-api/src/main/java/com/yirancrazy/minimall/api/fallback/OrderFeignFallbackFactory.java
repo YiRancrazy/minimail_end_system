@@ -11,6 +11,8 @@ import com.yirancrazy.minimall.api.feign.OrderFeignClient;
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */
+@Slf4j
+@Component
 public class OrderFeignFallbackFactory implements FallbackFactory<OrderFeignClient> {
     @Override
     public OrderFeignClient create(Throwable cause) {

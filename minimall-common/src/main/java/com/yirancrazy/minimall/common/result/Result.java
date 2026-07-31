@@ -12,6 +12,9 @@ import com.yirancrazy.minimall.common.exception.BizException;
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */
+@Getter
+@AllArgsConstructor
+@NoArgsConstructor
 public class Result<T> {
     private String code;
     private String message;

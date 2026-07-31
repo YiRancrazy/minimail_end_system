@@ -12,6 +12,8 @@ import com.yirancrazy.minimall.api.feign.UserFeignClient;
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */
+@Slf4j
+@Component
 public class UserFeignFallbackFactory implements FallbackFactory<UserFeignClient> {
     @Override
     public UserFeignClient create(Throwable cause) {

@@ -9,7 +9,7 @@ import com.yirancrazy.minimall.stock.mapper.StockMapper;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: StockManagerImpl description.
+ * @Description: Stock数据访问层实现，封装Stock表 CRUD 操作
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

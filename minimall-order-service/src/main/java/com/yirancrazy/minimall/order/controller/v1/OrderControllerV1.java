@@ -14,7 +14,7 @@ import com.yirancrazy.minimall.order.service.OrderService;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: OrderControllerV1 description.
+ * @Description: 订单控制器，提供Order RESTful API
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

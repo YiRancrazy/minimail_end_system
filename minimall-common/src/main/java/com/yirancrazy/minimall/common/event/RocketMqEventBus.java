@@ -16,7 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: RocketMqEventBus description.
+ * @Description: 事件总线组件，提供事件发布订阅能力
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

@@ -14,7 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: H2SchemaConfig description.
+ * @Description: 数据库 Schema 配置类，初始化认证模块数据库表结构
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

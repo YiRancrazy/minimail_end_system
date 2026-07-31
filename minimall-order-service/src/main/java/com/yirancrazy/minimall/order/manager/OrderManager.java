@@ -5,7 +5,7 @@ import com.yirancrazy.minimall.order.entity.OrderPO;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: OrderManager description.
+ * @Description: Order数据访问层接口，定义Order表操作契约
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

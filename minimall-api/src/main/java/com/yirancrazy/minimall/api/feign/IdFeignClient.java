@@ -7,7 +7,7 @@ import com.yirancrazy.minimall.api.fallback.IdFeignFallbackFactory;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: IdFeignClient description.
+ * @Description: Id Feign 客户端，调用Id服务接口
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

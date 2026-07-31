@@ -11,7 +11,7 @@ import com.yirancrazy.minimall.user.service.UserService;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: InternalUserControllerV1 description.
+ * @Description: 用户内部控制器，提供User相关内部接口
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

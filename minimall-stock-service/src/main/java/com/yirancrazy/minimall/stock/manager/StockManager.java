@@ -5,7 +5,7 @@ import com.yirancrazy.minimall.stock.entity.StockPO;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: StockManager description.
+ * @Description: Stock数据访问层接口，定义Stock表操作契约
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

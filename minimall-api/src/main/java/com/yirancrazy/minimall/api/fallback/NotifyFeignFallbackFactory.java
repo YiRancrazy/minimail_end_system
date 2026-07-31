@@ -8,7 +8,7 @@ import com.yirancrazy.minimall.api.feign.NotifyFeignClient;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: NotifyFeignFallbackFactory description.
+ * @Description: NotifyFeign Feign 降级工厂，处理NotifyFeign服务调用失败降级
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

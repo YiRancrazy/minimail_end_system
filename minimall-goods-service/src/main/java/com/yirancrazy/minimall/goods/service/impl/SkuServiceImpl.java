@@ -11,7 +11,7 @@ import com.yirancrazy.minimall.goods.service.SkuService;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: SkuServiceImpl description.
+ * @Description: 商品领域服务实现，实现Sku相关业务逻辑
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

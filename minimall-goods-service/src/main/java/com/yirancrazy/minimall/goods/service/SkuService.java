@@ -5,7 +5,7 @@ import com.yirancrazy.minimall.goods.entity.SkuPO;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: SkuService description.
+ * @Description: 商品领域服务接口，定义Sku相关业务契约
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

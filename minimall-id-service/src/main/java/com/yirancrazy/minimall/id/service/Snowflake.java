@@ -2,7 +2,7 @@ package com.yirancrazy.minimall.id.service;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: Snowflake description.
+ * @Description: Snowflake，提供ID生成相关能力
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

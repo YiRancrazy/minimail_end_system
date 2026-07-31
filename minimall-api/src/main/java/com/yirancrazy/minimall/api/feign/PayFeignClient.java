@@ -9,7 +9,7 @@ import com.yirancrazy.minimall.api.fallback.PayFeignFallbackFactory;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: PayFeignClient description.
+ * @Description: Pay Feign 客户端，调用Pay服务接口
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

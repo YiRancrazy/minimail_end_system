@@ -7,7 +7,7 @@ import lombok.Data;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: ShopUpdateDTO description.
+ * @Description: ShopUpdate数据传输对象，用于ShopUpdate相关数据传输
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

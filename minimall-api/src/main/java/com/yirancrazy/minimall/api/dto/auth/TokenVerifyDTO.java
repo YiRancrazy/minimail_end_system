@@ -4,7 +4,7 @@ import lombok.Data;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: TokenVerifyDTO description.
+ * @Description: TokenVerify数据传输对象，用于TokenVerify相关数据传输
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

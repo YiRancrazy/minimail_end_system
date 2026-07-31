@@ -12,7 +12,7 @@ import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerIntercept
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: MybatisPlusGlobalConfig description.
+ * @Description: MybatisPlusGlobal配置类，配置MybatisPlusGlobal相关 Bean
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

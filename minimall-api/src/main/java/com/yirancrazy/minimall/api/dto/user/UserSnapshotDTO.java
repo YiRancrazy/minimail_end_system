@@ -6,7 +6,7 @@ import lombok.NoArgsConstructor;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: UserSnapshotDTO description.
+ * @Description: UserSnapshot数据传输对象，用于UserSnapshot相关数据传输
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

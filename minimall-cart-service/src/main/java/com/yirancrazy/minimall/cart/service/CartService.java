@@ -7,7 +7,7 @@ import com.yirancrazy.minimall.cart.entity.CartItemPO;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: CartService description.
+ * @Description: 购物车领域服务接口，定义Cart相关业务契约
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

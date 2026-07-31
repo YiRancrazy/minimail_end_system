@@ -5,7 +5,7 @@ import com.yirancrazy.minimall.id.entity.IdSegmentPO;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: IdSegmentManager description.
+ * @Description: IdSegment数据访问层接口，定义IdSegment表操作契约
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

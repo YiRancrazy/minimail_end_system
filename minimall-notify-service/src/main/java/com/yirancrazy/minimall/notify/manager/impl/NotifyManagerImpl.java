@@ -8,7 +8,7 @@ import com.yirancrazy.minimall.notify.mapper.NotifyMessageMapper;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: NotifyManagerImpl description.
+ * @Description: Notify数据访问层实现，封装Notify表 CRUD 操作
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

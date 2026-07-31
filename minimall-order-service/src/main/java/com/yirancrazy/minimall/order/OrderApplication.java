@@ -8,7 +8,7 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: OrderApplication description.
+ * @Description: 订单服务启动类，初始化 Spring Boot 应用上下文
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

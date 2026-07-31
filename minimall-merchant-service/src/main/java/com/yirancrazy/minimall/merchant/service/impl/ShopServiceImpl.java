@@ -11,7 +11,7 @@ import com.yirancrazy.minimall.merchant.service.ShopService;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: ShopServiceImpl description.
+ * @Description: 商户领域服务实现，实现Shop相关业务逻辑
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

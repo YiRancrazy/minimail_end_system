@@ -8,7 +8,7 @@ import com.yirancrazy.minimall.api.fallback.NotifyFeignFallbackFactory;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: NotifyFeignClient description.
+ * @Description: Notify Feign 客户端，调用Notify服务接口
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

@@ -9,7 +9,7 @@ import com.yirancrazy.minimall.api.feign.GoodsFeignClient;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: GoodsFeignFallbackFactory description.
+ * @Description: GoodsFeign Feign 降级工厂，处理GoodsFeign服务调用失败降级
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

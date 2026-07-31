@@ -6,7 +6,7 @@ import com.yirancrazy.minimall.common.base.BaseEnum;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: OrderCodeEnum description.
+ * @Description: 订单Order错误码枚举，定义订单相关错误码
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

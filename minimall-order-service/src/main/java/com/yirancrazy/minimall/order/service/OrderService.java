@@ -2,7 +2,7 @@ package com.yirancrazy.minimall.order.service;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: OrderService description.
+ * @Description: 订单领域服务接口，定义Order相关业务契约
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

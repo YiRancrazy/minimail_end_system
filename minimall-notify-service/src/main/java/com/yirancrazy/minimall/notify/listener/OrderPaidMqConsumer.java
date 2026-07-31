@@ -13,7 +13,7 @@ import com.yirancrazy.minimall.notify.sse.SseHub;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: OrderPaidMqConsumer description.
+ * @Description: OrderPaidMq消费者，消费OrderPaidMq相关消息
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

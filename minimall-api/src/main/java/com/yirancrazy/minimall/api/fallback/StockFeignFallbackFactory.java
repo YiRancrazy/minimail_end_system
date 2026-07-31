@@ -8,7 +8,7 @@ import com.yirancrazy.minimall.api.feign.StockFeignClient;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: StockFeignFallbackFactory description.
+ * @Description: StockFeign Feign 降级工厂，处理StockFeign服务调用失败降级
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

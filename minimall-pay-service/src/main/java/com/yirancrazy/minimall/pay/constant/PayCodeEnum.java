@@ -6,7 +6,7 @@ import com.yirancrazy.minimall.common.base.BaseEnum;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: PayCodeEnum description.
+ * @Description: 支付Pay错误码枚举，定义支付相关错误码
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

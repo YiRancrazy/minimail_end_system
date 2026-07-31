@@ -7,7 +7,7 @@ import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: AuthApplication description.
+ * @Description: 认证服务启动类，初始化 Spring Boot 应用上下文
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

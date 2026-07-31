@@ -8,7 +8,7 @@ import com.yirancrazy.minimall.common.base.BasePO;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: OrderPO description.
+ * @Description: Order持久化对象，映射order表
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

@@ -6,7 +6,7 @@ import com.yirancrazy.minimall.common.base.BaseEnum;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: IdBizTagEnum description.
+ * @Description: ID生成IdBizTag枚举，定义ID生成相关错误码
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

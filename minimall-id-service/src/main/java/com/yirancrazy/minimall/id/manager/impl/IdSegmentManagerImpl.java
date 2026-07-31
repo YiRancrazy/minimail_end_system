@@ -8,7 +8,7 @@ import com.yirancrazy.minimall.id.mapper.IdSegmentMapper;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: IdSegmentManagerImpl description.
+ * @Description: IdSegment数据访问层实现，封装IdSegment表 CRUD 操作
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

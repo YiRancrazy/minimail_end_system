@@ -5,7 +5,7 @@ import com.yirancrazy.minimall.notify.entity.NotifyMessagePO;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: NotifyMessageMapper description.
+ * @Description: NotifyMessage MyBatis Mapper 接口，映射NotifyMessage表
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

@@ -11,7 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: RocketMqEventConsumer description.
+ * @Description: RocketMqEvent消费者，消费RocketMqEvent相关消息
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

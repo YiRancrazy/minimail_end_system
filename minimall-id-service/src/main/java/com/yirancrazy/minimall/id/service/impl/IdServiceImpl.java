@@ -6,7 +6,7 @@ import com.yirancrazy.minimall.id.service.Snowflake;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: IdServiceImpl description.
+ * @Description: ID生成领域服务实现，实现Id相关业务逻辑
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

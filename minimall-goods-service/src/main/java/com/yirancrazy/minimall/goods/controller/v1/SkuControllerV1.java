@@ -14,7 +14,7 @@ import com.yirancrazy.minimall.goods.service.SkuService;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: SkuControllerV1 description.
+ * @Description: 商品控制器，提供Sku RESTful API
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

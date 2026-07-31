@@ -8,7 +8,7 @@ import com.yirancrazy.minimall.api.feign.MerchantFeignClient;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: MerchantFeignFallbackFactory description.
+ * @Description: MerchantFeign Feign 降级工厂，处理MerchantFeign服务调用失败降级
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

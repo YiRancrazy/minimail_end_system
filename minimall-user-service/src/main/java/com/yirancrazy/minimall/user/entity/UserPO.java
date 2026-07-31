@@ -7,7 +7,7 @@ import com.yirancrazy.minimall.common.base.BasePO;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: UserPO description.
+ * @Description: User持久化对象，映射user表
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

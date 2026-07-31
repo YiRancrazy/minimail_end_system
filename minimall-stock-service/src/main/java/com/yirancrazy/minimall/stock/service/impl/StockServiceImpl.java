@@ -11,7 +11,7 @@ import com.yirancrazy.minimall.stock.service.StockService;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: StockServiceImpl description.
+ * @Description: 库存领域服务实现，实现Stock相关业务逻辑
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

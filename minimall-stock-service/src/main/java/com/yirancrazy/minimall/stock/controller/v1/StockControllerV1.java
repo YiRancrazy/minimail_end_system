@@ -12,7 +12,7 @@ import com.yirancrazy.minimall.stock.service.StockService;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: StockControllerV1 description.
+ * @Description: 库存控制器，提供Stock RESTful API
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

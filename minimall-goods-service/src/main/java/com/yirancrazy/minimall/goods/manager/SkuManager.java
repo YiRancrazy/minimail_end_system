@@ -5,7 +5,7 @@ import com.yirancrazy.minimall.goods.entity.SkuPO;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: SkuManager description.
+ * @Description: Sku数据访问层接口，定义Sku表操作契约
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

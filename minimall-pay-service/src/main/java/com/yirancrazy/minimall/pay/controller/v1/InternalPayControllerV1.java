@@ -13,7 +13,7 @@ import com.yirancrazy.minimall.pay.service.PayService;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: InternalPayControllerV1 description.
+ * @Description: 支付内部控制器，提供Pay相关内部接口
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

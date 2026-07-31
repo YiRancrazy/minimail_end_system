@@ -5,7 +5,7 @@ import com.yirancrazy.minimall.common.result.ResultCode;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: BizException description.
+ * @Description: Biz异常类，表示Biz相关业务异常
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

@@ -6,7 +6,7 @@ import com.yirancrazy.minimall.common.base.BasePO;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: IdSegmentPO description.
+ * @Description: IdSegment持久化对象，映射idsegment表
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

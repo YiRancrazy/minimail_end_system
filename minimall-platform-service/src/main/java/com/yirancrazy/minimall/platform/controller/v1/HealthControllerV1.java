@@ -7,7 +7,7 @@ import com.yirancrazy.minimall.common.result.Result;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: HealthControllerV1 description.
+ * @Description: 平台控制器，提供Health RESTful API
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

@@ -9,7 +9,7 @@ import com.yirancrazy.minimall.order.mapper.OrderMapper;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: OrderManagerImpl description.
+ * @Description: Order数据访问层实现，封装Order表 CRUD 操作
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

@@ -5,7 +5,7 @@ import com.yirancrazy.minimall.id.entity.IdSegmentPO;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: IdSegmentMapper description.
+ * @Description: IdSegment MyBatis Mapper 接口，映射IdSegment表
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

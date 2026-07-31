@@ -5,7 +5,7 @@ import com.yirancrazy.minimall.order.entity.OrderPO;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: OrderMapper description.
+ * @Description: Order MyBatis Mapper 接口，映射Order表
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

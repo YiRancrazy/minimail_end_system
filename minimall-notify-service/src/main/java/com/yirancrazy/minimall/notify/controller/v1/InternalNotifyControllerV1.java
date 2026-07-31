@@ -12,7 +12,7 @@ import com.yirancrazy.minimall.notify.sse.SseHub;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: InternalNotifyControllerV1 description.
+ * @Description: 通知内部控制器，提供Notify相关内部接口
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

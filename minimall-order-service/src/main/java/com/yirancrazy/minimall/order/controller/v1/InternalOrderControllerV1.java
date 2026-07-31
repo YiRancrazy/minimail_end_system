@@ -9,7 +9,7 @@ import com.yirancrazy.minimall.order.service.OrderService;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: InternalOrderControllerV1 description.
+ * @Description: 订单内部控制器，提供Order相关内部接口
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

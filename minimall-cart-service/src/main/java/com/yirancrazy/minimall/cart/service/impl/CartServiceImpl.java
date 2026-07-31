@@ -11,7 +11,7 @@ import com.yirancrazy.minimall.cart.service.CartService;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: CartServiceImpl description.
+ * @Description: 购物车领域服务实现，实现Cart相关业务逻辑
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

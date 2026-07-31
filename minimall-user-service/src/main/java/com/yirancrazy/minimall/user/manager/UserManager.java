@@ -5,7 +5,7 @@ import com.yirancrazy.minimall.user.entity.UserPO;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: UserManager description.
+ * @Description: User数据访问层接口，定义User表操作契约
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

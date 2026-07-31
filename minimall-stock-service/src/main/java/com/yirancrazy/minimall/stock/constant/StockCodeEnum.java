@@ -6,7 +6,7 @@ import com.yirancrazy.minimall.common.base.BaseEnum;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: StockCodeEnum description.
+ * @Description: 库存Stock错误码枚举，定义库存相关错误码
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

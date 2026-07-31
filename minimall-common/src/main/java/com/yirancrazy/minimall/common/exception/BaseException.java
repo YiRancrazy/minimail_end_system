@@ -4,7 +4,7 @@ import lombok.Getter;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: BaseException description.
+ * @Description: Base异常类，表示Base相关业务异常
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

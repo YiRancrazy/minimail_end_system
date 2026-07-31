@@ -2,7 +2,7 @@ package com.yirancrazy.minimall.stock.service;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: StockService description.
+ * @Description: 库存领域服务接口，定义Stock相关业务契约
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

@@ -5,7 +5,7 @@ import com.yirancrazy.minimall.cart.entity.CartItemPO;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: CartItemMapper description.
+ * @Description: CartItem MyBatis Mapper 接口，映射CartItem表
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

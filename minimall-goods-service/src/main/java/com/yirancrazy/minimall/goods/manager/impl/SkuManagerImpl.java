@@ -9,7 +9,7 @@ import com.yirancrazy.minimall.goods.mapper.SkuMapper;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: SkuManagerImpl description.
+ * @Description: Sku数据访问层实现，封装Sku表 CRUD 操作
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

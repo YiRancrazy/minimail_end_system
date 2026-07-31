@@ -17,7 +17,7 @@ import com.yirancrazy.minimall.merchant.service.ShopService;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: ShopControllerV1 description.
+ * @Description: 商户控制器，提供Shop RESTful API
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

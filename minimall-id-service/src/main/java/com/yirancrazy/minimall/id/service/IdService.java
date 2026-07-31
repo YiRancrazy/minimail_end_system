@@ -2,7 +2,7 @@ package com.yirancrazy.minimall.id.service;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: IdService description.
+ * @Description: ID生成领域服务接口，定义Id相关业务契约
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

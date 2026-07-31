@@ -14,7 +14,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: SseHub description.
+ * @Description: SseHub，提供通知相关能力
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

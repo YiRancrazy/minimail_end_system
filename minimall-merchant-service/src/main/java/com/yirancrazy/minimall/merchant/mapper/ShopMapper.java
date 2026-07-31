@@ -5,7 +5,7 @@ import com.yirancrazy.minimall.merchant.entity.ShopPO;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: ShopMapper description.
+ * @Description: Shop MyBatis Mapper 接口，映射Shop表
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

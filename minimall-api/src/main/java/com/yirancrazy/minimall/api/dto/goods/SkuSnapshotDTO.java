@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: SkuSnapshotDTO description.
+ * @Description: SkuSnapshot数据传输对象，用于SkuSnapshot相关数据传输
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

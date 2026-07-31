@@ -10,7 +10,7 @@ import com.yirancrazy.minimall.common.result.Result;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: InternalCartControllerV1 description.
+ * @Description: 购物车内部控制器，提供Cart相关内部接口
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

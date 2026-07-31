@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: PageResult description.
+ * @Description: PageResult，提供公共相关能力
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

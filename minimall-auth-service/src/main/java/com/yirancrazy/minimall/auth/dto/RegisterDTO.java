@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: RegisterDTO description.
+ * @Description: Register数据传输对象，用于Register相关数据传输
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

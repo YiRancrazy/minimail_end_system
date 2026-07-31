@@ -10,7 +10,7 @@ import io.jsonwebtoken.security.Keys;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: JwtVerifier description.
+ * @Description: JwtVerifier，提供网关相关能力
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

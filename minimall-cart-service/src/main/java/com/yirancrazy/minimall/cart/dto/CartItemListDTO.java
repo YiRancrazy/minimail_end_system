@@ -5,7 +5,7 @@ import lombok.Data;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: CartItemListDTO description.
+ * @Description: CartItemList数据传输对象，用于CartItemList相关数据传输
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

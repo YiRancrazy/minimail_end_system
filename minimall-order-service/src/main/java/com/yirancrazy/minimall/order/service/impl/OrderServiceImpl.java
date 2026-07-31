@@ -13,7 +13,7 @@ import com.yirancrazy.minimall.order.service.OrderService;
 @Service
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: OrderServiceImpl description.
+ * @Description: 订单领域服务实现，实现Order相关业务逻辑
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

@@ -12,7 +12,7 @@ import com.yirancrazy.minimall.notify.service.NotifyService;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: NotifyControllerV1 description.
+ * @Description: 通知控制器，提供Notify RESTful API
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

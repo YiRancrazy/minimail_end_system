@@ -5,7 +5,7 @@ import com.yirancrazy.minimall.cart.entity.CartItemPO;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: CartItemManager description.
+ * @Description: CartItem数据访问层接口，定义CartItem表操作契约
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

@@ -10,7 +10,7 @@ import com.yirancrazy.minimall.notify.sse.SseHub;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: OrderPaidListener description.
+ * @Description: OrderPaid监听器，监听OrderPaid相关事件
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

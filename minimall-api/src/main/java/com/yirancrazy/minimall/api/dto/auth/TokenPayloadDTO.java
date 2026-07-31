@@ -4,7 +4,7 @@ import lombok.Data;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: TokenPayloadDTO description.
+ * @Description: TokenPayload数据传输对象，用于TokenPayload相关数据传输
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

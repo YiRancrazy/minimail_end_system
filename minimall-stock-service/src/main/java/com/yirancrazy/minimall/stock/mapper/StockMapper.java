@@ -5,7 +5,7 @@ import com.yirancrazy.minimall.stock.entity.StockPO;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: StockMapper description.
+ * @Description: Stock MyBatis Mapper 接口，映射Stock表
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

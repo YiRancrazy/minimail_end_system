@@ -8,7 +8,7 @@ import com.yirancrazy.minimall.api.fallback.UserFeignFallbackFactory;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: UserFeignClient description.
+ * @Description: User Feign 客户端，调用User服务接口
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

@@ -5,7 +5,7 @@ import com.yirancrazy.minimall.goods.entity.SkuPO;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: SkuMapper description.
+ * @Description: Sku MyBatis Mapper 接口，映射Sku表
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

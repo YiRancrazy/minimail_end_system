@@ -8,7 +8,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: JacksonConfig description.
+ * @Description: Jackson配置类，配置Jackson相关 Bean
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

@@ -11,7 +11,7 @@ import reactor.core.publisher.Mono;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: TraceIdGlobalFilter description.
+ * @Description: TraceIdGlobal过滤器，处理TraceIdGlobal相关请求
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

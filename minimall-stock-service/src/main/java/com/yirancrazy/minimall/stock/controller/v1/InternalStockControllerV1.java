@@ -11,7 +11,7 @@ import com.yirancrazy.minimall.stock.service.StockService;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: InternalStockControllerV1 description.
+ * @Description: 库存内部控制器，提供Stock相关内部接口
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

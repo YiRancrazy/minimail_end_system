@@ -17,7 +17,7 @@ import com.yirancrazy.minimall.common.result.Result;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: CartControllerV1 description.
+ * @Description: 购物车控制器，提供Cart RESTful API
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

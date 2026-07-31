@@ -17,7 +17,7 @@ import com.yirancrazy.minimall.user.service.UserService;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: UserControllerV1 description.
+ * @Description: 用户控制器，提供User RESTful API
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

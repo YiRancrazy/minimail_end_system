@@ -13,7 +13,7 @@ import com.yirancrazy.minimall.common.result.Result;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: GlobalExceptionHandler description.
+ * @Description: GlobalException处理器，处理GlobalException相关逻辑
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

@@ -8,7 +8,7 @@ import com.yirancrazy.minimall.api.fallback.StockFeignFallbackFactory;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: StockFeignClient description.
+ * @Description: Stock Feign 客户端，调用Stock服务接口
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

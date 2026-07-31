@@ -9,7 +9,7 @@ import com.yirancrazy.minimall.merchant.mapper.ShopMapper;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: ShopManagerImpl description.
+ * @Description: Shop数据访问层实现，封装Shop表 CRUD 操作
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

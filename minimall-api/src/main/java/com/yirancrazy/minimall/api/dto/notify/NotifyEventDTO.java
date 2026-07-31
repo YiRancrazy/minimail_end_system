@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: NotifyEventDTO description.
+ * @Description: NotifyEvent数据传输对象，用于NotifyEvent相关数据传输
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

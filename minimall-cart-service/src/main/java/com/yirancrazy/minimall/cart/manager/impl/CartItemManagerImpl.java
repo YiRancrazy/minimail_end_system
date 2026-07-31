@@ -9,7 +9,7 @@ import com.yirancrazy.minimall.common.annotation.Manager;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: CartItemManagerImpl description.
+ * @Description: CartItem数据访问层实现，封装CartItem表 CRUD 操作
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

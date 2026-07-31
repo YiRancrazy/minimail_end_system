@@ -6,7 +6,7 @@ import com.yirancrazy.minimall.merchant.entity.ShopPO;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: ShopService description.
+ * @Description: 商户领域服务接口，定义Shop相关业务契约
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

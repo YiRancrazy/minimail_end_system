@@ -11,7 +11,7 @@ import com.yirancrazy.minimall.goods.service.SkuService;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: InternalSkuControllerV1 description.
+ * @Description: 商品内部控制器，提供Sku相关内部接口
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

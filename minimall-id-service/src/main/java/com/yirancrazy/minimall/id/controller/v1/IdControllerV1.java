@@ -10,7 +10,7 @@ import com.yirancrazy.minimall.id.service.IdService;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: IdControllerV1 description.
+ * @Description: ID生成控制器，提供Id RESTful API
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

@@ -9,7 +9,7 @@ import com.yirancrazy.minimall.notify.manager.NotifyManager;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: NotifyService description.
+ * @Description: 通知领域服务接口，定义Notify相关业务契约
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

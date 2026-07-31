@@ -9,7 +9,7 @@ import io.swagger.v3.oas.models.info.License;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: OpenApiConfig description.
+ * @Description: OpenApi配置类，配置OpenApi相关 Bean
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */

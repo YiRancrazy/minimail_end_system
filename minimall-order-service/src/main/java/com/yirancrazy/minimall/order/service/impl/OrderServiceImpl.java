@@ -1,13 +1,13 @@
 package com.yirancrazy.minimall.order.service.impl;
 
+import org.springframework.stereotype.Service;
+import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.order.constant.OrderCodeEnum;
 import com.yirancrazy.minimall.order.constant.OrderStatusEnum;
 import com.yirancrazy.minimall.order.entity.OrderPO;
 import com.yirancrazy.minimall.order.manager.OrderManager;
 import com.yirancrazy.minimall.order.service.OrderService;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
@@ -82,7 +82,8 @@ public class OrderServiceImpl implements OrderService {
         if (success) {
             po.setStatus(OrderStatusEnum.REFUNDED.intCode());
             log.info("order refunded, orderId={}", orderId);
-        } else {
+        }
+        else {
             Integer fromStatus = po.getRefundFromStatus();
             po.setStatus(fromStatus != null ? fromStatus : OrderStatusEnum.PAID.intCode());
             log.info("order refund failed, reverted, orderId={}", orderId);

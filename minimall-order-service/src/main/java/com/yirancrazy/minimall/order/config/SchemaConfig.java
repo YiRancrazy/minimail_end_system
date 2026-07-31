@@ -1,5 +1,6 @@
 package com.yirancrazy.minimall.order.config;
 
+import java.sql.SQLException;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
@@ -35,10 +36,7 @@ public class SchemaConfig implements CommandLineRunner {
                 new ClassPathResource("schema.sql"));
             log.info("schema.sql applied");
         }
-        catch (ScriptException e) {
-            log.warn("schema.sql init skipped: {}", e.getMessage());
-        }
-        catch (java.sql.SQLException e) {
+        catch (ScriptException | SQLException e) {
             log.warn("schema.sql init skipped: {}", e.getMessage());
         }
     }

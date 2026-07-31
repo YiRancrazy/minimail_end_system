@@ -1,7 +1,7 @@
 package com.yirancrazy.minimall.gateway.filter;
 
 import java.nio.charset.StandardCharsets;
-import java.time.Instant;
+import java.util.Date;
 import javax.crypto.SecretKey;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -72,8 +72,8 @@ class AuthGlobalFilterTest {
             .claim("username", "alice")
             .claim("role", "USER")
             .claim("jti", "test-jti")
-            .issuedAt(Instant.now())
-            .expiration(Instant.now().plusSeconds(3600))
+            .issuedAt(new Date())
+            .expiration(new Date(System.currentTimeMillis() + 3600_000))
             .signWith(key)
             .compact();
 

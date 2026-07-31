@@ -13,6 +13,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.test.util.ReflectionTestUtils;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * @Author: yirancrazy@gmail.com
@@ -20,8 +21,6 @@ import org.springframework.test.util.ReflectionTestUtils;
  * @Version: 1.0
  * @DateTime: 2026/7/31
  **/
-import static org.assertj.core.api.Assertions.assertThat;
-
 @ExtendWith(OutputCaptureExtension.class)
 class RocketMqEventConsumerTest {
 

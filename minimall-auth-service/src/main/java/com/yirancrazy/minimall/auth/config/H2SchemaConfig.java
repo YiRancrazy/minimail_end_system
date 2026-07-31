@@ -1,5 +1,6 @@
 package com.yirancrazy.minimall.auth.config;
 
+import java.sql.SQLException;
 import javax.sql.DataSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
@@ -41,7 +42,7 @@ public class H2SchemaConfig implements CommandLineRunner {
                 new ClassPathResource("schema.sql"));
             log.info("schema.sql applied via H2SchemaConfig");
         }
-        catch (ScriptException e) {
+        catch (ScriptException | SQLException e) {
             log.warn("schema.sql init skipped: {}", e.getMessage());
         }
     }

@@ -1,7 +1,7 @@
 package com.yirancrazy.minimall.auth.util;
 
 import java.nio.charset.StandardCharsets;
-import java.time.Instant;
+import java.util.Date;
 import java.util.UUID;
 import javax.crypto.SecretKey;
 import org.springframework.beans.factory.annotation.Value;
@@ -44,8 +44,8 @@ public class JwtUtil {
             .claim("username", username)
             .claim("role", role)
             .claim("jti", jti)
-            .issuedAt(Instant.ofEpochMilli(now))
-            .expiration(Instant.ofEpochMilli(now + ttlMillis))
+            .issuedAt(new Date(now))
+            .expiration(new Date(now + ttlMillis))
             .signWith(key)
             .compact();
     }

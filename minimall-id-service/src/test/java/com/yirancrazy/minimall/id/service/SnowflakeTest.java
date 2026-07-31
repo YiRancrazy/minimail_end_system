@@ -1,6 +1,7 @@
 package com.yirancrazy.minimall.id.service;
 
 import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * @Author: yirancrazy@gmail.com
@@ -8,8 +9,6 @@ import org.junit.jupiter.api.Test;
  * @Version: 1.0
  * @DateTime: 2026/7/31
  **/
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 class SnowflakeTest {
 
     @Test

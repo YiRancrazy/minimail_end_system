@@ -63,7 +63,7 @@ public class RocketMqEventConsumer {
             wrapper.start();
             log.info("rocketmq consumer started, group={}, topic={}", group, topic);
         }
-        catch (MQClientException e) {
+        catch (Exception e) {
             log.warn("rocketmq consumer start failed (events ignored): {}", e.getMessage());
             wrapper = null;
         }

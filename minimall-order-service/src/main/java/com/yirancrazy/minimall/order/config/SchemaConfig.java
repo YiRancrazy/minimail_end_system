@@ -38,5 +38,8 @@ public class SchemaConfig implements CommandLineRunner {
         catch (ScriptException e) {
             log.warn("schema.sql init skipped: {}", e.getMessage());
         }
+        catch (java.sql.SQLException e) {
+            log.warn("schema.sql init skipped: {}", e.getMessage());
+        }
     }
 }

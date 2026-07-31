@@ -1,5 +1,6 @@
 package com.yirancrazy.minimall.common.event;
 
+import org.apache.rocketmq.client.exception.MQBrokerException;
 import org.apache.rocketmq.client.exception.MQClientException;
 import org.apache.rocketmq.client.producer.DefaultMQProducer;
 import org.apache.rocketmq.client.producer.SendResult;
@@ -76,7 +77,7 @@ public class RocketMqEventBus implements EventBus {
             SendResult r = producer.send(msg);
             log.debug("rocketmq send ok, msgId={}", r.getMsgId());
         }
-        catch (MQClientException | RemotingException e) {
+        catch (MQClientException | RemotingException | MQBrokerException e) {
             log.warn("rocketmq send failed for {}: {}", event.getClass().getSimpleName(), e.getMessage());
         }
         catch (InterruptedException e) {

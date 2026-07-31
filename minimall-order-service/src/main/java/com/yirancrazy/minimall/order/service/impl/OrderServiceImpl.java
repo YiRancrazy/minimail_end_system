@@ -16,6 +16,7 @@ import com.yirancrazy.minimall.api.feign.StockFeignClient;
 import com.yirancrazy.minimall.common.event.EventBus;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.order.constant.OrderCodeEnum;
+import com.yirancrazy.minimall.order.constant.OrderStatusEnum;
 import com.yirancrazy.minimall.order.entity.OrderPO;
 import com.yirancrazy.minimall.order.manager.OrderManager;
 import com.yirancrazy.minimall.order.service.OrderService;
@@ -73,7 +74,7 @@ public class OrderServiceImpl implements OrderService {
         order.setSkuId(skuId);
         order.setQuantity(quantity);
         order.setAmount(new BigDecimal("100.00"));
-        order.setStatus("PENDING_PAY");
+        order.setStatus(OrderStatusEnum.PENDING.intCode());
         orderManager.save(order);
 
         Long payId = payFeign.create(new PayCreateDTO(
@@ -100,7 +101,7 @@ public class OrderServiceImpl implements OrderService {
         if (order == null) {
             throw new BizException(OrderCodeEnum.ORDER_NOT_FOUND);
         }
-        if (!"PENDING_PAY".equals(order.getStatus())) {
+        if (order.getStatus() == null || order.getStatus() != OrderStatusEnum.PENDING.intCode()) {
             log.warn("order {} status={}, skip pay", orderId, order.getStatus());
             return false;
         }
@@ -108,7 +109,7 @@ public class OrderServiceImpl implements OrderService {
         if (callbackOk == null || !callbackOk) {
             throw new BizException(OrderCodeEnum.PAY_FAIL);
         }
-        order.setStatus("PAID");
+        order.setStatus(OrderStatusEnum.PAID.intCode());
         orderManager.updateById(order);
 
         notifyPaid(order);
@@ -125,7 +126,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public String status(Long orderId) {
         OrderPO order = orderManager.getById(orderId);
-        return order == null ? "UNKNOWN" : order.getStatus();
+        return order == null ? "UNKNOWN" : String.valueOf(order.getStatus());
     }
 
     /**

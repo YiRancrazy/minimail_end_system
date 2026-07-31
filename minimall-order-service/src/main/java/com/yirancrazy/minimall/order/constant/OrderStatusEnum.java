@@ -31,6 +31,14 @@ public enum OrderStatusEnum implements BaseEnum {
     }
 
     /**
+     * Get the integer status code for persistence.
+     * @return the integer code value
+     */
+    public int intCode() {
+        return code;
+    }
+
+    /**
      * Check if transition from current to target is allowed.
      * @param target the target status to transition to
      * @return true if the transition is valid

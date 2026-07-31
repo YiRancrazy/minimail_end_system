@@ -1,4 +1,4 @@
-﻿package com.yirancrazy.minimall.common.result;
+package com.yirancrazy.minimall.common.result;
 
 import java.util.Collections;
 import java.util.List;

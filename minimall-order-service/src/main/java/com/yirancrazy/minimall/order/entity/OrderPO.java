@@ -19,5 +19,6 @@ public class OrderPO extends BasePO {
     private Long skuId;
     private Integer quantity;
     private BigDecimal amount;
-    private String status;
+    private Integer status;
+    private Integer refundFromStatus;
 }

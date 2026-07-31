@@ -1,5 +1,6 @@
 package com.yirancrazy.minimall.common.event;
 
+import java.io.IOException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -44,7 +45,7 @@ public final class MqEventJsonCodec {
         try {
             return M.readValue(body, type);
         }
-        catch (JsonProcessingException e) {
+        catch (IOException e) {
             throw new IllegalStateException("decode failed: " + type, e);
         }
     }

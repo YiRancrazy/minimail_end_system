@@ -14,7 +14,9 @@ import com.yirancrazy.minimall.common.base.BaseEnum;
 @AllArgsConstructor
 public enum StockCodeEnum implements BaseEnum {
     STOCK_NOT_FOUND("18001", "STOCK_NOT_FOUND", "SKU 库存不存在"),
-    STOCK_INSUFFICIENT("18002", "STOCK_INSUFFICIENT", "库存不足");
+    STOCK_INSUFFICIENT("18002", "STOCK_INSUFFICIENT", "库存不足"),
+    THRESHOLD_INVALID("60001", "THRESHOLD_INVALID", "Alert threshold must be >= 0"),
+    ADJUST_QUANTITY_ZERO("60002", "ADJUST_QUANTITY_ZERO", "Adjust quantity cannot be zero");
 
     private final String code;
     private final String alias;

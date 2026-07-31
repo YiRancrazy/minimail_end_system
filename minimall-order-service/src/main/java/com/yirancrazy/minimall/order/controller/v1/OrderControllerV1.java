@@ -42,8 +42,9 @@ public class OrderControllerV1 {
      * @return 支付成功返回 true，订单状态不允许支付时返回 false
      */
     @PostMapping("/{id}/pay")
-    public Result<Boolean> pay(@PathVariable("id") Long id) {
-        return Result.success(orderService.pay(id));
+    public Result<Void> pay(@PathVariable("id") Long id) {
+        orderService.pay(id);
+        return Result.success(null);
     }
 
     /**
@@ -52,7 +53,7 @@ public class OrderControllerV1 {
      * @return 订单状态
      */
     @GetMapping("/{id}")
-    public Result<String> status(@PathVariable("id") Long id) {
-        return Result.success(orderService.status(id));
+    public Result<Integer> status(@PathVariable("id") Long id) {
+        return Result.success(orderService.getStatus(id));
     }
 }

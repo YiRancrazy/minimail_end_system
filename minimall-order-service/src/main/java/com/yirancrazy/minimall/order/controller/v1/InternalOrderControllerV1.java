@@ -27,7 +27,7 @@ public class InternalOrderControllerV1 {
      * @return 订单状态；订单不存在时返回 UNKNOWN
      */
     @GetMapping("/{id}")
-    public Result<String> status(@PathVariable Long id) {
-        return Result.success(orderService.status(id));
+    public Result<Integer> status(@PathVariable Long id) {
+        return Result.success(orderService.getStatus(id));
     }
 }

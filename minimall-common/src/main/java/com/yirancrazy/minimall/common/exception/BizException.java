@@ -4,9 +4,11 @@ import lombok.Getter;
 import com.yirancrazy.minimall.common.result.ResultCode;
 
 /**
- * 业务异常，承载错误码、别名和提示消息，支持直接传码或由 ResultCode 枚举构造。
+ * @Author: yirancrazy@gmail.com
+ * @Description: BizException description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Getter
 public class BizException extends RuntimeException {
     private final String code;
     private final String alias;

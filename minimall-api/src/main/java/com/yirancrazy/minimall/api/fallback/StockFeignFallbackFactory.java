@@ -7,10 +7,11 @@ import com.yirancrazy.minimall.api.dto.stock.StockReserveDTO;
 import com.yirancrazy.minimall.api.feign.StockFeignClient;
 
 /**
-* 库存服务 Feign 降级工厂，在库存服务不可用时返回受控降级结果（按当前实现：reserve 返回 false 哨兵值）。
+ * @Author: yirancrazy@gmail.com
+ * @Description: StockFeignFallbackFactory description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Slf4j
-@Component
 public class StockFeignFallbackFactory implements FallbackFactory<StockFeignClient> {
     @Override
     public StockFeignClient create(Throwable cause) {

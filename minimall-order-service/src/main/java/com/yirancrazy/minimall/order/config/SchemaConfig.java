@@ -11,11 +11,11 @@ import org.springframework.jdbc.datasource.init.ScriptUtils;
 import lombok.extern.slf4j.Slf4j;
 
 /**
-* 订单服务开发与测试环境数据库初始化配置，应用启动时执行类路径下的 schema.sql 脚本。
+ * @Author: yirancrazy@gmail.com
+ * @Description: SchemaConfig description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Slf4j
-@Configuration
-@Profile({"test", "dev"})
 public class SchemaConfig implements CommandLineRunner {
 
     private final JdbcTemplate jdbcTemplate;

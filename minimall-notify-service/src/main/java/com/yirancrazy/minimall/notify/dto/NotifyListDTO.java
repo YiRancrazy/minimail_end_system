@@ -4,9 +4,11 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 /**
- * Notify list query DTO.
+ * @Author: yirancrazy@gmail.com
+ * @Description: NotifyListDTO description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Data
 public class NotifyListDTO {
 
     @NotNull(message = "userId cannot be null")

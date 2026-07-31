@@ -1,7 +1,10 @@
 package com.yirancrazy.minimall.id.service;
 
 /**
-* 雪花 ID 算法工具类，根据 datacenterId 与 workerId 生成趋势递增的分布式唯一 ID，线程安全。
+ * @Author: yirancrazy@gmail.com
+ * @Description: Snowflake description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
 public class Snowflake {
     private final long epoch = 1700000000000L;

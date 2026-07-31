@@ -7,9 +7,11 @@ import com.yirancrazy.minimall.api.dto.stock.StockReserveDTO;
 import com.yirancrazy.minimall.api.fallback.StockFeignFallbackFactory;
 
 /**
-* 库存服务 Feign 客户端，提供跨服务库存预占、释放与查询能力。
+ * @Author: yirancrazy@gmail.com
+ * @Description: StockFeignClient description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@FeignClient(value = "minimall-stock-service", fallbackFactory = StockFeignFallbackFactory.class)
 public interface StockFeignClient {
     @PostMapping("/internal/stock/reserve")
     Boolean reserve(@RequestBody StockReserveDTO dto);

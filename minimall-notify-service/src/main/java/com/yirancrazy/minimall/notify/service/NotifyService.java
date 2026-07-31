@@ -8,9 +8,11 @@ import com.yirancrazy.minimall.notify.entity.NotifyMessagePO;
 import com.yirancrazy.minimall.notify.manager.NotifyManager;
 
 /**
-* 通知领域服务，封装消息持久化、按用户查询等业务逻辑并委托 Manager 落地。
+ * @Author: yirancrazy@gmail.com
+ * @Description: NotifyService description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Service
 public class NotifyService {
 
     private final NotifyManager notifyManager;

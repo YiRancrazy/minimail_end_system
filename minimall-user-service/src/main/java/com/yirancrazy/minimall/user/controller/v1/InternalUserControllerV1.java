@@ -10,10 +10,11 @@ import com.yirancrazy.minimall.user.entity.UserPO;
 import com.yirancrazy.minimall.user.service.UserService;
 
 /**
-* 用户内部接口控制器，供其他服务查询用户快照等内部数据。
+ * @Author: yirancrazy@gmail.com
+ * @Description: InternalUserControllerV1 description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@RestController
-@RequestMapping("/internal/user")
 public class InternalUserControllerV1 {
 
     private final UserService userService;

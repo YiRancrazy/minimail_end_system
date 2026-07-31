@@ -6,11 +6,11 @@ import lombok.EqualsAndHashCode;
 import com.yirancrazy.minimall.common.base.BasePO;
 
 /**
-* 店铺持久化实体，对应 t_shop 表，承载店铺名称、营业执照号与状态等基础字段。
+ * @Author: yirancrazy@gmail.com
+ * @Description: ShopPO description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Data
-@EqualsAndHashCode(callSuper = true)
-@TableName("t_shop")
 public class ShopPO extends BasePO {
     private String shopName;
     private String licenseNo;

@@ -1,7 +1,10 @@
 package com.yirancrazy.minimall.common.result;
 
 /**
- * 响应码契约接口，约定业务码枚举必须提供的编码、别名和提示消息三个字段。
+ * @Author: yirancrazy@gmail.com
+ * @Description: ResultCode description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
 public interface ResultCode {
     String getCode();

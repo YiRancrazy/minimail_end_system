@@ -11,10 +11,11 @@ import com.yirancrazy.minimall.notify.service.NotifyService;
 import com.yirancrazy.minimall.notify.sse.SseHub;
 
 /**
-* 通知内部接口控制器，供他服务通过 HTTP 调用推送通知消息并触发 SSE。
+ * @Author: yirancrazy@gmail.com
+ * @Description: InternalNotifyControllerV1 description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@RestController
-@RequestMapping("/internal/notify")
 public class InternalNotifyControllerV1 {
 
     private final NotifyService notifyService;

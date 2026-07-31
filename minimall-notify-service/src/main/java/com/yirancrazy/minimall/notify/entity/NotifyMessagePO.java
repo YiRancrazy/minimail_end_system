@@ -6,11 +6,11 @@ import lombok.EqualsAndHashCode;
 import com.yirancrazy.minimall.common.base.BasePO;
 
 /**
-* 通知消息持久化实体，承载用户、类型、标题、内容与已读状态，映射至 t_notify_message 表。
+ * @Author: yirancrazy@gmail.com
+ * @Description: NotifyMessagePO description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Data
-@EqualsAndHashCode(callSuper = true)
-@TableName("t_notify_message")
 public class NotifyMessagePO extends BasePO {
     private Long userId;
     private String title;

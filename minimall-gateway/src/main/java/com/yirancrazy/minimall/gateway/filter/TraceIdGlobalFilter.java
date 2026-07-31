@@ -10,9 +10,11 @@ import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
 /**
-* 网关链路追踪全局过滤器，为每个请求生成/透传 traceId。
+ * @Author: yirancrazy@gmail.com
+ * @Description: TraceIdGlobalFilter description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Component
 public class TraceIdGlobalFilter implements GlobalFilter, Ordered {
 
     public static final String HEADER = "X-Trace-Id";

@@ -6,11 +6,11 @@ import lombok.EqualsAndHashCode;
 import com.yirancrazy.minimall.common.base.BasePO;
 
 /**
-* 购物车项持久化实体，对应 t_cart_item 表，记录用户、SKU、数量与选中状态。
+ * @Author: yirancrazy@gmail.com
+ * @Description: CartItemPO description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Data
-@EqualsAndHashCode(callSuper = true)
-@TableName("t_cart_item")
 public class CartItemPO extends BasePO {
     private Long userId;
     private Long skuId;

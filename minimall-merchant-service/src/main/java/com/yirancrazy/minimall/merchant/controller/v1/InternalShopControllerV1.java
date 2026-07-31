@@ -10,10 +10,11 @@ import com.yirancrazy.minimall.merchant.entity.ShopPO;
 import com.yirancrazy.minimall.merchant.service.ShopService;
 
 /**
-* 店铺内部 RPC 接口控制器，供其他微服务通过 Feign 调用获取店铺快照数据。
+ * @Author: yirancrazy@gmail.com
+ * @Description: InternalShopControllerV1 description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@RestController
-@RequestMapping("/internal/merchant/shop")
 public class InternalShopControllerV1 {
 
     private final ShopService shopService;

@@ -11,6 +11,12 @@ import com.yirancrazy.minimall.order.service.OrderService;
 
 @Slf4j
 @Service
+/**
+ * @Author: yirancrazy@gmail.com
+ * @Description: OrderServiceImpl description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
+ */
 public class OrderServiceImpl implements OrderService {
 
     private final OrderManager orderManager;

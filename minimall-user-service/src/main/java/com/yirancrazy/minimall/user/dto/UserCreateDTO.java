@@ -7,9 +7,11 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 /**
- * User creation request DTO.
+ * @Author: yirancrazy@gmail.com
+ * @Description: UserCreateDTO description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Data
 public class UserCreateDTO {
 
     @NotBlank(message = "username cannot be blank")

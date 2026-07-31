@@ -3,9 +3,11 @@ package com.yirancrazy.minimall.api.dto.auth;
 import lombok.Data;
 
 /**
-* JWT 令牌验签入参 DTO（具体承载字段见源码）。
+ * @Author: yirancrazy@gmail.com
+ * @Description: TokenVerifyDTO description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Data
 public class TokenVerifyDTO {
     private String token;
 }

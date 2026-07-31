@@ -6,10 +6,11 @@ import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.api.feign.IdFeignClient;
 
 /**
-* ID 服务 Feign 降级工厂，在 ID 服务不可用时返回受控降级结果（按当前实现：nextId 返回 null）。
+ * @Author: yirancrazy@gmail.com
+ * @Description: IdFeignFallbackFactory description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Slf4j
-@Component
 public class IdFeignFallbackFactory implements FallbackFactory<IdFeignClient> {
     @Override
     public IdFeignClient create(Throwable cause) {

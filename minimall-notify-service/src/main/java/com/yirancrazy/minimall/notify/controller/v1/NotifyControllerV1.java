@@ -11,10 +11,11 @@ import com.yirancrazy.minimall.notify.entity.NotifyMessagePO;
 import com.yirancrazy.minimall.notify.service.NotifyService;
 
 /**
-* 通知 C 端接口控制器，提供按用户拉取消息列表能力，供前端消息中心展示。
+ * @Author: yirancrazy@gmail.com
+ * @Description: NotifyControllerV1 description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@RestController
-@RequestMapping("/api/v1/notify")
 public class NotifyControllerV1 {
 
     private final NotifyService notifyService;

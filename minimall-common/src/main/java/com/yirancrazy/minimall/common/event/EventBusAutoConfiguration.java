@@ -5,11 +5,11 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * Decides which {@link EventBus} bean to expose. LocalEventBus is always
- * registered when no other implementation is found; RocketMqEventBus is
- * exposed only when its @ConditionalOnProperty triggers.
+ * @Author: yirancrazy@gmail.com
+ * @Description: EventBusAutoConfiguration description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Configuration
 public class EventBusAutoConfiguration {
 
     /**

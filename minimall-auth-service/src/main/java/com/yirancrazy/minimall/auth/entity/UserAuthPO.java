@@ -6,11 +6,11 @@ import lombok.EqualsAndHashCode;
 import com.yirancrazy.minimall.common.base.BasePO;
 
 /**
-* 用户认证持久化实体，对应 UserAuth 表，承载用户名、密码哈希、盐与角色。
+ * @Author: yirancrazy@gmail.com
+ * @Description: UserAuthPO description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Data
-@EqualsAndHashCode(callSuper = true)
-@TableName("t_user_auth")
 public class UserAuthPO extends BasePO {
     private String username;
     private String passwordHash;

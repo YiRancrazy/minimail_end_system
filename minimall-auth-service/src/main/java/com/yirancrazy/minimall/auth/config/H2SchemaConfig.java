@@ -13,12 +13,11 @@ import org.springframework.jdbc.datasource.init.ScriptUtils;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Iter-1 dev/test profile schema initializer. Runs schema.sql via JDBC at app
- * startup. Replaces Flyway/Liquibase (deferred to Iter-2).
+ * @Author: yirancrazy@gmail.com
+ * @Description: H2SchemaConfig description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Slf4j
-@Configuration
-@Profile({"test", "dev"})
 public class H2SchemaConfig implements CommandLineRunner {
 
     @Autowired

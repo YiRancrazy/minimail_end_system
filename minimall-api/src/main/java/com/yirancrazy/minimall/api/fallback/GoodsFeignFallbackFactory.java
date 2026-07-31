@@ -8,10 +8,11 @@ import com.yirancrazy.minimall.api.dto.goods.SkuSnapshotDTO;
 import com.yirancrazy.minimall.api.feign.GoodsFeignClient;
 
 /**
-* 商品服务 Feign 降级工厂，在商品服务不可用时返回受控降级结果。
+ * @Author: yirancrazy@gmail.com
+ * @Description: GoodsFeignFallbackFactory description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Slf4j
-@Component
 public class GoodsFeignFallbackFactory implements FallbackFactory<GoodsFeignClient> {
     @Override
     public GoodsFeignClient create(Throwable cause) {

@@ -7,11 +7,11 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
-* 库存预占入参 DTO，承载 SKU 标识与数量。
+ * @Author: yirancrazy@gmail.com
+ * @Description: StockReserveDTO description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 public class StockReserveDTO {
     @NotNull(message = "SKU ID不能为空")
     private Long skuId;

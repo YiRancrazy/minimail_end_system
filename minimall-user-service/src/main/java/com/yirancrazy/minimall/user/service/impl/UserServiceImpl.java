@@ -10,9 +10,11 @@ import com.yirancrazy.minimall.user.manager.UserManager;
 import com.yirancrazy.minimall.user.service.UserService;
 
 /**
-* 用户领域服务实现，校验用户业务规则并委托 UserManager 完成数据操作。
+ * @Author: yirancrazy@gmail.com
+ * @Description: UserServiceImpl description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Service
 public class UserServiceImpl implements UserService {
 
     private final UserManager userManager;

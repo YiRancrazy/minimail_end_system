@@ -8,11 +8,11 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
-* 通知事件 DTO，承载接收者、类型、标题与内容，供 notify-service 跨域消费。
+ * @Author: yirancrazy@gmail.com
+ * @Description: NotifyEventDTO description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 public class NotifyEventDTO {
 
     @NotNull(message = "userId cannot be null")

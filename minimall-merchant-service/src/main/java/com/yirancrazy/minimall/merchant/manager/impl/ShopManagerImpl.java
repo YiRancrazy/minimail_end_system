@@ -8,10 +8,11 @@ import com.yirancrazy.minimall.merchant.manager.ShopManager;
 import com.yirancrazy.minimall.merchant.mapper.ShopMapper;
 
 /**
-* 店铺数据访问管理实现，基于 MyBatis-Plus ServiceImpl 承载店铺表通用 CRUD 操作。
+ * @Author: yirancrazy@gmail.com
+ * @Description: ShopManagerImpl description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Service
-@Manager
 public class ShopManagerImpl extends ServiceImpl<ShopMapper, ShopPO>
     implements ShopManager {
 }

@@ -8,9 +8,11 @@ import com.yirancrazy.minimall.api.dto.pay.PayCreateDTO;
 import com.yirancrazy.minimall.api.fallback.PayFeignFallbackFactory;
 
 /**
-* 支付服务 Feign 客户端，提供跨服务支付推进与回调查询能力。
+ * @Author: yirancrazy@gmail.com
+ * @Description: PayFeignClient description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@FeignClient(value = "minimall-pay-service", fallbackFactory = PayFeignFallbackFactory.class)
 public interface PayFeignClient {
     @PostMapping("/internal/pay/create")
     Long create(@RequestBody PayCreateDTO dto);

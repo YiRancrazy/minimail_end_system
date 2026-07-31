@@ -5,11 +5,11 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
-* 用户跨服务快照 DTO，承载用户标识、用户名与角色，供他服务按快照消费。
+ * @Author: yirancrazy@gmail.com
+ * @Description: UserSnapshotDTO description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 public class UserSnapshotDTO {
     private Long userId;
     private String username;

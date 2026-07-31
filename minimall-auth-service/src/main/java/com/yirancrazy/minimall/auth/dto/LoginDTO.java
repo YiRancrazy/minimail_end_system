@@ -6,11 +6,11 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
-* 登录请求 DTO，承载 username 与 password（已通过 @Valid 校验）。
+ * @Author: yirancrazy@gmail.com
+ * @Description: LoginDTO description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 public class LoginDTO {
     @NotBlank
     private String username;

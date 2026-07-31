@@ -5,10 +5,11 @@ import lombok.EqualsAndHashCode;
 import com.yirancrazy.minimall.common.base.BasePO;
 
 /**
-* 号段持久化实体，对应 id_segment 表，记录各业务标签当前最大号与步长等元信息。
+ * @Author: yirancrazy@gmail.com
+ * @Description: IdSegmentPO description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Data
-@EqualsAndHashCode(callSuper = true)
 public class IdSegmentPO extends BasePO {
     private String bizTag;
     private Long currentMax;

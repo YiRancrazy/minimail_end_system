@@ -6,9 +6,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 import com.yirancrazy.minimall.api.fallback.CartFeignFallbackFactory;
 
 /**
-* 购物车服务 Feign 客户端，提供跨服务购物车统计能力。
+ * @Author: yirancrazy@gmail.com
+ * @Description: CartFeignClient description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@FeignClient(value = "minimall-cart-service", fallbackFactory = CartFeignFallbackFactory.class)
 public interface CartFeignClient {
     @GetMapping("/internal/cart/count")
     Long countByUser(@RequestParam("userId") Long userId);

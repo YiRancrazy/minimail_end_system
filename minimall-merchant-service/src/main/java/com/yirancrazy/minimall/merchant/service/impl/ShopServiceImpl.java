@@ -10,9 +10,11 @@ import com.yirancrazy.minimall.merchant.manager.ShopManager;
 import com.yirancrazy.minimall.merchant.service.ShopService;
 
 /**
-* 店铺领域服务实现，编排 Manager 完成店铺 CRUD，并在数据缺失时抛出业务异常。
+ * @Author: yirancrazy@gmail.com
+ * @Description: ShopServiceImpl description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Service
 public class ShopServiceImpl implements ShopService {
 
     private final ShopManager shopManager;

@@ -7,9 +7,11 @@ import com.yirancrazy.minimall.notify.manager.NotifyManager;
 import com.yirancrazy.minimall.notify.mapper.NotifyMessageMapper;
 
 /**
-* 通知消息数据访问管理实现，基于 MyBatis-Plus ServiceImpl 完成对 t_notify_message 表的持久化。
+ * @Author: yirancrazy@gmail.com
+ * @Description: NotifyManagerImpl description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Manager
 public class NotifyManagerImpl extends ServiceImpl<NotifyMessageMapper, NotifyMessagePO>
     implements NotifyManager {
 }

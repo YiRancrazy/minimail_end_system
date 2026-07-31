@@ -8,10 +8,11 @@ import com.yirancrazy.minimall.cart.mapper.CartItemMapper;
 import com.yirancrazy.minimall.common.annotation.Manager;
 
 /**
-* 购物车项数据访问管理实现，基于 MyBatis-Plus ServiceImpl 复用通用 CRUD。
+ * @Author: yirancrazy@gmail.com
+ * @Description: CartItemManagerImpl description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Service
-@Manager
 public class CartItemManagerImpl extends ServiceImpl<CartItemMapper, CartItemPO>
     implements CartItemManager {
 }

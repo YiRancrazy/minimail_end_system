@@ -4,7 +4,10 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.yirancrazy.minimall.user.entity.UserPO;
 
 /**
-* 用户表 MyBatis-Plus Mapper，负责 t_user 表与 UserPO 之间的数据访问。
+ * @Author: yirancrazy@gmail.com
+ * @Description: UserMapper description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
 public interface UserMapper extends BaseMapper<UserPO> {
 }

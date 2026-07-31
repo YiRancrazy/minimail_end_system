@@ -8,10 +8,11 @@ import com.yirancrazy.minimall.user.manager.UserManager;
 import com.yirancrazy.minimall.user.mapper.UserMapper;
 
 /**
-* 用户数据访问管理实现，继承 MyBatis-Plus 通用能力执行用户持久化操作。
+ * @Author: yirancrazy@gmail.com
+ * @Description: UserManagerImpl description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Service
-@Manager
 public class UserManagerImpl extends ServiceImpl<UserMapper, UserPO>
     implements UserManager {
 }

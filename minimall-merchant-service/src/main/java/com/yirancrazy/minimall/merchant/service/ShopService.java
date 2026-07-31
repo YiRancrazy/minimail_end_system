@@ -5,7 +5,10 @@ import com.yirancrazy.minimall.merchant.dto.ShopUpdateDTO;
 import com.yirancrazy.minimall.merchant.entity.ShopPO;
 
 /**
-* 店铺领域服务接口，定义店铺聚合根的查询、创建、更新与删除等业务契约。
+ * @Author: yirancrazy@gmail.com
+ * @Description: ShopService description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
 public interface ShopService {
     /**

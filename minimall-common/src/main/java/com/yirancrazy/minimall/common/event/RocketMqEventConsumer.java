@@ -10,12 +10,11 @@ import org.apache.rocketmq.client.exception.MQClientException;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Per-event-type consumer helper. Service code calls
- * `consumer.subscribe(OrderPaidDTO.class, this::handle)`. The consumer must
- * be started by the service (e.g., in @PostConstruct) and is no-op when
- * RocketMQ is not enabled.
+ * @Author: yirancrazy@gmail.com
+ * @Description: RocketMqEventConsumer description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Slf4j
 public class RocketMqEventConsumer {
 
     private final String namesrvAddr;

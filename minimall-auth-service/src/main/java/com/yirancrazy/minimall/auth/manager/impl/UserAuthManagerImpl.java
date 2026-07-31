@@ -8,10 +8,11 @@ import com.yirancrazy.minimall.auth.mapper.UserAuthMapper;
 import com.yirancrazy.minimall.common.annotation.Manager;
 
 /**
-* 认证数据访问管理实现，基于 MyBatis-Plus 操作 UserAuthPO。
+ * @Author: yirancrazy@gmail.com
+ * @Description: UserAuthManagerImpl description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Service
-@Manager
 public class UserAuthManagerImpl extends ServiceImpl<UserAuthMapper, UserAuthPO>
     implements UserAuthManager {
 }

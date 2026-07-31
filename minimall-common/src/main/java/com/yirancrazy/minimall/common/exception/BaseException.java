@@ -3,9 +3,11 @@ package com.yirancrazy.minimall.common.exception;
 import lombok.Getter;
 
 /**
- * 系统异常基类，继承 RuntimeException 并额外承载错误码字段，供框架层与基础设施层异常继承。
+ * @Author: yirancrazy@gmail.com
+ * @Description: BaseException description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Getter
 public class BaseException extends RuntimeException {
     private final String code;
 

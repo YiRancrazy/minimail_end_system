@@ -11,13 +11,11 @@ import org.springframework.jdbc.datasource.init.ScriptUtils;
 import lombok.extern.slf4j.Slf4j;
 
 /**
-* 库存服务数据库初始化配置，仅在 dev 与 test profile 下生效。作为
- *               CommandLineRunner 在应用启动后执行 classpath 下的 schema.sql 建表脚本，
- *               使本地开发与 H2 单测无需手工准备库表。
+ * @Author: yirancrazy@gmail.com
+ * @Description: SchemaConfig description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Slf4j
-@Configuration
-@Profile({"test", "dev"})
 public class SchemaConfig implements CommandLineRunner {
 
     private final JdbcTemplate jdbcTemplate;

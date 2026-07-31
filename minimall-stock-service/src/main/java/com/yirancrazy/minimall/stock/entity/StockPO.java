@@ -6,12 +6,11 @@ import lombok.EqualsAndHashCode;
 import com.yirancrazy.minimall.common.base.BasePO;
 
 /**
-* 库存持久化实体，对应库存表 t_stock，以 SKU 为维度记录可用数量 available
- *               与已预占数量 reserved；公共主键与审计字段继承自 BasePO。
+ * @Author: yirancrazy@gmail.com
+ * @Description: StockPO description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Data
-@EqualsAndHashCode(callSuper = true)
-@TableName("t_stock")
 public class StockPO extends BasePO {
     private Long skuId;
     private Long available;

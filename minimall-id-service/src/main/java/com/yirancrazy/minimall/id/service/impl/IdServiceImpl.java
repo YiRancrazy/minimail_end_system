@@ -5,9 +5,11 @@ import com.yirancrazy.minimall.id.service.IdService;
 import com.yirancrazy.minimall.id.service.Snowflake;
 
 /**
-* ID 领域服务实现，封装 Snowflake 算法对外下发全局唯一 ID，供内部各业务服务调用。
+ * @Author: yirancrazy@gmail.com
+ * @Description: IdServiceImpl description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Service
 public class IdServiceImpl implements IdService {
 
     private final Snowflake snowflake = new Snowflake(1L, 1L);

@@ -5,10 +5,11 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 
 /**
-* 网关服务 Spring Boot 启动入口，启用服务发现与路由。
+ * @Author: yirancrazy@gmail.com
+ * @Description: GatewayApplication description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@SpringBootApplication(scanBasePackages = "com.yirancrazy.minimall")
-@EnableDiscoveryClient
 public class GatewayApplication {
     public static void main(String[] args) {
         SpringApplication.run(GatewayApplication.class, args);

@@ -4,7 +4,10 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.yirancrazy.minimall.notify.entity.NotifyMessagePO;
 
 /**
-* 通知消息数据访问管理接口，继承 MyBatis-Plus IService 提供基础 CRUD 能力。
+ * @Author: yirancrazy@gmail.com
+ * @Description: NotifyManager description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
 public interface NotifyManager extends IService<NotifyMessagePO> {
 }

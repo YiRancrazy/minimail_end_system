@@ -44,6 +44,8 @@
 
 #### 2.1 类注释
 
+**必须包含** @Author/@Description/@Version/@DateTime
+
 ```java
 /**
  * @Author: 张三

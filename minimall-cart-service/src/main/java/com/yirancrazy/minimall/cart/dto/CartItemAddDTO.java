@@ -5,9 +5,11 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 /**
- * Cart item add request DTO.
+ * @Author: yirancrazy@gmail.com
+ * @Description: CartItemAddDTO description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Data
 public class CartItemAddDTO {
 
     @NotNull(message = "userId cannot be null")

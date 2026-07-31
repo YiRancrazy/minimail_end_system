@@ -15,14 +15,11 @@ import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * RocketMQ producer implementation. Activated by config
- * `minimall.eventbus.rocketmq.enabled=true` (default false). Falls back to
- * WARN-on-failure so producer outages never block the publish site.
+ * @Author: yirancrazy@gmail.com
+ * @Description: RocketMqEventBus description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Slf4j
-@Component
-@Primary
-@ConditionalOnProperty(prefix = "minimall.eventbus.rocketmq", name = "enabled", havingValue = "true")
 public class RocketMqEventBus implements EventBus {
 
     private final String namesrvAddr;

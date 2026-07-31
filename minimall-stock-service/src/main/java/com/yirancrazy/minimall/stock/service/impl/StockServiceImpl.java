@@ -10,10 +10,11 @@ import com.yirancrazy.minimall.stock.manager.StockManager;
 import com.yirancrazy.minimall.stock.service.StockService;
 
 /**
-* 库存领域服务实现，承载 SKU 库存预占与释放的业务规则：预占前校验库存存在且充足，
- *               将数量从可用转入预占；释放则做反向回冲。写操作以本地事务保证可用量与预占量同增同减。
+ * @Author: yirancrazy@gmail.com
+ * @Description: StockServiceImpl description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Service
 public class StockServiceImpl implements StockService {
 
     private final StockManager stockManager;

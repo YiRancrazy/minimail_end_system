@@ -1,7 +1,10 @@
 package com.yirancrazy.minimall.id.service;
 
 /**
-* ID 领域服务接口，定义基于业务标签获取全局唯一 ID 的契约。
+ * @Author: yirancrazy@gmail.com
+ * @Description: IdService description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
 public interface IdService {
     /**

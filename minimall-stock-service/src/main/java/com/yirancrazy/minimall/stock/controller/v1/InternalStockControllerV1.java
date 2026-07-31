@@ -10,11 +10,11 @@ import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.stock.service.StockService;
 
 /**
-* 库存内部接口控制器，挂载于 /internal/stock，仅供订单等内部服务经 Feign 调用，
- *               提供下单时的库存预占与取消/超时后的库存释放能力，不对外网暴露。
+ * @Author: yirancrazy@gmail.com
+ * @Description: InternalStockControllerV1 description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@RestController
-@RequestMapping("/internal/stock")
 public class InternalStockControllerV1 {
 
     private final StockService stockService;

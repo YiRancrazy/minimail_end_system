@@ -7,10 +7,11 @@ import com.yirancrazy.minimall.api.dto.merchant.ShopSnapshotDTO;
 import com.yirancrazy.minimall.api.feign.MerchantFeignClient;
 
 /**
-* 商家服务 Feign 降级工厂，在商家服务不可用时返回受控降级结果。
+ * @Author: yirancrazy@gmail.com
+ * @Description: MerchantFeignFallbackFactory description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Slf4j
-@Component
 public class MerchantFeignFallbackFactory implements FallbackFactory<MerchantFeignClient> {
     @Override
     public MerchantFeignClient create(Throwable cause) {

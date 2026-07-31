@@ -1,5 +1,11 @@
 package com.yirancrazy.minimall.order.service;
 
+/**
+ * @Author: yirancrazy@gmail.com
+ * @Description: OrderService description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
+ */
 public interface OrderService {
     Long create(Long userId, Long skuId, Integer quantity);
 

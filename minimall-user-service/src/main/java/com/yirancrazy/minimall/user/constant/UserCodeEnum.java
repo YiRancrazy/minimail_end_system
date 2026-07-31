@@ -5,10 +5,11 @@ import lombok.Getter;
 import com.yirancrazy.minimall.common.base.BaseEnum;
 
 /**
-* 用户服务错误码枚举，定义用户不存在等领域业务错误及其提示信息。
+ * @Author: yirancrazy@gmail.com
+ * @Description: UserCodeEnum description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Getter
-@AllArgsConstructor
 public enum UserCodeEnum implements BaseEnum {
     USER_NOT_FOUND("12001", "USER_NOT_FOUND", "用户不存在");
 

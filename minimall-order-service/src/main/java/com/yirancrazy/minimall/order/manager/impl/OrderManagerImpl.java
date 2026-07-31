@@ -8,10 +8,11 @@ import com.yirancrazy.minimall.order.manager.OrderManager;
 import com.yirancrazy.minimall.order.mapper.OrderMapper;
 
 /**
-* 订单数据访问管理实现，基于 MyBatis-Plus 与 OrderMapper 完成 OrderPO 的持久化操作。
+ * @Author: yirancrazy@gmail.com
+ * @Description: OrderManagerImpl description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Service
-@Manager
 public class OrderManagerImpl extends ServiceImpl<OrderMapper, OrderPO>
     implements OrderManager {
 }

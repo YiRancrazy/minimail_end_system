@@ -5,10 +5,11 @@ import lombok.Getter;
 import com.yirancrazy.minimall.common.base.BaseEnum;
 
 /**
-* 认证服务错误码枚举（USER_NOT_FOUND / PWD_INVALID / TOKEN_INVALID / ...）。
+ * @Author: yirancrazy@gmail.com
+ * @Description: AuthCodeEnum description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Getter
-@AllArgsConstructor
 public enum AuthCodeEnum implements BaseEnum {
     USER_NOT_FOUND("14001", "USER_NOT_FOUND", "用户不存在"),
     PWD_INVALID("14002", "PWD_INVALID", "密码错误"),

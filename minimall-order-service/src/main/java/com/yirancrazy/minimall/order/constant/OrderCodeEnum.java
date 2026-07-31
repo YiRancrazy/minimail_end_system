@@ -5,10 +5,11 @@ import lombok.Getter;
 import com.yirancrazy.minimall.common.base.BaseEnum;
 
 /**
-* 订单服务错误码枚举，定义库存锁定失败、订单不存在及支付失败等业务异常信息。
+ * @Author: yirancrazy@gmail.com
+ * @Description: OrderCodeEnum description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Getter
-@AllArgsConstructor
 public enum OrderCodeEnum implements BaseEnum {
     STOCK_RESERVE_FAIL("11001", "STOCK_RESERVE_FAIL", "库存锁定失败"),
     ORDER_NOT_FOUND("11002", "ORDER_NOT_FOUND", "订单不存在"),

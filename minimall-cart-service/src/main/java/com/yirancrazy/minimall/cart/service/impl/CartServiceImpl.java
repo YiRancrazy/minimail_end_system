@@ -10,9 +10,11 @@ import com.yirancrazy.minimall.cart.manager.CartItemManager;
 import com.yirancrazy.minimall.cart.service.CartService;
 
 /**
-* 购物车领域服务实现，委托 CartItemManager 完成数据访问并补充默认选中状态等业务规则。
+ * @Author: yirancrazy@gmail.com
+ * @Description: CartServiceImpl description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Service
 public class CartServiceImpl implements CartService {
 
     private final CartItemManager cartItemManager;

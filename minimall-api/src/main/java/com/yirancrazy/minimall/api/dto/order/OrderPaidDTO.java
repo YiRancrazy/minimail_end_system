@@ -6,11 +6,11 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
-* 订单已支付事件 DTO，用于通知他服务订单已支付并消费后续动作。
+ * @Author: yirancrazy@gmail.com
+ * @Description: OrderPaidDTO description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 public class OrderPaidDTO {
     private Long orderId;
     private Long userId;

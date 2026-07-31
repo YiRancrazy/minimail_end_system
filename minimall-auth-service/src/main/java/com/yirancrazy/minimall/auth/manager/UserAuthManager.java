@@ -4,7 +4,10 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.yirancrazy.minimall.auth.entity.UserAuthPO;
 
 /**
-* 认证数据访问管理接口，封装 UserAuthPO 持久化与按用户名查询能力。
+ * @Author: yirancrazy@gmail.com
+ * @Description: UserAuthManager description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
 public interface UserAuthManager extends IService<UserAuthPO> {
 }

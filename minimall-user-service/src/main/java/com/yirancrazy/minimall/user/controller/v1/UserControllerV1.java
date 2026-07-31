@@ -16,10 +16,11 @@ import com.yirancrazy.minimall.user.entity.UserPO;
 import com.yirancrazy.minimall.user.service.UserService;
 
 /**
-* 用户 C 端接口控制器，提供按 ID 查询、创建、更新与删除用户能力。
+ * @Author: yirancrazy@gmail.com
+ * @Description: UserControllerV1 description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@RestController
-@RequestMapping("/api/v1/user")
 public class UserControllerV1 {
 
     private final UserService userService;

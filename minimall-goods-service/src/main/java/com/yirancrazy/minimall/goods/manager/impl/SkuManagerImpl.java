@@ -8,10 +8,11 @@ import com.yirancrazy.minimall.goods.manager.SkuManager;
 import com.yirancrazy.minimall.goods.mapper.SkuMapper;
 
 /**
-* 商品数据访问管理实现，基于 MyBatis-Plus ServiceImpl 暴露 SKU 表的通用持久化能力。
+ * @Author: yirancrazy@gmail.com
+ * @Description: SkuManagerImpl description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Service
-@Manager
 public class SkuManagerImpl extends ServiceImpl<SkuMapper, SkuPO>
     implements SkuManager {
 }

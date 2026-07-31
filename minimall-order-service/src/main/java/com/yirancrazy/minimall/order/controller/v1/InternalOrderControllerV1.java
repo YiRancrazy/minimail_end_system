@@ -8,10 +8,11 @@ import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.order.service.OrderService;
 
 /**
-* 订单内部接口控制器，供其他服务通过订单标识查询订单当前业务状态。
+ * @Author: yirancrazy@gmail.com
+ * @Description: InternalOrderControllerV1 description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@RestController
-@RequestMapping("/internal/order")
 public class InternalOrderControllerV1 {
 
     private final OrderService orderService;

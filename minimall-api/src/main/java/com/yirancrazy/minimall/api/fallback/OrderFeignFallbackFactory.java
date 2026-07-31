@@ -6,10 +6,11 @@ import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.api.feign.OrderFeignClient;
 
 /**
-* 订单服务 Feign 降级工厂，在订单服务不可用时返回受控降级结果。
+ * @Author: yirancrazy@gmail.com
+ * @Description: OrderFeignFallbackFactory description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Slf4j
-@Component
 public class OrderFeignFallbackFactory implements FallbackFactory<OrderFeignClient> {
     @Override
     public OrderFeignClient create(Throwable cause) {

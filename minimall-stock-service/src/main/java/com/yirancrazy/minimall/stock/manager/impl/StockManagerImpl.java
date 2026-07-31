@@ -8,11 +8,11 @@ import com.yirancrazy.minimall.stock.manager.StockManager;
 import com.yirancrazy.minimall.stock.mapper.StockMapper;
 
 /**
-* 库存数据访问管理实现，基于 MyBatis-Plus ServiceImpl 绑定 StockMapper 与 StockPO，
- *               为上层提供库存记录的查询与更新等通用 CRUD 支撑。
+ * @Author: yirancrazy@gmail.com
+ * @Description: StockManagerImpl description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Service
-@Manager
 public class StockManagerImpl extends ServiceImpl<StockMapper, StockPO>
     implements StockManager {
 }

@@ -1,9 +1,10 @@
 package com.yirancrazy.minimall.common.event;
 
 /**
- * Cross-process event publication abstraction. Iterate-6 replaces the
- * in-process LocalEventBus with a RocketMQ-backed implementation behind
- * this interface. Local impl is kept as the default for dev/test profiles.
+ * @Author: yirancrazy@gmail.com
+ * @Description: EventBus description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
 public interface EventBus {
     void publish(Object event);

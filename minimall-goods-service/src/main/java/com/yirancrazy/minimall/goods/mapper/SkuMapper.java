@@ -4,7 +4,10 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.yirancrazy.minimall.goods.entity.SkuPO;
 
 /**
-* SKU 表 MyBatis-Plus Mapper，承载 t_sku 表的通用 CRUD 与自定义 SQL 入口。
+ * @Author: yirancrazy@gmail.com
+ * @Description: SkuMapper description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
 public interface SkuMapper extends BaseMapper<SkuPO> {
 }

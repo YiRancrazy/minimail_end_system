@@ -12,13 +12,11 @@ import com.yirancrazy.minimall.notify.service.NotifyService;
 import com.yirancrazy.minimall.notify.sse.SseHub;
 
 /**
- * Iter-6 RocketMQ consumer for OrderPaidDTO events. Activated only when
- * `minimall.eventbus.rocketmq.enabled=true`. In dev/test the in-process
- * OrderPaidListener (@EventListener) handles the same event.
+ * @Author: yirancrazy@gmail.com
+ * @Description: OrderPaidMqConsumer description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Slf4j
-@Component
-@ConditionalOnProperty(prefix = "minimall.eventbus.rocketmq", name = "enabled", havingValue = "true")
 public class OrderPaidMqConsumer {
 
     private final NotifyService notifyService;

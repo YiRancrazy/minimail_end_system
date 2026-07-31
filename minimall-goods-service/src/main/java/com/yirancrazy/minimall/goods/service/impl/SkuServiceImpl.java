@@ -10,9 +10,11 @@ import com.yirancrazy.minimall.goods.manager.SkuManager;
 import com.yirancrazy.minimall.goods.service.SkuService;
 
 /**
-* 商品领域服务实现，负责 SKU 业务规则校验、异常转换与对 SkuManager 的调用编排。
+ * @Author: yirancrazy@gmail.com
+ * @Description: SkuServiceImpl description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Service
 public class SkuServiceImpl implements SkuService {
 
     private final SkuManager skuManager;

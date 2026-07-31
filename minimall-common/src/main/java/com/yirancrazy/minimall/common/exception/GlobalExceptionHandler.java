@@ -12,10 +12,11 @@ import com.yirancrazy.minimall.common.result.CommonCode;
 import com.yirancrazy.minimall.common.result.Result;
 
 /**
- * 全局异常处理器，基于 RestControllerAdvice 拦截业务异常、参数校验异常、缺失请求头及未知异常。
+ * @Author: yirancrazy@gmail.com
+ * @Description: GlobalExceptionHandler description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Slf4j
-@RestControllerAdvice
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(BizException.class)

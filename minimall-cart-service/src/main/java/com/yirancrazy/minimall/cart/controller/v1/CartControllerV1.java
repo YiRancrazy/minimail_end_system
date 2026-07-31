@@ -16,10 +16,11 @@ import com.yirancrazy.minimall.cart.service.CartService;
 import com.yirancrazy.minimall.common.result.Result;
 
 /**
-* 购物车 C 端接口控制器，按用户查询、添加与删除购物车项。
+ * @Author: yirancrazy@gmail.com
+ * @Description: CartControllerV1 description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@RestController
-@RequestMapping("/api/v1/cart")
 public class CartControllerV1 {
 
     private final CartService cartService;

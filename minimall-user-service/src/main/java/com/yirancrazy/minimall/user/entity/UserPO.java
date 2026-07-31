@@ -6,11 +6,11 @@ import lombok.EqualsAndHashCode;
 import com.yirancrazy.minimall.common.base.BasePO;
 
 /**
-* 用户持久化实体，承载用户标识、用户名、昵称、联系方式等档案字段。
+ * @Author: yirancrazy@gmail.com
+ * @Description: UserPO description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Data
-@EqualsAndHashCode(callSuper = true)
-@TableName("t_user")
 public class UserPO extends BasePO {
     private String username;
     private String nickname;

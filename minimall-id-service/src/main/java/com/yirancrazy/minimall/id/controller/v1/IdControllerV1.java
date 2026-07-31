@@ -9,10 +9,11 @@ import com.yirancrazy.minimall.id.dto.IdNextDTO;
 import com.yirancrazy.minimall.id.service.IdService;
 
 /**
-* ID 内部接口控制器，提供基于业务标签的号段下发能力，仅供服务间内部调用。
+ * @Author: yirancrazy@gmail.com
+ * @Description: IdControllerV1 description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@RestController
-@RequestMapping("/internal/id")
 public class IdControllerV1 {
 
     private final IdService idService;

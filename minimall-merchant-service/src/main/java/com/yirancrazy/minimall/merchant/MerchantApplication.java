@@ -6,11 +6,11 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 
 /**
-* 商家服务 Spring Boot 启动入口，负责应用引导、组件扫描、Mapper 注册及服务注册中心接入。
+ * @Author: yirancrazy@gmail.com
+ * @Description: MerchantApplication description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@SpringBootApplication(scanBasePackages = "com.yirancrazy.minimall")
-@EnableDiscoveryClient
-@MapperScan("com.yirancrazy.minimall.merchant.mapper")
 public class MerchantApplication {
     public static void main(String[] args) {
         SpringApplication.run(MerchantApplication.class, args);

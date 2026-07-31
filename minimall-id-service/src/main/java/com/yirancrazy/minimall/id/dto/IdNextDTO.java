@@ -4,10 +4,11 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 
 /**
-* 号段下发返回 DTO，承载请求的业务标签与生成的新 ID，供内部接口调用方使用。
+ * @Author: yirancrazy@gmail.com
+ * @Description: IdNextDTO description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Data
-@AllArgsConstructor
 public class IdNextDTO {
     private String bizTag;
     private Long id;

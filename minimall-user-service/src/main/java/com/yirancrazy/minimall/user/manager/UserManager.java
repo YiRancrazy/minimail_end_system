@@ -4,7 +4,10 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.yirancrazy.minimall.user.entity.UserPO;
 
 /**
-* 用户数据访问管理接口，基于 MyBatis-Plus 提供用户实体的通用持久化操作。
+ * @Author: yirancrazy@gmail.com
+ * @Description: UserManager description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
 public interface UserManager extends IService<UserPO> {
 }

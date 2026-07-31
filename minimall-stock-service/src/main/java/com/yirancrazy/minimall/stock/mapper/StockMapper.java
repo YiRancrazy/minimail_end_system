@@ -4,8 +4,10 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.yirancrazy.minimall.stock.entity.StockPO;
 
 /**
-* 库存表 t_stock 的 MyBatis-Plus Mapper，继承 BaseMapper 提供 StockPO 的
- *               单表增删改查能力，由 StockManager 统一调用。
+ * @Author: yirancrazy@gmail.com
+ * @Description: StockMapper description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
 public interface StockMapper extends BaseMapper<StockPO> {
 }

@@ -8,10 +8,11 @@ import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.info.License;
 
 /**
- * Iter-3 OpenAPI/Knife4j 公共配置。各服务通过 {@code @SpringBootApplication}
- * 包扫描自动拾取。Knife4j UI 入口：{@code /doc.html}。
+ * @Author: yirancrazy@gmail.com
+ * @Description: OpenApiConfig description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Configuration
 public class OpenApiConfig {
 
     @Bean

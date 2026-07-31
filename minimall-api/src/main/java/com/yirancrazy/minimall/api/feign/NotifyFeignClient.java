@@ -7,9 +7,11 @@ import com.yirancrazy.minimall.api.dto.notify.NotifyEventDTO;
 import com.yirancrazy.minimall.api.fallback.NotifyFeignFallbackFactory;
 
 /**
-* 通知服务 Feign 客户端，提供跨服务通知发送能力。
+ * @Author: yirancrazy@gmail.com
+ * @Description: NotifyFeignClient description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@FeignClient(value = "minimall-notify-service", fallbackFactory = NotifyFeignFallbackFactory.class)
 public interface NotifyFeignClient {
     @PostMapping("/internal/notify/push")
     Boolean push(@RequestBody NotifyEventDTO dto);

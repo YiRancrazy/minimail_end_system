@@ -13,10 +13,11 @@ import com.yirancrazy.minimall.order.dto.OrderCreateDTO;
 import com.yirancrazy.minimall.order.service.OrderService;
 
 /**
-* 订单 C 端接口控制器，提供创建订单、发起支付及订单状态查询等对外业务接口。
+ * @Author: yirancrazy@gmail.com
+ * @Description: OrderControllerV1 description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@RestController
-@RequestMapping("/api/v1/order")
 public class OrderControllerV1 {
 
     private final OrderService orderService;

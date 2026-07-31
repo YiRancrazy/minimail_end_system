@@ -7,9 +7,11 @@ import com.yirancrazy.minimall.id.manager.IdSegmentManager;
 import com.yirancrazy.minimall.id.mapper.IdSegmentMapper;
 
 /**
-* 号段数据访问管理实现，基于 MyBatis-Plus 的 ServiceImpl 提供对 id_segment 表的持久化能力。
+ * @Author: yirancrazy@gmail.com
+ * @Description: IdSegmentManagerImpl description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Manager
 public class IdSegmentManagerImpl extends ServiceImpl<IdSegmentMapper, IdSegmentPO>
     implements IdSegmentManager {
 }

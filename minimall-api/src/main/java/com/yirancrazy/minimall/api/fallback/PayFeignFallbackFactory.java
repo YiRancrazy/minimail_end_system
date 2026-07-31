@@ -7,10 +7,11 @@ import com.yirancrazy.minimall.api.dto.pay.PayCreateDTO;
 import com.yirancrazy.minimall.api.feign.PayFeignClient;
 
 /**
-* 支付服务 Feign 降级工厂，在支付服务不可用时返回受控降级结果。
+ * @Author: yirancrazy@gmail.com
+ * @Description: PayFeignFallbackFactory description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Slf4j
-@Component
 public class PayFeignFallbackFactory implements FallbackFactory<PayFeignClient> {
     @Override
     public PayFeignClient create(Throwable cause) {

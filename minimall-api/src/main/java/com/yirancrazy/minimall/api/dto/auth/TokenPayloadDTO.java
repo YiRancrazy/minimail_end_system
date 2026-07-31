@@ -3,9 +3,11 @@ package com.yirancrazy.minimall.api.dto.auth;
 import lombok.Data;
 
 /**
-* JWT 令牌载荷 DTO，承载 userId、role、issuedAt 与 expiresAt 字段。
+ * @Author: yirancrazy@gmail.com
+ * @Description: TokenPayloadDTO description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Data
 public class TokenPayloadDTO {
     private Long userId;
     private String role;

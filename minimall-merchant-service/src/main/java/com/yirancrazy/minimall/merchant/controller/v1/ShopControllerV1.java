@@ -16,10 +16,11 @@ import com.yirancrazy.minimall.merchant.entity.ShopPO;
 import com.yirancrazy.minimall.merchant.service.ShopService;
 
 /**
-* 店铺 C 端 HTTP 接口控制器，提供店铺基础信息的查询、创建、更新与删除等 REST 能力。
+ * @Author: yirancrazy@gmail.com
+ * @Description: ShopControllerV1 description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@RestController
-@RequestMapping("/api/v1/merchant/shop")
 public class ShopControllerV1 {
 
     private final ShopService shopService;

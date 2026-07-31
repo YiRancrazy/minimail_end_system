@@ -9,10 +9,11 @@ import com.yirancrazy.minimall.notify.service.NotifyService;
 import com.yirancrazy.minimall.notify.sse.SseHub;
 
 /**
-* 订单已支付事件监听器，订阅 LocalEventBus 后保存通知并向在线用户 SSE 推送。
+ * @Author: yirancrazy@gmail.com
+ * @Description: OrderPaidListener description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Slf4j
-@Component
 public class OrderPaidListener {
 
     private final NotifyService notifyService;

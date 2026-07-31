@@ -9,10 +9,11 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 
 /**
- * Mirrors auth-service's JwtUtil. Both services must share the same secret.
- * In production this would come from Nacos / KMS.
+ * @Author: yirancrazy@gmail.com
+ * @Description: JwtVerifier description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Component
 public class JwtVerifier {
 
     private final SecretKey key;

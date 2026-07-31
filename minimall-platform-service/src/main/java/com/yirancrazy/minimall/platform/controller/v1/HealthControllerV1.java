@@ -6,10 +6,11 @@ import org.springframework.web.bind.annotation.RestController;
 import com.yirancrazy.minimall.common.result.Result;
 
 /**
-* 平台服务健康检查控制器，对外暴露 `/internal/platform/health` 端点用于存活探活。
+ * @Author: yirancrazy@gmail.com
+ * @Description: HealthControllerV1 description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@RestController
-@RequestMapping("/internal/platform")
 public class HealthControllerV1 {
 
     /**

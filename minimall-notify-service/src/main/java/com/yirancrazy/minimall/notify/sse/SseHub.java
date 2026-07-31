@@ -13,12 +13,11 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 /**
- * Iter-2 push 模型：每用户最多 1 条 SseEmitter 长连接。新连接覆盖旧连接。
- * Iter-3 替换为真正的多端推送（WebSocket/Union Tech Push）。
+ * @Author: yirancrazy@gmail.com
+ * @Description: SseHub description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@RestController
-@RequestMapping("/internal/notify/sse")
-@Component
 public class SseHub {
 
     private final ConcurrentHashMap<Long, Set<SseEmitter>> emitters = new ConcurrentHashMap<>();

@@ -10,10 +10,11 @@ import com.yirancrazy.minimall.goods.entity.SkuPO;
 import com.yirancrazy.minimall.goods.service.SkuService;
 
 /**
-* 商品内部接口控制器，供其他微服务（如订单、库存）按 ID 查询 SKU 快照数据。
+ * @Author: yirancrazy@gmail.com
+ * @Description: InternalSkuControllerV1 description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@RestController
-@RequestMapping("/internal/goods/sku")
 public class InternalSkuControllerV1 {
 
     private final SkuService skuService;

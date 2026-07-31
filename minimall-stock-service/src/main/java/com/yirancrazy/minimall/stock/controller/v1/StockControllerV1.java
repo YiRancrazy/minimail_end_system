@@ -11,11 +11,11 @@ import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.stock.service.StockService;
 
 /**
-* 库存 C 端接口控制器，挂载于 /api/v1/stock，对外提供按 SKU 查询当前
- *               可用库存数量的能力，结果统一包装为 Result 返回。
+ * @Author: yirancrazy@gmail.com
+ * @Description: StockControllerV1 description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@RestController
-@RequestMapping("/api/v1/stock")
 public class StockControllerV1 {
 
     private final StockService stockService;

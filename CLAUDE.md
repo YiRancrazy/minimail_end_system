@@ -67,7 +67,8 @@
 ---
 
 ## 3. 提交信息规范
-git 提交前检查新增Java代码是否符合编码规范。请参考 [.dev/docs/3. 开发阶段/01-Java编码规范.md](.dev/docs/3.%20开发阶段/01-Java编码规范.md) 中的规范。
+git 提交前检查新增Java代码是否符合编码规范。请参考 [.dev/docs/3. 开发阶段/01-Java编码规范.md](.dev/docs/3.%20开发阶段/01-Java编码规范.md)。
+- 运行 `./mvnw checkstyle:check`，确保 0 violations
 提交规则以 [.dev/docs/3. 开发阶段/06-Git 提交规范.md](.dev/docs/3.%20开发阶段/06-Git%20提交规范.md) 为唯一来源；本节只保留高频摘要。
 
 ```text
@@ -224,6 +225,7 @@ docs(ai-guidelines): 更新提交规范
 - 受保护配置的 deny 规则以 `.claude/settings.json` 为准；遇到拒绝不要绕过权限。
 - `/internal/**` 当前尚未完成可信边界隔离；不得把内部接口暴露给公网，也不得把路径白名单误当鉴权。
 - 金额统一使用 `BigDecimal`，禁止使用 `float` / `double`。
+- 单位为**元（CNY）**，数据库使用 `DECIMAL(12,2)`，精确到分（小数点后 2 位）
 - 数据库结构变更使用 Flyway 版本化迁移，不在运行时临时改表。
 
 ---
@@ -235,11 +237,11 @@ docs(ai-guidelines): 更新提交规范
 | 领域 | 当前缺口 | 新代码要求 |
 |------|----------|------------|
 | DTO / VO | Cart、Notify 等仍暴露 PO | Controller 边界只使用 DTO / VO |
-| 参数校验 | 多数 Controller 尚未使用 `@Valid` | 新请求体必须校验 |
+| 参数校验 | 部分Controller已使用`@Valid`（14文件，21处），仍有部分缺失 | 新请求体必须校验 |
 | 日志 | 多个 Service 缺少关键路径日志 | 新业务类使用 `@Slf4j` 并记录关键状态 |
-| 异常 | Cart、Notify 存在布尔值表达失败 | 失败抛具体 `BizException` |
+| 异常 | Cart、Notify、Stock 存在布尔值表达失败 | 失败抛具体 `BizException` |
 | 状态 | Order、Pay 等仍有 String 状态 | 新状态使用 code 枚举 |
-| 测试 | 核心服务覆盖不足 | 新增逻辑至少覆盖正常、失败、边界 |
+| 测试 | order 60%/pay 22%（未达85%目标） | 新增逻辑至少覆盖正常、失败、边界 |
 | 内部接口 | `/internal/**` 尚未完成可信隔离 | 不新增公网可达的内部接口 |
 | 工具链 | Checkstyle、SpotBugs、OWASP 尚未形成完整门禁 | 不引入新的扫描告警 |
 
@@ -295,6 +297,9 @@ docs(ai-guidelines): 更新提交规范
 | 线上故障 | [.dev/docs/5. 部署阶段/08-故障排查手册.md](.dev/docs/5.%20部署阶段/08-故障排查手册.md) |
 | 文档结构与写法 | [.dev/docs/6. 项目管理/02-文档编写规范.md](.dev/docs/6.%20项目管理/02-文档编写规范.md) |
 | 跨文档术语 | [.dev/docs/6. 项目管理/03-术语表.md](.dev/docs/6.%20项目管理/03-术语表.md) |
+| 金额处理、BigDecimal | [.dev/docs/3. 开发阶段/01-Java编码规范.md](.dev/docs/3.%20开发阶段/01-Java编码规范.md)（第 10 节性能与安全） |
+| 支付集成、支付宝 | [.dev/docs/2. 设计阶段/02-API设计文档.md](.dev/docs/2.%20设计阶段/02-API设计文档.md)（支付接口章节） |
+| RocketMQ 事件总线 | [.dev/docs/2. 设计阶段/01-系统架构设计文档.md](.dev/docs/2.%20设计阶段/01-系统架构设计文档.md)（消息队列章节） |
 
 **无需加载**：改一行文案或注释、纯前端/运维/脚本任务，以及当前上下文已足以完成的机械修改。
 

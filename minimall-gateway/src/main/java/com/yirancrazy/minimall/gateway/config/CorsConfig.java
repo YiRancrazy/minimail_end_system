@@ -8,9 +8,11 @@ import org.springframework.web.cors.reactive.CorsWebFilter;
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 
 /**
-* 网关跨域配置，统一处理 CORS 预检与响应头。
+ * @Author: yirancrazy@gmail.com
+ * @Description: CorsConfig description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Configuration
 public class CorsConfig {
 
     @Bean

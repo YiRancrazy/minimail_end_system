@@ -4,7 +4,10 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.yirancrazy.minimall.merchant.entity.ShopPO;
 
 /**
-* 店铺表 MyBatis-Plus Mapper，承接店铺表的通用持久化操作。
+ * @Author: yirancrazy@gmail.com
+ * @Description: ShopMapper description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
 public interface ShopMapper extends BaseMapper<ShopPO> {
 }

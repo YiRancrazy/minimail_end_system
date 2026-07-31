@@ -12,11 +12,11 @@ import com.yirancrazy.minimall.pay.dto.PayCallbackDTO;
 import com.yirancrazy.minimall.pay.service.PayService;
 
 /**
- * 伪支付宝异步回调。真实场景由支付宝 POST 异步通知，此处由 order-service
- * 同步内部调用以推进支付单状态。
+ * @Author: yirancrazy@gmail.com
+ * @Description: InternalPayControllerV1 description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@RestController
-@RequestMapping("/internal/pay")
 public class InternalPayControllerV1 {
 
     private final PayService payService;

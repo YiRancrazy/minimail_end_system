@@ -5,10 +5,11 @@ import lombok.Getter;
 import com.yirancrazy.minimall.common.base.BaseEnum;
 
 /**
-* 商家服务错误码枚举，集中维护店铺不存在等业务异常码及其消息描述。
+ * @Author: yirancrazy@gmail.com
+ * @Description: ShopCodeEnum description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Getter
-@AllArgsConstructor
 public enum ShopCodeEnum implements BaseEnum {
     SHOP_NOT_FOUND("15001", "SHOP_NOT_FOUND", "店铺不存在");
 

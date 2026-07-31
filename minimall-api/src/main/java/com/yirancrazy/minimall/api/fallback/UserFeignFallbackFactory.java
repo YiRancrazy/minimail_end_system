@@ -7,10 +7,11 @@ import com.yirancrazy.minimall.api.dto.user.UserSnapshotDTO;
 import com.yirancrazy.minimall.api.feign.UserFeignClient;
 
 /**
-* 用户服务 Feign 降级工厂，在用户服务不可用时返回受控降级结果。
+ * @Author: yirancrazy@gmail.com
+ * @Description: UserFeignFallbackFactory description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Slf4j
-@Component
 public class UserFeignFallbackFactory implements FallbackFactory<UserFeignClient> {
     @Override
     public UserFeignClient create(Throwable cause) {

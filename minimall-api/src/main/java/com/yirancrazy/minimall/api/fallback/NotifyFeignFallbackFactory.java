@@ -7,10 +7,11 @@ import com.yirancrazy.minimall.api.dto.notify.NotifyEventDTO;
 import com.yirancrazy.minimall.api.feign.NotifyFeignClient;
 
 /**
-* 通知服务 Feign 降级工厂，在通知服务不可用时返回受控降级结果。
+ * @Author: yirancrazy@gmail.com
+ * @Description: NotifyFeignFallbackFactory description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Slf4j
-@Component
 public class NotifyFeignFallbackFactory implements FallbackFactory<NotifyFeignClient> {
     @Override
     public NotifyFeignClient create(Throwable cause) {

@@ -5,10 +5,11 @@ import lombok.Getter;
 import com.yirancrazy.minimall.common.base.BaseEnum;
 
 /**
-* 商品服务错误码枚举，统一定义 SKU 域业务异常码（如 SKU_NOT_FOUND）及国际化文案。
+ * @Author: yirancrazy@gmail.com
+ * @Description: SkuCodeEnum description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Getter
-@AllArgsConstructor
 public enum SkuCodeEnum implements BaseEnum {
     SKU_NOT_FOUND("13001", "SKU_NOT_FOUND", "SKU 不存在");
 

@@ -13,10 +13,11 @@ import com.yirancrazy.minimall.goods.entity.SkuPO;
 import com.yirancrazy.minimall.goods.service.SkuService;
 
 /**
-* 商品 C 端接口控制器，提供 SKU 查询与创建能力，供前台商品维护与展示使用。
+ * @Author: yirancrazy@gmail.com
+ * @Description: SkuControllerV1 description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@RestController
-@RequestMapping("/api/v1/goods/sku")
 public class SkuControllerV1 {
 
     private final SkuService skuService;

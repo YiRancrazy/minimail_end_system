@@ -5,11 +5,11 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
-* 店铺跨服务快照 DTO，承载店铺标识、店主、店铺名与状态。
+ * @Author: yirancrazy@gmail.com
+ * @Description: ShopSnapshotDTO description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 public class ShopSnapshotDTO {
     private Long shopId;
     private String shopName;

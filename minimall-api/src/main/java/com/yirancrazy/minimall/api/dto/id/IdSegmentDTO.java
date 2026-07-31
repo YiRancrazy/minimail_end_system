@@ -3,9 +3,11 @@ package com.yirancrazy.minimall.api.dto.id;
 import lombok.Data;
 
 /**
-* 号段 DTO，承载当前可用号段范围与步长。
+ * @Author: yirancrazy@gmail.com
+ * @Description: IdSegmentDTO description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Data
 public class IdSegmentDTO {
     private String bizTag;
     private Long id;

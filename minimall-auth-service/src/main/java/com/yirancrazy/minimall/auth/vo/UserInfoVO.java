@@ -4,10 +4,11 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 
 /**
-* 当前用户信息 VO，向客户端返回用户标识、用户名与角色。
+ * @Author: yirancrazy@gmail.com
+ * @Description: UserInfoVO description.
+ * @Version: 1.0
+ * @DateTime: 2026/07/31
  */
-@Data
-@AllArgsConstructor
 public class UserInfoVO {
     private Long userId;
     private String username;

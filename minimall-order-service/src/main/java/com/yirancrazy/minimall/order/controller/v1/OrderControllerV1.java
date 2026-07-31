@@ -3,6 +3,7 @@ package com.yirancrazy.minimall.order.controller.v1;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -55,5 +56,51 @@ public class OrderControllerV1 {
     @GetMapping("/{id}")
     public Result<Integer> status(@PathVariable("id") Long id) {
         return Result.success(orderService.getStatus(id));
+    }
+
+    /**
+     * 取消订单。
+     * @param orderId 订单ID
+     * @param userId  当前用户ID
+     */
+    @PostMapping("/{orderId}/cancel")
+    public Result<Void> cancel(@PathVariable Long orderId,
+                               @RequestHeader("X-User-Id") Long userId) {
+        orderService.cancel(orderId, userId);
+        return Result.success(null);
+    }
+
+    /**
+     * 发货。
+     * @param orderId    订单ID
+     * @param merchantId 商户ID
+     */
+    @PostMapping("/{orderId}/ship")
+    public Result<Void> ship(@PathVariable Long orderId,
+                             @RequestHeader("X-User-Id") Long merchantId) {
+        orderService.ship(orderId, merchantId);
+        return Result.success(null);
+    }
+
+    /**
+     * 确认收货。
+     * @param orderId 订单ID
+     * @param userId  当前用户ID
+     */
+    @PostMapping("/{orderId}/confirm")
+    public Result<Void> confirm(@PathVariable Long orderId,
+                                @RequestHeader("X-User-Id") Long userId) {
+        orderService.confirm(orderId, userId);
+        return Result.success(null);
+    }
+
+    /**
+     * 申请退款。
+     * @param orderId 订单ID
+     */
+    @PostMapping("/{orderId}/refund")
+    public Result<Void> refund(@PathVariable Long orderId) {
+        orderService.refund(orderId);
+        return Result.success(null);
     }
 }

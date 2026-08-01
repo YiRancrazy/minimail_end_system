@@ -10,7 +10,14 @@ import org.springframework.context.annotation.Configuration;
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */
+@Configuration
 public class EventBusAutoConfiguration {
+
+    @Bean
+    @ConditionalOnMissingBean(LocalEventBus.class)
+    public LocalEventBus localEventBus() {
+        return new LocalEventBus();
+    }
 
     /**
      * Expose the in-process {@link LocalEventBus} as the default {@link EventBus}

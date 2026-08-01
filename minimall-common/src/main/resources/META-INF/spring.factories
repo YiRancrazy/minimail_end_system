@@ -1,1 +1,3 @@
 com.yirancrazy.minimall.common.event.EventBusAutoConfiguration
+
+org.springframework.context.ApplicationContextInitializer=com.yirancrazy.minimall.common.config.DotenvConfig

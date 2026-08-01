@@ -12,11 +12,11 @@ spring:
   cloud:
     nacos:
       discovery:
-        server-addr: 127.0.0.1:8848
+        server-addr: ${NACOS_HOST:127.0.0.1}:${NACOS_PORT:8848}
   datasource:
-    url: jdbc:mysql://127.0.0.1:3306/cart_db?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC
-    username: root
-    password: root
+    url: jdbc:mysql://${MYSQL_HOST:127.0.0.1}:${MYSQL_PORT:3306}/cart_db?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC&createDatabaseIfNotExist=true
+    username: ${MYSQL_USER:root}
+    password: ${MYSQL_PASSWORD:root}
   knife4j:
     enable: true
   mvc:

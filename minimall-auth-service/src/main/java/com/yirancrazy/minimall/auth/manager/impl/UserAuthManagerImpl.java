@@ -13,6 +13,7 @@ import com.yirancrazy.minimall.common.annotation.Manager;
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */
+@Manager
 public class UserAuthManagerImpl extends ServiceImpl<UserAuthMapper, UserAuthPO>
     implements UserAuthManager {
 }

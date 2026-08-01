@@ -13,6 +13,7 @@ import com.yirancrazy.minimall.goods.mapper.SkuMapper;
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */
+@Manager
 public class SkuManagerImpl extends ServiceImpl<SkuMapper, SkuPO>
     implements SkuManager {
 }

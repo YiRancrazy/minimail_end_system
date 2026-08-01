@@ -13,6 +13,7 @@ import com.yirancrazy.minimall.user.mapper.UserMapper;
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */
+@Manager
 public class UserManagerImpl extends ServiceImpl<UserMapper, UserPO>
     implements UserManager {
 }

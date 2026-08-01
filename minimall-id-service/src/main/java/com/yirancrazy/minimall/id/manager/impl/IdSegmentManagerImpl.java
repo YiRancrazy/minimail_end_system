@@ -12,6 +12,7 @@ import com.yirancrazy.minimall.id.mapper.IdSegmentMapper;
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */
+@Manager
 public class IdSegmentManagerImpl extends ServiceImpl<IdSegmentMapper, IdSegmentPO>
     implements IdSegmentManager {
 }

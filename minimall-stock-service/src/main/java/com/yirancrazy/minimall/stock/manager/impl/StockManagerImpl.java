@@ -13,6 +13,7 @@ import com.yirancrazy.minimall.stock.mapper.StockMapper;
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */
+@Manager
 public class StockManagerImpl extends ServiceImpl<StockMapper, StockPO>
     implements StockManager {
 }

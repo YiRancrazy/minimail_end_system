@@ -13,6 +13,7 @@ import com.yirancrazy.minimall.order.mapper.OrderMapper;
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */
+@Manager
 public class OrderManagerImpl extends ServiceImpl<OrderMapper, OrderPO>
     implements OrderManager {
 }

@@ -13,6 +13,7 @@ import com.yirancrazy.minimall.merchant.mapper.ShopMapper;
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */
+@Manager
 public class ShopManagerImpl extends ServiceImpl<ShopMapper, ShopPO>
     implements ShopManager {
 }

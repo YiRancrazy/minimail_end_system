@@ -19,6 +19,6 @@ class CartFeignFallbackFactoryTest {
         CartFeignFallbackFactory f = new CartFeignFallbackFactory();
         CartFeignClient client = f.create(new RuntimeException("down"));
         assertNotNull(client);
-        assertEquals(-1L, client.countByUser(1L));
+        assertEquals(-1L, client.countByUser(1L).getData());
     }
 }

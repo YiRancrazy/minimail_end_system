@@ -19,6 +19,6 @@ class IdFeignFallbackFactoryTest {
         IdFeignFallbackFactory f = new IdFeignFallbackFactory();
         IdFeignClient client = f.create(new RuntimeException("down"));
         assertNotNull(client);
-        assertEquals(-1L, client.nextId("order"));
+        assertEquals(-1L, client.nextId("order").getData());
     }
 }

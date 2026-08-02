@@ -18,6 +18,16 @@ public class StockFeignFallbackFactory implements FallbackFactory<StockFeignClie
     @Override
     public StockFeignClient create(Throwable cause) {
         log.warn("stock-service unreachable: {}", cause.getMessage());
-        return (StockReserveDTO dto) -> false;
+        return new StockFeignClient() {
+            @Override
+            public Boolean reserve(StockReserveDTO dto) {
+                return false;
+            }
+
+            @Override
+            public Boolean release(StockReserveDTO dto) {
+                return false;
+            }
+        };
     }
 }

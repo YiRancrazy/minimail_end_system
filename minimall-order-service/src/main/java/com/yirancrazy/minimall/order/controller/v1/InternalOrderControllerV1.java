@@ -4,6 +4,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.order.service.OrderService;
@@ -44,6 +45,19 @@ public class InternalOrderControllerV1 {
     @PostMapping("/pay/{id}")
     public Result<Void> pay(@PathVariable Long id) {
         orderService.pay(id);
+        return Result.success(null);
+    }
+
+    /**
+     * 接收支付服务退款结果回调，推进订单退款状态。
+     *
+     * @param id 订单标识
+     * @param success 退款是否成功
+     * @return 空响应体
+     */
+    @PostMapping("/refund-callback/{id}")
+    public Result<Void> refundCallback(@PathVariable Long id, @RequestParam boolean success) {
+        orderService.handleRefundCallback(id, success);
         return Result.success(null);
     }
 }

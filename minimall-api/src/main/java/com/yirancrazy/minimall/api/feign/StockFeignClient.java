@@ -16,4 +16,12 @@ import com.yirancrazy.minimall.api.fallback.StockFeignFallbackFactory;
 public interface StockFeignClient {
     @PostMapping("/internal/stock/reserve")
     Boolean reserve(@RequestBody StockReserveDTO dto);
+
+    /**
+     * Release previously reserved stock for a SKU.
+     * @param dto the release request, reusing the reserve DTO shape
+     * @return true if released successfully
+     */
+    @PostMapping("/internal/stock/release")
+    Boolean release(@RequestBody StockReserveDTO dto);
 }

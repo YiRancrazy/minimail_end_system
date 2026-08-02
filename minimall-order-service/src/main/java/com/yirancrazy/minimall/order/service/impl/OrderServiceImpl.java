@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.api.dto.goods.SkuSnapshotDTO;
 import com.yirancrazy.minimall.api.dto.order.OrderPaidDTO;
 import com.yirancrazy.minimall.api.dto.pay.PayCreateDTO;
+import com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO;
 import com.yirancrazy.minimall.api.dto.stock.StockReserveDTO;
 import com.yirancrazy.minimall.api.feign.GoodsFeignClient;
 import com.yirancrazy.minimall.api.feign.PayFeignClient;
@@ -118,6 +119,11 @@ public class OrderServiceImpl implements OrderService {
             throw new BizException(OrderCodeEnum.ORDER_NOT_FOUND);
         }
         transitStatus(orderId, OrderStatusEnum.CANCELLED);
+        Boolean released = stockFeignClient.release(
+            new StockReserveDTO(po.getSkuId(), po.getQuantity()));
+        if (released == null || !released) {
+            log.warn("stock release failed on cancel, orderId={}", orderId);
+        }
         log.info("order cancelled, orderId={}, userId={}", orderId, userId);
     }
 
@@ -147,6 +153,12 @@ public class OrderServiceImpl implements OrderService {
         po.setRefundFromStatus(po.getStatus());
         po.setStatus(OrderStatusEnum.REFUNDING.intCode());
         orderManager.updateById(po);
+
+        Boolean refunded = payFeignClient.refund(
+            new RefundCreateDTO(po.getPayId(), po.getAmount(), null));
+        if (refunded == null || !refunded) {
+            log.warn("pay refund failed, orderId={}", orderId);
+        }
         log.info("order refunding, orderId={}", orderId);
     }
 

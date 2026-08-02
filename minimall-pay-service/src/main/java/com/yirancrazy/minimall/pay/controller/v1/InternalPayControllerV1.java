@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.api.dto.pay.PayCreateDTO;
+import com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.pay.dto.PayCallbackDTO;
 import com.yirancrazy.minimall.pay.service.PayService;
@@ -14,8 +15,8 @@ import com.yirancrazy.minimall.pay.service.PayService;
 /**
  * @Author: yirancrazy@gmail.com
  * @Description: 支付内部控制器，提供Pay相关内部接口
- * @Version: 1.0
- * @DateTime: 2026/07/31
+ * @Version: 1.1
+ * @DateTime: 2026/08/02
  */
 @Slf4j
 @RestController
@@ -50,6 +51,19 @@ public class InternalPayControllerV1 {
     @PostMapping("/callback")
     public Result<Boolean> callback(@Valid @RequestBody PayCallbackDTO dto) {
         payService.handleCallback(dto);
+        return Result.success(true);
+    }
+
+    /**
+     * Create a refund for an existing payment and notify the order service
+     * of the result so it can advance its status.
+     *
+     * @param dto 退款创建参数
+     * @return 退款是否成功
+     */
+    @PostMapping("/refund")
+    public Result<Boolean> refund(@Valid @RequestBody RefundCreateDTO dto) {
+        payService.createRefund(dto);
         return Result.success(true);
     }
 }

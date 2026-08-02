@@ -7,6 +7,7 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.extern.slf4j.Slf4j;
+import com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO;
 import com.yirancrazy.minimall.api.feign.OrderFeignClient;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.pay.constant.PayChannelEnum;
@@ -14,7 +15,6 @@ import com.yirancrazy.minimall.pay.constant.PayCodeEnum;
 import com.yirancrazy.minimall.pay.constant.PayStatusEnum;
 import com.yirancrazy.minimall.pay.constant.RefundStatusEnum;
 import com.yirancrazy.minimall.pay.dto.PayCallbackDTO;
-import com.yirancrazy.minimall.pay.dto.RefundCreateDTO;
 import com.yirancrazy.minimall.pay.entity.PayRefundPO;
 import com.yirancrazy.minimall.pay.entity.PayTransactionPO;
 import com.yirancrazy.minimall.pay.gateway.AlipayGateway;
@@ -113,15 +113,13 @@ public class PayServiceImpl implements PayService {
     }
 
     /**
-     * 创建退款。
+     * 创建退款。成功后通过 Feign 通知 order 服务推进退款状态。
      * @param dto 退款创建DTO
      * @return 退款VO
      */
     @Override
     public RefundVO createRefund(RefundCreateDTO dto) {
-        PayTransactionPO payTx = payManager.getOne(
-            Wrappers.lambdaQuery(PayTransactionPO.class)
-                .eq(PayTransactionPO::getPaymentNo, dto.getPaymentNo()));
+        PayTransactionPO payTx = payManager.getById(dto.getPayId());
 
         if (payTx == null) {
             throw new BizException(PayCodeEnum.PAY_NOT_FOUND);
@@ -134,10 +132,11 @@ public class PayServiceImpl implements PayService {
         }
 
         String refundNo = generateRefundNo();
+        String paymentNo = payTx.getPaymentNo();
 
         PayRefundPO refund = new PayRefundPO();
         refund.setRefundNo(refundNo);
-        refund.setPaymentNo(dto.getPaymentNo());
+        refund.setPaymentNo(paymentNo);
         refund.setAmount(dto.getAmount());
         refund.setReason(dto.getReason());
         refund.setStatus(Integer.parseInt(RefundStatusEnum.PENDING.getCode()));
@@ -147,8 +146,9 @@ public class PayServiceImpl implements PayService {
         payTx.setStatus(Integer.parseInt(PayStatusEnum.REFUNDING.getCode()));
         payManager.updateById(payTx);
 
+        Long orderId = Long.valueOf(payTx.getOrderNo());
         try {
-            String refundTradeNo = alipayGateway.refund(dto.getPaymentNo(), refundNo, dto.getAmount(), dto.getReason());
+            String refundTradeNo = alipayGateway.refund(paymentNo, refundNo, dto.getAmount(), dto.getReason());
             refund.setStatus(Integer.parseInt(RefundStatusEnum.SUCCESS.getCode()));
             refund.setRefundTradeNo(refundTradeNo);
             refund.setNotifiedAt(LocalDateTime.now());
@@ -157,17 +157,19 @@ public class PayServiceImpl implements PayService {
             payTx.setStatus(Integer.parseInt(PayStatusEnum.REFUNDED.getCode()));
             payManager.updateById(payTx);
 
-            log.info("refund success, refundNo={}, paymentNo={}", refundNo, dto.getPaymentNo());
+            orderFeignClient.refundCallback(orderId, true);
+            log.info("refund success, refundNo={}, paymentNo={}", refundNo, paymentNo);
         }
         catch (Exception e) {
             refund.setStatus(Integer.parseInt(RefundStatusEnum.FAILED.getCode()));
             payRefundMapper.updateById(refund);
             payTx.setStatus(Integer.parseInt(PayStatusEnum.SUCCESS.getCode()));
             payManager.updateById(payTx);
+            orderFeignClient.refundCallback(orderId, false);
             throw new BizException(PayCodeEnum.REFUND_FAILED);
         }
 
-        return new RefundVO(refundNo, dto.getPaymentNo(), dto.getAmount(), refund.getStatus());
+        return new RefundVO(refundNo, paymentNo, dto.getAmount(), refund.getStatus());
     }
 
     private String generateRefundNo() {

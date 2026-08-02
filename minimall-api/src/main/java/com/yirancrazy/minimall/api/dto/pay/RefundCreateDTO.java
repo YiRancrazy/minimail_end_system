@@ -1,22 +1,24 @@
-package com.yirancrazy.minimall.pay.dto;
+package com.yirancrazy.minimall.api.dto.pay;
 
 import java.math.BigDecimal;
 import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
 import lombok.Data;
-
+import lombok.NoArgsConstructor;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 数据传输对象，用于接收请求参数。
- * @Version: 1.0
- * @DateTime: 2026/7/31
+ * @Description: RefundCreate 数据传输对象，跨服务退款创建入参
+ * @Version: 1.1
+ * @DateTime: 2026/08/02
  **/
 @Data
+@AllArgsConstructor
+@NoArgsConstructor
 public class RefundCreateDTO {
-    @NotBlank(message = "paymentNo cannot be blank")
-    private String paymentNo;
+    @NotNull(message = "payId cannot be null")
+    private Long payId;
 
     @NotNull(message = "amount cannot be null")
     @DecimalMin(value = "0.01", message = "amount must be at least 0.01")

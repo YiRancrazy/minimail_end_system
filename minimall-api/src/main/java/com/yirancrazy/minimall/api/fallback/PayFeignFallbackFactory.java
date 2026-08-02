@@ -4,6 +4,7 @@ import org.springframework.cloud.openfeign.FallbackFactory;
 import org.springframework.stereotype.Component;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.api.dto.pay.PayCreateDTO;
+import com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO;
 import com.yirancrazy.minimall.api.feign.PayFeignClient;
 
 /**
@@ -22,6 +23,11 @@ public class PayFeignFallbackFactory implements FallbackFactory<PayFeignClient> 
             @Override
             public Long create(PayCreateDTO dto) {
                 return -1L;
+            }
+
+            @Override
+            public Boolean refund(RefundCreateDTO dto) {
+                return false;
             }
         };
     }

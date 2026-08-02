@@ -13,8 +13,6 @@ public class RocketMqEventBusTest {
     private final WebApplicationContextRunner runner = new WebApplicationContextRunner()
         .withConfiguration(
             org.springframework.boot.autoconfigure.AutoConfigurations.of(EventBusAutoConfiguration.class))
-        .withBean(LocalEventBus.class)
-        .withBean(RocketMqEventBus.class, () -> new RocketMqEventBus("127.0.0.1:9877", "minimall-events"))
         .withPropertyValues(
             "minimall.eventbus.rocketmq.enabled=true",
             "minimall.eventbus.rocketmq.namesrv-addr=127.0.0.1:9877"

@@ -28,11 +28,11 @@ public class RocketMqEventBus implements EventBus {
     private final String topic;
     private TransactionMQProducer producer;
     /**
-     * ponytail: in-memory checker map lost on producer restart; broker
-     * callback then returns UNKNOWN and rolls back the half-message. For
-     * crash-safe commit confirmation, persist checker state (outbox table)
-     * in a later iteration.
+     * Optional persistent store for commit confirmation. When present, the
+     * broker callback reads commit state from it; otherwise falls back to
+     * the in-memory checker map which is lost on producer restart.
      */
+    private OutboxStore outboxStore;
     private final Map<String, Function<Object, Boolean>> checkers = new ConcurrentHashMap<>();
     private final Map<String, Class<?>> tagTypes = new ConcurrentHashMap<>();
 
@@ -41,6 +41,14 @@ public class RocketMqEventBus implements EventBus {
         @Value("${minimall.eventbus.rocketmq.topic:minimall-events}") String topic) {
         this.namesrvAddr = namesrvAddr;
         this.topic = topic;
+    }
+
+    /**
+     * Inject a persistent {@link OutboxStore} for crash-safe callback.
+     * @param outboxStore the store, or null to fall back to in-memory checkers
+     */
+    public void setOutboxStore(OutboxStore outboxStore) {
+        this.outboxStore = outboxStore;
     }
 
     @PostConstruct
@@ -53,6 +61,9 @@ public class RocketMqEventBus implements EventBus {
                 Runnable localTx = (Runnable) arg;
                 try {
                     localTx.run();
+                    if (outboxStore != null && msg.getTransactionId() != null) {
+                        outboxStore.recordCommit(msg.getTransactionId());
+                    }
                     return LocalTransactionState.COMMIT_MESSAGE;
                 }
                 catch (Exception e) {
@@ -63,6 +74,17 @@ public class RocketMqEventBus implements EventBus {
 
             @Override
             public LocalTransactionState checkLocalTransaction(MessageExt msg) {
+                if (outboxStore != null && msg.getTransactionId() != null) {
+                    try {
+                        return outboxStore.isCommitted(msg.getTransactionId())
+                            ? LocalTransactionState.COMMIT_MESSAGE
+                            : LocalTransactionState.ROLLBACK_MESSAGE;
+                    }
+                    catch (Exception e) {
+                        log.warn("outbox check failed for tag={}: {}", msg.getTags(), e.getMessage());
+                        return LocalTransactionState.UNKNOW;
+                    }
+                }
                 Function<Object, Boolean> checker = checkers.get(msg.getTags());
                 Class<?> type = tagTypes.get(msg.getTags());
                 if (checker == null || type == null) {

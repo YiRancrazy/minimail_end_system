@@ -41,6 +41,7 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
         "/api/v1/auth/send-reset-code",
         "/api/v1/auth/reset-password",
         "/api/v1/merchant/auth/login",
+        "/api/v1/platform/auth/login",
         "/actuator/health"
     );
 

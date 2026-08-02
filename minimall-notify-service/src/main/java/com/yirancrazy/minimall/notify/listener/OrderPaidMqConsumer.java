@@ -18,6 +18,8 @@ import com.yirancrazy.minimall.notify.sse.SseHub;
  * @DateTime: 2026/07/31
  */
 @Slf4j
+@Component
+@ConditionalOnProperty(name = "minimall.eventbus.rocketmq.enabled", havingValue = "true")
 public class OrderPaidMqConsumer {
 
     private final NotifyService notifyService;

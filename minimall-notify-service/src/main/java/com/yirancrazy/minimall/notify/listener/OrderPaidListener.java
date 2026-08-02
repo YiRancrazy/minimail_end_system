@@ -15,6 +15,7 @@ import com.yirancrazy.minimall.notify.sse.SseHub;
  * @DateTime: 2026/07/31
  */
 @Slf4j
+@Component
 public class OrderPaidListener {
 
     private final NotifyService notifyService;

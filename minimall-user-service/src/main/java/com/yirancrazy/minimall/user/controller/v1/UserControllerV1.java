@@ -21,6 +21,8 @@ import com.yirancrazy.minimall.user.service.UserService;
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */
+@RestController
+@RequestMapping("/api/v1/users")
 public class UserControllerV1 {
 
     private final UserService userService;

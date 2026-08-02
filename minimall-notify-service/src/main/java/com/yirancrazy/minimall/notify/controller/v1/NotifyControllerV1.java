@@ -16,6 +16,8 @@ import com.yirancrazy.minimall.notify.service.NotifyService;
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */
+@RestController
+@RequestMapping("/api/v1/notify")
 public class NotifyControllerV1 {
 
     private final NotifyService notifyService;

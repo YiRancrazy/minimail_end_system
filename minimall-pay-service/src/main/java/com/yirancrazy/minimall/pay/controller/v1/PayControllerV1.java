@@ -1,12 +1,10 @@
 package com.yirancrazy.minimall.pay.controller.v1;
 
-import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.Map;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -14,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.pay.dto.PayCallbackDTO;
+import com.yirancrazy.minimall.pay.dto.PayCreateDTO;
 import com.yirancrazy.minimall.pay.dto.RefundCreateDTO;
 import com.yirancrazy.minimall.pay.service.PayService;
 import com.yirancrazy.minimall.pay.vo.RefundVO;
@@ -38,18 +37,13 @@ public class PayControllerV1 {
 
     /**
      * 创建支付流水。
-     * @param orderNo 订单号
-     * @param userId 用户ID
-     * @param merchantId 商户ID
-     * @param amount 支付金额
+     * @param dto 支付流水创建DTO
      * @return 支付流水ID
      */
     @PostMapping("/create")
-    public Result<Long> create(@RequestParam String orderNo,
-                                @RequestParam Long userId,
-                                @RequestParam Long merchantId,
-                                @RequestParam BigDecimal amount) {
-        Long paymentId = payService.createPayment(orderNo, userId, merchantId, amount);
+    public Result<Long> create(@Valid @RequestBody PayCreateDTO dto) {
+        Long paymentId = payService.createPayment(
+            dto.getOrderNo(), dto.getUserId(), dto.getMerchantId(), dto.getAmount());
         return Result.success(paymentId);
     }
 

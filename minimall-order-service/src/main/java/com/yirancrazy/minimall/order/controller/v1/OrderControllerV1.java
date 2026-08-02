@@ -18,6 +18,8 @@ import com.yirancrazy.minimall.order.service.OrderService;
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */
+@RestController
+@RequestMapping("/api/v1/orders")
 public class OrderControllerV1 {
 
     private final OrderService orderService;

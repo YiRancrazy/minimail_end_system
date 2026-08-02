@@ -16,6 +16,8 @@ import com.yirancrazy.minimall.notify.sse.SseHub;
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */
+@RestController
+@RequestMapping("/internal/notify")
 public class InternalNotifyControllerV1 {
 
     private final NotifyService notifyService;

@@ -1,6 +1,7 @@
 package com.yirancrazy.minimall.goods.service.impl;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -8,19 +9,22 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.common.exception.BizException;
+import com.yirancrazy.minimall.goods.constant.AuditDecisionEnum;
 import com.yirancrazy.minimall.goods.constant.SpuCodeEnum;
 import com.yirancrazy.minimall.goods.constant.SpuStatusEnum;
 import com.yirancrazy.minimall.goods.dto.SpuCreateDTO;
 import com.yirancrazy.minimall.goods.dto.SpuPageDTO;
 import com.yirancrazy.minimall.goods.dto.SpuUpdateDTO;
+import com.yirancrazy.minimall.goods.entity.SpuAuditRecordPO;
 import com.yirancrazy.minimall.goods.entity.SpuPO;
+import com.yirancrazy.minimall.goods.manager.SpuAuditRecordManager;
 import com.yirancrazy.minimall.goods.manager.SpuManager;
 import com.yirancrazy.minimall.goods.service.SpuService;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 商品领域服务实现，实现Spu相关业务逻辑，含状态流转校验
- * @Version: 1.0
+ * @Description: 商品领域服务实现，实现Spu相关业务逻辑，含状态流转与审核闭环
+ * @Version: 1.1
  * @DateTime: 2026/08/02
  */
 @Slf4j
@@ -28,9 +32,11 @@ import com.yirancrazy.minimall.goods.service.SpuService;
 public class SpuServiceImpl implements SpuService {
 
     private final SpuManager spuManager;
+    private final SpuAuditRecordManager spuAuditRecordManager;
 
-    public SpuServiceImpl(SpuManager spuManager) {
+    public SpuServiceImpl(SpuManager spuManager, SpuAuditRecordManager spuAuditRecordManager) {
         this.spuManager = spuManager;
+        this.spuAuditRecordManager = spuAuditRecordManager;
     }
 
     /**
@@ -126,9 +132,9 @@ public class SpuServiceImpl implements SpuService {
     }
 
     /**
-     * 上架 SPU，仅草稿/下架/驳回状态可上架，否则抛出 SPU_STATUS_INVALID。
+     * 商家提交上架审核，仅草稿/下架/驳回状态可提交，提交后进入待审核，由平台审核通过后才会上架。
      * @param id SPU 主键 ID
-     * @return 上架是否成功
+     * @return 提交是否成功
      */
     @Override
     public boolean onShelf(Long id) {
@@ -143,10 +149,9 @@ public class SpuServiceImpl implements SpuService {
                 && s != SpuStatusEnum.REJECTED.statusValue())) {
             throw new BizException(SpuCodeEnum.SPU_STATUS_INVALID);
         }
-        existing.setStatus(SpuStatusEnum.ON_SALE.statusValue());
-        existing.setPublishAt(LocalDateTime.now());
+        existing.setStatus(SpuStatusEnum.PENDING_AUDIT.statusValue());
         boolean ok = spuManager.updateById(existing);
-        log.info("spu on shelf, spuId={}, ok={}", id, ok);
+        log.info("spu submit audit, spuId={}, ok={}", id, ok);
         return ok;
     }
 
@@ -169,5 +174,93 @@ public class SpuServiceImpl implements SpuService {
         boolean ok = spuManager.updateById(existing);
         log.info("spu off shelf, spuId={}, ok={}", id, ok);
         return ok;
+    }
+
+    /**
+     * 平台分页查询待审核 SPU，按更新时间倒序。
+     * @param pageNo 页码
+     * @param pageSize 每页大小
+     * @return 待审核 SPU 分页结果
+     */
+    @Override
+    public IPage<SpuPO> pagePending(Integer pageNo, Integer pageSize) {
+        Page<SpuPO> page = new Page<>(
+            pageNo == null || pageNo < 1 ? 1 : pageNo,
+            pageSize == null || pageSize < 1 ? 20 : pageSize);
+        return spuManager.page(page, Wrappers.lambdaQuery(SpuPO.class)
+            .eq(SpuPO::getStatus, SpuStatusEnum.PENDING_AUDIT.statusValue())
+            .orderByDesc(SpuPO::getUpdateTime));
+    }
+
+    /**
+     * 平台审核通过，仅待审核状态可通过，通过后置为在售并记录审核日志。
+     * @param spuId SPU 主键 ID
+     * @param auditorId 审核员账号ID
+     * @return 审核是否成功
+     */
+    @Override
+    public boolean approve(Long spuId, Long auditorId) {
+        SpuPO existing = spuManager.getById(spuId);
+        if (existing == null) {
+            throw new BizException(SpuCodeEnum.SPU_NOT_FOUND);
+        }
+        if (existing.getStatus() == null
+            || existing.getStatus() != SpuStatusEnum.PENDING_AUDIT.statusValue()) {
+            throw new BizException(SpuCodeEnum.SPU_NOT_PENDING_AUDIT);
+        }
+        existing.setStatus(SpuStatusEnum.ON_SALE.statusValue());
+        existing.setPublishAt(LocalDateTime.now());
+        boolean ok = spuManager.updateById(existing);
+        saveAuditRecord(spuId, auditorId, AuditDecisionEnum.APPROVE, null);
+        log.info("spu approved, spuId={}, auditorId={}", spuId, auditorId);
+        return ok;
+    }
+
+    /**
+     * 平台审核驳回，仅待审核状态可驳回，驳回后置为驳回并记录审核日志。
+     * @param spuId SPU 主键 ID
+     * @param auditorId 审核员账号ID
+     * @param reason 驳回原因
+     * @return 审核是否成功
+     */
+    @Override
+    public boolean reject(Long spuId, Long auditorId, String reason) {
+        SpuPO existing = spuManager.getById(spuId);
+        if (existing == null) {
+            throw new BizException(SpuCodeEnum.SPU_NOT_FOUND);
+        }
+        if (existing.getStatus() == null
+            || existing.getStatus() != SpuStatusEnum.PENDING_AUDIT.statusValue()) {
+            throw new BizException(SpuCodeEnum.SPU_NOT_PENDING_AUDIT);
+        }
+        existing.setStatus(SpuStatusEnum.REJECTED.statusValue());
+        boolean ok = spuManager.updateById(existing);
+        saveAuditRecord(spuId, auditorId, AuditDecisionEnum.REJECT, reason);
+        log.info("spu rejected, spuId={}, auditorId={}, reason={}", spuId, auditorId, reason);
+        return ok;
+    }
+
+    /**
+     * 查询指定 SPU 的审核记录列表，按审核时间倒序。
+     * @param spuId SPU 主键 ID
+     * @return 审核记录列表
+     */
+    @Override
+    public List<SpuAuditRecordPO> listAuditRecords(Long spuId) {
+        return spuAuditRecordManager.list(
+            Wrappers.lambdaQuery(SpuAuditRecordPO.class)
+                .eq(SpuAuditRecordPO::getSpuId, spuId)
+                .orderByDesc(SpuAuditRecordPO::getAuditAt));
+    }
+
+    private void saveAuditRecord(Long spuId, Long auditorId, AuditDecisionEnum decision,
+                                 String reason) {
+        SpuAuditRecordPO record = new SpuAuditRecordPO();
+        record.setSpuId(spuId);
+        record.setAuditorId(auditorId);
+        record.setDecision(decision.getCode());
+        record.setReason(reason);
+        record.setAuditAt(LocalDateTime.now());
+        spuAuditRecordManager.save(record);
     }
 }

@@ -1,5 +1,6 @@
 package com.yirancrazy.minimall.goods.service;
 
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -16,25 +17,30 @@ import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.yirancrazy.minimall.common.exception.BizException;
+import com.yirancrazy.minimall.goods.constant.AuditDecisionEnum;
 import com.yirancrazy.minimall.goods.constant.SpuStatusEnum;
 import com.yirancrazy.minimall.goods.dto.SpuCreateDTO;
 import com.yirancrazy.minimall.goods.dto.SpuPageDTO;
 import com.yirancrazy.minimall.goods.dto.SpuUpdateDTO;
+import com.yirancrazy.minimall.goods.entity.SpuAuditRecordPO;
 import com.yirancrazy.minimall.goods.entity.SpuPO;
+import com.yirancrazy.minimall.goods.manager.SpuAuditRecordManager;
 import com.yirancrazy.minimall.goods.manager.SpuManager;
 import com.yirancrazy.minimall.goods.service.impl.SpuServiceImpl;
 
 /**
- * SpuServiceImpl 单元测试，覆盖查询、创建、分页、更新、删除及上下架状态流转的正常、失败、边界路径。
+ * SpuServiceImpl 单元测试，覆盖查询、创建、分页、更新、删除、上下架与审核闭环的正常、失败、边界路径。
  */
 public class SpuServiceImplTest {
 
     private SpuManager spuManager;
+    private SpuAuditRecordManager spuAuditRecordManager;
     private SpuServiceImpl service;
 
     @BeforeEach
     void setUp() {
         spuManager = mock(SpuManager.class);
+        spuAuditRecordManager = mock(SpuAuditRecordManager.class);
         lenient().doAnswer(inv -> {
             SpuPO p = inv.getArgument(0);
             if (p.getId() == null) {
@@ -44,7 +50,8 @@ public class SpuServiceImplTest {
         }).when(spuManager).save(any(SpuPO.class));
         lenient().when(spuManager.updateById(any(SpuPO.class))).thenReturn(true);
         lenient().when(spuManager.removeById(100L)).thenReturn(true);
-        service = new SpuServiceImpl(spuManager);
+        lenient().when(spuAuditRecordManager.save(any(SpuAuditRecordPO.class))).thenReturn(true);
+        service = new SpuServiceImpl(spuManager, spuAuditRecordManager);
     }
 
     /**
@@ -177,7 +184,7 @@ public class SpuServiceImplTest {
     }
 
     /**
-     * 验证 onShelf 在已在售状态时抛出状态非法异常。
+     * 验证 onShelf 在已在售/待审核状态时抛出状态非法异常。
      */
     @Test
     public void onShelf_throws_when_status_invalid() {
@@ -190,7 +197,7 @@ public class SpuServiceImplTest {
     }
 
     /**
-     * 验证 onShelf 在草稿状态时成功上架并置为在售。
+     * 验证 onShelf 在草稿状态时成功提交审核并置为待审核。
      */
     @Test
     public void onShelf_returns_true_on_success() {
@@ -201,8 +208,7 @@ public class SpuServiceImplTest {
 
         boolean ok = service.onShelf(100L);
         assertTrue(ok);
-        assertEquals(SpuStatusEnum.ON_SALE.statusValue(), existing.getStatus());
-        assertNotNull(existing.getPublishAt());
+        assertEquals(SpuStatusEnum.PENDING_AUDIT.statusValue(), existing.getStatus());
     }
 
     /**
@@ -240,5 +246,104 @@ public class SpuServiceImplTest {
         boolean ok = service.offShelf(100L);
         assertTrue(ok);
         assertEquals(SpuStatusEnum.OFF_SHELF.statusValue(), existing.getStatus());
+    }
+
+    /**
+     * 验证 pagePending 返回待审核分页结果。
+     */
+    @Test
+    public void pagePending_returns_results() {
+        Page<SpuPO> mockPage = new Page<>(1, 20);
+        mockPage.setRecords(List.of(new SpuPO()));
+        when(spuManager.page(any(Page.class), any(Wrapper.class))).thenReturn(mockPage);
+
+        IPage<SpuPO> result = service.pagePending(1, 20);
+        assertEquals(1, result.getRecords().size());
+    }
+
+    /**
+     * 验证 approve 在待审核状态时通过并置为在售、记录审核日志。
+     */
+    @Test
+    public void approve_success_sets_on_sale_and_records_log() {
+        SpuPO existing = new SpuPO();
+        existing.setId(100L);
+        existing.setStatus(SpuStatusEnum.PENDING_AUDIT.statusValue());
+        when(spuManager.getById(100L)).thenReturn(existing);
+
+        boolean ok = service.approve(100L, 888L);
+
+        assertTrue(ok);
+        assertEquals(SpuStatusEnum.ON_SALE.statusValue(), existing.getStatus());
+        assertNotNull(existing.getPublishAt());
+        verify(spuAuditRecordManager).save(any(SpuAuditRecordPO.class));
+    }
+
+    /**
+     * 验证 approve 在非待审核状态时抛出 BizException。
+     */
+    @Test
+    public void approve_throws_when_not_pending() {
+        SpuPO existing = new SpuPO();
+        existing.setId(100L);
+        existing.setStatus(SpuStatusEnum.DRAFT.statusValue());
+        when(spuManager.getById(100L)).thenReturn(existing);
+
+        assertThrows(BizException.class, () -> service.approve(100L, 888L));
+    }
+
+    /**
+     * 验证 approve 在 SPU 不存在时抛出 BizException。
+     */
+    @Test
+    public void approve_throws_when_missing() {
+        when(spuManager.getById(999L)).thenReturn(null);
+        assertThrows(BizException.class, () -> service.approve(999L, 888L));
+    }
+
+    /**
+     * 验证 reject 在待审核状态时驳回并置为驳回、记录含原因的审核日志。
+     */
+    @Test
+    public void reject_success_sets_rejected_and_records_log() {
+        SpuPO existing = new SpuPO();
+        existing.setId(100L);
+        existing.setStatus(SpuStatusEnum.PENDING_AUDIT.statusValue());
+        when(spuManager.getById(100L)).thenReturn(existing);
+
+        boolean ok = service.reject(100L, 888L, "图片不合规");
+
+        assertTrue(ok);
+        assertEquals(SpuStatusEnum.REJECTED.statusValue(), existing.getStatus());
+        verify(spuAuditRecordManager).save(any(SpuAuditRecordPO.class));
+    }
+
+    /**
+     * 验证 reject 在非待审核状态时抛出 BizException。
+     */
+    @Test
+    public void reject_throws_when_not_pending() {
+        SpuPO existing = new SpuPO();
+        existing.setId(100L);
+        existing.setStatus(SpuStatusEnum.ON_SALE.statusValue());
+        when(spuManager.getById(100L)).thenReturn(existing);
+
+        assertThrows(BizException.class, () -> service.reject(100L, 888L, "reason"));
+    }
+
+    /**
+     * 验证 listAuditRecords 返回指定 SPU 的审核记录列表。
+     */
+    @Test
+    public void listAuditRecords_returns_records() {
+        SpuAuditRecordPO rec = new SpuAuditRecordPO();
+        rec.setSpuId(100L);
+        rec.setDecision(AuditDecisionEnum.APPROVE.getCode());
+        when(spuAuditRecordManager.list(any(Wrapper.class))).thenReturn(List.of(rec));
+
+        List<SpuAuditRecordPO> records = service.listAuditRecords(100L);
+
+        assertEquals(1, records.size());
+        assertEquals(AuditDecisionEnum.APPROVE.getCode(), records.get(0).getDecision());
     }
 }

@@ -14,7 +14,8 @@ import com.yirancrazy.minimall.common.base.BaseEnum;
 @AllArgsConstructor
 public enum SpuCodeEnum implements BaseEnum {
     SPU_NOT_FOUND("11001", "SPU_NOT_FOUND", "SPU 不存在"),
-    SPU_STATUS_INVALID("11002", "SPU_STATUS_INVALID", "SPU 状态不允许该操作");
+    SPU_STATUS_INVALID("11002", "SPU_STATUS_INVALID", "SPU 状态不允许该操作"),
+    SPU_NOT_PENDING_AUDIT("11003", "SPU_NOT_PENDING_AUDIT", "SPU 非待审核状态");
 
     private final String code;
     private final String alias;

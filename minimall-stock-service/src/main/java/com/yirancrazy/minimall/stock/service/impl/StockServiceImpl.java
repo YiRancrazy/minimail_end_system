@@ -10,8 +10,8 @@ import com.yirancrazy.minimall.stock.constant.StockCodeEnum;
 import com.yirancrazy.minimall.stock.constant.StockJournalTypeEnum;
 import com.yirancrazy.minimall.stock.entity.StockJournalPO;
 import com.yirancrazy.minimall.stock.entity.StockPO;
+import com.yirancrazy.minimall.stock.manager.StockJournalManager;
 import com.yirancrazy.minimall.stock.manager.StockManager;
-import com.yirancrazy.minimall.stock.mapper.StockJournalMapper;
 import com.yirancrazy.minimall.stock.service.StockService;
 
 /**
@@ -25,11 +25,11 @@ import com.yirancrazy.minimall.stock.service.StockService;
 public class StockServiceImpl implements StockService {
 
     private final StockManager stockManager;
-    private final StockJournalMapper journalMapper;
+    private final StockJournalManager journalManager;
 
-    public StockServiceImpl(StockManager stockManager, StockJournalMapper journalMapper) {
+    public StockServiceImpl(StockManager stockManager, StockJournalManager journalManager) {
         this.stockManager = stockManager;
-        this.journalMapper = journalMapper;
+        this.journalManager = journalManager;
     }
 
     /**
@@ -140,7 +140,7 @@ public class StockServiceImpl implements StockService {
      */
     @Override
     public List<StockJournalPO> queryJournal(Long skuId) {
-        return journalMapper.selectList(
+        return journalManager.list(
             Wrappers.lambdaQuery(StockJournalPO.class)
                 .eq(StockJournalPO::getSkuId, skuId)
                 .orderByDesc(StockJournalPO::getId));
@@ -163,7 +163,7 @@ public class StockServiceImpl implements StockService {
         journal.setType(type.intCode());
         journal.setReason(reason);
         journal.setOrderNo(orderNo);
-        journalMapper.insert(journal);
+        journalManager.save(journal);
     }
 
     private void checkAlert(StockPO po) {

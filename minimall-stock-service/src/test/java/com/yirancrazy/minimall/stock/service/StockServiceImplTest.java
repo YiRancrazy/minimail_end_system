@@ -11,8 +11,8 @@ import static org.mockito.Mockito.when;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.stock.entity.StockJournalPO;
 import com.yirancrazy.minimall.stock.entity.StockPO;
+import com.yirancrazy.minimall.stock.manager.StockJournalManager;
 import com.yirancrazy.minimall.stock.manager.StockManager;
-import com.yirancrazy.minimall.stock.mapper.StockJournalMapper;
 import com.yirancrazy.minimall.stock.service.impl.StockServiceImpl;
 
 /**
@@ -22,16 +22,16 @@ import com.yirancrazy.minimall.stock.service.impl.StockServiceImpl;
 public class StockServiceImplTest {
 
     private StockManager manager;
-    private StockJournalMapper journalMapper;
+    private StockJournalManager journalManager;
     private StockServiceImpl service;
 
     @BeforeEach
     void setUp() {
         manager = mock(StockManager.class);
-        journalMapper = mock(StockJournalMapper.class);
+        journalManager = mock(StockJournalManager.class);
         lenient().when(manager.updateById(any(StockPO.class))).thenReturn(true);
-        lenient().when(journalMapper.insert(any(StockJournalPO.class))).thenReturn(1);
-        service = new StockServiceImpl(manager, journalMapper);
+        lenient().when(journalManager.save(any(StockJournalPO.class))).thenReturn(true);
+        service = new StockServiceImpl(manager, journalManager);
     }
 
     /**

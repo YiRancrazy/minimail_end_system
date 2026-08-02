@@ -21,6 +21,7 @@ import com.yirancrazy.minimall.api.dto.order.OrderPaidDTO;
 import com.yirancrazy.minimall.notify.entity.NotifyMessagePO;
 import com.yirancrazy.minimall.notify.manager.NotifyManager;
 import com.yirancrazy.minimall.notify.service.NotifyService;
+import com.yirancrazy.minimall.notify.service.impl.NotifyServiceImpl;
 import com.yirancrazy.minimall.notify.sse.SseHub;
 
 /**
@@ -45,7 +46,7 @@ public class OrderPaidListenerTest {
             }
             return true;
         }).when(manager).save(any(NotifyMessagePO.class));
-        notifyService = new NotifyService(manager);
+        notifyService = new NotifyServiceImpl(manager);
         listener = new OrderPaidListener(notifyService, sseHub);
     }
 

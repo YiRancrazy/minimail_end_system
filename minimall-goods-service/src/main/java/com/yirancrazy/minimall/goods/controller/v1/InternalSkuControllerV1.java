@@ -15,6 +15,8 @@ import com.yirancrazy.minimall.goods.service.SkuService;
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */
+@RestController
+@RequestMapping("/internal/goods/sku")
 public class InternalSkuControllerV1 {
 
     private final SkuService skuService;

@@ -12,9 +12,11 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.yirancrazy.minimall.api.feign.OrderFeignClient;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.pay.dto.PayCallbackDTO;
 import com.yirancrazy.minimall.pay.entity.PayTransactionPO;
@@ -27,14 +29,15 @@ import com.yirancrazy.minimall.pay.service.impl.PayServiceImpl;
 /**
  * @Author: yirancrazy@gmail.com
  * @Description: PayServiceImpl 的单元测试类。
- * @Version: 1.0
- * @DateTime: 2026/7/31
+ * @Version: 1.1
+ * @DateTime: 2026/08/02
  **/
 public class PayServiceImplTest {
 
     private PayManager manager;
     private AlipayGateway alipayGateway;
     private PayRefundMapper payRefundMapper;
+    private OrderFeignClient orderFeignClient;
     private PayServiceImpl service;
 
     @BeforeEach
@@ -42,6 +45,7 @@ public class PayServiceImplTest {
         manager = mock(PayManager.class);
         alipayGateway = mock(AlipayGateway.class);
         payRefundMapper = mock(PayRefundMapper.class);
+        orderFeignClient = mock(OrderFeignClient.class);
         lenient().when(manager.updateById(any(PayTransactionPO.class))).thenReturn(true);
         lenient().when(alipayGateway.createPayment(anyString(), any(BigDecimal.class), anyString(), anyString()))
             .thenReturn("http://pay.url");
@@ -52,7 +56,7 @@ public class PayServiceImplTest {
             }
             return true;
         }).when(manager).save(any(PayTransactionPO.class));
-        service = new PayServiceImpl(manager, alipayGateway, payRefundMapper);
+        service = new PayServiceImpl(manager, alipayGateway, payRefundMapper, orderFeignClient);
     }
 
     /**
@@ -69,18 +73,20 @@ public class PayServiceImplTest {
     }
 
     /**
-     * 验证 handleCallback 在支付成功时把支付单状态推进为 SUCCESS。
+     * 验证 handleCallback 在支付成功时把支付单状态推进为 SUCCESS，并触发 order.pay。
      */
     @Test
     public void handleCallback_marks_success() {
         PayTransactionPO rec = new PayTransactionPO();
         rec.setId(1L);
         rec.setStatus(1);
+        rec.setOrderNo("100");
         when(manager.getOne(any())).thenReturn(rec);
 
         PayCallbackDTO dto = new PayCallbackDTO("PAY123", "TRADE123", true, "response");
         service.handleCallback(dto);
         assertEquals(2, rec.getStatus());
+        verify(orderFeignClient).pay(100L);
     }
 
     /**
@@ -106,5 +112,6 @@ public class PayServiceImplTest {
         PayCallbackDTO dto = new PayCallbackDTO("PAY123", "TRADE123", false, "response");
         service.handleCallback(dto);
         assertEquals(3, rec.getStatus());
+        verify(orderFeignClient, never()).pay(any());
     }
 }

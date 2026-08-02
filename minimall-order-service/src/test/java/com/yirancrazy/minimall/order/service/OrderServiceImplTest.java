@@ -1,5 +1,6 @@
 package com.yirancrazy.minimall.order.service;
 
+import java.math.BigDecimal;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -11,6 +12,11 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import com.yirancrazy.minimall.api.dto.goods.SkuSnapshotDTO;
+import com.yirancrazy.minimall.api.feign.GoodsFeignClient;
+import com.yirancrazy.minimall.api.feign.PayFeignClient;
+import com.yirancrazy.minimall.api.feign.StockFeignClient;
+import com.yirancrazy.minimall.common.event.EventBus;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.order.constant.OrderStatusEnum;
 import com.yirancrazy.minimall.order.entity.OrderPO;
@@ -23,11 +29,19 @@ import com.yirancrazy.minimall.order.service.impl.OrderServiceImpl;
 public class OrderServiceImplTest {
 
     private OrderManager manager;
+    private GoodsFeignClient goodsFeignClient;
+    private StockFeignClient stockFeignClient;
+    private PayFeignClient payFeignClient;
+    private EventBus eventBus;
     private OrderServiceImpl service;
 
     @BeforeEach
     void setUp() {
         manager = mock(OrderManager.class);
+        goodsFeignClient = mock(GoodsFeignClient.class);
+        stockFeignClient = mock(StockFeignClient.class);
+        payFeignClient = mock(PayFeignClient.class);
+        eventBus = mock(EventBus.class);
         lenient().when(manager.updateById(any(OrderPO.class))).thenReturn(true);
         doAnswer(inv -> {
             OrderPO p = inv.getArgument(0);
@@ -36,16 +50,49 @@ public class OrderServiceImplTest {
             }
             return true;
         }).when(manager).save(any(OrderPO.class));
-        service = new OrderServiceImpl(manager);
+        lenient().when(goodsFeignClient.skuSnapshot(any())).thenReturn(
+            new SkuSnapshotDTO(100L, 1L, "sku-100", new BigDecimal("9.90"), 100));
+        lenient().when(stockFeignClient.reserve(any())).thenReturn(Boolean.TRUE);
+        lenient().when(payFeignClient.create(any())).thenReturn(2001L);
+        service = new OrderServiceImpl(manager, goodsFeignClient, stockFeignClient, payFeignClient, eventBus);
     }
 
     /**
-     * 验证创建订单时状态为 PENDING。
+     * 验证创建订单时状态为 PENDING，并联动 stock.reserve 与 pay.create。
      */
     @Test
     public void create_sets_pending_status() {
         Long orderId = service.create(1L, 100L, 2);
         assertNotNull(orderId);
+        verify(stockFeignClient).reserve(any());
+        verify(payFeignClient).create(any());
+    }
+
+    /**
+     * 验证商品快照缺失时抛出 BizException。
+     */
+    @Test
+    public void create_snapshot_missing_throws() {
+        when(goodsFeignClient.skuSnapshot(any())).thenReturn(null);
+        assertThrows(BizException.class, () -> service.create(1L, 100L, 2));
+    }
+
+    /**
+     * 验证库存预占失败时抛出 BizException。
+     */
+    @Test
+    public void create_stock_reserve_fail_throws() {
+        when(stockFeignClient.reserve(any())).thenReturn(Boolean.FALSE);
+        assertThrows(BizException.class, () -> service.create(1L, 100L, 2));
+    }
+
+    /**
+     * 验证支付流水创建失败时抛出 BizException。
+     */
+    @Test
+    public void create_pay_create_fail_throws() {
+        when(payFeignClient.create(any())).thenReturn(-1L);
+        assertThrows(BizException.class, () -> service.create(1L, 100L, 2));
     }
 
     /**

@@ -15,6 +15,7 @@ import com.yirancrazy.minimall.goods.service.SkuService;
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */
+@Service
 public class SkuServiceImpl implements SkuService {
 
     private final SkuManager skuManager;

@@ -18,6 +18,8 @@ import com.yirancrazy.minimall.pay.service.PayService;
  * @DateTime: 2026/07/31
  */
 @Slf4j
+@RestController
+@RequestMapping("/internal/pay")
 public class InternalPayControllerV1 {
 
     private final PayService payService;

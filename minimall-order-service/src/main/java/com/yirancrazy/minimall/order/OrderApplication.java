@@ -14,6 +14,8 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
  */
 @SpringBootApplication
 @MapperScan("com.yirancrazy.minimall.order.mapper")
+@EnableDiscoveryClient
+@EnableFeignClients(basePackages = "com.yirancrazy.minimall.api.feign")
 public class OrderApplication {
     public static void main(String[] args) {
         SpringApplication.run(OrderApplication.class, args);

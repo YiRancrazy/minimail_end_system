@@ -15,6 +15,8 @@ import com.yirancrazy.minimall.stock.service.StockService;
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */
+@RestController
+@RequestMapping("/internal/stock")
 public class InternalStockControllerV1 {
 
     private final StockService stockService;

@@ -1,7 +1,18 @@
 package com.yirancrazy.minimall.order.service.impl;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import org.springframework.stereotype.Service;
+import io.seata.spring.annotation.GlobalTransactional;
 import lombok.extern.slf4j.Slf4j;
+import com.yirancrazy.minimall.api.dto.goods.SkuSnapshotDTO;
+import com.yirancrazy.minimall.api.dto.order.OrderPaidDTO;
+import com.yirancrazy.minimall.api.dto.pay.PayCreateDTO;
+import com.yirancrazy.minimall.api.dto.stock.StockReserveDTO;
+import com.yirancrazy.minimall.api.feign.GoodsFeignClient;
+import com.yirancrazy.minimall.api.feign.PayFeignClient;
+import com.yirancrazy.minimall.api.feign.StockFeignClient;
+import com.yirancrazy.minimall.common.event.EventBus;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.order.constant.OrderCodeEnum;
 import com.yirancrazy.minimall.order.constant.OrderStatusEnum;
@@ -9,37 +20,82 @@ import com.yirancrazy.minimall.order.entity.OrderPO;
 import com.yirancrazy.minimall.order.manager.OrderManager;
 import com.yirancrazy.minimall.order.service.OrderService;
 
-@Slf4j
-@Service
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 订单领域服务实现，实现Order相关业务逻辑
- * @Version: 1.0
- * @DateTime: 2026/07/31
+ * @Description: 订单领域服务实现，编排下单核心链路：取商品快照→锁库存→创建支付流水→持久化订单，并通过事件总线广播订单状态变更。
+ * @Version: 1.1
+ * @DateTime: 2026/08/02
  */
+@Slf4j
+@Service
 public class OrderServiceImpl implements OrderService {
 
     private final OrderManager orderManager;
+    private final GoodsFeignClient goodsFeignClient;
+    private final StockFeignClient stockFeignClient;
+    private final PayFeignClient payFeignClient;
+    private final EventBus eventBus;
 
-    public OrderServiceImpl(OrderManager orderManager) {
+    public OrderServiceImpl(OrderManager orderManager,
+                            GoodsFeignClient goodsFeignClient,
+                            StockFeignClient stockFeignClient,
+                            PayFeignClient payFeignClient,
+                            EventBus eventBus) {
         this.orderManager = orderManager;
+        this.goodsFeignClient = goodsFeignClient;
+        this.stockFeignClient = stockFeignClient;
+        this.payFeignClient = payFeignClient;
+        this.eventBus = eventBus;
     }
 
+    /**
+     * 创建订单：取商品快照算金额，Seata AT 全局事务内锁库存与创建支付流水，落库后返回订单ID。
+     * @param userId 用户ID
+     * @param skuId SKU ID
+     * @param quantity 购买数量
+     * @return 订单ID
+     */
     @Override
+    @GlobalTransactional
     public Long create(Long userId, Long skuId, Integer quantity) {
+        SkuSnapshotDTO snapshot = goodsFeignClient.skuSnapshot(skuId);
+        if (snapshot == null || snapshot.getPrice() == null) {
+            throw new BizException(OrderCodeEnum.ORDER_SKU_SNAPSHOT_MISSING);
+        }
+        BigDecimal amount = snapshot.getPrice().multiply(BigDecimal.valueOf(quantity));
+
+        Boolean reserved = stockFeignClient.reserve(new StockReserveDTO(skuId, quantity));
+        if (reserved == null || !reserved) {
+            throw new BizException(OrderCodeEnum.STOCK_RESERVE_FAIL);
+        }
+
         OrderPO po = new OrderPO();
         po.setUserId(userId);
         po.setSkuId(skuId);
         po.setQuantity(quantity);
+        po.setAmount(amount);
         po.setStatus(OrderStatusEnum.PENDING.intCode());
         orderManager.save(po);
-        log.info("order created, orderId={}, userId={}", po.getId(), userId);
+
+        Long payId = payFeignClient.create(new PayCreateDTO(String.valueOf(po.getId()), userId, 0L, amount));
+        if (payId == null || payId < 0) {
+            throw new BizException(OrderCodeEnum.ORDER_PAY_CREATE_FAIL);
+        }
+        po.setPayId(payId);
+        orderManager.updateById(po);
+
+        log.info("order created, orderId={}, userId={}, amount={}, payId={}",
+            po.getId(), userId, amount, payId);
         return po.getId();
     }
 
     @Override
     public void pay(Long orderId) {
+        OrderPO po = getOrder(orderId);
         transitStatus(orderId, OrderStatusEnum.PAID);
+        OrderPaidDTO event = new OrderPaidDTO(
+            orderId, po.getUserId(), po.getAmount(), LocalDateTime.now().toString());
+        eventBus.publish(event);
         log.info("order paid, orderId={}", orderId);
     }
 

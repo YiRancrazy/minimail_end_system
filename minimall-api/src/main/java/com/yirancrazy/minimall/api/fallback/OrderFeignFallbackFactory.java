@@ -17,6 +17,16 @@ public class OrderFeignFallbackFactory implements FallbackFactory<OrderFeignClie
     @Override
     public OrderFeignClient create(Throwable cause) {
         log.warn("order-service unreachable: {}", cause.getMessage());
-        return id -> "DOWN";
+        return new OrderFeignClient() {
+            @Override
+            public String status(Long id) {
+                return "DOWN";
+            }
+
+            @Override
+            public void pay(Long id) {
+                log.warn("order pay fallback, orderId={} skipped", id);
+            }
+        };
     }
 }

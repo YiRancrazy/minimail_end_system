@@ -7,6 +7,7 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.extern.slf4j.Slf4j;
+import com.yirancrazy.minimall.api.feign.OrderFeignClient;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.pay.constant.PayChannelEnum;
 import com.yirancrazy.minimall.pay.constant.PayCodeEnum;
@@ -26,8 +27,8 @@ import com.yirancrazy.minimall.pay.vo.RefundVO;
 /**
  * @Author: yirancrazy@gmail.com
  * @Description: 业务服务实现，处理核心业务逻辑。
- * @Version: 1.0
- * @DateTime: 2026/7/31
+ * @Version: 1.1
+ * @DateTime: 2026/08/02
  **/
 @Slf4j
 @Service
@@ -39,11 +40,14 @@ public class PayServiceImpl implements PayService {
     private final PayManager payManager;
     private final AlipayGateway alipayGateway;
     private final PayRefundMapper payRefundMapper;
+    private final OrderFeignClient orderFeignClient;
 
-    public PayServiceImpl(PayManager payManager, AlipayGateway alipayGateway, PayRefundMapper payRefundMapper) {
+    public PayServiceImpl(PayManager payManager, AlipayGateway alipayGateway,
+                          PayRefundMapper payRefundMapper, OrderFeignClient orderFeignClient) {
         this.payManager = payManager;
         this.alipayGateway = alipayGateway;
         this.payRefundMapper = payRefundMapper;
+        this.orderFeignClient = orderFeignClient;
     }
 
     /**
@@ -79,7 +83,7 @@ public class PayServiceImpl implements PayService {
     }
 
     /**
-     * 处理支付回调。
+     * 处理支付回调。成功时通过 Feign 推进订单状态，触发 OrderPaidDTO 事件广播。
      * @param dto 支付回调DTO
      */
     @Override
@@ -97,6 +101,10 @@ public class PayServiceImpl implements PayService {
         po.setPaidAt(LocalDateTime.now());
         payManager.updateById(po);
 
+        // ponytail: 同步 Feign 触发 order.pay，失败走 fallback 仅记日志；事务消息升级路径见 RocketMqEventBus。
+        if (dto.isSuccess() && po.getOrderNo() != null) {
+            orderFeignClient.pay(Long.valueOf(po.getOrderNo()));
+        }
         log.info("payment callback handled, paymentNo={}, success={}", dto.getPaymentNo(), dto.isSuccess());
     }
 

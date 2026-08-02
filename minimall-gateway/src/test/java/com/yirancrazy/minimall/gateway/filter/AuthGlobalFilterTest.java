@@ -87,4 +87,29 @@ class AuthGlobalFilterTest {
         assertEquals("42", ex.getRequest().getHeaders().getFirst("X-User-Id"));
         assertEquals("USER", ex.getRequest().getHeaders().getFirst("X-User-Role"));
     }
+
+    @Test
+    void merchant_token_injects_merchant_id_header() {
+        SecretKey key = Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8));
+        String token = Jwts.builder()
+            .subject("200")
+            .claim("username", "shopowner")
+            .claim("role", "MERCHANT")
+            .claim("jti", "merch-jti")
+            .issuedAt(new Date())
+            .expiration(new Date(System.currentTimeMillis() + 3600_000))
+            .signWith(key)
+            .compact();
+
+        when(redisTemplate.hasKey(anyString())).thenReturn(Mono.just(false));
+
+        ServerWebExchange ex = MockServerWebExchange.from(
+            MockServerHttpRequest.get("/api/v1/merchant/goods")
+                .header("Authorization", "Bearer " + token));
+        StepVerifier.create(filter.filter(ex, e -> Mono.empty()))
+            .verifyComplete();
+        assertEquals("200", ex.getRequest().getHeaders().getFirst("X-User-Id"));
+        assertEquals("MERCHANT", ex.getRequest().getHeaders().getFirst("X-User-Role"));
+        assertEquals("200", ex.getRequest().getHeaders().getFirst("X-Merchant-Id"));
+    }
 }

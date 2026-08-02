@@ -38,6 +38,9 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
         "/api/v1/auth/login",
         "/api/v1/auth/register",
         "/api/v1/auth/refresh-token",
+        "/api/v1/auth/send-reset-code",
+        "/api/v1/auth/reset-password",
+        "/api/v1/merchant/auth/login",
         "/actuator/health"
     );
 
@@ -47,6 +50,8 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
     );
 
     private static final Set<String> ALL_ROLES = Set.of("USER", "MERCHANT", "PLATFORM");
+
+    private static final String ROLE_MERCHANT = "MERCHANT";
 
     private final JwtVerifier verifier;
     private final ReactiveStringRedisTemplate redisTemplate;
@@ -122,16 +127,20 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
     private ServerWebExchange mutateWithHeaders(ServerWebExchange exchange, Claims claims, String jti) {
         String userId = claims.getSubject();
         String role = claims.get("role", String.class);
-        ServerHttpRequest mutated = exchange.getRequest().mutate()
+        String resolvedRole = role == null ? "USER" : role;
+        ServerHttpRequest.Builder builder = exchange.getRequest().mutate()
             .header("X-User-Id", userId)
-            .header("X-User-Role", role == null ? "USER" : role)
+            .header("X-User-Role", resolvedRole)
             .header("X-User-Jti", jti == null ? "" : jti)
             .header("X-Trace-Id",
                 exchange.getRequest().getHeaders().getFirst("X-Trace-Id") == null
                     ? UUID.randomUUID().toString().replace("-", "")
-                    : exchange.getRequest().getHeaders().getFirst("X-Trace-Id"))
-            .build();
-        return exchange.mutate().request(mutated).build();
+                    : exchange.getRequest().getHeaders().getFirst("X-Trace-Id"));
+        // 商家登录态：将账号ID作为 merchantId 透传，供 goods/merchant 等下游服务使用
+        if (ROLE_MERCHANT.equals(resolvedRole)) {
+            builder.header("X-Merchant-Id", userId);
+        }
+        return exchange.mutate().request(builder.build()).build();
     }
 
     private Mono<Void> reject(ServerWebExchange exchange, HttpStatus status, String reason) {

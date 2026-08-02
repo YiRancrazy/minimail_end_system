@@ -21,7 +21,10 @@ public enum AuthCodeEnum implements BaseEnum {
     USER_EXISTS("14005", "USER_EXISTS", "用户已存在"),
     REFRESH_TOKEN_INVALID("14006", "REFRESH_TOKEN_INVALID", "Refresh Token 无效"),
     ACCESS_DENIED("14007", "ACCESS_DENIED", "无访问权限"),
-    VERIFY_CODE_INVALID("14008", "VERIFY_CODE_INVALID", "验证码无效或已过期");
+    VERIFY_CODE_INVALID("14008", "VERIFY_CODE_INVALID", "验证码无效或已过期"),
+    ACCOUNT_DISABLED("14009", "ACCOUNT_DISABLED", "账号已禁用"),
+    ACCOUNT_ROLE_MISMATCH("14010", "ACCOUNT_ROLE_MISMATCH", "账号角色不匹配"),
+    MERCHANT_NOT_FOUND("14011", "MERCHANT_NOT_FOUND", "商家账号不存在");
 
     private final String code;
     private final String alias;

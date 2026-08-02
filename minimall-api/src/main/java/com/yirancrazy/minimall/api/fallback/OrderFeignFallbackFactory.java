@@ -4,12 +4,13 @@ import org.springframework.cloud.openfeign.FallbackFactory;
 import org.springframework.stereotype.Component;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.api.feign.OrderFeignClient;
+import com.yirancrazy.minimall.common.result.Result;
 
 /**
  * @Author: yirancrazy@gmail.com
  * @Description: OrderFeign Feign 降级工厂，处理OrderFeign服务调用失败降级
- * @Version: 1.0
- * @DateTime: 2026/07/31
+ * @Version: 1.2
+ * @DateTime: 2026/08/02
  */
 @Slf4j
 @Component
@@ -19,18 +20,20 @@ public class OrderFeignFallbackFactory implements FallbackFactory<OrderFeignClie
         log.warn("order-service unreachable: {}", cause.getMessage());
         return new OrderFeignClient() {
             @Override
-            public String status(Long id) {
-                return "DOWN";
+            public Result<Integer> status(Long id) {
+                return Result.success(null);
             }
 
             @Override
-            public void pay(Long id) {
+            public Result<Void> pay(Long id) {
                 log.warn("order pay fallback, orderId={} skipped", id);
+                return Result.success(null);
             }
 
             @Override
-            public void refundCallback(Long id, boolean success) {
+            public Result<Void> refundCallback(Long id, boolean success) {
                 log.warn("order refund-callback fallback, orderId={}, success={} skipped", id, success);
+                return Result.success(null);
             }
         };
     }

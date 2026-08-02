@@ -18,6 +18,7 @@ import com.yirancrazy.minimall.api.feign.PayFeignClient;
 import com.yirancrazy.minimall.api.feign.StockFeignClient;
 import com.yirancrazy.minimall.common.event.EventBus;
 import com.yirancrazy.minimall.common.exception.BizException;
+import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.order.constant.OrderStatusEnum;
 import com.yirancrazy.minimall.order.entity.OrderPO;
 import com.yirancrazy.minimall.order.manager.OrderManager;
@@ -50,10 +51,12 @@ public class OrderServiceImplTest {
             }
             return true;
         }).when(manager).save(any(OrderPO.class));
-        lenient().when(goodsFeignClient.skuSnapshot(any())).thenReturn(
-            new SkuSnapshotDTO(100L, 1L, "sku-100", new BigDecimal("9.90"), 100));
-        lenient().when(stockFeignClient.reserve(any())).thenReturn(Boolean.TRUE);
-        lenient().when(payFeignClient.create(any())).thenReturn(2001L);
+        lenient().when(goodsFeignClient.skuSnapshot(any())).thenReturn(Result.success(
+            new SkuSnapshotDTO(100L, 1L, "sku-100", new BigDecimal("9.90"), 100)));
+        lenient().when(stockFeignClient.reserve(any())).thenReturn(Result.success(Boolean.TRUE));
+        lenient().when(stockFeignClient.release(any())).thenReturn(Result.success(Boolean.TRUE));
+        lenient().when(payFeignClient.create(any())).thenReturn(Result.success(2001L));
+        lenient().when(payFeignClient.refund(any())).thenReturn(Result.success(Boolean.TRUE));
         lenient().doAnswer(inv -> {
             inv.getArgument(1, Runnable.class).run();
             return null;
@@ -77,7 +80,7 @@ public class OrderServiceImplTest {
      */
     @Test
     public void create_snapshot_missing_throws() {
-        when(goodsFeignClient.skuSnapshot(any())).thenReturn(null);
+        when(goodsFeignClient.skuSnapshot(any())).thenReturn(Result.success(null));
         assertThrows(BizException.class, () -> service.create(1L, 100L, 2));
     }
 
@@ -86,7 +89,7 @@ public class OrderServiceImplTest {
      */
     @Test
     public void create_stock_reserve_fail_throws() {
-        when(stockFeignClient.reserve(any())).thenReturn(Boolean.FALSE);
+        when(stockFeignClient.reserve(any())).thenReturn(Result.success(Boolean.FALSE));
         assertThrows(BizException.class, () -> service.create(1L, 100L, 2));
     }
 
@@ -95,7 +98,7 @@ public class OrderServiceImplTest {
      */
     @Test
     public void create_pay_create_fail_throws() {
-        when(payFeignClient.create(any())).thenReturn(-1L);
+        when(payFeignClient.create(any())).thenReturn(Result.success(-1L));
         assertThrows(BizException.class, () -> service.create(1L, 100L, 2));
     }
 

@@ -59,13 +59,13 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @GlobalTransactional
     public Long create(Long userId, Long skuId, Integer quantity) {
-        SkuSnapshotDTO snapshot = goodsFeignClient.skuSnapshot(skuId);
+        SkuSnapshotDTO snapshot = goodsFeignClient.skuSnapshot(skuId).getData();
         if (snapshot == null || snapshot.getPrice() == null) {
             throw new BizException(OrderCodeEnum.ORDER_SKU_SNAPSHOT_MISSING);
         }
         BigDecimal amount = snapshot.getPrice().multiply(BigDecimal.valueOf(quantity));
 
-        Boolean reserved = stockFeignClient.reserve(new StockReserveDTO(skuId, quantity));
+        Boolean reserved = stockFeignClient.reserve(new StockReserveDTO(skuId, quantity)).getData();
         if (reserved == null || !reserved) {
             throw new BizException(OrderCodeEnum.STOCK_RESERVE_FAIL);
         }
@@ -78,7 +78,8 @@ public class OrderServiceImpl implements OrderService {
         po.setStatus(OrderStatusEnum.PENDING.intCode());
         orderManager.save(po);
 
-        Long payId = payFeignClient.create(new PayCreateDTO(String.valueOf(po.getId()), userId, 0L, amount));
+        Long payId = payFeignClient.create(
+            new PayCreateDTO(String.valueOf(po.getId()), userId, 0L, amount)).getData();
         if (payId == null || payId < 0) {
             throw new BizException(OrderCodeEnum.ORDER_PAY_CREATE_FAIL);
         }
@@ -120,7 +121,7 @@ public class OrderServiceImpl implements OrderService {
         }
         transitStatus(orderId, OrderStatusEnum.CANCELLED);
         Boolean released = stockFeignClient.release(
-            new StockReserveDTO(po.getSkuId(), po.getQuantity()));
+            new StockReserveDTO(po.getSkuId(), po.getQuantity())).getData();
         if (released == null || !released) {
             log.warn("stock release failed on cancel, orderId={}", orderId);
         }
@@ -155,7 +156,7 @@ public class OrderServiceImpl implements OrderService {
         orderManager.updateById(po);
 
         Boolean refunded = payFeignClient.refund(
-            new RefundCreateDTO(po.getPayId(), po.getAmount(), null));
+            new RefundCreateDTO(po.getPayId(), po.getAmount(), null)).getData();
         if (refunded == null || !refunded) {
             log.warn("pay refund failed, orderId={}", orderId);
         }

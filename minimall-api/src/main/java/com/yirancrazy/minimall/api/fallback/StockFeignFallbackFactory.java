@@ -5,12 +5,13 @@ import org.springframework.stereotype.Component;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.api.dto.stock.StockReserveDTO;
 import com.yirancrazy.minimall.api.feign.StockFeignClient;
+import com.yirancrazy.minimall.common.result.Result;
 
 /**
  * @Author: yirancrazy@gmail.com
  * @Description: StockFeign Feign 降级工厂，处理StockFeign服务调用失败降级
- * @Version: 1.0
- * @DateTime: 2026/07/31
+ * @Version: 1.1
+ * @DateTime: 2026/08/02
  */
 @Slf4j
 @Component
@@ -20,13 +21,13 @@ public class StockFeignFallbackFactory implements FallbackFactory<StockFeignClie
         log.warn("stock-service unreachable: {}", cause.getMessage());
         return new StockFeignClient() {
             @Override
-            public Boolean reserve(StockReserveDTO dto) {
-                return false;
+            public Result<Boolean> reserve(StockReserveDTO dto) {
+                return Result.success(false);
             }
 
             @Override
-            public Boolean release(StockReserveDTO dto) {
-                return false;
+            public Result<Boolean> release(StockReserveDTO dto) {
+                return Result.success(false);
             }
         };
     }

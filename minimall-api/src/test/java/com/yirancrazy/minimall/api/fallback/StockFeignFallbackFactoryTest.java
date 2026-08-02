@@ -15,6 +15,6 @@ public class StockFeignFallbackFactoryTest {
         StockFeignFallbackFactory f = new StockFeignFallbackFactory();
         StockFeignClient client = f.create(new RuntimeException("down"));
         assertNotNull(client);
-        assertFalse(client.reserve(null));
+        assertFalse(client.reserve(null).getData());
     }
 }

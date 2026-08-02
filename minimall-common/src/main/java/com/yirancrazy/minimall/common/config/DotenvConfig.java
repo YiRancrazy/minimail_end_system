@@ -1,14 +1,13 @@
 package com.yirancrazy.minimall.common.config;
 
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.ApplicationContextInitializer;
-import org.springframework.context.ConfigurableApplicationContext;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import org.springframework.context.ApplicationContextInitializer;
+import org.springframework.context.ConfigurableApplicationContext;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * @Author: yirancrazy@gmail.com
@@ -51,7 +50,8 @@ public class DotenvConfig implements ApplicationContextInitializer {
                 log.debug("Loaded .env: {}={}", key, key.contains("PASSWORD") ? "***" : value);
             }
             log.info("Loaded {} entries from .env file", count);
-        } catch (IOException e) {
+        }
+        catch (IOException e) {
             log.warn("Failed to read .env file: {}", e.getMessage());
         }
     }

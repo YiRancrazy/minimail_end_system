@@ -23,11 +23,6 @@ public class PayFeignFallbackFactory implements FallbackFactory<PayFeignClient> 
             public Long create(PayCreateDTO dto) {
                 return -1L;
             }
-
-            @Override
-            public Boolean callback(Long payId) {
-                return false;
-            }
         };
     }
 }

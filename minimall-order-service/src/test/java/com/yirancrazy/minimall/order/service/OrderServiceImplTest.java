@@ -54,6 +54,10 @@ public class OrderServiceImplTest {
             new SkuSnapshotDTO(100L, 1L, "sku-100", new BigDecimal("9.90"), 100));
         lenient().when(stockFeignClient.reserve(any())).thenReturn(Boolean.TRUE);
         lenient().when(payFeignClient.create(any())).thenReturn(2001L);
+        lenient().doAnswer(inv -> {
+            inv.getArgument(1, Runnable.class).run();
+            return null;
+        }).when(eventBus).publishInTx(any(), any(Runnable.class), any());
         service = new OrderServiceImpl(manager, goodsFeignClient, stockFeignClient, payFeignClient, eventBus);
     }
 

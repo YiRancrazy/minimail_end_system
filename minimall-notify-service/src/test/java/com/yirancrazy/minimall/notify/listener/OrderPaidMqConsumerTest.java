@@ -1,11 +1,18 @@
 package com.yirancrazy.minimall.notify.listener;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 import com.yirancrazy.minimall.api.dto.order.OrderPaidDTO;
 import com.yirancrazy.minimall.notify.service.NotifyService;
 import com.yirancrazy.minimall.notify.sse.SseHub;
@@ -14,20 +21,28 @@ import com.yirancrazy.minimall.notify.sse.SseHub;
 /**
  * @Author: yirancrazy@gmail.com
  * @Description: OrderPaidMqConsumer 的单元测试类。
- * @Version: 1.0
- * @DateTime: 2026/7/31
+ * @Version: 1.1
+ * @DateTime: 2026/08/02
  **/
 class OrderPaidMqConsumerTest {
 
     private NotifyService notifyService;
     private SseHub sseHub;
+    @SuppressWarnings("unchecked")
+    private final ValueOperations<String, String> valueOps = mock(ValueOperations.class);
+    private StringRedisTemplate redis;
     private OrderPaidMqConsumer consumer;
 
     @BeforeEach
     void setUp() {
         notifyService = mock(NotifyService.class);
         sseHub = mock(SseHub.class);
-        consumer = new OrderPaidMqConsumer(notifyService, sseHub, "localhost:9876", "events", "notify-test");
+        redis = mock(StringRedisTemplate.class);
+        lenient().when(redis.opsForValue()).thenReturn(valueOps);
+        lenient().when(valueOps.setIfAbsent(anyString(), anyString(), any(Duration.class)))
+            .thenReturn(Boolean.TRUE);
+        consumer = new OrderPaidMqConsumer(notifyService, sseHub, redis,
+            "localhost:9876", "events", "notify-test");
     }
 
     @Test
@@ -53,6 +68,21 @@ class OrderPaidMqConsumerTest {
     void onPaid_givenNullOrderId_thenDoesNothing() {
         OrderPaidDTO event = new OrderPaidDTO(
             null, 7L, new BigDecimal("100.00"), "2026-07-29T10:00:00");
+
+        consumer.onPaid(event);
+
+        verifyNoInteractions(notifyService, sseHub);
+    }
+
+    /**
+     * 验证 SETNX 返回 false（重复事件）时跳过通知。
+     */
+    @Test
+    void onPaid_givenDuplicateEvent_thenSkipsNotification() {
+        when(valueOps.setIfAbsent(anyString(), anyString(), any(Duration.class)))
+            .thenReturn(Boolean.FALSE);
+        OrderPaidDTO event = new OrderPaidDTO(
+            99L, 7L, new BigDecimal("100.00"), "2026-07-29T10:00:00");
 
         consumer.onPaid(event);
 

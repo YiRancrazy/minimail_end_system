@@ -92,11 +92,23 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public void pay(Long orderId) {
         OrderPO po = getOrder(orderId);
-        transitStatus(orderId, OrderStatusEnum.PAID);
         OrderPaidDTO event = new OrderPaidDTO(
             orderId, po.getUserId(), po.getAmount(), LocalDateTime.now().toString());
-        eventBus.publish(event);
+        eventBus.publishInTx(event,
+            () -> transitStatus(orderId, OrderStatusEnum.PAID),
+            e -> isOrderPaid(orderId));
         log.info("order paid, orderId={}", orderId);
+    }
+
+    /**
+     * Check whether the order has reached PAID status, used as the
+     * transaction-message callback checker.
+     * @param orderId the order id to probe
+     * @return true if the order is PAID
+     */
+    private boolean isOrderPaid(Long orderId) {
+        OrderPO po = orderManager.getById(orderId);
+        return po != null && po.getStatus() == OrderStatusEnum.PAID.intCode();
     }
 
     @Override

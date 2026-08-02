@@ -20,7 +20,8 @@ public enum AuthCodeEnum implements BaseEnum {
     TOKEN_EXPIRED("14004", "TOKEN_EXPIRED", "Token 已过期"),
     USER_EXISTS("14005", "USER_EXISTS", "用户已存在"),
     REFRESH_TOKEN_INVALID("14006", "REFRESH_TOKEN_INVALID", "Refresh Token 无效"),
-    ACCESS_DENIED("14007", "ACCESS_DENIED", "无访问权限");
+    ACCESS_DENIED("14007", "ACCESS_DENIED", "无访问权限"),
+    VERIFY_CODE_INVALID("14008", "VERIFY_CODE_INVALID", "验证码无效或已过期");
 
     private final String code;
     private final String alias;

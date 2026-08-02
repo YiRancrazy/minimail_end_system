@@ -1,6 +1,7 @@
 package com.yirancrazy.minimall.auth.service.impl;
 
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -10,6 +11,7 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.security.crypto.bcrypt.BCrypt;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -17,13 +19,15 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import com.yirancrazy.minimall.api.dto.auth.TokenVO;
 import com.yirancrazy.minimall.auth.constant.AuthCodeEnum;
+import com.yirancrazy.minimall.auth.dto.ChangePasswordDTO;
 import com.yirancrazy.minimall.auth.dto.LoginDTO;
 import com.yirancrazy.minimall.auth.dto.RegisterDTO;
+import com.yirancrazy.minimall.auth.dto.ResetPasswordDTO;
+import com.yirancrazy.minimall.auth.dto.SendResetCodeDTO;
 import com.yirancrazy.minimall.auth.entity.UserAuthPO;
 import com.yirancrazy.minimall.auth.manager.UserAuthManager;
 import com.yirancrazy.minimall.auth.util.JwtUtil;
@@ -95,5 +99,98 @@ class AuthServiceImplTest {
         authService.signOut(1L, "abc");
         verify(redisTemplate).delete(Set.of("refresh:1:abc"));
         verify(valueOperations).set(eq("blacklist:jti:abc"), eq("1"), eq(900L), any());
+    }
+
+    @Test
+    void changePassword_success_updatesAndInvalidatesRefresh() {
+        String salt = "testsalt";
+        String hash = BCrypt.hashpw("oldpass" + salt, BCrypt.gensalt());
+        UserAuthPO po = new UserAuthPO();
+        po.setId(1L);
+        po.setSalt(salt);
+        po.setPasswordHash(hash);
+        when(userAuthManager.getById(1L)).thenReturn(po);
+        when(userAuthManager.updateById(any(UserAuthPO.class))).thenReturn(true);
+        when(redisTemplate.keys("refresh:1:*")).thenReturn(Set.of("refresh:1:abc"));
+
+        authService.changePassword(1L, new ChangePasswordDTO("oldpass", "newpass123"));
+
+        verify(userAuthManager).updateById(any(UserAuthPO.class));
+        verify(redisTemplate).delete(Set.of("refresh:1:abc"));
+    }
+
+    @Test
+    void changePassword_userNotFound_throws() {
+        when(userAuthManager.getById(999L)).thenReturn(null);
+        assertThrows(BizException.class,
+            () -> authService.changePassword(999L, new ChangePasswordDTO("old", "newpass123")));
+    }
+
+    @Test
+    void changePassword_oldPwdInvalid_throws() {
+        String salt = "testsalt";
+        String hash = BCrypt.hashpw("correctpass" + salt, BCrypt.gensalt());
+        UserAuthPO po = new UserAuthPO();
+        po.setId(1L);
+        po.setSalt(salt);
+        po.setPasswordHash(hash);
+        when(userAuthManager.getById(1L)).thenReturn(po);
+
+        assertThrows(BizException.class,
+            () -> authService.changePassword(1L, new ChangePasswordDTO("wrongpass", "newpass123")));
+    }
+
+    @Test
+    void sendResetCode_success_storesCode() {
+        UserAuthPO po = new UserAuthPO();
+        po.setUsername("testuser");
+        when(userAuthManager.getOne(any())).thenReturn(po);
+
+        authService.sendResetCode(new SendResetCodeDTO("testuser"));
+
+        verify(valueOperations).set(eq("pwd:reset:code:testuser"), anyString(), eq(600L), any());
+    }
+
+    @Test
+    void sendResetCode_userNotFound_throws() {
+        when(userAuthManager.getOne(any())).thenReturn(null);
+        assertThrows(BizException.class,
+            () -> authService.sendResetCode(new SendResetCodeDTO("nobody")));
+    }
+
+    @Test
+    void resetPassword_success_updatesAndClearsCodeAndRefresh() {
+        UserAuthPO po = new UserAuthPO();
+        po.setId(1L);
+        po.setUsername("testuser");
+        when(userAuthManager.getOne(any())).thenReturn(po);
+        when(valueOperations.get("pwd:reset:code:testuser")).thenReturn("123456");
+        when(userAuthManager.updateById(any(UserAuthPO.class))).thenReturn(true);
+        when(redisTemplate.keys("refresh:1:*")).thenReturn(Set.of("refresh:1:abc"));
+
+        authService.resetPassword(new ResetPasswordDTO("testuser", "123456", "newpass123"));
+
+        verify(userAuthManager).updateById(any(UserAuthPO.class));
+        verify(redisTemplate).delete("pwd:reset:code:testuser");
+        verify(redisTemplate).delete(Set.of("refresh:1:abc"));
+    }
+
+    @Test
+    void resetPassword_userNotFound_throws() {
+        when(userAuthManager.getOne(any())).thenReturn(null);
+        assertThrows(BizException.class,
+            () -> authService.resetPassword(new ResetPasswordDTO("nobody", "123456", "newpass123")));
+    }
+
+    @Test
+    void resetPassword_verifyCodeInvalid_throws() {
+        UserAuthPO po = new UserAuthPO();
+        po.setId(1L);
+        po.setUsername("testuser");
+        when(userAuthManager.getOne(any())).thenReturn(po);
+        when(valueOperations.get("pwd:reset:code:testuser")).thenReturn(null);
+
+        assertThrows(BizException.class,
+            () -> authService.resetPassword(new ResetPasswordDTO("testuser", "123456", "newpass123")));
     }
 }

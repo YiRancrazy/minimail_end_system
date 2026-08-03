@@ -19,6 +19,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.user.dto.UserCreateDTO;
 import com.yirancrazy.minimall.user.dto.UserPageDTO;
+import com.yirancrazy.minimall.user.dto.UserProfileDTO;
 import com.yirancrazy.minimall.user.dto.UserUpdateDTO;
 import com.yirancrazy.minimall.user.entity.UserPO;
 import com.yirancrazy.minimall.user.manager.UserManager;
@@ -149,5 +150,61 @@ public class UserServiceImplTest {
         IPage<UserPO> result = service.page(dto);
         assertEquals(expected, result);
         verify(userManager).page(any(IPage.class), any());
+    }
+
+    /**
+     * 验证 getProfile 在用户存在时返回含 avatar 和 gender 的实体。
+     */
+    @Test
+    public void getProfile_returns_user_with_avatar_and_gender() {
+        UserPO u = new UserPO();
+        u.setId(1L);
+        u.setUsername("alice");
+        u.setNickname("Alice");
+        u.setAvatar("https://example.com/avatar.png");
+        u.setGender(1);
+        when(userManager.getById(1L)).thenReturn(u);
+
+        UserPO result = service.getProfile(1L);
+        assertEquals(1L, result.getId());
+        assertEquals("Alice", result.getNickname());
+        assertEquals("https://example.com/avatar.png", result.getAvatar());
+        assertEquals(1, result.getGender());
+    }
+
+    /**
+     * 验证 getProfile 在用户不存在时抛出 BizException。
+     */
+    @Test
+    public void getProfile_throws_when_missing() {
+        when(userManager.getById(999L)).thenReturn(null);
+        assertThrows(BizException.class, () -> service.getProfile(999L));
+    }
+
+    /**
+     * 验证 updateProfile 仅更新 nickname、avatar、gender 字段。
+     */
+    @Test
+    public void updateProfile_updates_partial_fields() {
+        UserProfileDTO dto = new UserProfileDTO();
+        dto.setNickname("NewNick");
+        dto.setAvatar("https://example.com/new.png");
+        dto.setGender(2);
+
+        boolean ok = service.updateProfile(1L, dto);
+        assertTrue(ok);
+        verify(userManager).updateById(any(UserPO.class));
+    }
+
+    /**
+     * 验证 updateProfile 在 nickname 为 null 时不覆盖原值。
+     */
+    @Test
+    public void updateProfile_skips_null_fields() {
+        UserProfileDTO dto = new UserProfileDTO();
+        dto.setAvatar("https://example.com/new.png");
+
+        boolean ok = service.updateProfile(1L, dto);
+        assertTrue(ok);
     }
 }

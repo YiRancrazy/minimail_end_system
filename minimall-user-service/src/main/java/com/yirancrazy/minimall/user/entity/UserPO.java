@@ -7,14 +7,18 @@ import com.yirancrazy.minimall.common.base.BasePO;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: User持久化对象，映射user表
- * @Version: 1.0
- * @DateTime: 2026/07/31
- */
+ * @Description: User 持久化对象，映射 t_user 表
+ * @Version: 1.1
+ * @DateTime: 2026/08/03
+ **/
 @Data
+@EqualsAndHashCode(callSuper = true)
+@TableName("t_user")
 public class UserPO extends BasePO {
     private String username;
     private String nickname;
     private String phone;
     private String email;
+    private String avatar;
+    private Integer gender;
 }

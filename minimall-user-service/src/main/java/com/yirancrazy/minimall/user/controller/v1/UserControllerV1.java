@@ -2,10 +2,12 @@ package com.yirancrazy.minimall.user.controller.v1;
 
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -13,6 +15,7 @@ import jakarta.validation.Valid;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.user.dto.UserCreateDTO;
 import com.yirancrazy.minimall.user.dto.UserPageDTO;
+import com.yirancrazy.minimall.user.dto.UserProfileDTO;
 import com.yirancrazy.minimall.user.dto.UserUpdateDTO;
 import com.yirancrazy.minimall.user.entity.UserPO;
 import com.yirancrazy.minimall.user.service.UserService;
@@ -84,5 +87,27 @@ public class UserControllerV1 {
     @DeleteMapping("/{id}")
     public Result<Boolean> delete(@PathVariable("id") Long id) {
         return Result.success(userService.delete(id));
+    }
+
+    /**
+     * 查询当前用户个人资料。
+     * @param userId 用户ID，来自网关 X-User-Id 头
+     * @return 用户信息
+     */
+    @GetMapping("/profile")
+    public Result<UserPO> getProfile(@RequestHeader("X-User-Id") Long userId) {
+        return Result.success(userService.getProfile(userId));
+    }
+
+    /**
+     * 更新个人资料，仅修改昵称、头像、性别。
+     * @param userId 用户ID，来自网关 X-User-Id 头
+     * @param dto 个人资料更新入参
+     * @return 更新是否成功
+     */
+    @PatchMapping("/profile")
+    public Result<Boolean> updateProfile(@RequestHeader("X-User-Id") Long userId,
+                                         @Valid @RequestBody UserProfileDTO dto) {
+        return Result.success(userService.updateProfile(userId, dto));
     }
 }

@@ -3,19 +3,20 @@ package com.yirancrazy.minimall.user.service;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.yirancrazy.minimall.user.dto.UserCreateDTO;
 import com.yirancrazy.minimall.user.dto.UserPageDTO;
+import com.yirancrazy.minimall.user.dto.UserProfileDTO;
 import com.yirancrazy.minimall.user.dto.UserUpdateDTO;
 import com.yirancrazy.minimall.user.entity.UserPO;
 
 /**
- * 用户领域服务接口，定义用户查询、创建、更新与删除的业务契约。
+ * 用户领域服务接口，定义用户查询、创建、更新、删除与个人资料管理业务契约。
  * @Author: yirancrazy@gmail.com
- * @Description: 用户服务接口，提供用户CRUD与分页查询业务契约。
- * @Version: 1.1
- * @DateTime: 2026/7/31
+ * @Description: 用户服务接口，提供用户 CRUD、分页查询与个人资料管理业务契约。
+ * @Version: 1.2
+ * @DateTime: 2026/08/03
  */
 public interface UserService {
     /**
-     * 根据ID查询用户。
+     * 根据 ID 查询用户。
      * @param id 用户ID
      * @return 用户PO
      */
@@ -49,4 +50,20 @@ public interface UserService {
      * @return 用户分页结果
      */
     IPage<UserPO> page(UserPageDTO dto);
+
+    /**
+     * 查询当前用户个人资料。
+     * @param userId 用户ID
+     * @return 用户PO
+     * @throws com.yirancrazy.minimall.common.exception.BizException 用户不存在时
+     */
+    UserPO getProfile(Long userId);
+
+    /**
+     * 更新个人资料，仅修改 nickname、avatar、gender 字段，null 字段不覆盖。
+     * @param userId 用户ID
+     * @param dto 个人资料更新入参
+     * @return 更新是否成功
+     */
+    boolean updateProfile(Long userId, UserProfileDTO dto);
 }

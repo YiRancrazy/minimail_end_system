@@ -9,6 +9,7 @@ import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.user.constant.UserCodeEnum;
 import com.yirancrazy.minimall.user.dto.UserCreateDTO;
 import com.yirancrazy.minimall.user.dto.UserPageDTO;
+import com.yirancrazy.minimall.user.dto.UserProfileDTO;
 import com.yirancrazy.minimall.user.dto.UserUpdateDTO;
 import com.yirancrazy.minimall.user.entity.UserPO;
 import com.yirancrazy.minimall.user.manager.UserManager;
@@ -104,5 +105,46 @@ public class UserServiceImpl implements UserService {
             .and(dto.getKeyword() != null && !dto.getKeyword().isBlank(),
                 w -> w.like(UserPO::getUsername, dto.getKeyword())
                     .or().like(UserPO::getNickname, dto.getKeyword())));
+    }
+
+    /**
+     * 查询当前用户个人资料，不存在时抛出用户不存在业务异常。
+     *
+     * @param userId 用户唯一标识
+     * @return 用户持久化实体
+     * @throws BizException 用户不存在时
+     */
+    @Override
+    public UserPO getProfile(Long userId) {
+        UserPO u = userManager.getById(userId);
+        if (u == null) {
+            throw new BizException(UserCodeEnum.USER_NOT_FOUND);
+        }
+        return u;
+    }
+
+    /**
+     * 更新个人资料，仅修改 nickname、avatar、gender 字段，null 字段不覆盖原值。
+     *
+     * @param userId 用户唯一标识
+     * @param dto 个人资料更新入参
+     * @return 更新是否成功
+     */
+    @Override
+    public boolean updateProfile(Long userId, UserProfileDTO dto) {
+        UserPO user = new UserPO();
+        user.setId(userId);
+        if (dto.getNickname() != null) {
+            user.setNickname(dto.getNickname());
+        }
+        if (dto.getAvatar() != null) {
+            user.setAvatar(dto.getAvatar());
+        }
+        if (dto.getGender() != null) {
+            user.setGender(dto.getGender());
+        }
+        boolean ok = userManager.updateById(user);
+        log.info("profile updated, userId={}", userId);
+        return ok;
     }
 }

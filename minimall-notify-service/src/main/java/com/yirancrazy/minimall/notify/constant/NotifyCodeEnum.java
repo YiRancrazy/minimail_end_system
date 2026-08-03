@@ -7,7 +7,7 @@ import com.yirancrazy.minimall.common.base.BaseEnum;
 /**
  * @Author: yirancrazy@gmail.com
  * @Description: 通知Notify错误码枚举，定义通知相关错误码
- * @Version: 1.0
+ * @Version: 1.1
  * @DateTime: 2026/08/03
  */
 @Getter
@@ -17,7 +17,9 @@ public enum NotifyCodeEnum implements BaseEnum {
     NOTIFY_NO_PERMISSION("19002", "NOTIFY_NO_PERMISSION", "无权操作该消息"),
     BROADCAST_RECIPIENT_INVALID("19003", "BROADCAST_RECIPIENT_INVALID", "广播接收方类型非法"),
     NOTIFY_BATCH_IDS_EMPTY("19004", "NOTIFY_BATCH_IDS_EMPTY", "消息ID列表不能为空"),
-    NOTIFY_BATCH_TOO_MANY("19005", "NOTIFY_BATCH_TOO_MANY", "单次最多删除100条消息");
+    NOTIFY_BATCH_TOO_MANY("19005", "NOTIFY_BATCH_TOO_MANY", "单次最多删除100条消息"),
+    COMPLAINT_STATUS_INVALID("19006", "COMPLAINT_STATUS_INVALID", "投诉状态流转非法"),
+    COMPLAINT_NOT_FOUND("19007", "COMPLAINT_NOT_FOUND", "投诉不存在");
 
     private final String code;
     private final String alias;

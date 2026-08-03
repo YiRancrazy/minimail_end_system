@@ -16,6 +16,9 @@ import com.yirancrazy.minimall.notify.constant.RecipientTypeEnum;
 import com.yirancrazy.minimall.notify.dto.NotifyBatchDeleteDTO;
 import com.yirancrazy.minimall.notify.dto.NotifyBroadcastDTO;
 import com.yirancrazy.minimall.notify.dto.NotifyListDTO;
+import com.yirancrazy.minimall.notify.dto.NotifyMarketingPushDTO;
+import com.yirancrazy.minimall.notify.dto.NotifySystemAlertDTO;
+import com.yirancrazy.minimall.notify.dto.NotifyViolationWarningDTO;
 import com.yirancrazy.minimall.notify.entity.NotifyMessagePO;
 import com.yirancrazy.minimall.notify.service.NotifyService;
 
@@ -206,6 +209,39 @@ public class NotifyControllerV1 {
                                   @Valid @RequestBody NotifyBroadcastDTO dto) {
         dto.setSenderId(adminId);
         notifyService.broadcast(dto);
+        return Result.success(null);
+    }
+
+    /**
+     * 营销推送，向指定用户列表或全量用户发送营销站内信。
+     * @param dto 营销推送入参
+     * @return 统一响应体
+     */
+    @PostMapping("/platform/marketing-push")
+    public Result<Void> marketingPush(@Valid @RequestBody NotifyMarketingPushDTO dto) {
+        notifyService.marketingPush(dto);
+        return Result.success(null);
+    }
+
+    /**
+     * 违规警告通知，向指定商家发送违规警告站内信。
+     * @param dto 违规警告入参
+     * @return 统一响应体
+     */
+    @PostMapping("/platform/violation-warning")
+    public Result<Void> violationWarning(@Valid @RequestBody NotifyViolationWarningDTO dto) {
+        notifyService.violationWarning(dto);
+        return Result.success(null);
+    }
+
+    /**
+     * 系统告警通知，向平台管理员发送系统异常/故障预警站内信。
+     * @param dto 系统告警入参
+     * @return 统一响应体
+     */
+    @PostMapping("/platform/system-alert")
+    public Result<Void> systemAlert(@Valid @RequestBody NotifySystemAlertDTO dto) {
+        notifyService.systemAlert(dto);
         return Result.success(null);
     }
 }

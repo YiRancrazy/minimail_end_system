@@ -4,6 +4,9 @@ import java.util.List;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.yirancrazy.minimall.notify.dto.NotifyBroadcastDTO;
 import com.yirancrazy.minimall.notify.dto.NotifyListDTO;
+import com.yirancrazy.minimall.notify.dto.NotifyMarketingPushDTO;
+import com.yirancrazy.minimall.notify.dto.NotifySystemAlertDTO;
+import com.yirancrazy.minimall.notify.dto.NotifyViolationWarningDTO;
 import com.yirancrazy.minimall.notify.entity.NotifyMessagePO;
 
 /**
@@ -86,4 +89,22 @@ public interface NotifyService {
      * @param dto 广播入参
      */
     void broadcast(NotifyBroadcastDTO dto);
+
+    /**
+     * 营销推送，向指定用户列表发送营销站内信；userIds 为 null 时全量广播。
+     * @param dto 营销推送入参
+     */
+    void marketingPush(NotifyMarketingPushDTO dto);
+
+    /**
+     * 违规警告通知，向指定商家发送违规警告站内信。
+     * @param dto 违规警告入参
+     */
+    void violationWarning(NotifyViolationWarningDTO dto);
+
+    /**
+     * 系统告警通知，向平台管理员发送系统异常/故障预警站内信。
+     * @param dto 系统告警入参
+     */
+    void systemAlert(NotifySystemAlertDTO dto);
 }

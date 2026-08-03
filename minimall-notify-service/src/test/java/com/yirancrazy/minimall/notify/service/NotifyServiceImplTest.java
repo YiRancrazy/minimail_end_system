@@ -25,6 +25,9 @@ import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.notify.constant.RecipientTypeEnum;
 import com.yirancrazy.minimall.notify.dto.NotifyBroadcastDTO;
 import com.yirancrazy.minimall.notify.dto.NotifyListDTO;
+import com.yirancrazy.minimall.notify.dto.NotifyMarketingPushDTO;
+import com.yirancrazy.minimall.notify.dto.NotifySystemAlertDTO;
+import com.yirancrazy.minimall.notify.dto.NotifyViolationWarningDTO;
 import com.yirancrazy.minimall.notify.entity.NotifyMessagePO;
 import com.yirancrazy.minimall.notify.manager.NotifyManager;
 import com.yirancrazy.minimall.notify.service.impl.NotifyServiceImpl;
@@ -293,5 +296,69 @@ public class NotifyServiceImplTest {
         m.setRecipientType(RecipientTypeEnum.USER.intCode());
         m.setReadFlag(readFlag);
         return m;
+    }
+
+    /**
+     * 验证营销推送指定用户列表时逐条落库并 SSE 推送。
+     */
+    @Test
+    public void marketingPush_with_userIds_saves_and_sse() {
+        NotifyMarketingPushDTO dto = new NotifyMarketingPushDTO();
+        dto.setTitle("促销");
+        dto.setContent("满减活动");
+        dto.setUserIds(List.of(1L, 2L));
+
+        service.marketingPush(dto);
+
+        verify(notifyManager, org.mockito.Mockito.times(2)).save(any(NotifyMessagePO.class));
+        verify(sseHub).send(1L, "促销");
+        verify(sseHub).send(2L, "促销");
+    }
+
+    /**
+     * 验证营销推送全量广播（userIds=null）时落库一条 userId=0 的占位记录。
+     */
+    @Test
+    public void marketingPush_broadcast_saves_placeholder() {
+        NotifyMarketingPushDTO dto = new NotifyMarketingPushDTO();
+        dto.setTitle("促销");
+        dto.setContent("满减活动");
+
+        service.marketingPush(dto);
+
+        verify(notifyManager).save(any(NotifyMessagePO.class));
+        verify(sseHub, never()).send(any(), any());
+    }
+
+    /**
+     * 验证违规警告通知向商家落库 VIOLATION 类型消息并 SSE 推送。
+     */
+    @Test
+    public void violationWarning_saves_and_sse() {
+        NotifyViolationWarningDTO dto = new NotifyViolationWarningDTO();
+        dto.setMerchantId(100L);
+        dto.setTitle("违规警告");
+        dto.setContent("商品描述不符");
+        dto.setViolationType("FAKE");
+
+        service.violationWarning(dto);
+
+        verify(notifyManager).save(any(NotifyMessagePO.class));
+        verify(sseHub).send(100L, "违规警告");
+    }
+
+    /**
+     * 验证系统告警通知向平台落库 SYSTEM 类型消息。
+     */
+    @Test
+    public void systemAlert_saves_message() {
+        NotifySystemAlertDTO dto = new NotifySystemAlertDTO();
+        dto.setTitle("系统告警");
+        dto.setContent("数据库连接超时");
+        dto.setAlertLevel("CRITICAL");
+
+        service.systemAlert(dto);
+
+        verify(notifyManager).save(any(NotifyMessagePO.class));
     }
 }

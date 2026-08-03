@@ -14,6 +14,9 @@ import com.yirancrazy.minimall.notify.constant.NotifyMessageTypeEnum;
 import com.yirancrazy.minimall.notify.constant.RecipientTypeEnum;
 import com.yirancrazy.minimall.notify.dto.NotifyBroadcastDTO;
 import com.yirancrazy.minimall.notify.dto.NotifyListDTO;
+import com.yirancrazy.minimall.notify.dto.NotifyMarketingPushDTO;
+import com.yirancrazy.minimall.notify.dto.NotifySystemAlertDTO;
+import com.yirancrazy.minimall.notify.dto.NotifyViolationWarningDTO;
 import com.yirancrazy.minimall.notify.entity.NotifyMessagePO;
 import com.yirancrazy.minimall.notify.manager.NotifyManager;
 import com.yirancrazy.minimall.notify.service.NotifyService;
@@ -224,6 +227,77 @@ public class NotifyServiceImpl implements NotifyService {
         }
         log.info("broadcast notify, recipientType={}, targetId={}",
             dto.getRecipientType(), dto.getTargetId());
+    }
+
+    /**
+     * 营销推送，向指定用户列表发送营销站内信；userIds 为 null 或空时全量广播（落库 userId=0 占位）。
+     * @param dto 营销推送入参
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void marketingPush(NotifyMarketingPushDTO dto) {
+        if (dto.getUserIds() == null || dto.getUserIds().isEmpty()) {
+            NotifyMessagePO m = new NotifyMessagePO();
+            m.setUserId(0L);
+            m.setRecipientType(RecipientTypeEnum.USER.intCode());
+            m.setMessageType(NotifyMessageTypeEnum.PROMOTION.intCode());
+            m.setTitle(dto.getTitle());
+            m.setContent(dto.getContent());
+            m.setReadFlag(0);
+            notifyManager.save(m);
+        }
+        else {
+            for (Long uid : dto.getUserIds()) {
+                NotifyMessagePO m = new NotifyMessagePO();
+                m.setUserId(uid);
+                m.setRecipientType(RecipientTypeEnum.USER.intCode());
+                m.setMessageType(NotifyMessageTypeEnum.PROMOTION.intCode());
+                m.setTitle(dto.getTitle());
+                m.setContent(dto.getContent());
+                m.setReadFlag(0);
+                notifyManager.save(m);
+                sseHub.send(uid, dto.getTitle());
+            }
+        }
+        log.info("marketing push, userIds={}", dto.getUserIds());
+    }
+
+    /**
+     * 违规警告通知，向指定商家发送违规警告站内信并 SSE 推送。
+     * @param dto 违规警告入参
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void violationWarning(NotifyViolationWarningDTO dto) {
+        NotifyMessagePO m = new NotifyMessagePO();
+        m.setUserId(dto.getMerchantId());
+        m.setRecipientType(RecipientTypeEnum.MERCHANT.intCode());
+        m.setMessageType(NotifyMessageTypeEnum.VIOLATION.intCode());
+        m.setTitle(dto.getTitle());
+        m.setContent(dto.getContent());
+        m.setReadFlag(0);
+        notifyManager.save(m);
+        sseHub.send(dto.getMerchantId(), dto.getTitle());
+        log.info("violation warning, merchantId={}, type={}",
+            dto.getMerchantId(), dto.getViolationType());
+    }
+
+    /**
+     * 系统告警通知，向平台管理员发送系统异常/故障预警站内信。
+     * @param dto 系统告警入参
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void systemAlert(NotifySystemAlertDTO dto) {
+        NotifyMessagePO m = new NotifyMessagePO();
+        m.setUserId(0L);
+        m.setRecipientType(RecipientTypeEnum.PLATFORM.intCode());
+        m.setMessageType(NotifyMessageTypeEnum.SYSTEM.intCode());
+        m.setTitle(dto.getTitle());
+        m.setContent(dto.getContent());
+        m.setReadFlag(0);
+        notifyManager.save(m);
+        log.info("system alert, title={}, level={}", dto.getTitle(), dto.getAlertLevel());
     }
 
     private NotifyMessagePO getOwnedMessage(Long id, Integer recipientType, Long userId) {

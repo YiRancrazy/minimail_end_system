@@ -23,7 +23,9 @@ import com.yirancrazy.minimall.pay.entity.PayTransactionPO;
 import com.yirancrazy.minimall.pay.gateway.AlipayGateway;
 import com.yirancrazy.minimall.pay.manager.PayManager;
 import com.yirancrazy.minimall.pay.mapper.PayRefundMapper;
+import com.yirancrazy.minimall.pay.mapper.PayTransactionMapper;
 import com.yirancrazy.minimall.pay.service.PayService;
+import com.yirancrazy.minimall.pay.vo.PayStatisticsVO;
 import com.yirancrazy.minimall.pay.vo.PaymentParamsVO;
 import com.yirancrazy.minimall.pay.vo.RefundVO;
 
@@ -44,13 +46,16 @@ public class PayServiceImpl implements PayService {
     private final PayManager payManager;
     private final AlipayGateway alipayGateway;
     private final PayRefundMapper payRefundMapper;
+    private final PayTransactionMapper payTransactionMapper;
     private final OrderFeignClient orderFeignClient;
 
     public PayServiceImpl(PayManager payManager, AlipayGateway alipayGateway,
-                          PayRefundMapper payRefundMapper, OrderFeignClient orderFeignClient) {
+                          PayRefundMapper payRefundMapper, PayTransactionMapper payTransactionMapper,
+                          OrderFeignClient orderFeignClient) {
         this.payManager = payManager;
         this.alipayGateway = alipayGateway;
         this.payRefundMapper = payRefundMapper;
+        this.payTransactionMapper = payTransactionMapper;
         this.orderFeignClient = orderFeignClient;
     }
 
@@ -233,5 +238,47 @@ public class PayServiceImpl implements PayService {
             .ge(dto.getStartTime() != null, PayTransactionPO::getCreateTime, dto.getStartTime())
             .le(dto.getEndTime() != null, PayTransactionPO::getCreateTime, dto.getEndTime())
             .orderByDesc(PayTransactionPO::getCreateTime));
+    }
+
+    /**
+     * 平台全平台交易流水分页查询，不绑定 merchantId。
+     * @param dto 分页查询入参
+     * @return 支付流水分页结果
+     */
+    @Override
+    public IPage<PayTransactionPO> platformPage(PayPageDTO dto) {
+        Page<PayTransactionPO> page = new Page<>(dto.getPageNo(), dto.getPageSize());
+        return payManager.page(page, Wrappers.lambdaQuery(PayTransactionPO.class)
+            .eq(dto.getStatus() != null, PayTransactionPO::getStatus, dto.getStatus())
+            .ge(dto.getStartTime() != null, PayTransactionPO::getCreateTime, dto.getStartTime())
+            .le(dto.getEndTime() != null, PayTransactionPO::getCreateTime, dto.getEndTime())
+            .orderByDesc(PayTransactionPO::getCreateTime));
+    }
+
+    /**
+     * 资金统计聚合查询，merchantId 为空时统计全平台。
+     * @param merchantId 商家ID，null 表示全平台
+     * @param dto 分页查询入参（复用时间范围字段）
+     * @return 统计VO
+     */
+    @Override
+    public PayStatisticsVO statistics(Long merchantId, PayPageDTO dto) {
+        return payTransactionMapper.statistics(merchantId, dto.getStartTime(), dto.getEndTime());
+    }
+
+    /**
+     * 异常支付冻结，将支付单状态置为 FROZEN，不存在时抛出 PAY_NOT_FOUND。
+     * @param paymentNo 支付单号
+     */
+    @Override
+    public void freeze(String paymentNo) {
+        PayTransactionPO po = payManager.getOne(
+            Wrappers.lambdaQuery(PayTransactionPO.class).eq(PayTransactionPO::getPaymentNo, paymentNo));
+        if (po == null) {
+            throw new BizException(PayCodeEnum.PAY_NOT_FOUND);
+        }
+        po.setStatus(Integer.parseInt(PayStatusEnum.FROZEN.getCode()));
+        payManager.updateById(po);
+        log.info("payment frozen, paymentNo={}", paymentNo);
     }
 }

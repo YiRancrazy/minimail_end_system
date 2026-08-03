@@ -19,7 +19,8 @@ public enum PayStatusEnum implements BaseEnum {
     FAILED(3, "FAILED", "支付失败"),
     CLOSED(4, "CLOSED", "已关闭"),
     REFUNDING(5, "REFUNDING", "退款中"),
-    REFUNDED(6, "REFUNDED", "已退款");
+    REFUNDED(6, "REFUNDED", "已退款"),
+    FROZEN(7, "FROZEN", "已冻结");
 
     private final int code;
     private final String alias;

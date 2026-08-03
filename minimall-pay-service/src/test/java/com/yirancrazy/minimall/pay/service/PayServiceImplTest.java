@@ -26,7 +26,9 @@ import com.yirancrazy.minimall.pay.entity.PayTransactionPO;
 import com.yirancrazy.minimall.pay.gateway.AlipayGateway;
 import com.yirancrazy.minimall.pay.manager.PayManager;
 import com.yirancrazy.minimall.pay.mapper.PayRefundMapper;
+import com.yirancrazy.minimall.pay.mapper.PayTransactionMapper;
 import com.yirancrazy.minimall.pay.service.impl.PayServiceImpl;
+import com.yirancrazy.minimall.pay.vo.PayStatisticsVO;
 import com.yirancrazy.minimall.pay.vo.PaymentParamsVO;
 
 
@@ -41,6 +43,7 @@ public class PayServiceImplTest {
     private PayManager manager;
     private AlipayGateway alipayGateway;
     private PayRefundMapper payRefundMapper;
+    private PayTransactionMapper payTransactionMapper;
     private OrderFeignClient orderFeignClient;
     private PayServiceImpl service;
 
@@ -49,6 +52,7 @@ public class PayServiceImplTest {
         manager = mock(PayManager.class);
         alipayGateway = mock(AlipayGateway.class);
         payRefundMapper = mock(PayRefundMapper.class);
+        payTransactionMapper = mock(PayTransactionMapper.class);
         orderFeignClient = mock(OrderFeignClient.class);
         lenient().when(manager.updateById(any(PayTransactionPO.class))).thenReturn(true);
         lenient().when(alipayGateway.createPayment(anyString(), any(BigDecimal.class), anyString(), anyString()))
@@ -60,7 +64,7 @@ public class PayServiceImplTest {
             }
             return true;
         }).when(manager).save(any(PayTransactionPO.class));
-        service = new PayServiceImpl(manager, alipayGateway, payRefundMapper, orderFeignClient);
+        service = new PayServiceImpl(manager, alipayGateway, payRefundMapper, payTransactionMapper, orderFeignClient);
     }
 
     /**
@@ -196,5 +200,58 @@ public class PayServiceImplTest {
         IPage<PayTransactionPO> result = service.page(10L, dto);
         assertEquals(expected, result);
         verify(manager).page(any(IPage.class), any());
+    }
+
+    /**
+     * 验证 platformPage 委托给 manager.page，不绑定 merchantId。
+     */
+    @Test
+    public void platformPage_delegates_to_manager() {
+        PayPageDTO dto = new PayPageDTO();
+        IPage<PayTransactionPO> expected = new Page<>(1, 20);
+        when(manager.page(any(IPage.class), any())).thenReturn(expected);
+
+        IPage<PayTransactionPO> result = service.platformPage(dto);
+        assertEquals(expected, result);
+        verify(manager).page(any(IPage.class), any());
+    }
+
+    /**
+     * 验证 statistics 委托给 mapper.statistics。
+     */
+    @Test
+    public void statistics_delegates_to_mapper() {
+        PayPageDTO dto = new PayPageDTO();
+        PayStatisticsVO expected = new PayStatisticsVO(new BigDecimal("1000.00"), new BigDecimal("100.00"), 50L);
+        when(payTransactionMapper.statistics(any(), any(), any())).thenReturn(expected);
+
+        PayStatisticsVO result = service.statistics(10L, dto);
+        assertEquals(expected, result);
+        verify(payTransactionMapper).statistics(any(), any(), any());
+    }
+
+    /**
+     * 验证 freeze 在支付单存在时将状态置为 FROZEN。
+     */
+    @Test
+    public void freeze_marks_frozen_when_exists() {
+        PayTransactionPO rec = new PayTransactionPO();
+        rec.setId(1L);
+        rec.setPaymentNo("PAY123");
+        rec.setStatus(1);
+        when(manager.getOne(any())).thenReturn(rec);
+
+        service.freeze("PAY123");
+        assertEquals(7, rec.getStatus());
+        verify(manager).updateById(rec);
+    }
+
+    /**
+     * 验证 freeze 在找不到支付单时抛出 PAY_NOT_FOUND。
+     */
+    @Test
+    public void freeze_missing_throws_biz() {
+        when(manager.getOne(any())).thenReturn(null);
+        assertThrows(BizException.class, () -> service.freeze("PAY999"));
     }
 }

@@ -6,6 +6,7 @@ import com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO;
 import com.yirancrazy.minimall.pay.dto.PayCallbackDTO;
 import com.yirancrazy.minimall.pay.dto.PayPageDTO;
 import com.yirancrazy.minimall.pay.entity.PayTransactionPO;
+import com.yirancrazy.minimall.pay.vo.PayStatisticsVO;
 import com.yirancrazy.minimall.pay.vo.PaymentParamsVO;
 import com.yirancrazy.minimall.pay.vo.RefundVO;
 
@@ -62,4 +63,25 @@ public interface PayService {
      * @return 支付流水分页结果
      */
     IPage<PayTransactionPO> page(Long merchantId, PayPageDTO dto);
+
+    /**
+     * 平台全平台交易流水分页查询，不绑定 merchantId。
+     * @param dto 分页查询入参
+     * @return 支付流水分页结果
+     */
+    IPage<PayTransactionPO> platformPage(PayPageDTO dto);
+
+    /**
+     * 资金统计聚合查询，merchantId 为空时统计全平台。
+     * @param merchantId 商家ID，null 表示全平台
+     * @param dto 分页查询入参（复用时间范围字段）
+     * @return 统计VO
+     */
+    PayStatisticsVO statistics(Long merchantId, PayPageDTO dto);
+
+    /**
+     * 异常支付冻结，将支付单状态置为 FROZEN，不存在时抛出 PAY_NOT_FOUND。
+     * @param paymentNo 支付单号
+     */
+    void freeze(String paymentNo);
 }

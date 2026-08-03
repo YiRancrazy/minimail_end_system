@@ -21,6 +21,7 @@ import com.yirancrazy.minimall.pay.dto.PayCreateDTO;
 import com.yirancrazy.minimall.pay.dto.PayPageDTO;
 import com.yirancrazy.minimall.pay.entity.PayTransactionPO;
 import com.yirancrazy.minimall.pay.service.PayService;
+import com.yirancrazy.minimall.pay.vo.PayStatisticsVO;
 import com.yirancrazy.minimall.pay.vo.PaymentParamsVO;
 import com.yirancrazy.minimall.pay.vo.RefundVO;
 
@@ -121,5 +122,47 @@ public class PayControllerV1 {
     public Result<IPage<PayTransactionPO>> merchantTransactions(@RequestHeader("X-Merchant-Id") Long merchantId,
                                                                @Valid PayPageDTO dto) {
         return Result.success(payService.page(merchantId, dto));
+    }
+
+    /**
+     * 平台全平台交易流水分页查询。
+     * @param dto 分页查询入参
+     * @return 支付流水分页结果
+     */
+    @GetMapping("/transactions")
+    public Result<IPage<PayTransactionPO>> platformTransactions(@Valid PayPageDTO dto) {
+        return Result.success(payService.platformPage(dto));
+    }
+
+    /**
+     * 平台资金统计报表，含交易总额、退款总额、交易笔数。
+     * @param dto 分页查询入参（复用时间范围字段）
+     * @return 统计VO
+     */
+    @GetMapping("/statistics")
+    public Result<PayStatisticsVO> platformStatistics(@Valid PayPageDTO dto) {
+        return Result.success(payService.statistics(null, dto));
+    }
+
+    /**
+     * 商家交易汇总统计，merchantId 由可信 Header 注入。
+     * @param merchantId 商家ID
+     * @param dto 分页查询入参（复用时间范围字段）
+     * @return 统计VO
+     */
+    @GetMapping("/merchant/statistics")
+    public Result<PayStatisticsVO> merchantStatistics(@RequestHeader("X-Merchant-Id") Long merchantId,
+                                                     @Valid PayPageDTO dto) {
+        return Result.success(payService.statistics(merchantId, dto));
+    }
+
+    /**
+     * 平台异常支付冻结，将支付单状态置为 FROZEN。
+     * @param paymentNo 支付单号
+     */
+    @PostMapping("/{paymentNo}/freeze")
+    public Result<Void> freeze(@PathVariable("paymentNo") String paymentNo) {
+        payService.freeze(paymentNo);
+        return Result.success(null);
     }
 }

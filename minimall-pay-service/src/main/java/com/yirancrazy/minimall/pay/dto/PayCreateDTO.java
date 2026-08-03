@@ -32,4 +32,6 @@ public class PayCreateDTO {
     @NotNull(message = "支付金额不能为空")
     @Positive(message = "支付金额必须大于0")
     private BigDecimal amount;
+
+    private Integer channel;
 }

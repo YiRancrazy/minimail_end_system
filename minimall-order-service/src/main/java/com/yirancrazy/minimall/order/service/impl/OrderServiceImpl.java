@@ -83,7 +83,7 @@ public class OrderServiceImpl implements OrderService {
         orderManager.save(po);
 
         Long payId = payFeignClient.create(
-            new PayCreateDTO(String.valueOf(po.getId()), userId, 0L, amount)).getData();
+            new PayCreateDTO(String.valueOf(po.getId()), userId, 0L, amount, null)).getData();
         if (payId == null || payId < 0) {
             throw new BizException(OrderCodeEnum.ORDER_PAY_CREATE_FAIL);
         }

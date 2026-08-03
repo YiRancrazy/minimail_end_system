@@ -21,6 +21,7 @@ import com.yirancrazy.minimall.pay.gateway.AlipayGateway;
 import com.yirancrazy.minimall.pay.manager.PayManager;
 import com.yirancrazy.minimall.pay.mapper.PayRefundMapper;
 import com.yirancrazy.minimall.pay.service.PayService;
+import com.yirancrazy.minimall.pay.vo.PaymentParamsVO;
 import com.yirancrazy.minimall.pay.vo.RefundVO;
 
 
@@ -51,15 +52,21 @@ public class PayServiceImpl implements PayService {
     }
 
     /**
-     * 创建支付流水。
+     * 创建支付流水，channel 为空时默认 ALIPAY，不支持渠道抛出 PAY_CHANNEL_UNSUPPORTED。
      * @param orderNo 订单号
      * @param userId 用户ID
      * @param merchantId 商户ID
      * @param amount 支付金额
+     * @param channel 支付渠道 code，null 默认 ALIPAY
      * @return 支付流水ID
      */
     @Override
-    public Long createPayment(String orderNo, Long userId, Long merchantId, BigDecimal amount) {
+    public Long createPayment(String orderNo, Long userId, Long merchantId, BigDecimal amount, Integer channel) {
+        int alipayCode = Integer.parseInt(PayChannelEnum.ALIPAY.getCode());
+        int channelCode = channel == null ? alipayCode : channel;
+        if (channelCode != alipayCode) {
+            throw new BizException(PayCodeEnum.PAY_CHANNEL_UNSUPPORTED);
+        }
         String paymentNo = generatePaymentNo();
         LocalDateTime expireAt = LocalDateTime.now().plusMinutes(15);
 
@@ -71,14 +78,14 @@ public class PayServiceImpl implements PayService {
         po.setAmount(amount);
         po.setCurrency("CNY");
         po.setStatus(Integer.parseInt(PayStatusEnum.PENDING.getCode()));
-        po.setChannel(Integer.parseInt(PayChannelEnum.ALIPAY.getCode()));
+        po.setChannel(channelCode);
         po.setExpireAt(expireAt);
         po.setIdempotencyKey(UUID.randomUUID().toString());
         payManager.save(po);
 
         String expireTime = expireAt.format(EXPIRE_FORMATTER);
         alipayGateway.createPayment(paymentNo, amount, "Order " + orderNo, expireTime);
-        log.info("payment created, paymentNo={}, orderNo={}", paymentNo, orderNo);
+        log.info("payment created, paymentNo={}, orderNo={}, channel={}", paymentNo, orderNo, channelCode);
         return po.getId();
     }
 
@@ -189,5 +196,22 @@ public class PayServiceImpl implements PayService {
             throw new BizException(PayCodeEnum.PAY_NOT_FOUND);
         }
         return po;
+    }
+
+    /**
+     * 按支付单号查询支付参数，供前端调起渠道 SDK，不存在时抛出 PAY_NOT_FOUND。
+     * @param paymentNo 支付单号
+     * @return 支付参数VO
+     */
+    @Override
+    public PaymentParamsVO getPaymentParams(String paymentNo) {
+        PayTransactionPO po = payManager.getOne(
+            Wrappers.lambdaQuery(PayTransactionPO.class).eq(PayTransactionPO::getPaymentNo, paymentNo));
+        if (po == null) {
+            throw new BizException(PayCodeEnum.PAY_NOT_FOUND);
+        }
+        return new PaymentParamsVO(
+            po.getPaymentNo(), po.getOrderNo(), po.getAmount(), po.getCurrency(),
+            po.getChannel(), "Order " + po.getOrderNo(), po.getExpireAt());
     }
 }

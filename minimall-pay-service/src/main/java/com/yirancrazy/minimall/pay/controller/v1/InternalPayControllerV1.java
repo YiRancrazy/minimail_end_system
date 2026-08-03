@@ -38,7 +38,7 @@ public class InternalPayControllerV1 {
     @PostMapping("/create")
     public Result<Long> create(@Valid @RequestBody PayCreateDTO dto) {
         Long paymentId = payService.createPayment(
-            dto.getOrderNo(), dto.getUserId(), dto.getMerchantId(), dto.getAmount());
+            dto.getOrderNo(), dto.getUserId(), dto.getMerchantId(), dto.getAmount(), dto.getChannel());
         return Result.success(paymentId);
     }
 

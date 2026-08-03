@@ -24,6 +24,7 @@ import com.yirancrazy.minimall.pay.gateway.AlipayGateway;
 import com.yirancrazy.minimall.pay.manager.PayManager;
 import com.yirancrazy.minimall.pay.mapper.PayRefundMapper;
 import com.yirancrazy.minimall.pay.service.impl.PayServiceImpl;
+import com.yirancrazy.minimall.pay.vo.PaymentParamsVO;
 
 
 /**
@@ -64,12 +65,21 @@ public class PayServiceImplTest {
      */
     @Test
     public void createPayment_persists_pending_record() {
-        Long id = service.createPayment("ORDER100", 1L, 1L, new BigDecimal("99.99"));
+        Long id = service.createPayment("ORDER100", 1L, 1L, new BigDecimal("99.99"), null);
         assertNotNull(id);
         ArgumentCaptor<PayTransactionPO> cap = ArgumentCaptor.forClass(PayTransactionPO.class);
         verify(manager).save(cap.capture());
         assertEquals(1, cap.getValue().getStatus());
         assertEquals(0, new BigDecimal("99.99").compareTo(cap.getValue().getAmount()));
+    }
+
+    /**
+     * 验证 createPayment 在传入不支持渠道时抛出 PAY_CHANNEL_UNSUPPORTED。
+     */
+    @Test
+    public void createPayment_unsupported_channel_throws() {
+        assertThrows(BizException.class,
+            () -> service.createPayment("ORDER100", 1L, 1L, new BigDecimal("99.99"), 2));
     }
 
     /**
@@ -137,5 +147,34 @@ public class PayServiceImplTest {
     public void getByOrderNo_missing_throws_biz() {
         when(manager.getOne(any())).thenReturn(null);
         assertThrows(BizException.class, () -> service.getByOrderNo("ORDER999"));
+    }
+
+    /**
+     * 验证 getPaymentParams 在支付单存在时返回参数VO。
+     */
+    @Test
+    public void getPaymentParams_returns_vo_when_exists() {
+        PayTransactionPO rec = new PayTransactionPO();
+        rec.setPaymentNo("PAY123");
+        rec.setOrderNo("ORDER100");
+        rec.setAmount(new BigDecimal("99.99"));
+        rec.setCurrency("CNY");
+        rec.setChannel(1);
+        when(manager.getOne(any())).thenReturn(rec);
+
+        PaymentParamsVO vo = service.getPaymentParams("PAY123");
+        assertEquals("PAY123", vo.getPaymentNo());
+        assertEquals("ORDER100", vo.getOrderNo());
+        assertEquals(0, new BigDecimal("99.99").compareTo(vo.getAmount()));
+        assertEquals("Order ORDER100", vo.getSubject());
+    }
+
+    /**
+     * 验证 getPaymentParams 在找不到支付单时抛出 PAY_NOT_FOUND。
+     */
+    @Test
+    public void getPaymentParams_missing_throws_biz() {
+        when(manager.getOne(any())).thenReturn(null);
+        assertThrows(BizException.class, () -> service.getPaymentParams("PAY999"));
     }
 }

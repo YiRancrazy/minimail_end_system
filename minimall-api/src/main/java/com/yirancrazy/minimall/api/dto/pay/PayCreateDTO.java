@@ -21,4 +21,5 @@ public class PayCreateDTO {
     private Long userId;
     private Long merchantId;
     private BigDecimal amount;
+    private Integer channel;
 }

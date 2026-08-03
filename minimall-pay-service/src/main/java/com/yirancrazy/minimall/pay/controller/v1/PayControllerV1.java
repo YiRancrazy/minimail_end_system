@@ -18,6 +18,7 @@ import com.yirancrazy.minimall.pay.dto.PayCallbackDTO;
 import com.yirancrazy.minimall.pay.dto.PayCreateDTO;
 import com.yirancrazy.minimall.pay.entity.PayTransactionPO;
 import com.yirancrazy.minimall.pay.service.PayService;
+import com.yirancrazy.minimall.pay.vo.PaymentParamsVO;
 import com.yirancrazy.minimall.pay.vo.RefundVO;
 
 
@@ -39,14 +40,14 @@ public class PayControllerV1 {
     }
 
     /**
-     * 创建支付流水。
+     * 创建支付流水，channel 为空时默认 ALIPAY。
      * @param dto 支付流水创建DTO
      * @return 支付流水ID
      */
     @PostMapping("/create")
     public Result<Long> create(@Valid @RequestBody PayCreateDTO dto) {
         Long paymentId = payService.createPayment(
-            dto.getOrderNo(), dto.getUserId(), dto.getMerchantId(), dto.getAmount());
+            dto.getOrderNo(), dto.getUserId(), dto.getMerchantId(), dto.getAmount(), dto.getChannel());
         return Result.success(paymentId);
     }
 
@@ -95,5 +96,15 @@ public class PayControllerV1 {
     @GetMapping("/status/{orderNo}")
     public Result<PayTransactionPO> getStatus(@PathVariable("orderNo") String orderNo) {
         return Result.success(payService.getByOrderNo(orderNo));
+    }
+
+    /**
+     * 按支付单号查询支付参数，供前端调起渠道 SDK。
+     * @param paymentNo 支付单号
+     * @return 支付参数VO
+     */
+    @GetMapping("/params/{paymentNo}")
+    public Result<PaymentParamsVO> getParams(@PathVariable("paymentNo") String paymentNo) {
+        return Result.success(payService.getPaymentParams(paymentNo));
     }
 }

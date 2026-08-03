@@ -187,6 +187,36 @@ public class OrderServiceImpl implements OrderService {
         return getOrder(orderId).getStatus();
     }
 
+    /**
+     * 查询订单详情，不存在时抛出 ORDER_NOT_FOUND。
+     * @param orderId 订单ID
+     * @return 订单持久化实体
+     */
+    @Override
+    public OrderPO getDetail(Long orderId) {
+        return getOrder(orderId);
+    }
+
+    /**
+     * 商家关闭订单，仅允许 PENDING 状态关闭并释放库存，归属不符时抛出 ORDER_NOT_FOUND。
+     * @param orderId 订单ID
+     * @param merchantId 商家ID
+     */
+    @Override
+    public void merchantClose(Long orderId, Long merchantId) {
+        OrderPO po = getOrder(orderId);
+        if (!po.getMerchantId().equals(merchantId)) {
+            throw new BizException(OrderCodeEnum.ORDER_NOT_FOUND);
+        }
+        transitStatus(orderId, OrderStatusEnum.CANCELLED);
+        Boolean released = stockFeignClient.release(
+            new StockReserveDTO(po.getSkuId(), po.getQuantity())).getData();
+        if (released == null || !released) {
+            log.warn("stock release failed on merchant-close, orderId={}", orderId);
+        }
+        log.info("order merchant-closed, orderId={}, merchantId={}", orderId, merchantId);
+    }
+
     private OrderPO getOrder(Long orderId) {
         OrderPO po = orderManager.getById(orderId);
         if (po == null) {

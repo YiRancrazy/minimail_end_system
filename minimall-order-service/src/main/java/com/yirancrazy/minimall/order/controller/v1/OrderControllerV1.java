@@ -42,6 +42,19 @@ public class OrderControllerV1 {
     }
 
     /**
+     * 商家端分页查询订单列表，merchantId 由可信 Header 注入。
+     * @param merchantId 商家ID
+     * @param dto 分页查询入参
+     * @return 订单分页结果
+     */
+    @GetMapping("/merchant")
+    public Result<IPage<OrderPO>> merchantPage(@RequestHeader("X-Merchant-Id") Long merchantId,
+                                               @Valid OrderPageDTO dto) {
+        dto.setMerchantId(merchantId);
+        return Result.success(orderService.page(dto));
+    }
+
+    /**
      * 创建订单并完成库存锁定及支付流水初始化。
      *
      * @param dto 订单创建请求参数
@@ -72,6 +85,16 @@ public class OrderControllerV1 {
     @GetMapping("/{id}")
     public Result<Integer> status(@PathVariable("id") Long id) {
         return Result.success(orderService.getStatus(id));
+    }
+
+    /**
+     * 查询订单详情。
+     * @param id 订单ID
+     * @return 订单实体
+     */
+    @GetMapping("/{id}/detail")
+    public Result<OrderPO> detail(@PathVariable("id") Long id) {
+        return Result.success(orderService.getDetail(id));
     }
 
     /**
@@ -117,6 +140,18 @@ public class OrderControllerV1 {
     @PostMapping("/{orderId}/refund")
     public Result<Void> refund(@PathVariable Long orderId) {
         orderService.refund(orderId);
+        return Result.success(null);
+    }
+
+    /**
+     * 商家关闭订单，仅允许待支付订单关闭并释放库存。
+     * @param orderId 订单ID
+     * @param merchantId 商家ID
+     */
+    @PostMapping("/{orderId}/merchant-close")
+    public Result<Void> merchantClose(@PathVariable Long orderId,
+                                      @RequestHeader("X-Merchant-Id") Long merchantId) {
+        orderService.merchantClose(orderId, merchantId);
         return Result.success(null);
     }
 }

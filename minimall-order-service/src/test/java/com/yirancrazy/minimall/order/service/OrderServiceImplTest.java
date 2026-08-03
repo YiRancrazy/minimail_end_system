@@ -297,11 +297,73 @@ public class OrderServiceImplTest {
         verify(manager).page(any(IPage.class), any());
     }
 
+    /**
+     * 验证 getDetail 在订单存在时返回实体。
+     */
+    @Test
+    public void getDetail_returns_order_when_exists() {
+        OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.PAID.intCode());
+        when(manager.getById(99L)).thenReturn(existing);
+
+        OrderPO result = service.getDetail(99L);
+        assertEquals(99L, result.getId());
+    }
+
+    /**
+     * 验证 getDetail 在订单不存在时抛出异常。
+     */
+    @Test
+    public void getDetail_missing_throws() {
+        when(manager.getById(99L)).thenReturn(null);
+        assertThrows(BizException.class, () -> service.getDetail(99L));
+    }
+
+    /**
+     * 验证商家关闭待支付订单成功，状态推进为 CANCELLED 并释放库存。
+     */
+    @Test
+    public void merchantClose_pending_succeeds() {
+        OrderPO existing = buildOrder(99L, 1L, 10L, OrderStatusEnum.PENDING.intCode());
+        when(manager.getById(99L)).thenReturn(existing);
+
+        service.merchantClose(99L, 10L);
+        assertEquals(OrderStatusEnum.CANCELLED.intCode(), existing.getStatus());
+        verify(stockFeignClient).release(any());
+    }
+
+    /**
+     * 验证非归属商家关闭订单时抛出异常。
+     */
+    @Test
+    public void merchantClose_wrong_merchant_throws() {
+        OrderPO existing = buildOrder(99L, 1L, 10L, OrderStatusEnum.PENDING.intCode());
+        when(manager.getById(99L)).thenReturn(existing);
+
+        assertThrows(BizException.class, () -> service.merchantClose(99L, 999L));
+    }
+
+    /**
+     * 验证已支付订单不能被商家关闭（状态流转不合法）。
+     */
+    @Test
+    public void merchantClose_paid_order_throws() {
+        OrderPO existing = buildOrder(99L, 1L, 10L, OrderStatusEnum.PAID.intCode());
+        when(manager.getById(99L)).thenReturn(existing);
+
+        assertThrows(BizException.class, () -> service.merchantClose(99L, 10L));
+    }
+
     private OrderPO buildOrder(Long id, Long userId, Integer status) {
         OrderPO po = new OrderPO();
         po.setId(id);
         po.setUserId(userId);
         po.setStatus(status);
+        return po;
+    }
+
+    private OrderPO buildOrder(Long id, Long userId, Long merchantId, Integer status) {
+        OrderPO po = buildOrder(id, userId, status);
+        po.setMerchantId(merchantId);
         return po;
     }
 }

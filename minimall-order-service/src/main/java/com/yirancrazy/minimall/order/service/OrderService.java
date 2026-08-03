@@ -28,6 +28,20 @@ public interface OrderService {
     Integer getStatus(Long orderId);
 
     /**
+     * 查询订单详情，不存在时抛出 ORDER_NOT_FOUND。
+     * @param orderId 订单ID
+     * @return 订单持久化实体
+     */
+    OrderPO getDetail(Long orderId);
+
+    /**
+     * 商家关闭订单，仅允许 PENDING 状态关闭并释放库存，归属不符时抛出 ORDER_NOT_FOUND。
+     * @param orderId 订单ID
+     * @param merchantId 商家ID
+     */
+    void merchantClose(Long orderId, Long merchantId);
+
+    /**
      * 分页查询订单，支持按用户/商家/状态过滤。
      * @param dto 分页查询入参
      * @return 订单分页结果

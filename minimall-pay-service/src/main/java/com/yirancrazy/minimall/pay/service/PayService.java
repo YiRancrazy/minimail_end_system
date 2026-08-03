@@ -1,6 +1,7 @@
 package com.yirancrazy.minimall.pay.service;
 
 import java.math.BigDecimal;
+import java.util.List;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO;
 import com.yirancrazy.minimall.pay.dto.PayCallbackDTO;
@@ -118,4 +119,11 @@ public interface PayService {
      * @param reason 驳回原因，approved=false 时填写
      */
     void reviewWithdraw(Long withdrawId, boolean approved, String reason);
+
+    /**
+     * 导出全平台交易流水对账单，最多 10000 行。
+     * @param dto 查询入参（复用状态与时间范围字段）
+     * @return 支付流水列表
+     */
+    List<PayTransactionPO> exportTransactions(PayPageDTO dto);
 }

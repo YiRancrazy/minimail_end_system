@@ -20,6 +20,7 @@ import com.yirancrazy.minimall.api.feign.PayFeignClient;
 import com.yirancrazy.minimall.api.feign.StockFeignClient;
 import com.yirancrazy.minimall.common.event.EventBus;
 import com.yirancrazy.minimall.common.exception.BizException;
+import com.yirancrazy.minimall.common.util.CsvExporter;
 import com.yirancrazy.minimall.order.constant.OrderCodeEnum;
 import com.yirancrazy.minimall.order.constant.OrderStatusEnum;
 import com.yirancrazy.minimall.order.dto.OrderPageDTO;
@@ -322,7 +323,44 @@ public class OrderServiceImpl implements OrderService {
             .eq(dto.getUserId() != null, OrderPO::getUserId, dto.getUserId())
             .eq(dto.getMerchantId() != null, OrderPO::getMerchantId, dto.getMerchantId())
             .eq(dto.getStatus() != null, OrderPO::getStatus, dto.getStatus())
+            .ge(dto.getStartTime() != null, OrderPO::getCreateTime, dto.getStartTime())
+            .le(dto.getEndTime() != null, OrderPO::getCreateTime, dto.getEndTime())
             .orderByDesc(OrderPO::getCreateTime));
+    }
+
+    /**
+     * 导出商家订单列表，最多 10000 行，merchantId 强制绑定。
+     * @param merchantId 商家ID
+     * @param dto 查询入参
+     * @return 订单列表
+     */
+    @Override
+    public List<OrderPO> exportList(Long merchantId, OrderPageDTO dto) {
+        return orderManager.list(Wrappers.lambdaQuery(OrderPO.class)
+            .eq(OrderPO::getMerchantId, merchantId)
+            .eq(dto.getUserId() != null, OrderPO::getUserId, dto.getUserId())
+            .eq(dto.getStatus() != null, OrderPO::getStatus, dto.getStatus())
+            .ge(dto.getStartTime() != null, OrderPO::getCreateTime, dto.getStartTime())
+            .le(dto.getEndTime() != null, OrderPO::getCreateTime, dto.getEndTime())
+            .orderByDesc(OrderPO::getCreateTime)
+            .last("LIMIT " + CsvExporter.maxExportRows()));
+    }
+
+    /**
+     * 导出全平台订单列表，最多 10000 行，不绑定 merchantId。
+     * @param dto 查询入参
+     * @return 订单列表
+     */
+    @Override
+    public List<OrderPO> platformExportList(OrderPageDTO dto) {
+        return orderManager.list(Wrappers.lambdaQuery(OrderPO.class)
+            .eq(dto.getUserId() != null, OrderPO::getUserId, dto.getUserId())
+            .eq(dto.getMerchantId() != null, OrderPO::getMerchantId, dto.getMerchantId())
+            .eq(dto.getStatus() != null, OrderPO::getStatus, dto.getStatus())
+            .ge(dto.getStartTime() != null, OrderPO::getCreateTime, dto.getStartTime())
+            .le(dto.getEndTime() != null, OrderPO::getCreateTime, dto.getEndTime())
+            .orderByDesc(OrderPO::getCreateTime)
+            .last("LIMIT " + CsvExporter.maxExportRows()));
     }
 
     /**

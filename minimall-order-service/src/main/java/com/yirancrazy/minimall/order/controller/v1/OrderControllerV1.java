@@ -1,5 +1,7 @@
 package com.yirancrazy.minimall.order.controller.v1;
 
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -11,8 +13,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import com.yirancrazy.minimall.common.result.Result;
+import com.yirancrazy.minimall.common.util.CsvExporter;
 import com.yirancrazy.minimall.order.dto.OrderCreateDTO;
 import com.yirancrazy.minimall.order.dto.OrderPageDTO;
 import com.yirancrazy.minimall.order.entity.OrderPO;
@@ -225,5 +229,54 @@ public class OrderControllerV1 {
     @GetMapping("/{orderId}/logistics")
     public Result<List<OrderLogisticsVO>> logistics(@PathVariable Long orderId) {
         return Result.success(orderService.queryLogistics(orderId));
+    }
+
+    private static final String[] ORDER_HEADERS = {
+        "订单ID", "用户ID", "商家ID", "SKU", "数量", "金额", "状态", "创建时间"
+    };
+
+    /**
+     * 商家导出订单 CSV，merchantId 由可信 Header 注入。
+     * @param merchantId 商家ID
+     * @param dto 查询入参
+     * @param response HTTP 响应
+     * @throws IOException 写入失败时抛出
+     */
+    @GetMapping("/export")
+    public void export(@RequestHeader("X-Merchant-Id") Long merchantId,
+                       @Valid OrderPageDTO dto,
+                       HttpServletResponse response) throws IOException {
+        List<OrderPO> list = orderService.exportList(merchantId, dto);
+        CsvExporter.write(response, "orders.csv", ORDER_HEADERS, toOrderRows(list));
+    }
+
+    /**
+     * 平台导出全平台订单 CSV。
+     * @param dto 查询入参
+     * @param response HTTP 响应
+     * @throws IOException 写入失败时抛出
+     */
+    @GetMapping("/platform/export")
+    public void platformExport(@Valid OrderPageDTO dto,
+                               HttpServletResponse response) throws IOException {
+        List<OrderPO> list = orderService.platformExportList(dto);
+        CsvExporter.write(response, "platform-orders.csv", ORDER_HEADERS, toOrderRows(list));
+    }
+
+    private List<String[]> toOrderRows(List<OrderPO> list) {
+        List<String[]> rows = new ArrayList<>(list.size());
+        for (OrderPO po : list) {
+            rows.add(new String[] {
+                String.valueOf(po.getId()),
+                String.valueOf(po.getUserId()),
+                String.valueOf(po.getMerchantId()),
+                String.valueOf(po.getSkuId()),
+                String.valueOf(po.getQuantity()),
+                po.getAmount() == null ? "" : po.getAmount().toPlainString(),
+                String.valueOf(po.getStatus()),
+                po.getCreateTime() == null ? "" : po.getCreateTime().toString()
+            });
+        }
+        return rows;
     }
 }

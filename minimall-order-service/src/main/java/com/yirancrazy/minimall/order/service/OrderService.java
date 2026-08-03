@@ -91,4 +91,19 @@ public interface OrderService {
      * @return 物流节点列表
      */
     List<OrderLogisticsVO> queryLogistics(Long orderId);
+
+    /**
+     * 导出商家订单列表，最多 10000 行，merchantId 强制绑定。
+     * @param merchantId 商家ID
+     * @param dto 查询入参（复用过滤字段）
+     * @return 订单列表
+     */
+    List<OrderPO> exportList(Long merchantId, OrderPageDTO dto);
+
+    /**
+     * 导出全平台订单列表，最多 10000 行，不绑定 merchantId。
+     * @param dto 查询入参
+     * @return 订单列表
+     */
+    List<OrderPO> platformExportList(OrderPageDTO dto);
 }

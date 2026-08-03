@@ -3,6 +3,7 @@ package com.yirancrazy.minimall.pay.service.impl;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -12,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO;
 import com.yirancrazy.minimall.api.feign.OrderFeignClient;
 import com.yirancrazy.minimall.common.exception.BizException;
+import com.yirancrazy.minimall.common.util.CsvExporter;
 import com.yirancrazy.minimall.pay.constant.PayChannelEnum;
 import com.yirancrazy.minimall.pay.constant.PayCodeEnum;
 import com.yirancrazy.minimall.pay.constant.PayStatusEnum;
@@ -376,5 +378,20 @@ public class PayServiceImpl implements PayService {
         po.setReviewedAt(LocalDateTime.now());
         merchantWithdrawManager.updateById(po);
         log.info("withdraw reviewed, withdrawId={}, approved={}", withdrawId, approved);
+    }
+
+    /**
+     * 导出全平台交易流水对账单，最多 10000 行。
+     * @param dto 查询入参
+     * @return 支付流水列表
+     */
+    @Override
+    public List<PayTransactionPO> exportTransactions(PayPageDTO dto) {
+        return payManager.list(Wrappers.lambdaQuery(PayTransactionPO.class)
+            .eq(dto.getStatus() != null, PayTransactionPO::getStatus, dto.getStatus())
+            .ge(dto.getStartTime() != null, PayTransactionPO::getCreateTime, dto.getStartTime())
+            .le(dto.getEndTime() != null, PayTransactionPO::getCreateTime, dto.getEndTime())
+            .orderByDesc(PayTransactionPO::getCreateTime)
+            .last("LIMIT " + CsvExporter.maxExportRows()));
     }
 }

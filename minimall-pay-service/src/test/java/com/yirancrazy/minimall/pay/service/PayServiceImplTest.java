@@ -271,6 +271,16 @@ public class PayServiceImplTest {
     }
 
     /**
+     * 验证 exportTransactions 委托给 manager.list。
+     */
+    @Test
+    public void exportTransactions_delegates_to_manager() {
+        when(manager.list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class)))
+            .thenReturn(new java.util.ArrayList<>());
+        assertEquals(0, service.exportTransactions(new PayPageDTO()).size());
+    }
+
+    /**
      * 验证 applyWithdraw 会持久化一条状态为 PENDING 的提现单并返回正确 VO。
      */
     @Test

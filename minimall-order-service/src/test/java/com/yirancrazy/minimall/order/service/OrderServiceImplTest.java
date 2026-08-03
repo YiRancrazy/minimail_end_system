@@ -435,6 +435,26 @@ public class OrderServiceImplTest {
     }
 
     /**
+     * 验证 exportList 委托给 manager.list 并强制绑定 merchantId。
+     */
+    @Test
+    public void exportList_delegates_to_manager() {
+        when(manager.list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class)))
+            .thenReturn(new java.util.ArrayList<>());
+        assertEquals(0, service.exportList(10L, new OrderPageDTO()).size());
+    }
+
+    /**
+     * 验证 platformExportList 委托给 manager.list，不绑定 merchantId。
+     */
+    @Test
+    public void platformExportList_delegates_to_manager() {
+        when(manager.list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class)))
+            .thenReturn(new java.util.ArrayList<>());
+        assertEquals(0, service.platformExportList(new OrderPageDTO()).size());
+    }
+
+    /**
      * 验证商家同意退款时状态保持 REFUNDING 且不调用 updateById。
      */
     @Test

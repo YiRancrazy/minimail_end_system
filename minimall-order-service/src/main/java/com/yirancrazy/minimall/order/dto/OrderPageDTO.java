@@ -1,12 +1,13 @@
 package com.yirancrazy.minimall.order.dto;
 
+import java.time.LocalDateTime;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import lombok.Data;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 订单分页查询入参，支持按用户/商家/状态过滤
+ * @Description: 订单分页查询入参，支持按用户/商家/状态/时间范围过滤
  * @Version: 1.0
  * @DateTime: 2026/08/02
  **/
@@ -23,4 +24,6 @@ public class OrderPageDTO {
     private Long userId;
     private Long merchantId;
     private Integer status;
+    private LocalDateTime startTime;
+    private LocalDateTime endTime;
 }

@@ -1,6 +1,9 @@
 package com.yirancrazy.minimall.pay.controller.v1;
 
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -12,11 +15,13 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.Result;
+import com.yirancrazy.minimall.common.util.CsvExporter;
 import com.yirancrazy.minimall.pay.dto.PayCallbackDTO;
 import com.yirancrazy.minimall.pay.dto.PayCreateDTO;
 import com.yirancrazy.minimall.pay.dto.PayPageDTO;
@@ -217,5 +222,34 @@ public class PayControllerV1 {
                                        @RequestParam(required = false) String reason) {
         payService.reviewWithdraw(withdrawId, approved, reason);
         return Result.success(null);
+    }
+
+    private static final String[] TX_HEADERS = {
+        "支付单号", "订单号", "用户ID", "商家ID", "金额", "状态", "创建时间"
+    };
+
+    /**
+     * 平台导出交易流水对账单 CSV。
+     * @param dto 查询入参
+     * @param response HTTP 响应
+     * @throws IOException 写入失败时抛出
+     */
+    @GetMapping("/transactions/export")
+    public void exportTransactions(@Valid PayPageDTO dto,
+                                   HttpServletResponse response) throws IOException {
+        List<PayTransactionPO> list = payService.exportTransactions(dto);
+        List<String[]> rows = new ArrayList<>(list.size());
+        for (PayTransactionPO po : list) {
+            rows.add(new String[] {
+                po.getPaymentNo(),
+                po.getOrderNo(),
+                String.valueOf(po.getUserId()),
+                String.valueOf(po.getMerchantId()),
+                po.getAmount() == null ? "" : po.getAmount().toPlainString(),
+                String.valueOf(po.getStatus()),
+                po.getCreateTime() == null ? "" : po.getCreateTime().toString()
+            });
+        }
+        CsvExporter.write(response, "transactions.csv", TX_HEADERS, rows);
     }
 }

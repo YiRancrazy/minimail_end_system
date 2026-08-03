@@ -13,7 +13,8 @@ import com.yirancrazy.minimall.common.base.BaseEnum;
 @Getter
 @AllArgsConstructor
 public enum CartCodeEnum implements BaseEnum {
-    CART_ITEM_NOT_FOUND("14001", "CART_ITEM_NOT_FOUND", "购物车项不存在");
+    CART_ITEM_NOT_FOUND("14001", "CART_ITEM_NOT_FOUND", "购物车项不存在"),
+    MOVE_TO_FAVORITE_FAIL("14002", "MOVE_TO_FAVORITE_FAIL", "移入收藏夹失败");
 
     private final String code;
     private final String alias;

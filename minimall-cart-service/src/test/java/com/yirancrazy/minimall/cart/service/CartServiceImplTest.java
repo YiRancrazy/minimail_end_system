@@ -16,11 +16,13 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
+import com.yirancrazy.minimall.api.feign.UserFeignClient;
 import com.yirancrazy.minimall.cart.dto.CartItemAddDTO;
 import com.yirancrazy.minimall.cart.dto.CartItemListDTO;
 import com.yirancrazy.minimall.cart.dto.CartSelectAllDTO;
@@ -30,6 +32,8 @@ import com.yirancrazy.minimall.cart.entity.CartItemPO;
 import com.yirancrazy.minimall.cart.manager.CartItemManager;
 import com.yirancrazy.minimall.cart.service.impl.CartServiceImpl;
 import com.yirancrazy.minimall.common.exception.BizException;
+import com.yirancrazy.minimall.common.result.CommonCode;
+import com.yirancrazy.minimall.common.result.Result;
 
 /**
  * CartServiceImpl 单元测试，覆盖查询、新增、删除、计数的正常、失败、边界路径。
@@ -44,11 +48,13 @@ public class CartServiceImplTest {
     }
 
     private CartItemManager cartItemManager;
+    private UserFeignClient userFeignClient;
     private CartServiceImpl service;
 
     @BeforeEach
     void setUp() {
         cartItemManager = mock(CartItemManager.class);
+        userFeignClient = mock(UserFeignClient.class);
         lenient().doAnswer(inv -> {
             CartItemPO p = inv.getArgument(0);
             if (p.getId() == null) {
@@ -56,7 +62,7 @@ public class CartServiceImplTest {
             }
             return true;
         }).when(cartItemManager).save(any(CartItemPO.class));
-        service = new CartServiceImpl(cartItemManager);
+        service = new CartServiceImpl(cartItemManager, userFeignClient);
     }
 
     /**
@@ -257,5 +263,50 @@ public class CartServiceImplTest {
 
         assertTrue(ok);
         verify(cartItemManager).remove(any(Wrapper.class));
+    }
+
+    /**
+     * 验证 moveToFavorite 在收藏成功后删除对应购物车项。
+     */
+    @Test
+    public void moveToFavorite_success_deletes_cart_item() {
+        when(userFeignClient.addFavorite(any(), any())).thenReturn(Result.success(null));
+        CartItemPO item = new CartItemPO();
+        item.setId(1L);
+        item.setUserId(7L);
+        item.setSkuId(100L);
+        when(cartItemManager.list(any(Wrapper.class))).thenReturn(List.of(item));
+        when(cartItemManager.removeById(1L)).thenReturn(true);
+
+        service.moveToFavorite(7L, 100L);
+
+        verify(userFeignClient).addFavorite(eq(7L), eq(100L));
+        verify(cartItemManager).removeById(eq(1L));
+    }
+
+    /**
+     * 验证 moveToFavorite 在收藏服务失败时抛出 BizException 且不删除购物车项。
+     */
+    @Test
+    public void moveToFavorite_feign_fail_throws() {
+        when(userFeignClient.addFavorite(any(), any()))
+            .thenReturn(Result.fail(CommonCode.SYS_ERROR, "down"));
+
+        assertThrows(BizException.class, () -> service.moveToFavorite(7L, 100L));
+        verify(cartItemManager, never()).list(any(Wrapper.class));
+    }
+
+    /**
+     * 验证 moveToFavorite 在购物车无该商品时收藏成功且不抛异常。
+     */
+    @Test
+    public void moveToFavorite_no_cart_item_still_succeeds() {
+        when(userFeignClient.addFavorite(any(), any())).thenReturn(Result.success(null));
+        when(cartItemManager.list(any(Wrapper.class))).thenReturn(Collections.emptyList());
+
+        service.moveToFavorite(7L, 100L);
+
+        verify(userFeignClient).addFavorite(eq(7L), eq(100L));
+        verify(cartItemManager).list(any(Wrapper.class));
     }
 }

@@ -14,7 +14,8 @@ import com.yirancrazy.minimall.common.base.BaseEnum;
 
 @AllArgsConstructor
 public enum UserCodeEnum implements BaseEnum {
-    USER_NOT_FOUND("12001", "USER_NOT_FOUND", "用户不存在");
+    USER_NOT_FOUND("12001", "USER_NOT_FOUND", "用户不存在"),
+    PARAM_INVALID("12002", "PARAM_INVALID", "参数非法");
 
     private final String code;
     private final String alias;

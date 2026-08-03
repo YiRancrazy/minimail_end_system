@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
@@ -23,8 +24,8 @@ import com.yirancrazy.minimall.common.result.Result;
 /**
  * @Author: yirancrazy@gmail.com
  * @Description: 购物车控制器，提供Cart RESTful API
- * @Version: 1.1
- * @DateTime: 2026/08/02
+ * @Version: 1.2
+ * @DateTime: 2026/08/03
  */
 @RestController
 @RequestMapping("/api/v1/cart")
@@ -108,5 +109,17 @@ public class CartControllerV1 {
     @DeleteMapping
     public Result<Boolean> clear(@RequestBody CartClearDTO dto) {
         return Result.success(cartService.clear(dto.getUserId()));
+    }
+
+    /**
+     * 将指定购物车商品移入收藏夹。
+     * @param userId 用户ID，来自网关X-User-Id头
+     * @param skuId 商品SKU ID
+     * @return 无业务数据的成功响应
+     */
+    @PostMapping("/{skuId}/move-to-favorite")
+    public Result<Void> moveToFavorite(@RequestHeader("X-User-Id") Long userId, @PathVariable("skuId") Long skuId) {
+        cartService.moveToFavorite(userId, skuId);
+        return Result.success(null);
     }
 }

@@ -72,4 +72,11 @@ public interface CartService {
      * @return 清空是否成功
      */
     boolean clear(Long userId);
+
+    /**
+     * 将指定用户的某个购物车商品移入收藏夹：先调用收藏服务收藏，成功后删除该购物车项。
+     * @param userId 用户ID
+     * @param skuId 商品SKU ID
+     */
+    void moveToFavorite(Long userId, Long skuId);
 }

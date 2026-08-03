@@ -1,35 +1,48 @@
 package com.yirancrazy.minimall.stock.service.impl;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.stock.constant.StockCodeEnum;
 import com.yirancrazy.minimall.stock.constant.StockJournalTypeEnum;
+import com.yirancrazy.minimall.stock.dto.StockPageDTO;
 import com.yirancrazy.minimall.stock.entity.StockJournalPO;
 import com.yirancrazy.minimall.stock.entity.StockPO;
 import com.yirancrazy.minimall.stock.manager.StockJournalManager;
 import com.yirancrazy.minimall.stock.manager.StockManager;
+import com.yirancrazy.minimall.stock.mapper.StockMapper;
 import com.yirancrazy.minimall.stock.service.StockService;
+import com.yirancrazy.minimall.stock.vo.StockStatisticsVO;
 
 /**
  * @Author: yirancrazy@gmail.com
  * @Description: 库存领域服务实现，实现Stock相关业务逻辑
- * @Version: 1.0
- * @DateTime: 2026/07/31
+ * @Version: 1.1
+ * @DateTime: 2026/08/03
  */
 @Slf4j
 @Service
 public class StockServiceImpl implements StockService {
 
+    private static final int EXPORT_MAX_ROWS = 10000;
+
     private final StockManager stockManager;
     private final StockJournalManager journalManager;
+    private final StockMapper stockMapper;
 
-    public StockServiceImpl(StockManager stockManager, StockJournalManager journalManager) {
+    public StockServiceImpl(StockManager stockManager, StockJournalManager journalManager,
+                            StockMapper stockMapper) {
         this.stockManager = stockManager;
         this.journalManager = journalManager;
+        this.stockMapper = stockMapper;
     }
 
     /**
@@ -144,6 +157,59 @@ public class StockServiceImpl implements StockService {
             Wrappers.lambdaQuery(StockJournalPO.class)
                 .eq(StockJournalPO::getSkuId, skuId)
                 .orderByDesc(StockJournalPO::getId));
+    }
+
+    /**
+     * 平台分页查询全平台库存，可选按 SKU 过滤或仅查预警库存，按ID降序返回。
+     * @param dto 分页查询入参
+     * @return 库存分页结果
+     */
+    @Override
+    public IPage<StockPO> page(StockPageDTO dto) {
+        Page<StockPO> page = new Page<>(dto.getPageNo(), dto.getPageSize());
+        LambdaQueryWrapper<StockPO> wrapper = Wrappers.lambdaQuery(StockPO.class);
+        if (dto.getSkuId() != null) {
+            wrapper.eq(StockPO::getSkuId, dto.getSkuId());
+        }
+        if (Boolean.TRUE.equals(dto.getLowStockOnly())) {
+            wrapper.isNotNull(StockPO::getAlertThreshold)
+                .apply("available <= alert_threshold");
+        }
+        wrapper.orderByDesc(StockPO::getId);
+        return stockManager.page(page, wrapper);
+    }
+
+    /**
+     * 全平台库存统计聚合，委托 Mapper 聚合后计算预警比例；无库存记录时返回零值。
+     * @return 库存统计VO
+     */
+    @Override
+    public StockStatisticsVO platformStatistics() {
+        StockStatisticsVO vo = stockMapper.statistics();
+        if (vo == null) {
+            return new StockStatisticsVO(0L, 0L, 0L, 0L, BigDecimal.ZERO);
+        }
+        long total = vo.getTotalSkuCount() == null ? 0L : vo.getTotalSkuCount();
+        long alert = vo.getAlertSkuCount() == null ? 0L : vo.getAlertSkuCount();
+        BigDecimal ratio = total == 0L
+            ? BigDecimal.ZERO
+            : BigDecimal.valueOf(alert).divide(BigDecimal.valueOf(total), 2, RoundingMode.HALF_UP);
+        vo.setAlertRatio(ratio);
+        return vo;
+    }
+
+    /**
+     * 导出指定SKU的库存流水，最多 10000 行，按ID降序。
+     * @param skuId SKU标识
+     * @return 库存流水列表
+     */
+    @Override
+    public List<StockJournalPO> exportJournal(Long skuId) {
+        return journalManager.list(
+            Wrappers.lambdaQuery(StockJournalPO.class)
+                .eq(StockJournalPO::getSkuId, skuId)
+                .orderByDesc(StockJournalPO::getId)
+                .last("LIMIT " + EXPORT_MAX_ROWS));
     }
 
     private StockPO getStock(Long skuId) {

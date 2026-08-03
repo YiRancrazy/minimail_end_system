@@ -1,13 +1,17 @@
 package com.yirancrazy.minimall.stock.service;
 
 import java.util.List;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.yirancrazy.minimall.stock.dto.StockPageDTO;
 import com.yirancrazy.minimall.stock.entity.StockJournalPO;
+import com.yirancrazy.minimall.stock.entity.StockPO;
+import com.yirancrazy.minimall.stock.vo.StockStatisticsVO;
 
 /**
  * @Author: yirancrazy@gmail.com
  * @Description: 库存领域服务接口，定义Stock相关业务契约
- * @Version: 1.0
- * @DateTime: 2026/07/31
+ * @Version: 1.1
+ * @DateTime: 2026/08/03
  */
 public interface StockService {
     /**
@@ -56,4 +60,24 @@ public interface StockService {
      * @return 库存流水列表，按ID降序
      */
     List<StockJournalPO> queryJournal(Long skuId);
+
+    /**
+     * 平台分页查询全平台库存，可选按 SKU 过滤或仅查预警库存。
+     * @param dto 分页查询入参
+     * @return 库存分页结果
+     */
+    IPage<StockPO> page(StockPageDTO dto);
+
+    /**
+     * 全平台库存统计聚合，返回SKU总数、可用/预占总量、预警SKU数及预警比例。
+     * @return 库存统计VO
+     */
+    StockStatisticsVO platformStatistics();
+
+    /**
+     * 导出指定SKU的库存流水，最多 10000 行，按ID降序。
+     * @param skuId SKU标识
+     * @return 库存流水列表
+     */
+    List<StockJournalPO> exportJournal(Long skuId);
 }

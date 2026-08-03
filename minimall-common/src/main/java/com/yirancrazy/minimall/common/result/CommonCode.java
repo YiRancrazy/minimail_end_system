@@ -9,4 +9,5 @@ public final class CommonCode {
     public static final String SUCCESS = "00000";
     public static final String SYS_ERROR = "20000";
     public static final String PARAM_INVALID = "20001";
+    public static final String FORBIDDEN = "20003";
 }

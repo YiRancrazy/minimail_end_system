@@ -9,17 +9,24 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.yirancrazy.minimall.common.exception.BizException;
+import com.yirancrazy.minimall.stock.constant.StockCountTaskStatusEnum;
+import com.yirancrazy.minimall.stock.dto.StockCountTaskCompleteDTO;
+import com.yirancrazy.minimall.stock.dto.StockCountTaskCreateDTO;
+import com.yirancrazy.minimall.stock.dto.StockCountTaskPageDTO;
 import com.yirancrazy.minimall.stock.dto.StockPageDTO;
 import com.yirancrazy.minimall.stock.dto.StockTransferDTO;
 import com.yirancrazy.minimall.stock.dto.StockTransferPageDTO;
+import com.yirancrazy.minimall.stock.entity.StockCountTaskPO;
 import com.yirancrazy.minimall.stock.entity.StockJournalPO;
 import com.yirancrazy.minimall.stock.entity.StockPO;
 import com.yirancrazy.minimall.stock.entity.StockTransferPO;
+import com.yirancrazy.minimall.stock.manager.StockCountTaskManager;
 import com.yirancrazy.minimall.stock.manager.StockJournalManager;
 import com.yirancrazy.minimall.stock.manager.StockManager;
 import com.yirancrazy.minimall.stock.manager.StockTransferManager;
@@ -37,6 +44,7 @@ public class StockServiceImplTest {
     private StockJournalManager journalManager;
     private StockMapper stockMapper;
     private StockTransferManager transferManager;
+    private StockCountTaskManager countTaskManager;
     private StockServiceImpl service;
 
     @BeforeEach
@@ -45,10 +53,13 @@ public class StockServiceImplTest {
         journalManager = mock(StockJournalManager.class);
         stockMapper = mock(StockMapper.class);
         transferManager = mock(StockTransferManager.class);
+        countTaskManager = mock(StockCountTaskManager.class);
         lenient().when(manager.updateById(any(StockPO.class))).thenReturn(true);
         lenient().when(journalManager.save(any(StockJournalPO.class))).thenReturn(true);
         lenient().when(transferManager.save(any(StockTransferPO.class))).thenReturn(true);
-        service = new StockServiceImpl(manager, journalManager, stockMapper, transferManager);
+        lenient().when(countTaskManager.updateById(any(StockCountTaskPO.class))).thenReturn(true);
+        service = new StockServiceImpl(manager, journalManager, stockMapper,
+            transferManager, countTaskManager);
     }
 
     /**
@@ -307,5 +318,143 @@ public class StockServiceImplTest {
         IPage<StockTransferPO> result = service.transferPage(dto);
         assertEquals(expected, result);
         verify(transferManager).page(any(IPage.class), any());
+    }
+
+    /**
+     * 验证创建盘点任务时查询当前可用库存作为期望数量。
+     */
+    @Test
+    public void createCountTask_succeeds() {
+        StockPO s = new StockPO();
+        s.setId(1L);
+        s.setSkuId(100L);
+        s.setAvailable(10L);
+        when(manager.getOne(any())).thenReturn(s);
+
+        StockCountTaskCreateDTO dto = new StockCountTaskCreateDTO();
+        dto.setSkuId(100L);
+        dto.setOperatorId(1L);
+        service.createCountTask(dto);
+
+        verify(countTaskManager).save(any(StockCountTaskPO.class));
+    }
+
+    /**
+     * 验证完成盘点任务有差异时调整库存并推进状态为 COMPLETED。
+     */
+    @Test
+    public void completeCountTask_with_diff_adjusts_stock() {
+        StockCountTaskPO task = new StockCountTaskPO();
+        task.setId(1L);
+        task.setSkuId(100L);
+        task.setExpectedQuantity(10L);
+        task.setStatus(StockCountTaskStatusEnum.PENDING.intCode());
+        when(countTaskManager.getById(1L)).thenReturn(task);
+
+        StockPO s = new StockPO();
+        s.setId(2L);
+        s.setSkuId(100L);
+        s.setAvailable(10L);
+        when(manager.getOne(any())).thenReturn(s);
+
+        StockCountTaskCompleteDTO dto = new StockCountTaskCompleteDTO();
+        dto.setActualQuantity(8L);
+        service.completeCountTask(1L, dto);
+
+        assertEquals(StockCountTaskStatusEnum.COMPLETED.intCode(), task.getStatus());
+        assertEquals(-2L, task.getDiffQuantity());
+        verify(manager).updateById(any(StockPO.class));
+    }
+
+    /**
+     * 验证完成盘点任务无差异时不调整库存。
+     */
+    @Test
+    public void completeCountTask_no_diff_succeeds() {
+        StockCountTaskPO task = new StockCountTaskPO();
+        task.setId(1L);
+        task.setSkuId(100L);
+        task.setExpectedQuantity(10L);
+        task.setStatus(StockCountTaskStatusEnum.PENDING.intCode());
+        when(countTaskManager.getById(1L)).thenReturn(task);
+
+        StockCountTaskCompleteDTO dto = new StockCountTaskCompleteDTO();
+        dto.setActualQuantity(10L);
+        service.completeCountTask(1L, dto);
+
+        assertEquals(0L, task.getDiffQuantity());
+        verify(manager, never()).updateById(any(StockPO.class));
+    }
+
+    /**
+     * 验证完成非PENDING状态的盘点任务时抛出 BizException。
+     */
+    @Test
+    public void completeCountTask_not_pending_throws() {
+        StockCountTaskPO task = new StockCountTaskPO();
+        task.setId(1L);
+        task.setStatus(StockCountTaskStatusEnum.COMPLETED.intCode());
+        when(countTaskManager.getById(1L)).thenReturn(task);
+
+        StockCountTaskCompleteDTO dto = new StockCountTaskCompleteDTO();
+        dto.setActualQuantity(10L);
+        assertThrows(BizException.class, () -> service.completeCountTask(1L, dto));
+    }
+
+    /**
+     * 验证取消PENDING状态的盘点任务时推进为 CANCELLED。
+     */
+    @Test
+    public void cancelCountTask_succeeds() {
+        StockCountTaskPO task = new StockCountTaskPO();
+        task.setId(1L);
+        task.setStatus(StockCountTaskStatusEnum.PENDING.intCode());
+        when(countTaskManager.getById(1L)).thenReturn(task);
+
+        service.cancelCountTask(1L, 99L);
+        assertEquals(StockCountTaskStatusEnum.CANCELLED.intCode(), task.getStatus());
+        verify(countTaskManager).updateById(task);
+    }
+
+    /**
+     * 验证取消非PENDING状态的盘点任务时抛出 BizException。
+     */
+    @Test
+    public void cancelCountTask_not_pending_throws() {
+        StockCountTaskPO task = new StockCountTaskPO();
+        task.setId(1L);
+        task.setStatus(StockCountTaskStatusEnum.CANCELLED.intCode());
+        when(countTaskManager.getById(1L)).thenReturn(task);
+
+        assertThrows(BizException.class, () -> service.cancelCountTask(1L, 99L));
+    }
+
+    /**
+     * 验证 countTaskPage 委托给 countTaskManager.page。
+     */
+    @Test
+    public void countTaskPage_delegates_to_manager() {
+        StockCountTaskPageDTO dto = new StockCountTaskPageDTO();
+        dto.setPageNo(1);
+        dto.setPageSize(10);
+        IPage<StockCountTaskPO> expected = new Page<>(1, 10);
+        when(countTaskManager.page(any(IPage.class), any())).thenReturn(expected);
+
+        IPage<StockCountTaskPO> result = service.countTaskPage(dto);
+        assertEquals(expected, result);
+        verify(countTaskManager).page(any(IPage.class), any());
+    }
+
+    /**
+     * 验证创建盘点任务时SKU库存不存在抛出 BizException。
+     */
+    @Test
+    public void createCountTask_stock_not_found_throws() {
+        when(manager.getOne(any())).thenReturn(null);
+
+        StockCountTaskCreateDTO dto = new StockCountTaskCreateDTO();
+        dto.setSkuId(999L);
+        dto.setOperatorId(1L);
+        assertThrows(BizException.class, () -> service.createCountTask(dto));
     }
 }

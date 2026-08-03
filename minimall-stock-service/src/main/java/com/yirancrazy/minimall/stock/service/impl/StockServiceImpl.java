@@ -12,13 +12,19 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.stock.constant.StockCodeEnum;
+import com.yirancrazy.minimall.stock.constant.StockCountTaskStatusEnum;
 import com.yirancrazy.minimall.stock.constant.StockJournalTypeEnum;
+import com.yirancrazy.minimall.stock.dto.StockCountTaskCompleteDTO;
+import com.yirancrazy.minimall.stock.dto.StockCountTaskCreateDTO;
+import com.yirancrazy.minimall.stock.dto.StockCountTaskPageDTO;
 import com.yirancrazy.minimall.stock.dto.StockPageDTO;
 import com.yirancrazy.minimall.stock.dto.StockTransferDTO;
 import com.yirancrazy.minimall.stock.dto.StockTransferPageDTO;
+import com.yirancrazy.minimall.stock.entity.StockCountTaskPO;
 import com.yirancrazy.minimall.stock.entity.StockJournalPO;
 import com.yirancrazy.minimall.stock.entity.StockPO;
 import com.yirancrazy.minimall.stock.entity.StockTransferPO;
+import com.yirancrazy.minimall.stock.manager.StockCountTaskManager;
 import com.yirancrazy.minimall.stock.manager.StockJournalManager;
 import com.yirancrazy.minimall.stock.manager.StockManager;
 import com.yirancrazy.minimall.stock.manager.StockTransferManager;
@@ -42,13 +48,16 @@ public class StockServiceImpl implements StockService {
     private final StockJournalManager journalManager;
     private final StockMapper stockMapper;
     private final StockTransferManager transferManager;
+    private final StockCountTaskManager countTaskManager;
 
     public StockServiceImpl(StockManager stockManager, StockJournalManager journalManager,
-                            StockMapper stockMapper, StockTransferManager transferManager) {
+                            StockMapper stockMapper, StockTransferManager transferManager,
+                            StockCountTaskManager countTaskManager) {
         this.stockManager = stockManager;
         this.journalManager = journalManager;
         this.stockMapper = stockMapper;
         this.transferManager = transferManager;
+        this.countTaskManager = countTaskManager;
     }
 
     /**
@@ -279,6 +288,100 @@ public class StockServiceImpl implements StockService {
         }
         wrapper.orderByDesc(StockTransferPO::getId);
         return transferManager.page(page, wrapper);
+    }
+
+    /**
+     * 下发库存盘点任务，查询当前可用库存作为期望数量。
+     * @param dto 创建入参，含SKU与操作人
+     * @return 盘点任务ID
+     * @throws BizException SKU库存不存在时
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Long createCountTask(StockCountTaskCreateDTO dto) {
+        StockPO po = getStock(dto.getSkuId());
+        StockCountTaskPO task = new StockCountTaskPO();
+        task.setSkuId(dto.getSkuId());
+        task.setExpectedQuantity(po.getAvailable());
+        task.setStatus(StockCountTaskStatusEnum.PENDING.intCode());
+        task.setRemark(dto.getRemark());
+        task.setOperatorId(dto.getOperatorId());
+        countTaskManager.save(task);
+        log.info("count task created, id={}, skuId={}, expected={}",
+            task.getId(), dto.getSkuId(), po.getAvailable());
+        return task.getId();
+    }
+
+    /**
+     * 分页查询盘点任务，可选按SKU和状态过滤，按ID降序返回。
+     * @param dto 分页查询入参
+     * @return 盘点任务分页结果
+     */
+    @Override
+    public IPage<StockCountTaskPO> countTaskPage(StockCountTaskPageDTO dto) {
+        Page<StockCountTaskPO> page = new Page<>(dto.getPageNo(), dto.getPageSize());
+        LambdaQueryWrapper<StockCountTaskPO> wrapper =
+            Wrappers.lambdaQuery(StockCountTaskPO.class);
+        if (dto.getSkuId() != null) {
+            wrapper.eq(StockCountTaskPO::getSkuId, dto.getSkuId());
+        }
+        if (dto.getStatus() != null) {
+            wrapper.eq(StockCountTaskPO::getStatus, dto.getStatus());
+        }
+        wrapper.orderByDesc(StockCountTaskPO::getId);
+        return countTaskManager.page(page, wrapper);
+    }
+
+    /**
+     * 完成盘点任务，计算差异并在有差异时调整库存。
+     * @param id 任务ID
+     * @param dto 完成入参，含实际盘点数量
+     * @throws BizException 任务不存在或非待盘点状态时
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void completeCountTask(Long id, StockCountTaskCompleteDTO dto) {
+        StockCountTaskPO task = countTaskManager.getById(id);
+        if (task == null) {
+            throw new BizException(StockCodeEnum.STOCK_COUNT_TASK_NOT_FOUND);
+        }
+        if (task.getStatus() != StockCountTaskStatusEnum.PENDING.intCode()) {
+            throw new BizException(StockCodeEnum.STOCK_COUNT_TASK_NOT_PENDING);
+        }
+        task.setActualQuantity(dto.getActualQuantity());
+        task.setDiffQuantity(dto.getActualQuantity() - task.getExpectedQuantity());
+        if (dto.getRemark() != null) {
+            task.setRemark(dto.getRemark());
+        }
+        task.setStatus(StockCountTaskStatusEnum.COMPLETED.intCode());
+        countTaskManager.updateById(task);
+
+        if (task.getDiffQuantity() != 0) {
+            adjustStock(task.getSkuId(), task.getDiffQuantity(), "盘点差异调整");
+        }
+        log.info("count task completed, id={}, skuId={}, diff={}",
+            id, task.getSkuId(), task.getDiffQuantity());
+    }
+
+    /**
+     * 取消盘点任务，校验状态为PENDING后推进为CANCELLED。
+     * @param id 任务ID
+     * @param operatorId 操作人ID
+     * @throws BizException 任务不存在或非待盘点状态时
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void cancelCountTask(Long id, Long operatorId) {
+        StockCountTaskPO task = countTaskManager.getById(id);
+        if (task == null) {
+            throw new BizException(StockCodeEnum.STOCK_COUNT_TASK_NOT_FOUND);
+        }
+        if (task.getStatus() != StockCountTaskStatusEnum.PENDING.intCode()) {
+            throw new BizException(StockCodeEnum.STOCK_COUNT_TASK_NOT_PENDING);
+        }
+        task.setStatus(StockCountTaskStatusEnum.CANCELLED.intCode());
+        countTaskManager.updateById(task);
+        log.info("count task cancelled, id={}, operator={}", id, operatorId);
     }
 
     private StockPO getStock(Long skuId) {

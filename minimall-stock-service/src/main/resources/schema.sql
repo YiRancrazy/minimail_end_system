@@ -36,3 +36,18 @@ CREATE TABLE IF NOT EXISTS t_stock_transfer (
   is_deleted TINYINT DEFAULT 0,
   PRIMARY KEY (id)
 );
+
+CREATE TABLE IF NOT EXISTS t_stock_count_task (
+  id BIGINT NOT NULL,
+  sku_id BIGINT NOT NULL,
+  expected_quantity BIGINT NOT NULL,
+  actual_quantity BIGINT,
+  diff_quantity BIGINT,
+  status TINYINT NOT NULL DEFAULT 1,
+  remark VARCHAR(256),
+  operator_id BIGINT NOT NULL,
+  create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+  update_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+  is_deleted TINYINT DEFAULT 0,
+  PRIMARY KEY (id)
+);

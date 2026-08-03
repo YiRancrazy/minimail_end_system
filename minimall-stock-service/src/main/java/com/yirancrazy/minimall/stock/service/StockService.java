@@ -2,9 +2,13 @@ package com.yirancrazy.minimall.stock.service;
 
 import java.util.List;
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.yirancrazy.minimall.stock.dto.StockCountTaskCompleteDTO;
+import com.yirancrazy.minimall.stock.dto.StockCountTaskCreateDTO;
+import com.yirancrazy.minimall.stock.dto.StockCountTaskPageDTO;
 import com.yirancrazy.minimall.stock.dto.StockPageDTO;
 import com.yirancrazy.minimall.stock.dto.StockTransferDTO;
 import com.yirancrazy.minimall.stock.dto.StockTransferPageDTO;
+import com.yirancrazy.minimall.stock.entity.StockCountTaskPO;
 import com.yirancrazy.minimall.stock.entity.StockJournalPO;
 import com.yirancrazy.minimall.stock.entity.StockPO;
 import com.yirancrazy.minimall.stock.entity.StockTransferPO;
@@ -97,4 +101,35 @@ public interface StockService {
      * @return 调拨记录分页结果
      */
     IPage<StockTransferPO> transferPage(StockTransferPageDTO dto);
+
+    /**
+     * 下发库存盘点任务，查询当前可用库存作为期望数量。
+     * @param dto 创建入参，含SKU与操作人
+     * @return 盘点任务ID
+     * @throws com.yirancrazy.minimall.common.exception.BizException SKU库存不存在时
+     */
+    Long createCountTask(StockCountTaskCreateDTO dto);
+
+    /**
+     * 分页查询盘点任务，可选按SKU和状态过滤。
+     * @param dto 分页查询入参
+     * @return 盘点任务分页结果
+     */
+    IPage<StockCountTaskPO> countTaskPage(StockCountTaskPageDTO dto);
+
+    /**
+     * 完成盘点任务，计算差异并调整库存。
+     * @param id 任务ID
+     * @param dto 完成入参，含实际盘点数量
+     * @throws com.yirancrazy.minimall.common.exception.BizException 任务不存在或非待盘点状态时
+     */
+    void completeCountTask(Long id, StockCountTaskCompleteDTO dto);
+
+    /**
+     * 取消盘点任务。
+     * @param id 任务ID
+     * @param operatorId 操作人ID
+     * @throws com.yirancrazy.minimall.common.exception.BizException 任务不存在或非待盘点状态时
+     */
+    void cancelCountTask(Long id, Long operatorId);
 }

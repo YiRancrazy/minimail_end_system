@@ -17,9 +17,13 @@ import jakarta.validation.Valid;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.common.util.CsvExporter;
 import com.yirancrazy.minimall.stock.constant.StockJournalTypeEnum;
+import com.yirancrazy.minimall.stock.dto.StockCountTaskCompleteDTO;
+import com.yirancrazy.minimall.stock.dto.StockCountTaskCreateDTO;
+import com.yirancrazy.minimall.stock.dto.StockCountTaskPageDTO;
 import com.yirancrazy.minimall.stock.dto.StockPageDTO;
 import com.yirancrazy.minimall.stock.dto.StockTransferDTO;
 import com.yirancrazy.minimall.stock.dto.StockTransferPageDTO;
+import com.yirancrazy.minimall.stock.entity.StockCountTaskPO;
 import com.yirancrazy.minimall.stock.entity.StockJournalPO;
 import com.yirancrazy.minimall.stock.entity.StockPO;
 import com.yirancrazy.minimall.stock.entity.StockTransferPO;
@@ -135,6 +139,55 @@ public class StockControllerV1 {
     @GetMapping("/platform/transfers")
     public Result<IPage<StockTransferPO>> transferPage(@Valid StockTransferPageDTO dto) {
         return Result.success(stockService.transferPage(dto));
+    }
+
+    /**
+     * 下发库存盘点任务，查询当前可用库存作为期望数量。
+     * @param operatorId 操作人ID（Header注入）
+     * @param dto 创建入参
+     * @return 统一响应体，数据为盘点任务ID
+     */
+    @PostMapping("/platform/count-tasks")
+    public Result<Long> createCountTask(@RequestHeader("X-User-Id") Long operatorId,
+                                        @Valid @RequestBody StockCountTaskCreateDTO dto) {
+        dto.setOperatorId(operatorId);
+        return Result.success(stockService.createCountTask(dto));
+    }
+
+    /**
+     * 分页查询盘点任务，可选按SKU和状态过滤。
+     * @param dto 分页查询入参
+     * @return 盘点任务分页结果
+     */
+    @GetMapping("/platform/count-tasks")
+    public Result<IPage<StockCountTaskPO>> countTaskPage(@Valid StockCountTaskPageDTO dto) {
+        return Result.success(stockService.countTaskPage(dto));
+    }
+
+    /**
+     * 完成盘点任务，计算差异并调整库存。
+     * @param id 任务ID
+     * @param dto 完成入参
+     * @return 统一响应体
+     */
+    @PostMapping("/platform/count-tasks/{id}/complete")
+    public Result<Void> completeCountTask(@PathVariable Long id,
+                                          @Valid @RequestBody StockCountTaskCompleteDTO dto) {
+        stockService.completeCountTask(id, dto);
+        return Result.success(null);
+    }
+
+    /**
+     * 取消盘点任务。
+     * @param id 任务ID
+     * @param operatorId 操作人ID（Header注入）
+     * @return 统一响应体
+     */
+    @PostMapping("/platform/count-tasks/{id}/cancel")
+    public Result<Void> cancelCountTask(@PathVariable Long id,
+                                        @RequestHeader("X-User-Id") Long operatorId) {
+        stockService.cancelCountTask(id, operatorId);
+        return Result.success(null);
     }
 
     private static final String[] JOURNAL_HEADERS = {

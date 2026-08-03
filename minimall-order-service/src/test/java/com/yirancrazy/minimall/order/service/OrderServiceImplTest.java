@@ -1,6 +1,9 @@
 package com.yirancrazy.minimall.order.service;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -10,8 +13,10 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.yirancrazy.minimall.api.dto.goods.SkuSnapshotDTO;
@@ -23,9 +28,12 @@ import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.order.constant.OrderStatusEnum;
 import com.yirancrazy.minimall.order.dto.OrderPageDTO;
+import com.yirancrazy.minimall.order.entity.OrderLogisticsPO;
 import com.yirancrazy.minimall.order.entity.OrderPO;
+import com.yirancrazy.minimall.order.manager.OrderLogisticsManager;
 import com.yirancrazy.minimall.order.manager.OrderManager;
 import com.yirancrazy.minimall.order.service.impl.OrderServiceImpl;
+import com.yirancrazy.minimall.order.vo.OrderLogisticsVO;
 
 /**
 * OrderServiceImpl 单元测试，覆盖订单状态机创建、支付、取消、发货、确认、退款及异常路径。
@@ -33,6 +41,7 @@ import com.yirancrazy.minimall.order.service.impl.OrderServiceImpl;
 public class OrderServiceImplTest {
 
     private OrderManager manager;
+    private OrderLogisticsManager logisticsManager;
     private GoodsFeignClient goodsFeignClient;
     private StockFeignClient stockFeignClient;
     private PayFeignClient payFeignClient;
@@ -42,6 +51,7 @@ public class OrderServiceImplTest {
     @BeforeEach
     void setUp() {
         manager = mock(OrderManager.class);
+        logisticsManager = mock(OrderLogisticsManager.class);
         goodsFeignClient = mock(GoodsFeignClient.class);
         stockFeignClient = mock(StockFeignClient.class);
         payFeignClient = mock(PayFeignClient.class);
@@ -55,6 +65,7 @@ public class OrderServiceImplTest {
             }
             return true;
         }).when(manager).save(any(OrderPO.class));
+        lenient().when(logisticsManager.save(any(OrderLogisticsPO.class))).thenReturn(true);
         lenient().when(goodsFeignClient.skuSnapshot(any())).thenReturn(Result.success(
             new SkuSnapshotDTO(100L, 1L, "sku-100", new BigDecimal("9.90"), 100)));
         lenient().when(stockFeignClient.reserve(any())).thenReturn(Result.success(Boolean.TRUE));
@@ -65,7 +76,8 @@ public class OrderServiceImplTest {
             inv.getArgument(1, Runnable.class).run();
             return null;
         }).when(eventBus).publishInTx(any(), any(Runnable.class), any());
-        service = new OrderServiceImpl(manager, goodsFeignClient, stockFeignClient, payFeignClient, eventBus);
+        service = new OrderServiceImpl(manager, logisticsManager, goodsFeignClient,
+            stockFeignClient, payFeignClient, eventBus);
     }
 
     /**
@@ -420,6 +432,145 @@ public class OrderServiceImplTest {
         when(manager.count(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class))).thenReturn(5L);
         long count = service.pendingCount(10L);
         assertEquals(5L, count);
+    }
+
+    /**
+     * 验证商家同意退款时状态保持 REFUNDING 且不调用 updateById。
+     */
+    @Test
+    public void reviewRefund_approved_keeps_refunding() {
+        OrderPO existing = buildOrder(99L, 1L, 10L, OrderStatusEnum.REFUNDING.intCode());
+        existing.setRefundFromStatus(OrderStatusEnum.PAID.intCode());
+        when(manager.getById(99L)).thenReturn(existing);
+
+        service.reviewRefund(99L, true, 10L);
+        assertEquals(OrderStatusEnum.REFUNDING.intCode(), existing.getStatus());
+        verify(manager, never()).updateById(any(OrderPO.class));
+    }
+
+    /**
+     * 验证商家拒绝退款时状态回退到 refundFromStatus。
+     */
+    @Test
+    public void reviewRefund_rejected_reverts_status() {
+        OrderPO existing = buildOrder(99L, 1L, 10L, OrderStatusEnum.REFUNDING.intCode());
+        existing.setRefundFromStatus(OrderStatusEnum.PAID.intCode());
+        when(manager.getById(99L)).thenReturn(existing);
+
+        service.reviewRefund(99L, false, 10L);
+        assertEquals(OrderStatusEnum.PAID.intCode(), existing.getStatus());
+        verify(manager).updateById(existing);
+    }
+
+    /**
+     * 验证非归属商家审核退款时抛出异常。
+     */
+    @Test
+    public void reviewRefund_wrong_merchant_throws() {
+        OrderPO existing = buildOrder(99L, 1L, 10L, OrderStatusEnum.REFUNDING.intCode());
+        when(manager.getById(99L)).thenReturn(existing);
+
+        assertThrows(BizException.class, () -> service.reviewRefund(99L, true, 999L));
+    }
+
+    /**
+     * 验证非 REFUNDING 状态订单审核退款时抛出异常。
+     */
+    @Test
+    public void reviewRefund_not_refunding_throws() {
+        OrderPO existing = buildOrder(99L, 1L, 10L, OrderStatusEnum.PAID.intCode());
+        when(manager.getById(99L)).thenReturn(existing);
+
+        assertThrows(BizException.class, () -> service.reviewRefund(99L, true, 10L));
+    }
+
+    /**
+     * 验证平台仲裁同意退款时状态推进为 REFUNDED。
+     */
+    @Test
+    public void arbitrateRefund_approved_transitions_to_refunded() {
+        OrderPO existing = buildOrder(99L, 1L, 10L, OrderStatusEnum.REFUNDING.intCode());
+        existing.setRefundFromStatus(OrderStatusEnum.PAID.intCode());
+        when(manager.getById(99L)).thenReturn(existing);
+
+        service.arbitrateRefund(99L, true);
+        assertEquals(OrderStatusEnum.REFUNDED.intCode(), existing.getStatus());
+        verify(manager).updateById(existing);
+    }
+
+    /**
+     * 验证平台仲裁拒绝退款时状态回退到 refundFromStatus。
+     */
+    @Test
+    public void arbitrateRefund_rejected_reverts_status() {
+        OrderPO existing = buildOrder(99L, 1L, 10L, OrderStatusEnum.REFUNDING.intCode());
+        existing.setRefundFromStatus(OrderStatusEnum.SHIPPED.intCode());
+        when(manager.getById(99L)).thenReturn(existing);
+
+        service.arbitrateRefund(99L, false);
+        assertEquals(OrderStatusEnum.SHIPPED.intCode(), existing.getStatus());
+        verify(manager).updateById(existing);
+    }
+
+    /**
+     * 验证平台仲裁非 REFUNDING 状态订单时抛出异常。
+     */
+    @Test
+    public void arbitrateRefund_not_refunding_throws() {
+        OrderPO existing = buildOrder(99L, 1L, 10L, OrderStatusEnum.PAID.intCode());
+        when(manager.getById(99L)).thenReturn(existing);
+
+        assertThrows(BizException.class, () -> service.arbitrateRefund(99L, true));
+    }
+
+    /**
+     * 验证 queryLogistics 在订单存在时按创建时间正序返回物流节点 VO。
+     */
+    @Test
+    public void queryLogistics_returns_nodes_when_order_exists() {
+        OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.SHIPPED.intCode());
+        when(manager.getById(99L)).thenReturn(existing);
+        List<OrderLogisticsPO> nodes = new ArrayList<>(2);
+        OrderLogisticsPO first = new OrderLogisticsPO();
+        first.setOrderId(99L);
+        first.setNode("已发货");
+        first.setDescription("商家已发货");
+        first.setCreateTime(LocalDateTime.of(2026, 8, 3, 10, 0));
+        OrderLogisticsPO second = new OrderLogisticsPO();
+        second.setOrderId(99L);
+        second.setNode("已签收");
+        second.setDescription("用户已签收");
+        second.setCreateTime(LocalDateTime.of(2026, 8, 4, 12, 0));
+        nodes.add(first);
+        nodes.add(second);
+        when(logisticsManager.list(any(Wrapper.class))).thenReturn(nodes);
+
+        List<OrderLogisticsVO> result = service.queryLogistics(99L);
+        assertEquals(2, result.size());
+        assertEquals("已发货", result.get(0).getNode());
+        assertEquals("已签收", result.get(1).getNode());
+    }
+
+    /**
+     * 验证 queryLogistics 在订单不存在时抛出异常。
+     */
+    @Test
+    public void queryLogistics_missing_order_throws() {
+        when(manager.getById(99L)).thenReturn(null);
+        assertThrows(BizException.class, () -> service.queryLogistics(99L));
+    }
+
+    /**
+     * 验证发货时插入一条"已发货"物流节点。
+     */
+    @Test
+    public void ship_inserts_logistics_node() {
+        OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.PAID.intCode());
+        when(manager.getById(99L)).thenReturn(existing);
+
+        service.ship(99L, 10L);
+        assertEquals(OrderStatusEnum.SHIPPED.intCode(), existing.getStatus());
+        verify(logisticsManager).save(any(OrderLogisticsPO.class));
     }
 
     private OrderPO buildOrder(Long id, Long userId, Integer status) {

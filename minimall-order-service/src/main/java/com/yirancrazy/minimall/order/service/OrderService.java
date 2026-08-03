@@ -1,14 +1,16 @@
 package com.yirancrazy.minimall.order.service;
 
+import java.util.List;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.yirancrazy.minimall.order.dto.OrderPageDTO;
 import com.yirancrazy.minimall.order.entity.OrderPO;
+import com.yirancrazy.minimall.order.vo.OrderLogisticsVO;
 
 /**
  * @Author: yirancrazy@gmail.com
  * @Description: 订单领域服务接口，定义Order相关业务契约
- * @Version: 1.1
- * @DateTime: 2026/07/31
+ * @Version: 1.2
+ * @DateTime: 2026/08/03
  */
 public interface OrderService {
     Long create(Long userId, Long skuId, Integer quantity);
@@ -67,4 +69,26 @@ public interface OrderService {
      * @return 订单分页结果
      */
     IPage<OrderPO> page(OrderPageDTO dto);
+
+    /**
+     * 商家审核退款，仅允许 REFUNDING 状态订单；approved=false 回退到 refundFromStatus，true 仅记录审核通过。
+     * @param orderId 订单ID
+     * @param approved 是否同意退款
+     * @param merchantId 商家ID，来自可信 Header
+     */
+    void reviewRefund(Long orderId, boolean approved, Long merchantId);
+
+    /**
+     * 平台退款仲裁，仅允许 REFUNDING 状态订单；approved=true 强制推进 REFUNDED，false 回退到 refundFromStatus。
+     * @param orderId 订单ID
+     * @param approved 仲裁是否支持退款
+     */
+    void arbitrateRefund(Long orderId, boolean approved);
+
+    /**
+     * 查询订单物流轨迹，按创建时间正序返回；订单不存在抛出 ORDER_NOT_FOUND。
+     * @param orderId 订单ID
+     * @return 物流节点列表
+     */
+    List<OrderLogisticsVO> queryLogistics(Long orderId);
 }

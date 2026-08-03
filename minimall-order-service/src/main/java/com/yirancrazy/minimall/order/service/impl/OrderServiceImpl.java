@@ -3,6 +3,7 @@ package com.yirancrazy.minimall.order.service.impl;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
@@ -22,32 +23,38 @@ import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.order.constant.OrderCodeEnum;
 import com.yirancrazy.minimall.order.constant.OrderStatusEnum;
 import com.yirancrazy.minimall.order.dto.OrderPageDTO;
+import com.yirancrazy.minimall.order.entity.OrderLogisticsPO;
 import com.yirancrazy.minimall.order.entity.OrderPO;
+import com.yirancrazy.minimall.order.manager.OrderLogisticsManager;
 import com.yirancrazy.minimall.order.manager.OrderManager;
 import com.yirancrazy.minimall.order.service.OrderService;
+import com.yirancrazy.minimall.order.vo.OrderLogisticsVO;
 
 /**
  * @Author: yirancrazy@gmail.com
  * @Description: 订单领域服务实现，编排下单核心链路：取商品快照→锁库存→创建支付流水→持久化订单，并通过事件总线广播订单状态变更。
- * @Version: 1.1
- * @DateTime: 2026/08/02
+ * @Version: 1.2
+ * @DateTime: 2026/08/03
  */
 @Slf4j
 @Service
 public class OrderServiceImpl implements OrderService {
 
     private final OrderManager orderManager;
+    private final OrderLogisticsManager orderLogisticsManager;
     private final GoodsFeignClient goodsFeignClient;
     private final StockFeignClient stockFeignClient;
     private final PayFeignClient payFeignClient;
     private final EventBus eventBus;
 
     public OrderServiceImpl(OrderManager orderManager,
+                            OrderLogisticsManager orderLogisticsManager,
                             GoodsFeignClient goodsFeignClient,
                             StockFeignClient stockFeignClient,
                             PayFeignClient payFeignClient,
                             EventBus eventBus) {
         this.orderManager = orderManager;
+        this.orderLogisticsManager = orderLogisticsManager;
         this.goodsFeignClient = goodsFeignClient;
         this.stockFeignClient = stockFeignClient;
         this.payFeignClient = payFeignClient;
@@ -136,6 +143,12 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public void ship(Long orderId, Long merchantId) {
         transitStatus(orderId, OrderStatusEnum.SHIPPED);
+        OrderLogisticsPO node = new OrderLogisticsPO();
+        node.setOrderId(orderId);
+        node.setNode("已发货");
+        node.setDescription("商家已发货");
+        node.setCreatedTime(LocalDateTime.now());
+        orderLogisticsManager.save(node);
         log.info("order shipped, orderId={}, merchantId={}", orderId, merchantId);
     }
 
@@ -310,5 +323,76 @@ public class OrderServiceImpl implements OrderService {
             .eq(dto.getMerchantId() != null, OrderPO::getMerchantId, dto.getMerchantId())
             .eq(dto.getStatus() != null, OrderPO::getStatus, dto.getStatus())
             .orderByDesc(OrderPO::getCreateTime));
+    }
+
+    /**
+     * 商家审核退款，校验订单归属与 REFUNDING 状态；approved=false 回退到 refundFromStatus，true 仅记录审核通过。
+     * @param orderId 订单ID
+     * @param approved 是否同意退款
+     * @param merchantId 商家ID
+     */
+    @Override
+    public void reviewRefund(Long orderId, boolean approved, Long merchantId) {
+        OrderPO po = getOrder(orderId);
+        if (!po.getMerchantId().equals(merchantId)) {
+            throw new BizException(OrderCodeEnum.ORDER_NOT_FOUND);
+        }
+        if (po.getStatus() != OrderStatusEnum.REFUNDING.intCode()) {
+            throw new BizException(OrderCodeEnum.ORDER_NOT_REFUNDING);
+        }
+        if (!approved) {
+            Integer fromStatus = po.getRefundFromStatus();
+            po.setStatus(fromStatus != null ? fromStatus : OrderStatusEnum.PAID.intCode());
+            orderManager.updateById(po);
+            log.info("refund rejected by merchant, orderId={}, merchantId={}", orderId, merchantId);
+            return;
+        }
+        log.info("refund approved by merchant, orderId={}, merchantId={}", orderId, merchantId);
+    }
+
+    /**
+     * 平台退款仲裁，校验 REFUNDING 状态；approved=true 强制推进 REFUNDED，false 回退到 refundFromStatus。
+     * @param orderId 订单ID
+     * @param approved 仲裁是否支持退款
+     */
+    @Override
+    public void arbitrateRefund(Long orderId, boolean approved) {
+        OrderPO po = getOrder(orderId);
+        if (po.getStatus() != OrderStatusEnum.REFUNDING.intCode()) {
+            throw new BizException(OrderCodeEnum.ORDER_NOT_REFUNDING);
+        }
+        if (approved) {
+            po.setStatus(OrderStatusEnum.REFUNDED.intCode());
+            orderManager.updateById(po);
+            log.info("refund arbitrated approved, orderId={}", orderId);
+            return;
+        }
+        Integer fromStatus = po.getRefundFromStatus();
+        po.setStatus(fromStatus != null ? fromStatus : OrderStatusEnum.PAID.intCode());
+        orderManager.updateById(po);
+        log.info("refund arbitrated rejected, orderId={}", orderId);
+    }
+
+    /**
+     * 查询订单物流轨迹，按创建时间正序返回；订单不存在抛出 ORDER_NOT_FOUND。
+     * @param orderId 订单ID
+     * @return 物流节点列表
+     */
+    @Override
+    public List<OrderLogisticsVO> queryLogistics(Long orderId) {
+        getOrder(orderId);
+        List<OrderLogisticsPO> nodes = orderLogisticsManager.list(
+            Wrappers.lambdaQuery(OrderLogisticsPO.class)
+                .eq(OrderLogisticsPO::getOrderId, orderId)
+                .orderByAsc(OrderLogisticsPO::getCreateTime));
+        return nodes.stream().map(this::toLogisticsVO).collect(Collectors.toList());
+    }
+
+    private OrderLogisticsVO toLogisticsVO(OrderLogisticsPO po) {
+        OrderLogisticsVO vo = new OrderLogisticsVO();
+        vo.setNode(po.getNode());
+        vo.setDescription(po.getDescription());
+        vo.setCreateTime(po.getCreateTime());
+        return vo;
     }
 }

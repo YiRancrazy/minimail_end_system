@@ -1,5 +1,6 @@
 package com.yirancrazy.minimall.order.controller.v1;
 
+import java.util.List;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -7,6 +8,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import jakarta.validation.Valid;
@@ -15,6 +17,7 @@ import com.yirancrazy.minimall.order.dto.OrderCreateDTO;
 import com.yirancrazy.minimall.order.dto.OrderPageDTO;
 import com.yirancrazy.minimall.order.entity.OrderPO;
 import com.yirancrazy.minimall.order.service.OrderService;
+import com.yirancrazy.minimall.order.vo.OrderLogisticsVO;
 
 /**
  * @Author: yirancrazy@gmail.com
@@ -186,5 +189,41 @@ public class OrderControllerV1 {
     @GetMapping("/merchant/pending-count")
     public Result<Long> merchantPendingCount(@RequestHeader("X-Merchant-Id") Long merchantId) {
         return Result.success(orderService.pendingCount(merchantId));
+    }
+
+    /**
+     * 商家审核退款，merchantId 由可信 Header 注入。
+     * @param orderId 订单ID
+     * @param merchantId 商家ID
+     * @param approved 是否同意退款
+     */
+    @PostMapping("/{orderId}/refund-review")
+    public Result<Void> refundReview(@PathVariable Long orderId,
+                                     @RequestHeader("X-Merchant-Id") Long merchantId,
+                                     @RequestParam boolean approved) {
+        orderService.reviewRefund(orderId, approved, merchantId);
+        return Result.success(null);
+    }
+
+    /**
+     * 平台退款仲裁，强制推进或回退退款状态。
+     * @param orderId 订单ID
+     * @param approved 仲裁是否支持退款
+     */
+    @PostMapping("/{orderId}/refund-arbitrate")
+    public Result<Void> refundArbitrate(@PathVariable Long orderId,
+                                        @RequestParam boolean approved) {
+        orderService.arbitrateRefund(orderId, approved);
+        return Result.success(null);
+    }
+
+    /**
+     * 查询订单物流轨迹，按创建时间正序返回。
+     * @param orderId 订单ID
+     * @return 物流节点列表
+     */
+    @GetMapping("/{orderId}/logistics")
+    public Result<List<OrderLogisticsVO>> logistics(@PathVariable Long orderId) {
+        return Result.success(orderService.queryLogistics(orderId));
     }
 }

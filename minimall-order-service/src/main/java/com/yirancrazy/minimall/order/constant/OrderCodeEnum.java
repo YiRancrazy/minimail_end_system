@@ -21,7 +21,8 @@ public enum OrderCodeEnum implements BaseEnum {
     ORDER_PAY_CREATE_FAIL("11005", "ORDER_PAY_CREATE_FAIL", "创建支付流水失败"),
     ORDER_STATUS_TRANSITION_INVALID("50001", "ORDER_STATUS_TRANSITION_INVALID", "订单状态流转不合法"),
     ORDER_ALREADY_CANCELLED("50002", "ORDER_ALREADY_CANCELLED", "订单已取消"),
-    ORDER_DELETE_NOT_ALLOWED("50003", "ORDER_DELETE_NOT_ALLOWED", "订单状态不允许删除");
+    ORDER_DELETE_NOT_ALLOWED("50003", "ORDER_DELETE_NOT_ALLOWED", "订单状态不允许删除"),
+    ORDER_NOT_REFUNDING("50004", "ORDER_NOT_REFUNDING", "订单非退款中状态");
 
     private final String code;
     private final String alias;

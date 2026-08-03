@@ -22,6 +22,7 @@ import com.yirancrazy.minimall.order.dto.OrderPageDTO;
 import com.yirancrazy.minimall.order.entity.OrderPO;
 import com.yirancrazy.minimall.order.service.OrderService;
 import com.yirancrazy.minimall.order.vo.OrderLogisticsVO;
+import com.yirancrazy.minimall.order.vo.OrderStatisticsVO;
 
 /**
  * @Author: yirancrazy@gmail.com
@@ -261,6 +262,16 @@ public class OrderControllerV1 {
                                HttpServletResponse response) throws IOException {
         List<OrderPO> list = orderService.platformExportList(dto);
         CsvExporter.write(response, "platform-orders.csv", ORDER_HEADERS, toOrderRows(list));
+    }
+
+    /**
+     * 平台订单统计聚合，可选 merchantId/时间范围过滤。
+     * @param dto 查询入参
+     * @return 订单统计VO
+     */
+    @GetMapping("/statistics")
+    public Result<OrderStatisticsVO> statistics(@Valid OrderPageDTO dto) {
+        return Result.success(orderService.statistics(dto));
     }
 
     private List<String[]> toOrderRows(List<OrderPO> list) {

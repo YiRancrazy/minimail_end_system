@@ -28,8 +28,10 @@ import com.yirancrazy.minimall.order.entity.OrderLogisticsPO;
 import com.yirancrazy.minimall.order.entity.OrderPO;
 import com.yirancrazy.minimall.order.manager.OrderLogisticsManager;
 import com.yirancrazy.minimall.order.manager.OrderManager;
+import com.yirancrazy.minimall.order.mapper.OrderMapper;
 import com.yirancrazy.minimall.order.service.OrderService;
 import com.yirancrazy.minimall.order.vo.OrderLogisticsVO;
+import com.yirancrazy.minimall.order.vo.OrderStatisticsVO;
 
 /**
  * @Author: yirancrazy@gmail.com
@@ -43,6 +45,7 @@ public class OrderServiceImpl implements OrderService {
 
     private final OrderManager orderManager;
     private final OrderLogisticsManager orderLogisticsManager;
+    private final OrderMapper orderMapper;
     private final GoodsFeignClient goodsFeignClient;
     private final StockFeignClient stockFeignClient;
     private final PayFeignClient payFeignClient;
@@ -50,12 +53,14 @@ public class OrderServiceImpl implements OrderService {
 
     public OrderServiceImpl(OrderManager orderManager,
                             OrderLogisticsManager orderLogisticsManager,
+                            OrderMapper orderMapper,
                             GoodsFeignClient goodsFeignClient,
                             StockFeignClient stockFeignClient,
                             PayFeignClient payFeignClient,
                             EventBus eventBus) {
         this.orderManager = orderManager;
         this.orderLogisticsManager = orderLogisticsManager;
+        this.orderMapper = orderMapper;
         this.goodsFeignClient = goodsFeignClient;
         this.stockFeignClient = stockFeignClient;
         this.payFeignClient = payFeignClient;
@@ -361,6 +366,16 @@ public class OrderServiceImpl implements OrderService {
             .le(dto.getEndTime() != null, OrderPO::getCreateTime, dto.getEndTime())
             .orderByDesc(OrderPO::getCreateTime)
             .last("LIMIT " + CsvExporter.maxExportRows()));
+    }
+
+    /**
+     * 平台订单统计聚合，可选 merchantId 过滤，委托 OrderMapper 统计。
+     * @param dto 查询入参（复用 merchantId/startTime/endTime）
+     * @return 订单统计VO
+     */
+    @Override
+    public OrderStatisticsVO statistics(OrderPageDTO dto) {
+        return orderMapper.statistics(dto.getMerchantId(), dto.getStartTime(), dto.getEndTime());
     }
 
     /**

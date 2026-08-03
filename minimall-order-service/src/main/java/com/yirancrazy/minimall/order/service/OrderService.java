@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.yirancrazy.minimall.order.dto.OrderPageDTO;
 import com.yirancrazy.minimall.order.entity.OrderPO;
 import com.yirancrazy.minimall.order.vo.OrderLogisticsVO;
+import com.yirancrazy.minimall.order.vo.OrderStatisticsVO;
 
 /**
  * @Author: yirancrazy@gmail.com
@@ -106,4 +107,11 @@ public interface OrderService {
      * @return 订单列表
      */
     List<OrderPO> platformExportList(OrderPageDTO dto);
+
+    /**
+     * 平台订单统计聚合，可选 merchantId 过滤，返回总数/总金额/退款金额/各状态计数。
+     * @param dto 查询入参（复用 merchantId/startTime/endTime）
+     * @return 订单统计VO
+     */
+    OrderStatisticsVO statistics(OrderPageDTO dto);
 }

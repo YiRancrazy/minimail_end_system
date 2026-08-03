@@ -32,6 +32,7 @@ import com.yirancrazy.minimall.order.entity.OrderLogisticsPO;
 import com.yirancrazy.minimall.order.entity.OrderPO;
 import com.yirancrazy.minimall.order.manager.OrderLogisticsManager;
 import com.yirancrazy.minimall.order.manager.OrderManager;
+import com.yirancrazy.minimall.order.mapper.OrderMapper;
 import com.yirancrazy.minimall.order.service.impl.OrderServiceImpl;
 import com.yirancrazy.minimall.order.vo.OrderLogisticsVO;
 
@@ -42,6 +43,7 @@ public class OrderServiceImplTest {
 
     private OrderManager manager;
     private OrderLogisticsManager logisticsManager;
+    private OrderMapper orderMapper;
     private GoodsFeignClient goodsFeignClient;
     private StockFeignClient stockFeignClient;
     private PayFeignClient payFeignClient;
@@ -52,6 +54,7 @@ public class OrderServiceImplTest {
     void setUp() {
         manager = mock(OrderManager.class);
         logisticsManager = mock(OrderLogisticsManager.class);
+        orderMapper = mock(OrderMapper.class);
         goodsFeignClient = mock(GoodsFeignClient.class);
         stockFeignClient = mock(StockFeignClient.class);
         payFeignClient = mock(PayFeignClient.class);
@@ -76,7 +79,7 @@ public class OrderServiceImplTest {
             inv.getArgument(1, Runnable.class).run();
             return null;
         }).when(eventBus).publishInTx(any(), any(Runnable.class), any());
-        service = new OrderServiceImpl(manager, logisticsManager, goodsFeignClient,
+        service = new OrderServiceImpl(manager, logisticsManager, orderMapper, goodsFeignClient,
             stockFeignClient, payFeignClient, eventBus);
     }
 

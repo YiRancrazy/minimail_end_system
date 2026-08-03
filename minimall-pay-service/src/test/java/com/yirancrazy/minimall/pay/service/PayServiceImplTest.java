@@ -22,14 +22,18 @@ import com.yirancrazy.minimall.api.feign.OrderFeignClient;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.pay.dto.PayCallbackDTO;
 import com.yirancrazy.minimall.pay.dto.PayPageDTO;
+import com.yirancrazy.minimall.pay.dto.WithdrawApplyDTO;
+import com.yirancrazy.minimall.pay.entity.MerchantWithdrawPO;
 import com.yirancrazy.minimall.pay.entity.PayTransactionPO;
 import com.yirancrazy.minimall.pay.gateway.AlipayGateway;
+import com.yirancrazy.minimall.pay.manager.MerchantWithdrawManager;
 import com.yirancrazy.minimall.pay.manager.PayManager;
 import com.yirancrazy.minimall.pay.mapper.PayRefundMapper;
 import com.yirancrazy.minimall.pay.mapper.PayTransactionMapper;
 import com.yirancrazy.minimall.pay.service.impl.PayServiceImpl;
 import com.yirancrazy.minimall.pay.vo.PayStatisticsVO;
 import com.yirancrazy.minimall.pay.vo.PaymentParamsVO;
+import com.yirancrazy.minimall.pay.vo.WithdrawVO;
 
 
 /**
@@ -45,6 +49,7 @@ public class PayServiceImplTest {
     private PayRefundMapper payRefundMapper;
     private PayTransactionMapper payTransactionMapper;
     private OrderFeignClient orderFeignClient;
+    private MerchantWithdrawManager merchantWithdrawManager;
     private PayServiceImpl service;
 
     @BeforeEach
@@ -54,6 +59,7 @@ public class PayServiceImplTest {
         payRefundMapper = mock(PayRefundMapper.class);
         payTransactionMapper = mock(PayTransactionMapper.class);
         orderFeignClient = mock(OrderFeignClient.class);
+        merchantWithdrawManager = mock(MerchantWithdrawManager.class);
         lenient().when(manager.updateById(any(PayTransactionPO.class))).thenReturn(true);
         lenient().when(alipayGateway.createPayment(anyString(), any(BigDecimal.class), anyString(), anyString()))
             .thenReturn("http://pay.url");
@@ -64,7 +70,16 @@ public class PayServiceImplTest {
             }
             return true;
         }).when(manager).save(any(PayTransactionPO.class));
-        service = new PayServiceImpl(manager, alipayGateway, payRefundMapper, payTransactionMapper, orderFeignClient);
+        lenient().when(merchantWithdrawManager.updateById(any(MerchantWithdrawPO.class))).thenReturn(true);
+        doAnswer(inv -> {
+            MerchantWithdrawPO p = inv.getArgument(0);
+            if (p.getId() == null) {
+                p.setId(System.nanoTime());
+            }
+            return true;
+        }).when(merchantWithdrawManager).save(any(MerchantWithdrawPO.class));
+        service = new PayServiceImpl(manager, alipayGateway, payRefundMapper, payTransactionMapper,
+            orderFeignClient, merchantWithdrawManager);
     }
 
     /**
@@ -253,5 +268,97 @@ public class PayServiceImplTest {
     public void freeze_missing_throws_biz() {
         when(manager.getOne(any())).thenReturn(null);
         assertThrows(BizException.class, () -> service.freeze("PAY999"));
+    }
+
+    /**
+     * 验证 applyWithdraw 会持久化一条状态为 PENDING 的提现单并返回正确 VO。
+     */
+    @Test
+    public void applyWithdraw_persists_pending_record() {
+        WithdrawApplyDTO dto = new WithdrawApplyDTO(new BigDecimal("500.00"), "月度提现");
+        WithdrawVO vo = service.applyWithdraw(10L, dto);
+
+        assertNotNull(vo);
+        assertEquals(10L, vo.getMerchantId());
+        assertEquals(0, new BigDecimal("500.00").compareTo(vo.getAmount()));
+        assertEquals(1, vo.getStatus());
+        assertEquals("月度提现", vo.getReason());
+        assertNotNull(vo.getWithdrawNo());
+        assertNotNull(vo.getAppliedAt());
+
+        ArgumentCaptor<MerchantWithdrawPO> cap = ArgumentCaptor.forClass(MerchantWithdrawPO.class);
+        verify(merchantWithdrawManager).save(cap.capture());
+        assertEquals(1, cap.getValue().getStatus());
+        assertEquals(10L, cap.getValue().getMerchantId());
+    }
+
+    /**
+     * 验证 pageWithdraw 委托给 merchantWithdrawManager.page 并强制绑定 merchantId。
+     */
+    @Test
+    public void pageWithdraw_delegates_to_manager() {
+        PayPageDTO dto = new PayPageDTO();
+        dto.setPageNo(1);
+        dto.setPageSize(10);
+        IPage<MerchantWithdrawPO> expected = new Page<>(1, 10);
+        when(merchantWithdrawManager.page(any(IPage.class), any())).thenReturn(expected);
+
+        IPage<MerchantWithdrawPO> result = service.pageWithdraw(10L, dto);
+        assertEquals(expected, result);
+        verify(merchantWithdrawManager).page(any(IPage.class), any());
+    }
+
+    /**
+     * 验证 platformPageWithdraw 委托给 merchantWithdrawManager.page，不绑定 merchantId。
+     */
+    @Test
+    public void platformPageWithdraw_delegates_to_manager() {
+        PayPageDTO dto = new PayPageDTO();
+        IPage<MerchantWithdrawPO> expected = new Page<>(1, 20);
+        when(merchantWithdrawManager.page(any(IPage.class), any())).thenReturn(expected);
+
+        IPage<MerchantWithdrawPO> result = service.platformPageWithdraw(dto);
+        assertEquals(expected, result);
+        verify(merchantWithdrawManager).page(any(IPage.class), any());
+    }
+
+    /**
+     * 验证 reviewWithdraw 在审核通过时将提现单状态置为 PAID。
+     */
+    @Test
+    public void reviewWithdraw_approves_marks_paid() {
+        MerchantWithdrawPO rec = new MerchantWithdrawPO();
+        rec.setId(1L);
+        rec.setStatus(1);
+        when(merchantWithdrawManager.getById(any())).thenReturn(rec);
+
+        service.reviewWithdraw(1L, true, null);
+        assertEquals(4, rec.getStatus());
+        verify(merchantWithdrawManager).updateById(rec);
+    }
+
+    /**
+     * 验证 reviewWithdraw 在审核驳回时将提现单状态置为 REJECTED 并记录原因。
+     */
+    @Test
+    public void reviewWithdraw_rejects_marks_rejected() {
+        MerchantWithdrawPO rec = new MerchantWithdrawPO();
+        rec.setId(1L);
+        rec.setStatus(1);
+        when(merchantWithdrawManager.getById(any())).thenReturn(rec);
+
+        service.reviewWithdraw(1L, false, "材料不全");
+        assertEquals(3, rec.getStatus());
+        assertEquals("材料不全", rec.getReason());
+        verify(merchantWithdrawManager).updateById(rec);
+    }
+
+    /**
+     * 验证 reviewWithdraw 在找不到提现单时抛出 WITHDRAW_NOT_FOUND 业务异常。
+     */
+    @Test
+    public void reviewWithdraw_missing_throws_biz() {
+        when(merchantWithdrawManager.getById(any())).thenReturn(null);
+        assertThrows(BizException.class, () -> service.reviewWithdraw(999L, true, null));
     }
 }

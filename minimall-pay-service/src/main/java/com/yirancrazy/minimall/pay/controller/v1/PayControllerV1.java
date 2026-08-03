@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import jakarta.servlet.http.HttpServletRequest;
@@ -19,11 +20,14 @@ import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.pay.dto.PayCallbackDTO;
 import com.yirancrazy.minimall.pay.dto.PayCreateDTO;
 import com.yirancrazy.minimall.pay.dto.PayPageDTO;
+import com.yirancrazy.minimall.pay.dto.WithdrawApplyDTO;
+import com.yirancrazy.minimall.pay.entity.MerchantWithdrawPO;
 import com.yirancrazy.minimall.pay.entity.PayTransactionPO;
 import com.yirancrazy.minimall.pay.service.PayService;
 import com.yirancrazy.minimall.pay.vo.PayStatisticsVO;
 import com.yirancrazy.minimall.pay.vo.PaymentParamsVO;
 import com.yirancrazy.minimall.pay.vo.RefundVO;
+import com.yirancrazy.minimall.pay.vo.WithdrawVO;
 
 
 /**
@@ -163,6 +167,55 @@ public class PayControllerV1 {
     @PostMapping("/{paymentNo}/freeze")
     public Result<Void> freeze(@PathVariable("paymentNo") String paymentNo) {
         payService.freeze(paymentNo);
+        return Result.success(null);
+    }
+
+    /**
+     * 商家提现申请，merchantId 由可信 Header 注入。
+     * @param merchantId 商家ID
+     * @param dto 提现申请DTO
+     * @return 提现单VO
+     */
+    @PostMapping("/merchant/withdraw")
+    public Result<WithdrawVO> applyWithdraw(@RequestHeader("X-Merchant-Id") Long merchantId,
+                                            @Valid @RequestBody WithdrawApplyDTO dto) {
+        return Result.success(payService.applyWithdraw(merchantId, dto));
+    }
+
+    /**
+     * 商家提现记录分页查询，merchantId 由可信 Header 注入。
+     * @param merchantId 商家ID
+     * @param dto 分页查询入参
+     * @return 提现单分页结果
+     */
+    @GetMapping("/merchant/withdrawals")
+    public Result<IPage<MerchantWithdrawPO>> merchantWithdrawals(@RequestHeader("X-Merchant-Id") Long merchantId,
+                                                                 @Valid PayPageDTO dto) {
+        return Result.success(payService.pageWithdraw(merchantId, dto));
+    }
+
+    /**
+     * 平台提现记录分页查询。
+     * @param dto 分页查询入参
+     * @return 提现单分页结果
+     */
+    @GetMapping("/withdrawals")
+    public Result<IPage<MerchantWithdrawPO>> platformWithdrawals(@Valid PayPageDTO dto) {
+        return Result.success(payService.platformPageWithdraw(dto));
+    }
+
+    /**
+     * 平台审核提现申请。
+     * @param withdrawId 提现单ID
+     * @param approved 是否通过
+     * @param reason 驳回原因，approved=false 时填写
+     * @return 操作结果
+     */
+    @PostMapping("/withdrawals/{withdrawId}/review")
+    public Result<Void> reviewWithdraw(@PathVariable("withdrawId") Long withdrawId,
+                                       @RequestParam boolean approved,
+                                       @RequestParam(required = false) String reason) {
+        payService.reviewWithdraw(withdrawId, approved, reason);
         return Result.success(null);
     }
 }

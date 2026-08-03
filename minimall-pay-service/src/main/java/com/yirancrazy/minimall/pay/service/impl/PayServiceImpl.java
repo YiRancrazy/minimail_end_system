@@ -16,11 +16,15 @@ import com.yirancrazy.minimall.pay.constant.PayChannelEnum;
 import com.yirancrazy.minimall.pay.constant.PayCodeEnum;
 import com.yirancrazy.minimall.pay.constant.PayStatusEnum;
 import com.yirancrazy.minimall.pay.constant.RefundStatusEnum;
+import com.yirancrazy.minimall.pay.constant.WithdrawStatusEnum;
 import com.yirancrazy.minimall.pay.dto.PayCallbackDTO;
 import com.yirancrazy.minimall.pay.dto.PayPageDTO;
+import com.yirancrazy.minimall.pay.dto.WithdrawApplyDTO;
+import com.yirancrazy.minimall.pay.entity.MerchantWithdrawPO;
 import com.yirancrazy.minimall.pay.entity.PayRefundPO;
 import com.yirancrazy.minimall.pay.entity.PayTransactionPO;
 import com.yirancrazy.minimall.pay.gateway.AlipayGateway;
+import com.yirancrazy.minimall.pay.manager.MerchantWithdrawManager;
 import com.yirancrazy.minimall.pay.manager.PayManager;
 import com.yirancrazy.minimall.pay.mapper.PayRefundMapper;
 import com.yirancrazy.minimall.pay.mapper.PayTransactionMapper;
@@ -28,6 +32,7 @@ import com.yirancrazy.minimall.pay.service.PayService;
 import com.yirancrazy.minimall.pay.vo.PayStatisticsVO;
 import com.yirancrazy.minimall.pay.vo.PaymentParamsVO;
 import com.yirancrazy.minimall.pay.vo.RefundVO;
+import com.yirancrazy.minimall.pay.vo.WithdrawVO;
 
 
 /**
@@ -41,6 +46,7 @@ import com.yirancrazy.minimall.pay.vo.RefundVO;
 public class PayServiceImpl implements PayService {
 
     private static final String PAYMENT_NO_PREFIX = "PAY";
+    private static final String WITHDRAW_NO_PREFIX = "WD";
     private static final DateTimeFormatter EXPIRE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private final PayManager payManager;
@@ -48,15 +54,18 @@ public class PayServiceImpl implements PayService {
     private final PayRefundMapper payRefundMapper;
     private final PayTransactionMapper payTransactionMapper;
     private final OrderFeignClient orderFeignClient;
+    private final MerchantWithdrawManager merchantWithdrawManager;
 
     public PayServiceImpl(PayManager payManager, AlipayGateway alipayGateway,
                           PayRefundMapper payRefundMapper, PayTransactionMapper payTransactionMapper,
-                          OrderFeignClient orderFeignClient) {
+                          OrderFeignClient orderFeignClient,
+                          MerchantWithdrawManager merchantWithdrawManager) {
         this.payManager = payManager;
         this.alipayGateway = alipayGateway;
         this.payRefundMapper = payRefundMapper;
         this.payTransactionMapper = payTransactionMapper;
         this.orderFeignClient = orderFeignClient;
+        this.merchantWithdrawManager = merchantWithdrawManager;
     }
 
     /**
@@ -280,5 +289,92 @@ public class PayServiceImpl implements PayService {
         po.setStatus(Integer.parseInt(PayStatusEnum.FROZEN.getCode()));
         payManager.updateById(po);
         log.info("payment frozen, paymentNo={}", paymentNo);
+    }
+
+    /**
+     * 商家提现申请，生成提现单号并保存为 PENDING 状态。
+     * @param merchantId 商家ID，由可信 Header 注入
+     * @param dto 提现申请DTO
+     * @return 提现单VO
+     */
+    @Override
+    public WithdrawVO applyWithdraw(Long merchantId, WithdrawApplyDTO dto) {
+        String withdrawNo = generateWithdrawNo();
+        LocalDateTime appliedAt = LocalDateTime.now();
+
+        MerchantWithdrawPO po = new MerchantWithdrawPO();
+        po.setMerchantId(merchantId);
+        po.setWithdrawNo(withdrawNo);
+        po.setAmount(dto.getAmount());
+        po.setStatus(Integer.parseInt(WithdrawStatusEnum.PENDING.getCode()));
+        po.setReason(dto.getReason());
+        po.setAppliedAt(appliedAt);
+        merchantWithdrawManager.save(po);
+
+        log.info("withdraw applied, withdrawNo={}, merchantId={}, amount={}",
+            withdrawNo, merchantId, dto.getAmount());
+        return new WithdrawVO(withdrawNo, merchantId, dto.getAmount(),
+            Integer.parseInt(WithdrawStatusEnum.PENDING.getCode()), dto.getReason(), appliedAt, null);
+    }
+
+    private String generateWithdrawNo() {
+        return WITHDRAW_NO_PREFIX + System.currentTimeMillis() + (int)(Math.random() * 1000);
+    }
+
+    /**
+     * 商家提现记录分页查询，merchantId 强制绑定，支持按状态与时间范围过滤。
+     * @param merchantId 商家ID
+     * @param dto 分页查询入参
+     * @return 提现单分页结果
+     */
+    @Override
+    public IPage<MerchantWithdrawPO> pageWithdraw(Long merchantId, PayPageDTO dto) {
+        Page<MerchantWithdrawPO> page = new Page<>(dto.getPageNo(), dto.getPageSize());
+        return merchantWithdrawManager.page(page, Wrappers.lambdaQuery(MerchantWithdrawPO.class)
+            .eq(MerchantWithdrawPO::getMerchantId, merchantId)
+            .eq(dto.getStatus() != null, MerchantWithdrawPO::getStatus, dto.getStatus())
+            .ge(dto.getStartTime() != null, MerchantWithdrawPO::getCreateTime, dto.getStartTime())
+            .le(dto.getEndTime() != null, MerchantWithdrawPO::getCreateTime, dto.getEndTime())
+            .orderByDesc(MerchantWithdrawPO::getCreateTime));
+    }
+
+    /**
+     * 平台提现记录分页查询，不绑定 merchantId。
+     * @param dto 分页查询入参
+     * @return 提现单分页结果
+     */
+    @Override
+    public IPage<MerchantWithdrawPO> platformPageWithdraw(PayPageDTO dto) {
+        Page<MerchantWithdrawPO> page = new Page<>(dto.getPageNo(), dto.getPageSize());
+        return merchantWithdrawManager.page(page, Wrappers.lambdaQuery(MerchantWithdrawPO.class)
+            .eq(dto.getStatus() != null, MerchantWithdrawPO::getStatus, dto.getStatus())
+            .ge(dto.getStartTime() != null, MerchantWithdrawPO::getCreateTime, dto.getStartTime())
+            .le(dto.getEndTime() != null, MerchantWithdrawPO::getCreateTime, dto.getEndTime())
+            .orderByDesc(MerchantWithdrawPO::getCreateTime));
+    }
+
+    /**
+     * 平台审核提现申请，approved=true 时状态置为 PAID，approved=false 时状态置为 REJECTED 并记录原因。
+     * @param withdrawId 提现单ID
+     * @param approved 是否通过
+     * @param reason 驳回原因，approved=false 时填写
+     */
+    @Override
+    public void reviewWithdraw(Long withdrawId, boolean approved, String reason) {
+        MerchantWithdrawPO po = merchantWithdrawManager.getById(withdrawId);
+        if (po == null) {
+            throw new BizException(PayCodeEnum.WITHDRAW_NOT_FOUND);
+        }
+
+        if (approved) {
+            po.setStatus(Integer.parseInt(WithdrawStatusEnum.PAID.getCode()));
+        }
+        else {
+            po.setStatus(Integer.parseInt(WithdrawStatusEnum.REJECTED.getCode()));
+            po.setReason(reason);
+        }
+        po.setReviewedAt(LocalDateTime.now());
+        merchantWithdrawManager.updateById(po);
+        log.info("withdraw reviewed, withdrawId={}, approved={}", withdrawId, approved);
     }
 }

@@ -5,10 +5,13 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO;
 import com.yirancrazy.minimall.pay.dto.PayCallbackDTO;
 import com.yirancrazy.minimall.pay.dto.PayPageDTO;
+import com.yirancrazy.minimall.pay.dto.WithdrawApplyDTO;
+import com.yirancrazy.minimall.pay.entity.MerchantWithdrawPO;
 import com.yirancrazy.minimall.pay.entity.PayTransactionPO;
 import com.yirancrazy.minimall.pay.vo.PayStatisticsVO;
 import com.yirancrazy.minimall.pay.vo.PaymentParamsVO;
 import com.yirancrazy.minimall.pay.vo.RefundVO;
+import com.yirancrazy.minimall.pay.vo.WithdrawVO;
 
 
 /**
@@ -84,4 +87,35 @@ public interface PayService {
      * @param paymentNo 支付单号
      */
     void freeze(String paymentNo);
+
+    /**
+     * 商家提现申请，生成提现单号并保存为 PENDING 状态。
+     * @param merchantId 商家ID，由可信 Header 注入
+     * @param dto 提现申请DTO
+     * @return 提现单VO
+     */
+    WithdrawVO applyWithdraw(Long merchantId, WithdrawApplyDTO dto);
+
+    /**
+     * 商家提现记录分页查询，merchantId 强制绑定，支持按状态与时间范围过滤。
+     * @param merchantId 商家ID
+     * @param dto 分页查询入参
+     * @return 提现单分页结果
+     */
+    IPage<MerchantWithdrawPO> pageWithdraw(Long merchantId, PayPageDTO dto);
+
+    /**
+     * 平台提现记录分页查询，不绑定 merchantId。
+     * @param dto 分页查询入参
+     * @return 提现单分页结果
+     */
+    IPage<MerchantWithdrawPO> platformPageWithdraw(PayPageDTO dto);
+
+    /**
+     * 平台审核提现申请，approved=true 时状态置为 PAID，approved=false 时状态置为 REJECTED 并记录原因。
+     * @param withdrawId 提现单ID
+     * @param approved 是否通过
+     * @param reason 驳回原因，approved=false 时填写
+     */
+    void reviewWithdraw(Long withdrawId, boolean approved, String reason);
 }

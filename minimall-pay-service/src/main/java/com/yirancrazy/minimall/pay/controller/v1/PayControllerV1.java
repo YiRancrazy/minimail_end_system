@@ -25,10 +25,12 @@ import com.yirancrazy.minimall.common.util.CsvExporter;
 import com.yirancrazy.minimall.pay.dto.PayCallbackDTO;
 import com.yirancrazy.minimall.pay.dto.PayCreateDTO;
 import com.yirancrazy.minimall.pay.dto.PayPageDTO;
+import com.yirancrazy.minimall.pay.dto.PayStatementDTO;
 import com.yirancrazy.minimall.pay.dto.WithdrawApplyDTO;
 import com.yirancrazy.minimall.pay.entity.MerchantWithdrawPO;
 import com.yirancrazy.minimall.pay.entity.PayTransactionPO;
 import com.yirancrazy.minimall.pay.service.PayService;
+import com.yirancrazy.minimall.pay.vo.PayStatementVO;
 import com.yirancrazy.minimall.pay.vo.PayStatisticsVO;
 import com.yirancrazy.minimall.pay.vo.PaymentParamsVO;
 import com.yirancrazy.minimall.pay.vo.RefundVO;
@@ -151,6 +153,16 @@ public class PayControllerV1 {
     @GetMapping("/statistics")
     public Result<PayStatisticsVO> platformStatistics(@Valid PayPageDTO dto) {
         return Result.success(payService.statistics(null, dto));
+    }
+
+    /**
+     * 平台对账单聚合查询，按日期范围统计交易笔数与金额。
+     * @param dto 对账单查询入参（含起止日期）
+     * @return 对账单 VO
+     */
+    @GetMapping("/statements")
+    public Result<PayStatementVO> statement(@Valid PayStatementDTO dto) {
+        return Result.success(payService.statement(dto));
     }
 
     /**

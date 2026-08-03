@@ -21,6 +21,7 @@ import com.yirancrazy.minimall.pay.constant.RefundStatusEnum;
 import com.yirancrazy.minimall.pay.constant.WithdrawStatusEnum;
 import com.yirancrazy.minimall.pay.dto.PayCallbackDTO;
 import com.yirancrazy.minimall.pay.dto.PayPageDTO;
+import com.yirancrazy.minimall.pay.dto.PayStatementDTO;
 import com.yirancrazy.minimall.pay.dto.WithdrawApplyDTO;
 import com.yirancrazy.minimall.pay.entity.MerchantWithdrawPO;
 import com.yirancrazy.minimall.pay.entity.PayRefundPO;
@@ -31,6 +32,7 @@ import com.yirancrazy.minimall.pay.manager.PayManager;
 import com.yirancrazy.minimall.pay.mapper.PayRefundMapper;
 import com.yirancrazy.minimall.pay.mapper.PayTransactionMapper;
 import com.yirancrazy.minimall.pay.service.PayService;
+import com.yirancrazy.minimall.pay.vo.PayStatementVO;
 import com.yirancrazy.minimall.pay.vo.PayStatisticsVO;
 import com.yirancrazy.minimall.pay.vo.PaymentParamsVO;
 import com.yirancrazy.minimall.pay.vo.RefundVO;
@@ -393,5 +395,17 @@ public class PayServiceImpl implements PayService {
             .le(dto.getEndTime() != null, PayTransactionPO::getCreateTime, dto.getEndTime())
             .orderByDesc(PayTransactionPO::getCreateTime)
             .last("LIMIT " + CsvExporter.maxExportRows()));
+    }
+
+    /**
+     * 对账单聚合查询，将日期范围转为时间范围后委托给 mapper.statement。
+     * @param dto 对账单查询入参（含起止日期）
+     * @return 对账单 VO
+     */
+    @Override
+    public PayStatementVO statement(PayStatementDTO dto) {
+        LocalDateTime startTime = dto.getStartDate().atStartOfDay();
+        LocalDateTime endTime = dto.getEndDate().plusDays(1).atStartOfDay();
+        return payTransactionMapper.statement(startTime, endTime);
     }
 }

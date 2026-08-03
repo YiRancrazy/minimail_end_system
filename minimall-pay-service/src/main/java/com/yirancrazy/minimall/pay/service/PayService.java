@@ -6,9 +6,11 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO;
 import com.yirancrazy.minimall.pay.dto.PayCallbackDTO;
 import com.yirancrazy.minimall.pay.dto.PayPageDTO;
+import com.yirancrazy.minimall.pay.dto.PayStatementDTO;
 import com.yirancrazy.minimall.pay.dto.WithdrawApplyDTO;
 import com.yirancrazy.minimall.pay.entity.MerchantWithdrawPO;
 import com.yirancrazy.minimall.pay.entity.PayTransactionPO;
+import com.yirancrazy.minimall.pay.vo.PayStatementVO;
 import com.yirancrazy.minimall.pay.vo.PayStatisticsVO;
 import com.yirancrazy.minimall.pay.vo.PaymentParamsVO;
 import com.yirancrazy.minimall.pay.vo.RefundVO;
@@ -126,4 +128,11 @@ public interface PayService {
      * @return 支付流水列表
      */
     List<PayTransactionPO> exportTransactions(PayPageDTO dto);
+
+    /**
+     * 对账单聚合查询，按状态分组统计交易笔数与金额。
+     * @param dto 对账单查询入参（含起止日期）
+     * @return 对账单 VO
+     */
+    PayStatementVO statement(PayStatementDTO dto);
 }

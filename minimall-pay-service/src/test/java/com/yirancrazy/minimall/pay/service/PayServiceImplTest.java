@@ -1,6 +1,7 @@
 package com.yirancrazy.minimall.pay.service;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -22,6 +23,7 @@ import com.yirancrazy.minimall.api.feign.OrderFeignClient;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.pay.dto.PayCallbackDTO;
 import com.yirancrazy.minimall.pay.dto.PayPageDTO;
+import com.yirancrazy.minimall.pay.dto.PayStatementDTO;
 import com.yirancrazy.minimall.pay.dto.WithdrawApplyDTO;
 import com.yirancrazy.minimall.pay.entity.MerchantWithdrawPO;
 import com.yirancrazy.minimall.pay.entity.PayTransactionPO;
@@ -31,6 +33,7 @@ import com.yirancrazy.minimall.pay.manager.PayManager;
 import com.yirancrazy.minimall.pay.mapper.PayRefundMapper;
 import com.yirancrazy.minimall.pay.mapper.PayTransactionMapper;
 import com.yirancrazy.minimall.pay.service.impl.PayServiceImpl;
+import com.yirancrazy.minimall.pay.vo.PayStatementVO;
 import com.yirancrazy.minimall.pay.vo.PayStatisticsVO;
 import com.yirancrazy.minimall.pay.vo.PaymentParamsVO;
 import com.yirancrazy.minimall.pay.vo.WithdrawVO;
@@ -243,6 +246,40 @@ public class PayServiceImplTest {
         PayStatisticsVO result = service.statistics(10L, dto);
         assertEquals(expected, result);
         verify(payTransactionMapper).statistics(any(), any(), any());
+    }
+
+    /**
+     * 验证 statement 委托给 mapper.statement 并返回对账单 VO。
+     */
+    @Test
+    public void statement_delegates_to_mapper() {
+        PayStatementDTO dto = new PayStatementDTO();
+        dto.setStartDate(LocalDate.of(2026, 7, 1));
+        dto.setEndDate(LocalDate.of(2026, 7, 31));
+
+        PayStatementVO expected = new PayStatementVO();
+        expected.setTotalCount(100L);
+        expected.setTotalAmount(new BigDecimal("10000.00"));
+        expected.setPaidCount(80L);
+        expected.setPaidAmount(new BigDecimal("8000.00"));
+        expected.setRefundedCount(5L);
+        expected.setRefundedAmount(new BigDecimal("500.00"));
+        expected.setFrozenCount(2L);
+        expected.setFrozenAmount(new BigDecimal("200.00"));
+        when(payTransactionMapper.statement(any(), any())).thenReturn(expected);
+
+        PayStatementVO result = service.statement(dto);
+
+        assertEquals(expected, result);
+        assertEquals(100L, result.getTotalCount());
+        assertEquals(0, new BigDecimal("10000.00").compareTo(result.getTotalAmount()));
+        assertEquals(80L, result.getPaidCount());
+        assertEquals(0, new BigDecimal("8000.00").compareTo(result.getPaidAmount()));
+        assertEquals(5L, result.getRefundedCount());
+        assertEquals(0, new BigDecimal("500.00").compareTo(result.getRefundedAmount()));
+        assertEquals(2L, result.getFrozenCount());
+        assertEquals(0, new BigDecimal("200.00").compareTo(result.getFrozenAmount()));
+        verify(payTransactionMapper).statement(any(), any());
     }
 
     /**

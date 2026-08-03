@@ -2,6 +2,7 @@ package com.yirancrazy.minimall.order.service.impl;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
@@ -23,9 +24,12 @@ import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.util.CsvExporter;
 import com.yirancrazy.minimall.order.constant.OrderCodeEnum;
 import com.yirancrazy.minimall.order.constant.OrderStatusEnum;
+import com.yirancrazy.minimall.order.dto.OrderCheckoutItemDTO;
 import com.yirancrazy.minimall.order.dto.OrderPageDTO;
+import com.yirancrazy.minimall.order.entity.OrderItemPO;
 import com.yirancrazy.minimall.order.entity.OrderLogisticsPO;
 import com.yirancrazy.minimall.order.entity.OrderPO;
+import com.yirancrazy.minimall.order.manager.OrderItemManager;
 import com.yirancrazy.minimall.order.manager.OrderLogisticsManager;
 import com.yirancrazy.minimall.order.manager.OrderManager;
 import com.yirancrazy.minimall.order.mapper.OrderMapper;
@@ -44,6 +48,7 @@ import com.yirancrazy.minimall.order.vo.OrderStatisticsVO;
 public class OrderServiceImpl implements OrderService {
 
     private final OrderManager orderManager;
+    private final OrderItemManager orderItemManager;
     private final OrderLogisticsManager orderLogisticsManager;
     private final OrderMapper orderMapper;
     private final GoodsFeignClient goodsFeignClient;
@@ -52,6 +57,7 @@ public class OrderServiceImpl implements OrderService {
     private final EventBus eventBus;
 
     public OrderServiceImpl(OrderManager orderManager,
+                            OrderItemManager orderItemManager,
                             OrderLogisticsManager orderLogisticsManager,
                             OrderMapper orderMapper,
                             GoodsFeignClient goodsFeignClient,
@@ -59,6 +65,7 @@ public class OrderServiceImpl implements OrderService {
                             PayFeignClient payFeignClient,
                             EventBus eventBus) {
         this.orderManager = orderManager;
+        this.orderItemManager = orderItemManager;
         this.orderLogisticsManager = orderLogisticsManager;
         this.orderMapper = orderMapper;
         this.goodsFeignClient = goodsFeignClient;
@@ -109,6 +116,70 @@ public class OrderServiceImpl implements OrderService {
         return po.getId();
     }
 
+    /**
+     * 多SKU结算下单：批量取商品快照、逐条锁库存、创建订单头与明细行、初始化支付流水。
+     * @param userId 用户ID
+     * @param items 结算明细列表
+     * @return 订单ID
+     */
+    @Override
+    @GlobalTransactional
+    public Long checkout(Long userId, List<OrderCheckoutItemDTO> items) {
+        if (items == null || items.isEmpty()) {
+            throw new BizException(OrderCodeEnum.ORDER_ITEMS_EMPTY);
+        }
+
+        List<OrderItemPO> itemPOs = new ArrayList<>(items.size());
+        BigDecimal totalAmount = BigDecimal.ZERO;
+
+        for (OrderCheckoutItemDTO item : items) {
+            SkuSnapshotDTO snapshot = goodsFeignClient.skuSnapshot(item.getSkuId()).getData();
+            if (snapshot == null || snapshot.getPrice() == null) {
+                throw new BizException(OrderCodeEnum.ORDER_SKU_SNAPSHOT_MISSING);
+            }
+            Boolean reserved = stockFeignClient.reserve(
+                new StockReserveDTO(item.getSkuId(), item.getQuantity())).getData();
+            if (reserved == null || !reserved) {
+                throw new BizException(OrderCodeEnum.STOCK_RESERVE_FAIL);
+            }
+
+            BigDecimal lineAmount = snapshot.getPrice()
+                .multiply(BigDecimal.valueOf(item.getQuantity()));
+            totalAmount = totalAmount.add(lineAmount);
+
+            OrderItemPO itemPO = new OrderItemPO();
+            itemPO.setSkuId(item.getSkuId());
+            itemPO.setSkuName(snapshot.getSkuName());
+            itemPO.setQuantity(item.getQuantity());
+            itemPO.setUnitPrice(snapshot.getPrice());
+            itemPO.setAmount(lineAmount);
+            itemPOs.add(itemPO);
+        }
+
+        OrderPO po = new OrderPO();
+        po.setUserId(userId);
+        po.setAmount(totalAmount);
+        po.setStatus(OrderStatusEnum.PENDING.intCode());
+        orderManager.save(po);
+
+        for (OrderItemPO itemPO : itemPOs) {
+            itemPO.setOrderId(po.getId());
+            orderItemManager.save(itemPO);
+        }
+
+        Long payId = payFeignClient.create(
+            new PayCreateDTO(String.valueOf(po.getId()), userId, 0L, totalAmount, null)).getData();
+        if (payId == null || payId < 0) {
+            throw new BizException(OrderCodeEnum.ORDER_PAY_CREATE_FAIL);
+        }
+        po.setPayId(payId);
+        orderManager.updateById(po);
+
+        log.info("order checkout, orderId={}, userId={}, items={}, amount={}, payId={}",
+            po.getId(), userId, items.size(), totalAmount, payId);
+        return po.getId();
+    }
+
     @Override
     public void pay(Long orderId) {
         OrderPO po = getOrder(orderId);
@@ -138,11 +209,7 @@ public class OrderServiceImpl implements OrderService {
             throw new BizException(OrderCodeEnum.ORDER_NOT_FOUND);
         }
         transitStatus(orderId, OrderStatusEnum.CANCELLED);
-        Boolean released = stockFeignClient.release(
-            new StockReserveDTO(po.getSkuId(), po.getQuantity())).getData();
-        if (released == null || !released) {
-            log.warn("stock release failed on cancel, orderId={}", orderId);
-        }
+        releaseStockForOrder(po);
         log.info("order cancelled, orderId={}, userId={}", orderId, userId);
     }
 
@@ -229,11 +296,7 @@ public class OrderServiceImpl implements OrderService {
             throw new BizException(OrderCodeEnum.ORDER_NOT_FOUND);
         }
         transitStatus(orderId, OrderStatusEnum.CANCELLED);
-        Boolean released = stockFeignClient.release(
-            new StockReserveDTO(po.getSkuId(), po.getQuantity())).getData();
-        if (released == null || !released) {
-            log.warn("stock release failed on merchant-close, orderId={}", orderId);
-        }
+        releaseStockForOrder(po);
         log.info("order merchant-closed, orderId={}, merchantId={}", orderId, merchantId);
     }
 
@@ -266,11 +329,7 @@ public class OrderServiceImpl implements OrderService {
     public void platformClose(Long orderId) {
         OrderPO po = getOrder(orderId);
         transitStatus(orderId, OrderStatusEnum.CANCELLED);
-        Boolean released = stockFeignClient.release(
-            new StockReserveDTO(po.getSkuId(), po.getQuantity())).getData();
-        if (released == null || !released) {
-            log.warn("stock release failed on platform-close, orderId={}", orderId);
-        }
+        releaseStockForOrder(po);
         log.info("order platform-closed, orderId={}", orderId);
     }
 
@@ -295,6 +354,32 @@ public class OrderServiceImpl implements OrderService {
             throw new BizException(OrderCodeEnum.ORDER_NOT_FOUND);
         }
         return po;
+    }
+
+    /**
+     * 释放订单库存：优先查询 order_item 明细逐条释放，无明细时回退到订单头的 skuId/quantity（兼容旧单SKU订单）。
+     * @param po 订单实体
+     */
+    private void releaseStockForOrder(OrderPO po) {
+        List<OrderItemPO> items = orderItemManager.list(
+            Wrappers.lambdaQuery(OrderItemPO.class).eq(OrderItemPO::getOrderId, po.getId()));
+        if (!items.isEmpty()) {
+            for (OrderItemPO item : items) {
+                Boolean released = stockFeignClient.release(
+                    new StockReserveDTO(item.getSkuId(), item.getQuantity())).getData();
+                if (released == null || !released) {
+                    log.warn("stock release failed, orderId={}, skuId={}", po.getId(), item.getSkuId());
+                }
+            }
+            return;
+        }
+        if (po.getSkuId() != null && po.getQuantity() != null) {
+            Boolean released = stockFeignClient.release(
+                new StockReserveDTO(po.getSkuId(), po.getQuantity())).getData();
+            if (released == null || !released) {
+                log.warn("stock release failed, orderId={}, skuId={}", po.getId(), po.getSkuId());
+            }
+        }
     }
 
     private void transitStatus(Long orderId, OrderStatusEnum target) {

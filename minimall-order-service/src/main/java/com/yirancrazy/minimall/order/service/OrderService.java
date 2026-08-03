@@ -2,6 +2,7 @@ package com.yirancrazy.minimall.order.service;
 
 import java.util.List;
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.yirancrazy.minimall.order.dto.OrderCheckoutItemDTO;
 import com.yirancrazy.minimall.order.dto.OrderPageDTO;
 import com.yirancrazy.minimall.order.entity.OrderPO;
 import com.yirancrazy.minimall.order.vo.OrderLogisticsVO;
@@ -15,6 +16,14 @@ import com.yirancrazy.minimall.order.vo.OrderStatisticsVO;
  */
 public interface OrderService {
     Long create(Long userId, Long skuId, Integer quantity);
+
+    /**
+     * 多SKU结算下单：批量获取商品快照、锁库存、创建订单头与明细行、初始化支付流水。
+     * @param userId 用户ID
+     * @param items 结算明细列表
+     * @return 订单ID
+     */
+    Long checkout(Long userId, List<OrderCheckoutItemDTO> items);
 
     void pay(Long orderId);
 

@@ -14,6 +14,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
@@ -27,9 +28,12 @@ import com.yirancrazy.minimall.common.event.EventBus;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.order.constant.OrderStatusEnum;
+import com.yirancrazy.minimall.order.dto.OrderCheckoutItemDTO;
 import com.yirancrazy.minimall.order.dto.OrderPageDTO;
+import com.yirancrazy.minimall.order.entity.OrderItemPO;
 import com.yirancrazy.minimall.order.entity.OrderLogisticsPO;
 import com.yirancrazy.minimall.order.entity.OrderPO;
+import com.yirancrazy.minimall.order.manager.OrderItemManager;
 import com.yirancrazy.minimall.order.manager.OrderLogisticsManager;
 import com.yirancrazy.minimall.order.manager.OrderManager;
 import com.yirancrazy.minimall.order.mapper.OrderMapper;
@@ -42,6 +46,7 @@ import com.yirancrazy.minimall.order.vo.OrderLogisticsVO;
 public class OrderServiceImplTest {
 
     private OrderManager manager;
+    private OrderItemManager orderItemManager;
     private OrderLogisticsManager logisticsManager;
     private OrderMapper orderMapper;
     private GoodsFeignClient goodsFeignClient;
@@ -53,6 +58,7 @@ public class OrderServiceImplTest {
     @BeforeEach
     void setUp() {
         manager = mock(OrderManager.class);
+        orderItemManager = mock(OrderItemManager.class);
         logisticsManager = mock(OrderLogisticsManager.class);
         orderMapper = mock(OrderMapper.class);
         goodsFeignClient = mock(GoodsFeignClient.class);
@@ -68,6 +74,8 @@ public class OrderServiceImplTest {
             }
             return true;
         }).when(manager).save(any(OrderPO.class));
+        lenient().when(orderItemManager.save(any(OrderItemPO.class))).thenReturn(true);
+        lenient().when(orderItemManager.list(any(Wrapper.class))).thenReturn(java.util.Collections.emptyList());
         lenient().when(logisticsManager.save(any(OrderLogisticsPO.class))).thenReturn(true);
         lenient().when(goodsFeignClient.skuSnapshot(any())).thenReturn(Result.success(
             new SkuSnapshotDTO(100L, 1L, "sku-100", new BigDecimal("9.90"), 100)));
@@ -79,8 +87,8 @@ public class OrderServiceImplTest {
             inv.getArgument(1, Runnable.class).run();
             return null;
         }).when(eventBus).publishInTx(any(), any(Runnable.class), any());
-        service = new OrderServiceImpl(manager, logisticsManager, orderMapper, goodsFeignClient,
-            stockFeignClient, payFeignClient, eventBus);
+        service = new OrderServiceImpl(manager, orderItemManager, logisticsManager, orderMapper,
+            goodsFeignClient, stockFeignClient, payFeignClient, eventBus);
     }
 
     /**
@@ -596,10 +604,87 @@ public class OrderServiceImplTest {
         verify(logisticsManager).save(any(OrderLogisticsPO.class));
     }
 
+    /**
+     * 验证多SKU结算下单成功，创建订单头与明细行并初始化支付。
+     */
+    @Test
+    public void checkout_multi_sku_succeeds() {
+        List<OrderCheckoutItemDTO> items = List.of(
+            new OrderCheckoutItemDTO(100L, 2),
+            new OrderCheckoutItemDTO(200L, 1));
+        when(goodsFeignClient.skuSnapshot(any())).thenReturn(Result.success(
+            new SkuSnapshotDTO(100L, 1L, "sku-100", new BigDecimal("9.90"), 100)));
+
+        Long orderId = service.checkout(1L, items);
+
+        assertNotNull(orderId);
+        verify(stockFeignClient, times(2)).reserve(any());
+        verify(orderItemManager, times(2)).save(any(OrderItemPO.class));
+        verify(payFeignClient).create(any());
+    }
+
+    /**
+     * 验证空结算列表抛出 ORDER_ITEMS_EMPTY。
+     */
+    @Test
+    public void checkout_empty_items_throws() {
+        assertThrows(BizException.class, () -> service.checkout(1L, java.util.Collections.emptyList()));
+    }
+
+    /**
+     * 验证结算时商品快照缺失抛出异常。
+     */
+    @Test
+    public void checkout_snapshot_missing_throws() {
+        when(goodsFeignClient.skuSnapshot(any())).thenReturn(Result.success(null));
+        List<OrderCheckoutItemDTO> items = List.of(new OrderCheckoutItemDTO(100L, 1));
+
+        assertThrows(BizException.class, () -> service.checkout(1L, items));
+    }
+
+    /**
+     * 验证结算时库存锁定失败抛出异常。
+     */
+    @Test
+    public void checkout_stock_reserve_fail_throws() {
+        when(stockFeignClient.reserve(any())).thenReturn(Result.success(Boolean.FALSE));
+        List<OrderCheckoutItemDTO> items = List.of(new OrderCheckoutItemDTO(100L, 1));
+
+        assertThrows(BizException.class, () -> service.checkout(1L, items));
+    }
+
+    /**
+     * 验证取消多SKU订单时逐条释放库存。
+     */
+    @Test
+    public void cancel_multi_sku_releases_all_items() {
+        OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.PENDING.intCode());
+        when(manager.getById(99L)).thenReturn(existing);
+        List<OrderItemPO> items = new ArrayList<>(2);
+        OrderItemPO i1 = new OrderItemPO();
+        i1.setOrderId(99L);
+        i1.setSkuId(100L);
+        i1.setQuantity(2);
+        OrderItemPO i2 = new OrderItemPO();
+        i2.setOrderId(99L);
+        i2.setSkuId(200L);
+        i2.setQuantity(1);
+        items.add(i1);
+        items.add(i2);
+        when(orderItemManager.list(any(Wrapper.class))).thenReturn(items);
+
+        service.cancel(99L, 1L);
+
+        assertEquals(OrderStatusEnum.CANCELLED.intCode(), existing.getStatus());
+        verify(stockFeignClient, times(2)).release(any());
+    }
+
     private OrderPO buildOrder(Long id, Long userId, Integer status) {
         OrderPO po = new OrderPO();
         po.setId(id);
         po.setUserId(userId);
+        po.setSkuId(100L);
+        po.setQuantity(1);
         po.setStatus(status);
         return po;
     }

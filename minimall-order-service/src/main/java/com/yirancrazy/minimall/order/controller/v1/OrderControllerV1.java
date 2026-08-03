@@ -17,6 +17,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.common.util.CsvExporter;
+import com.yirancrazy.minimall.order.dto.OrderCheckoutDTO;
 import com.yirancrazy.minimall.order.dto.OrderCreateDTO;
 import com.yirancrazy.minimall.order.dto.OrderPageDTO;
 import com.yirancrazy.minimall.order.entity.OrderPO;
@@ -72,6 +73,18 @@ public class OrderControllerV1 {
     @PostMapping
     public Result<Long> create(@Valid @RequestBody OrderCreateDTO dto) {
         return Result.success(orderService.create(dto.getUserId(), dto.getSkuId(), dto.getQuantity()));
+    }
+
+    /**
+     * 多SKU结算下单，支持购物车批量结算。
+     * @param userId 用户ID，来自网关 X-User-Id 头
+     * @param dto 结算请求
+     * @return 新创建的订单ID
+     */
+    @PostMapping("/checkout")
+    public Result<Long> checkout(@RequestHeader("X-User-Id") Long userId,
+                                 @Valid @RequestBody OrderCheckoutDTO dto) {
+        return Result.success(orderService.checkout(userId, dto.getItems()));
     }
 
     /**

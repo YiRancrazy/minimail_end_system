@@ -8,20 +8,18 @@ import com.yirancrazy.minimall.common.base.BasePO;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: Order持久化对象，映射t_order表
- * @Version: 1.1
+ * @Description: OrderItem持久化对象，映射t_order_item表，存储多SKU订单的明细行。
+ * @Version: 1.0
  * @DateTime: 2026/08/03
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
-@TableName("t_order")
-public class OrderPO extends BasePO {
-    private Long userId;
-    private Long merchantId;
-    private Long payId;
+@TableName("t_order_item")
+public class OrderItemPO extends BasePO {
+    private Long orderId;
     private Long skuId;
+    private String skuName;
     private Integer quantity;
+    private BigDecimal unitPrice;
     private BigDecimal amount;
-    private Integer status;
-    private Integer refundFromStatus;
 }

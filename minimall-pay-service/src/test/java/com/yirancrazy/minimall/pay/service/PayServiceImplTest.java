@@ -114,4 +114,28 @@ public class PayServiceImplTest {
         assertEquals(3, rec.getStatus());
         verify(orderFeignClient, never()).pay(any());
     }
+
+    /**
+     * 验证 getByOrderNo 在订单号存在时返回支付流水。
+     */
+    @Test
+    public void getByOrderNo_returns_record_when_exists() {
+        PayTransactionPO rec = new PayTransactionPO();
+        rec.setId(1L);
+        rec.setOrderNo("ORDER100");
+        when(manager.getOne(any())).thenReturn(rec);
+
+        PayTransactionPO result = service.getByOrderNo("ORDER100");
+        assertEquals(1L, result.getId());
+        assertEquals("ORDER100", result.getOrderNo());
+    }
+
+    /**
+     * 验证 getByOrderNo 在找不到支付流水时抛出 PAY_NOT_FOUND。
+     */
+    @Test
+    public void getByOrderNo_missing_throws_biz() {
+        when(manager.getOne(any())).thenReturn(null);
+        assertThrows(BizException.class, () -> service.getByOrderNo("ORDER999"));
+    }
 }

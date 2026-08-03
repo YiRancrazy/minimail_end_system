@@ -3,6 +3,9 @@ package com.yirancrazy.minimall.order.service.impl;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import org.springframework.stereotype.Service;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.seata.spring.annotation.GlobalTransactional;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.api.dto.goods.SkuSnapshotDTO;
@@ -17,6 +20,7 @@ import com.yirancrazy.minimall.common.event.EventBus;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.order.constant.OrderCodeEnum;
 import com.yirancrazy.minimall.order.constant.OrderStatusEnum;
+import com.yirancrazy.minimall.order.dto.OrderPageDTO;
 import com.yirancrazy.minimall.order.entity.OrderPO;
 import com.yirancrazy.minimall.order.manager.OrderManager;
 import com.yirancrazy.minimall.order.service.OrderService;
@@ -208,5 +212,20 @@ public class OrderServiceImpl implements OrderService {
             }
         }
         throw new BizException(OrderCodeEnum.ORDER_STATUS_TRANSITION_INVALID);
+    }
+
+    /**
+     * 分页查询订单，按 userId/merchantId/status 等值过滤，按创建时间倒序。
+     * @param dto 分页查询入参
+     * @return 订单分页结果
+     */
+    @Override
+    public IPage<OrderPO> page(OrderPageDTO dto) {
+        Page<OrderPO> page = new Page<>(dto.getPageNo(), dto.getPageSize());
+        return orderManager.page(page, Wrappers.lambdaQuery(OrderPO.class)
+            .eq(dto.getUserId() != null, OrderPO::getUserId, dto.getUserId())
+            .eq(dto.getMerchantId() != null, OrderPO::getMerchantId, dto.getMerchantId())
+            .eq(dto.getStatus() != null, OrderPO::getStatus, dto.getStatus())
+            .orderByDesc(OrderPO::getCreateTime));
     }
 }

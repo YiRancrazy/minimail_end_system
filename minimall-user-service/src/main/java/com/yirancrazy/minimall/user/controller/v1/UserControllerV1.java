@@ -8,9 +8,11 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import jakarta.validation.Valid;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.user.dto.UserCreateDTO;
+import com.yirancrazy.minimall.user.dto.UserPageDTO;
 import com.yirancrazy.minimall.user.dto.UserUpdateDTO;
 import com.yirancrazy.minimall.user.entity.UserPO;
 import com.yirancrazy.minimall.user.service.UserService;
@@ -29,6 +31,16 @@ public class UserControllerV1 {
 
     public UserControllerV1(UserService userService) {
         this.userService = userService;
+    }
+
+    /**
+     * 分页查询用户列表，支持按用户名/昵称模糊搜索。
+     * @param dto 分页查询入参
+     * @return 用户分页结果
+     */
+    @GetMapping
+    public Result<IPage<UserPO>> page(@Valid UserPageDTO dto) {
+        return Result.success(userService.page(dto));
     }
 
     /**

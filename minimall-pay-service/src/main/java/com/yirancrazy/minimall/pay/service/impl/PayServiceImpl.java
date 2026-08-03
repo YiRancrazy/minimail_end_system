@@ -175,4 +175,19 @@ public class PayServiceImpl implements PayService {
     private String generateRefundNo() {
         return "REFUND" + System.currentTimeMillis() + (int)(Math.random() * 1000);
     }
+
+    /**
+     * 按订单号查询支付流水，不存在时抛出 PAY_NOT_FOUND。
+     * @param orderNo 订单号
+     * @return 支付流水实体
+     */
+    @Override
+    public PayTransactionPO getByOrderNo(String orderNo) {
+        PayTransactionPO po = payManager.getOne(
+            Wrappers.lambdaQuery(PayTransactionPO.class).eq(PayTransactionPO::getOrderNo, orderNo));
+        if (po == null) {
+            throw new BizException(PayCodeEnum.PAY_NOT_FOUND);
+        }
+        return po;
+    }
 }

@@ -12,6 +12,8 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.yirancrazy.minimall.api.dto.goods.SkuSnapshotDTO;
 import com.yirancrazy.minimall.api.feign.GoodsFeignClient;
 import com.yirancrazy.minimall.api.feign.PayFeignClient;
@@ -20,6 +22,7 @@ import com.yirancrazy.minimall.common.event.EventBus;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.order.constant.OrderStatusEnum;
+import com.yirancrazy.minimall.order.dto.OrderPageDTO;
 import com.yirancrazy.minimall.order.entity.OrderPO;
 import com.yirancrazy.minimall.order.manager.OrderManager;
 import com.yirancrazy.minimall.order.service.impl.OrderServiceImpl;
@@ -275,6 +278,23 @@ public class OrderServiceImplTest {
     public void getStatus_missing_order_throws() {
         when(manager.getById(99L)).thenReturn(null);
         assertThrows(BizException.class, () -> service.getStatus(99L));
+    }
+
+    /**
+     * 验证 page 委托给 manager.page 并返回其结果。
+     */
+    @Test
+    public void page_delegates_to_manager() {
+        OrderPageDTO dto = new OrderPageDTO();
+        dto.setPageNo(1);
+        dto.setPageSize(10);
+        dto.setUserId(1L);
+        IPage<OrderPO> expected = new Page<>(1, 10);
+        when(manager.page(any(IPage.class), any())).thenReturn(expected);
+
+        IPage<OrderPO> result = service.page(dto);
+        assertEquals(expected, result);
+        verify(manager).page(any(IPage.class), any());
     }
 
     private OrderPO buildOrder(Long id, Long userId, Integer status) {

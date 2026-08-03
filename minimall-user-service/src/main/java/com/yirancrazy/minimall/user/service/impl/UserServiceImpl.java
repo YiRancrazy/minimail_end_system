@@ -1,9 +1,14 @@
 package com.yirancrazy.minimall.user.service.impl;
 
 import org.springframework.stereotype.Service;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.user.constant.UserCodeEnum;
 import com.yirancrazy.minimall.user.dto.UserCreateDTO;
+import com.yirancrazy.minimall.user.dto.UserPageDTO;
 import com.yirancrazy.minimall.user.dto.UserUpdateDTO;
 import com.yirancrazy.minimall.user.entity.UserPO;
 import com.yirancrazy.minimall.user.manager.UserManager;
@@ -12,9 +17,11 @@ import com.yirancrazy.minimall.user.service.UserService;
 /**
  * @Author: yirancrazy@gmail.com
  * @Description: 用户领域服务实现，实现User相关业务逻辑
- * @Version: 1.0
+ * @Version: 1.1
  * @DateTime: 2026/07/31
  */
+@Slf4j
+@Service
 public class UserServiceImpl implements UserService {
 
     private final UserManager userManager;
@@ -82,5 +89,20 @@ public class UserServiceImpl implements UserService {
     @Override
     public boolean delete(Long id) {
         return userManager.removeById(id);
+    }
+
+    /**
+     * 分页查询用户，keyword 非空时按用户名或昵称模糊匹配。
+     *
+     * @param dto 分页查询入参
+     * @return 用户分页结果
+     */
+    @Override
+    public IPage<UserPO> page(UserPageDTO dto) {
+        Page<UserPO> page = new Page<>(dto.getPageNo(), dto.getPageSize());
+        return userManager.page(page, Wrappers.lambdaQuery(UserPO.class)
+            .and(dto.getKeyword() != null && !dto.getKeyword().isBlank(),
+                w -> w.like(UserPO::getUsername, dto.getKeyword())
+                    .or().like(UserPO::getNickname, dto.getKeyword())));
     }
 }

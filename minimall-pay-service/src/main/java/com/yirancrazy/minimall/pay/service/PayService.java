@@ -3,13 +3,14 @@ package com.yirancrazy.minimall.pay.service;
 import java.math.BigDecimal;
 import com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO;
 import com.yirancrazy.minimall.pay.dto.PayCallbackDTO;
+import com.yirancrazy.minimall.pay.entity.PayTransactionPO;
 import com.yirancrazy.minimall.pay.vo.RefundVO;
 
 
 /**
  * @Author: yirancrazy@gmail.com
  * @Description: 业务服务接口，定义核心业务逻辑。
- * @Version: 1.0
+ * @Version: 1.1
  * @DateTime: 2026/7/31
  **/
 public interface PayService {
@@ -35,4 +36,11 @@ public interface PayService {
      * @return 退款VO
      */
     RefundVO createRefund(RefundCreateDTO dto);
+
+    /**
+     * 按订单号查询支付流水，不存在时抛出 PAY_NOT_FOUND。
+     * @param orderNo 订单号
+     * @return 支付流水实体
+     */
+    PayTransactionPO getByOrderNo(String orderNo);
 }

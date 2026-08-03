@@ -14,8 +14,11 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.user.dto.UserCreateDTO;
+import com.yirancrazy.minimall.user.dto.UserPageDTO;
 import com.yirancrazy.minimall.user.dto.UserUpdateDTO;
 import com.yirancrazy.minimall.user.entity.UserPO;
 import com.yirancrazy.minimall.user.manager.UserManager;
@@ -129,5 +132,22 @@ public class UserServiceImplTest {
         when(userManager.removeById(1L)).thenReturn(false);
         boolean ok = service.delete(1L);
         assertFalse(ok);
+    }
+
+    /**
+     * 验证 page 委托给 userManager.page 并返回其结果。
+     */
+    @Test
+    public void page_delegates_to_manager() {
+        UserPageDTO dto = new UserPageDTO();
+        dto.setPageNo(1);
+        dto.setPageSize(10);
+        dto.setKeyword("ali");
+        IPage<UserPO> expected = new Page<>(1, 10);
+        when(userManager.page(any(IPage.class), any())).thenReturn(expected);
+
+        IPage<UserPO> result = service.page(dto);
+        assertEquals(expected, result);
+        verify(userManager).page(any(IPage.class), any());
     }
 }

@@ -2,6 +2,8 @@ package com.yirancrazy.minimall.pay.controller.v1;
 
 import java.util.HashMap;
 import java.util.Map;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -14,6 +16,7 @@ import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.pay.dto.PayCallbackDTO;
 import com.yirancrazy.minimall.pay.dto.PayCreateDTO;
+import com.yirancrazy.minimall.pay.entity.PayTransactionPO;
 import com.yirancrazy.minimall.pay.service.PayService;
 import com.yirancrazy.minimall.pay.vo.RefundVO;
 
@@ -82,5 +85,15 @@ public class PayControllerV1 {
     public Result<RefundVO> createRefund(@Valid @RequestBody RefundCreateDTO dto) {
         RefundVO vo = payService.createRefund(dto);
         return Result.success(vo);
+    }
+
+    /**
+     * 按订单号查询支付流水状态。
+     * @param orderNo 订单号
+     * @return 支付流水实体
+     */
+    @GetMapping("/status/{orderNo}")
+    public Result<PayTransactionPO> getStatus(@PathVariable("orderNo") String orderNo) {
+        return Result.success(payService.getByOrderNo(orderNo));
     }
 }

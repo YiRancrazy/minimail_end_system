@@ -7,9 +7,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import jakarta.validation.Valid;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.order.dto.OrderCreateDTO;
+import com.yirancrazy.minimall.order.dto.OrderPageDTO;
+import com.yirancrazy.minimall.order.entity.OrderPO;
 import com.yirancrazy.minimall.order.service.OrderService;
 
 /**
@@ -26,6 +29,16 @@ public class OrderControllerV1 {
 
     public OrderControllerV1(OrderService orderService) {
         this.orderService = orderService;
+    }
+
+    /**
+     * 分页查询订单列表，支持按用户/商家/状态过滤。
+     * @param dto 分页查询入参
+     * @return 订单分页结果
+     */
+    @GetMapping
+    public Result<IPage<OrderPO>> page(@Valid OrderPageDTO dto) {
+        return Result.success(orderService.page(dto));
     }
 
     /**

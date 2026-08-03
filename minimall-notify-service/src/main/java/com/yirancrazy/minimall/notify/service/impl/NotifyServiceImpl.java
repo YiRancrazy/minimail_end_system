@@ -17,6 +17,7 @@ import com.yirancrazy.minimall.notify.dto.NotifyListDTO;
 import com.yirancrazy.minimall.notify.dto.NotifyMarketingPushDTO;
 import com.yirancrazy.minimall.notify.dto.NotifySystemAlertDTO;
 import com.yirancrazy.minimall.notify.dto.NotifyViolationWarningDTO;
+import com.yirancrazy.minimall.notify.dto.SystemAlertPageDTO;
 import com.yirancrazy.minimall.notify.entity.NotifyMessagePO;
 import com.yirancrazy.minimall.notify.manager.NotifyManager;
 import com.yirancrazy.minimall.notify.service.NotifyService;
@@ -298,6 +299,21 @@ public class NotifyServiceImpl implements NotifyService {
         m.setReadFlag(0);
         notifyManager.save(m);
         log.info("system alert, title={}, level={}", dto.getTitle(), dto.getAlertLevel());
+    }
+
+    /**
+     * 平台系统告警分页查询，固定过滤 recipient_type=PLATFORM, message_type=SYSTEM，按 ID 降序返回。
+     * @param dto 分页入参
+     * @return 系统告警分页结果
+     */
+    @Override
+    public IPage<NotifyMessagePO> alertPage(SystemAlertPageDTO dto) {
+        Page<NotifyMessagePO> page = new Page<>(dto.getPageNo(), dto.getPageSize());
+        LambdaQueryWrapper<NotifyMessagePO> wrapper = Wrappers.lambdaQuery(NotifyMessagePO.class)
+            .eq(NotifyMessagePO::getRecipientType, RecipientTypeEnum.PLATFORM.intCode())
+            .eq(NotifyMessagePO::getMessageType, NotifyMessageTypeEnum.SYSTEM.intCode())
+            .orderByDesc(NotifyMessagePO::getId);
+        return notifyManager.page(page, wrapper);
     }
 
     private NotifyMessagePO getOwnedMessage(Long id, Integer recipientType, Long userId) {

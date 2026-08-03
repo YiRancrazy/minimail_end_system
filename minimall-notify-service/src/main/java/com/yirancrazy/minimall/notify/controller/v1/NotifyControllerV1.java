@@ -19,6 +19,7 @@ import com.yirancrazy.minimall.notify.dto.NotifyListDTO;
 import com.yirancrazy.minimall.notify.dto.NotifyMarketingPushDTO;
 import com.yirancrazy.minimall.notify.dto.NotifySystemAlertDTO;
 import com.yirancrazy.minimall.notify.dto.NotifyViolationWarningDTO;
+import com.yirancrazy.minimall.notify.dto.SystemAlertPageDTO;
 import com.yirancrazy.minimall.notify.entity.NotifyMessagePO;
 import com.yirancrazy.minimall.notify.service.NotifyService;
 
@@ -243,5 +244,17 @@ public class NotifyControllerV1 {
     public Result<Void> systemAlert(@Valid @RequestBody NotifySystemAlertDTO dto) {
         notifyService.systemAlert(dto);
         return Result.success(null);
+    }
+
+    /**
+     * 平台系统告警分页查询，固定查询 PLATFORM + SYSTEM 类型消息。
+     * @param adminId 管理员ID（Header 注入）
+     * @param dto 分页入参
+     * @return 系统告警分页结果
+     */
+    @GetMapping("/platform/alerts")
+    public Result<IPage<NotifyMessagePO>> platformAlerts(@RequestHeader("X-User-Id") Long adminId,
+                                                         @Valid SystemAlertPageDTO dto) {
+        return Result.success(notifyService.alertPage(dto));
     }
 }

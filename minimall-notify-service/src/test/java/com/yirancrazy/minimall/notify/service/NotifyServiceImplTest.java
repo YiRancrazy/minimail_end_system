@@ -22,12 +22,14 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.yirancrazy.minimall.common.exception.BizException;
+import com.yirancrazy.minimall.notify.constant.NotifyMessageTypeEnum;
 import com.yirancrazy.minimall.notify.constant.RecipientTypeEnum;
 import com.yirancrazy.minimall.notify.dto.NotifyBroadcastDTO;
 import com.yirancrazy.minimall.notify.dto.NotifyListDTO;
 import com.yirancrazy.minimall.notify.dto.NotifyMarketingPushDTO;
 import com.yirancrazy.minimall.notify.dto.NotifySystemAlertDTO;
 import com.yirancrazy.minimall.notify.dto.NotifyViolationWarningDTO;
+import com.yirancrazy.minimall.notify.dto.SystemAlertPageDTO;
 import com.yirancrazy.minimall.notify.entity.NotifyMessagePO;
 import com.yirancrazy.minimall.notify.manager.NotifyManager;
 import com.yirancrazy.minimall.notify.service.impl.NotifyServiceImpl;
@@ -360,5 +362,46 @@ public class NotifyServiceImplTest {
         service.systemAlert(dto);
 
         verify(notifyManager).save(any(NotifyMessagePO.class));
+    }
+
+    /**
+     * 验证 alertPage 返回平台系统告警分页结果。
+     */
+    @Test
+    public void alertPage_returns_platform_system_alerts() {
+        NotifyMessagePO alert = new NotifyMessagePO();
+        alert.setId(1L);
+        alert.setRecipientType(RecipientTypeEnum.PLATFORM.intCode());
+        alert.setMessageType(NotifyMessageTypeEnum.SYSTEM.intCode());
+        alert.setTitle("CPU 告警");
+        IPage<NotifyMessagePO> expected = new Page<>(1, 10);
+        expected.setRecords(List.of(alert));
+        when(notifyManager.page(any(IPage.class), any())).thenReturn(expected);
+
+        SystemAlertPageDTO dto = new SystemAlertPageDTO();
+        dto.setPageNo(1);
+        dto.setPageSize(10);
+        IPage<NotifyMessagePO> result = service.alertPage(dto);
+
+        assertEquals(1, result.getRecords().size());
+        assertEquals("CPU 告警", result.getRecords().get(0).getTitle());
+        verify(notifyManager).page(any(IPage.class), any());
+    }
+
+    /**
+     * 验证 alertPage 在无告警时返回空分页。
+     */
+    @Test
+    public void alertPage_returns_empty_when_no_alerts() {
+        IPage<NotifyMessagePO> expected = new Page<>(1, 10);
+        expected.setRecords(Collections.emptyList());
+        when(notifyManager.page(any(IPage.class), any())).thenReturn(expected);
+
+        SystemAlertPageDTO dto = new SystemAlertPageDTO();
+        dto.setPageNo(1);
+        dto.setPageSize(10);
+        IPage<NotifyMessagePO> result = service.alertPage(dto);
+
+        assertEquals(0, result.getRecords().size());
     }
 }

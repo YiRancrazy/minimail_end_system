@@ -7,6 +7,7 @@ import com.yirancrazy.minimall.notify.dto.NotifyListDTO;
 import com.yirancrazy.minimall.notify.dto.NotifyMarketingPushDTO;
 import com.yirancrazy.minimall.notify.dto.NotifySystemAlertDTO;
 import com.yirancrazy.minimall.notify.dto.NotifyViolationWarningDTO;
+import com.yirancrazy.minimall.notify.dto.SystemAlertPageDTO;
 import com.yirancrazy.minimall.notify.entity.NotifyMessagePO;
 
 /**
@@ -107,4 +108,11 @@ public interface NotifyService {
      * @param dto 系统告警入参
      */
     void systemAlert(NotifySystemAlertDTO dto);
+
+    /**
+     * 平台系统告警分页查询，固定过滤 recipient_type=PLATFORM, message_type=SYSTEM。
+     * @param dto 分页入参
+     * @return 系统告警分页结果
+     */
+    IPage<NotifyMessagePO> alertPage(SystemAlertPageDTO dto);
 }

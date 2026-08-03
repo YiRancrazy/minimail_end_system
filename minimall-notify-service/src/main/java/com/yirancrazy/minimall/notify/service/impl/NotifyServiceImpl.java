@@ -2,6 +2,7 @@ package com.yirancrazy.minimall.notify.service.impl;
 
 import java.util.List;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
@@ -156,6 +157,39 @@ public class NotifyServiceImpl implements NotifyService {
     public void delete(Long id, Integer recipientType, Long userId) {
         getOwnedMessage(id, recipientType, userId);
         notifyManager.removeById(id);
+    }
+
+    /**
+     * 批量删除消息（软删除），校验所有消息归属当前用户。
+     * @param ids 消息ID列表，最多100条
+     * @param recipientType 接收方类型
+     * @param userId 接收者ID
+     * @throws BizException 当ID列表为空、超限或存在非本人消息时
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void batchDelete(List<Long> ids, Integer recipientType, Long userId) {
+        if (ids == null || ids.isEmpty()) {
+            throw new BizException(NotifyCodeEnum.NOTIFY_BATCH_IDS_EMPTY);
+        }
+        if (ids.size() > 100) {
+            throw new BizException(NotifyCodeEnum.NOTIFY_BATCH_TOO_MANY);
+        }
+        // Query all messages by IDs
+        List<NotifyMessagePO> messages = notifyManager.listByIds(ids);
+        // Validate all messages belong to the user
+        for (NotifyMessagePO m : messages) {
+            if (!recipientType.equals(m.getRecipientType()) || !userId.equals(m.getUserId())) {
+                throw new BizException(NotifyCodeEnum.NOTIFY_NOT_FOUND);
+            }
+        }
+        // Check if all IDs were found
+        if (messages.size() != ids.size()) {
+            throw new BizException(NotifyCodeEnum.NOTIFY_NOT_FOUND);
+        }
+        // Batch soft delete
+        notifyManager.removeByIds(ids);
+        log.info("batch deleted messages, count={}, userId={}", ids.size(), userId);
     }
 
     /**

@@ -15,7 +15,9 @@ import com.yirancrazy.minimall.common.base.BaseEnum;
 public enum NotifyCodeEnum implements BaseEnum {
     NOTIFY_NOT_FOUND("19001", "NOTIFY_NOT_FOUND", "消息不存在"),
     NOTIFY_NO_PERMISSION("19002", "NOTIFY_NO_PERMISSION", "无权操作该消息"),
-    BROADCAST_RECIPIENT_INVALID("19003", "BROADCAST_RECIPIENT_INVALID", "广播接收方类型非法");
+    BROADCAST_RECIPIENT_INVALID("19003", "BROADCAST_RECIPIENT_INVALID", "广播接收方类型非法"),
+    NOTIFY_BATCH_IDS_EMPTY("19004", "NOTIFY_BATCH_IDS_EMPTY", "消息ID列表不能为空"),
+    NOTIFY_BATCH_TOO_MANY("19005", "NOTIFY_BATCH_TOO_MANY", "单次最多删除100条消息");
 
     private final String code;
     private final String alias;

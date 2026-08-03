@@ -1,5 +1,6 @@
 package com.yirancrazy.minimall.notify.service;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
@@ -40,6 +41,12 @@ public class NotifyServiceImplTest {
 
     @BeforeEach
     void setUp() {
+        // Initialize TableInfo so LambdaUpdateWrapper can resolve lambda cache
+        MybatisConfiguration configuration = new MybatisConfiguration();
+        MapperBuilderAssistant assistant = new MapperBuilderAssistant(configuration, "");
+        assistant.setCurrentNamespace("com.yirancrazy.minimall.notify.mapper.NotifyMessageMapper");
+        TableInfoHelper.initTableInfo(assistant, NotifyMessagePO.class);
+
         notifyManager = mock(NotifyManager.class);
         sseHub = mock(SseHub.class);
         lenient().when(notifyManager.save(any(NotifyMessagePO.class))).thenReturn(true);
@@ -226,6 +233,57 @@ public class NotifyServiceImplTest {
         dto.setContent("内容");
 
         assertThrows(BizException.class, () -> service.broadcast(dto));
+    }
+
+    /**
+     * 验证 batchDelete 成功删除归属匹配的批量消息。
+     */
+    @Test
+    public void batchDelete_succeeds() {
+        List<Long> ids = List.of(1L, 2L);
+        NotifyMessagePO m1 = buildOwnedMessage(1L, 0);
+        NotifyMessagePO m2 = buildOwnedMessage(2L, 0);
+        when(notifyManager.listByIds(any())).thenReturn(List.of(m1, m2));
+
+        service.batchDelete(ids, RecipientTypeEnum.USER.intCode(), 7L);
+
+        verify(notifyManager).removeByIds(ids);
+    }
+
+    /**
+     * 验证 batchDelete 空ID列表时抛出 BizException。
+     */
+    @Test
+    public void batchDelete_empty_ids_throws() {
+        assertThrows(BizException.class,
+            () -> service.batchDelete(Collections.emptyList(),
+                RecipientTypeEnum.USER.intCode(), 7L));
+    }
+
+    /**
+     * 验证 batchDelete 超过100条时抛出 BizException。
+     */
+    @Test
+    public void batchDelete_too_many_throws() {
+        List<Long> ids = new ArrayList<>(101);
+        for (long i = 1; i <= 101; i++) {
+            ids.add(i);
+        }
+        assertThrows(BizException.class,
+            () -> service.batchDelete(ids, RecipientTypeEnum.USER.intCode(), 7L));
+    }
+
+    /**
+     * 验证 batchDelete 存在非本人消息时抛出 BizException。
+     */
+    @Test
+    public void batchDelete_not_owned_throws() {
+        NotifyMessagePO m = buildOwnedMessage(1L, 0);
+        m.setUserId(999L);
+        when(notifyManager.listByIds(any())).thenReturn(List.of(m));
+
+        assertThrows(BizException.class,
+            () -> service.batchDelete(List.of(1L), RecipientTypeEnum.USER.intCode(), 7L));
     }
 
     private NotifyMessagePO buildOwnedMessage(Long id, Integer readFlag) {

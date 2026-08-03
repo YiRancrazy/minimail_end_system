@@ -73,6 +73,15 @@ public interface NotifyService {
     void delete(Long id, Integer recipientType, Long userId);
 
     /**
+     * 批量删除消息（软删除），校验所有消息归属当前用户。
+     * @param ids 消息ID列表，最多100条
+     * @param recipientType 接收方类型
+     * @param userId 接收者ID
+     * @throws com.yirancrazy.minimall.common.exception.BizException 当ID列表为空、超限或存在非本人消息时
+     */
+    void batchDelete(List<Long> ids, Integer recipientType, Long userId);
+
+    /**
      * 平台广播消息，落库并通过 SSE 实时推送。
      * @param dto 广播入参
      */

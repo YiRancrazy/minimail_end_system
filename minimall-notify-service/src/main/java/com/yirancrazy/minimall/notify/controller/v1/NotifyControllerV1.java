@@ -13,6 +13,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import jakarta.validation.Valid;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.notify.constant.RecipientTypeEnum;
+import com.yirancrazy.minimall.notify.dto.NotifyBatchDeleteDTO;
 import com.yirancrazy.minimall.notify.dto.NotifyBroadcastDTO;
 import com.yirancrazy.minimall.notify.dto.NotifyListDTO;
 import com.yirancrazy.minimall.notify.entity.NotifyMessagePO;
@@ -102,6 +103,19 @@ public class NotifyControllerV1 {
     public Result<Void> userDelete(@PathVariable Long id,
                                    @RequestHeader("X-User-Id") Long userId) {
         notifyService.delete(id, RecipientTypeEnum.USER.intCode(), userId);
+        return Result.success(null);
+    }
+
+    /**
+     * 用户批量删除消息（软删除），单次最多100条。
+     * @param userId 用户ID
+     * @param dto 批量删除入参
+     * @return 操作结果
+     */
+    @DeleteMapping("/messages/batch")
+    public Result<Void> batchDelete(@RequestHeader("X-User-Id") Long userId,
+                                    @Valid @RequestBody NotifyBatchDeleteDTO dto) {
+        notifyService.batchDelete(dto.getIds(), RecipientTypeEnum.USER.intCode(), userId);
         return Result.success(null);
     }
 

@@ -17,7 +17,8 @@ public enum StockJournalTypeEnum implements BaseEnum {
     RELEASE(2, "RELEASE", "释放"),
     ADJUST(3, "ADJUST", "调整"),
     TRANSFER_OUT(4, "TRANSFER_OUT", "调出"),
-    TRANSFER_IN(5, "TRANSFER_IN", "调入");
+    TRANSFER_IN(5, "TRANSFER_IN", "调入"),
+    CORRECT(6, "CORRECT", "纠正");
 
     private final int code;
     private final String alias;

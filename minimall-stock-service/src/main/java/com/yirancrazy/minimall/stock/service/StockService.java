@@ -132,4 +132,19 @@ public interface StockService {
      * @throws com.yirancrazy.minimall.common.exception.BizException 任务不存在或非待盘点状态时
      */
     void cancelCountTask(Long id, Long operatorId);
+
+    /**
+     * 查询异常库存记录（available &lt; 0 或 reserved &lt; 0）。
+     * @return 异常库存列表
+     */
+    List<StockPO> listAbnormalStock();
+
+    /**
+     * 纠正指定SKU的库存至指定值，记录CORRECT类型流水。
+     * @param skuId SKU标识
+     * @param correctQuantity 纠正后的目标可用库存值，必须 &gt;= 0
+     * @param reason 纠正原因
+     * @throws com.yirancrazy.minimall.common.exception.BizException 当库存不存在或纠正数量非法时
+     */
+    void correctStock(Long skuId, Long correctQuantity, String reason);
 }

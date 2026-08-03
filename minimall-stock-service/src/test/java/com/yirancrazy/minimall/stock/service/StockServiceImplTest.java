@@ -457,4 +457,59 @@ public class StockServiceImplTest {
         dto.setOperatorId(1L);
         assertThrows(BizException.class, () -> service.createCountTask(dto));
     }
+
+    /**
+     * 验证 listAbnormalStock 返回 available &lt; 0 或 reserved &lt; 0 的记录。
+     */
+    @Test
+    public void listAbnormalStock_returns_abnormal_records() {
+        StockPO abnormal = new StockPO();
+        abnormal.setId(1L);
+        abnormal.setSkuId(100L);
+        abnormal.setAvailable(-5L);
+        abnormal.setReserved(0L);
+        when(manager.list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class)))
+            .thenReturn(List.of(abnormal));
+
+        List<StockPO> result = service.listAbnormalStock();
+        assertEquals(1, result.size());
+        assertEquals(-5L, result.get(0).getAvailable());
+        verify(manager).list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class));
+    }
+
+    /**
+     * 验证纠正库存成功时更新可用量并记录流水。
+     */
+    @Test
+    public void correctStock_succeeds() {
+        StockPO s = new StockPO();
+        s.setId(1L);
+        s.setSkuId(100L);
+        s.setAvailable(10L);
+        s.setReserved(0L);
+        when(manager.getOne(any())).thenReturn(s);
+
+        service.correctStock(100L, 20L, "data error");
+
+        assertEquals(20L, s.getAvailable());
+        verify(manager).updateById(s);
+        verify(journalManager).save(any(StockJournalPO.class));
+    }
+
+    /**
+     * 验证纠正库存时数量为负抛出 BizException。
+     */
+    @Test
+    public void correctStock_negative_quantity_throws() {
+        assertThrows(BizException.class, () -> service.correctStock(100L, -1L, "test"));
+    }
+
+    /**
+     * 验证纠正库存时SKU不存在抛出 BizException。
+     */
+    @Test
+    public void correctStock_stock_not_found_throws() {
+        when(manager.getOne(any())).thenReturn(null);
+        assertThrows(BizException.class, () -> service.correctStock(999L, 10L, "test"));
+    }
 }

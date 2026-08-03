@@ -384,6 +384,42 @@ public class StockServiceImpl implements StockService {
         log.info("count task cancelled, id={}, operator={}", id, operatorId);
     }
 
+    /**
+     * 查询异常库存记录（available &lt; 0 或 reserved &lt; 0）。
+     * @return 异常库存列表
+     */
+    @Override
+    public List<StockPO> listAbnormalStock() {
+        return stockManager.list(
+            Wrappers.lambdaQuery(StockPO.class)
+                .lt(StockPO::getAvailable, 0)
+                .or()
+                .lt(StockPO::getReserved, 0));
+    }
+
+    /**
+     * 纠正指定SKU的库存至指定值，记录CORRECT类型流水。
+     * @param skuId SKU标识
+     * @param correctQuantity 纠正后的目标可用库存值，必须 &gt;= 0
+     * @param reason 纠正原因
+     * @throws BizException 当库存不存在或纠正数量非法时
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void correctStock(Long skuId, Long correctQuantity, String reason) {
+        if (correctQuantity == null || correctQuantity < 0) {
+            throw new BizException(StockCodeEnum.STOCK_CORRECT_QUANTITY_INVALID);
+        }
+        StockPO po = getStock(skuId);
+        long oldAvailable = po.getAvailable();
+        long delta = correctQuantity - oldAvailable;
+        po.setAvailable(correctQuantity);
+        stockManager.updateById(po);
+
+        recordJournal(skuId, delta, StockJournalTypeEnum.CORRECT, reason, null);
+        log.info("stock corrected, skuId={}, from={}, to={}", skuId, oldAvailable, correctQuantity);
+    }
+
     private StockPO getStock(Long skuId) {
         StockPO po = stockManager.getOne(
             Wrappers.lambdaQuery(StockPO.class).eq(StockPO::getSkuId, skuId));

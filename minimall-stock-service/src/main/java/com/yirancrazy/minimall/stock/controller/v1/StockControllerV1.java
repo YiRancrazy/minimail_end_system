@@ -17,6 +17,7 @@ import jakarta.validation.Valid;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.common.util.CsvExporter;
 import com.yirancrazy.minimall.stock.constant.StockJournalTypeEnum;
+import com.yirancrazy.minimall.stock.dto.StockCorrectDTO;
 import com.yirancrazy.minimall.stock.dto.StockCountTaskCompleteDTO;
 import com.yirancrazy.minimall.stock.dto.StockCountTaskCreateDTO;
 import com.yirancrazy.minimall.stock.dto.StockCountTaskPageDTO;
@@ -187,6 +188,30 @@ public class StockControllerV1 {
     public Result<Void> cancelCountTask(@PathVariable Long id,
                                         @RequestHeader("X-User-Id") Long operatorId) {
         stockService.cancelCountTask(id, operatorId);
+        return Result.success(null);
+    }
+
+    /**
+     * 查询异常库存记录（available &lt; 0 或 reserved &lt; 0）。
+     * @return 异常库存列表
+     */
+    @GetMapping("/platform/abnormal")
+    public Result<List<StockPO>> listAbnormal() {
+        return Result.success(stockService.listAbnormalStock());
+    }
+
+    /**
+     * 纠正指定SKU的库存至指定值。
+     * @param skuId SKU标识
+     * @param operatorId 操作人ID（Header注入）
+     * @param dto 纠正入参
+     * @return 统一响应体
+     */
+    @PostMapping("/platform/{skuId}/correct")
+    public Result<Void> correct(@PathVariable Long skuId,
+                                @RequestHeader("X-User-Id") Long operatorId,
+                                @Valid @RequestBody StockCorrectDTO dto) {
+        stockService.correctStock(skuId, dto.getCorrectQuantity(), dto.getReason());
         return Result.success(null);
     }
 

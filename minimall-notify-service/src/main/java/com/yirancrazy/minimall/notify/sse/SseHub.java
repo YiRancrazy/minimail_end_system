@@ -5,7 +5,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 import org.springframework.http.MediaType;
-import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -14,10 +13,12 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: SseHub，提供通知相关能力
- * @Version: 1.0
- * @DateTime: 2026/07/31
+ * @Description: SseHub，提供 SSE 长连接订阅与实时推送能力
+ * @Version: 1.1
+ * @DateTime: 2026/08/03
  */
+@RestController
+@RequestMapping("/api/v1/notify/sse")
 public class SseHub {
 
     private final ConcurrentHashMap<Long, Set<SseEmitter>> emitters = new ConcurrentHashMap<>();

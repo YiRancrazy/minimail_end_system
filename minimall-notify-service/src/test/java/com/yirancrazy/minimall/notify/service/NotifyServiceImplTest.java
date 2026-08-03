@@ -2,55 +2,72 @@ package com.yirancrazy.minimall.notify.service;
 
 import java.util.Collections;
 import java.util.List;
+import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.yirancrazy.minimall.common.exception.BizException;
+import com.yirancrazy.minimall.notify.constant.RecipientTypeEnum;
+import com.yirancrazy.minimall.notify.dto.NotifyBroadcastDTO;
 import com.yirancrazy.minimall.notify.dto.NotifyListDTO;
 import com.yirancrazy.minimall.notify.entity.NotifyMessagePO;
 import com.yirancrazy.minimall.notify.manager.NotifyManager;
 import com.yirancrazy.minimall.notify.service.impl.NotifyServiceImpl;
+import com.yirancrazy.minimall.notify.sse.SseHub;
 
 /**
- * NotifyServiceImpl 单元测试，覆盖消息持久化与按用户查询的正常、失败、边界路径。
+ * NotifyServiceImpl 单元测试，覆盖站内信发送、分页、已读标记、删除与广播的正常及异常路径。
  */
 public class NotifyServiceImplTest {
 
     private NotifyManager notifyManager;
+    private SseHub sseHub;
     private NotifyServiceImpl service;
 
     @BeforeEach
     void setUp() {
         notifyManager = mock(NotifyManager.class);
+        sseHub = mock(SseHub.class);
         lenient().when(notifyManager.save(any(NotifyMessagePO.class))).thenReturn(true);
-        service = new NotifyServiceImpl(notifyManager);
+        lenient().when(notifyManager.updateById(any(NotifyMessagePO.class))).thenReturn(true);
+        lenient().when(notifyManager.removeById(99L)).thenReturn(true);
+        service = new NotifyServiceImpl(notifyManager, sseHub);
     }
 
     /**
-     * 验证 push 成功时返回 true 并将消息标记为未读。
+     * 验证 push 成功时返回 true 并通过 SSE 推送。
      */
     @Test
     public void push_persists_unread_message() {
         boolean ok = service.push(7L, "订单支付成功", "订单 99 已支付");
         assertTrue(ok);
         verify(notifyManager).save(any(NotifyMessagePO.class));
+        verify(sseHub).send(7L, "订单支付成功");
     }
 
     /**
-     * 验证 save 失败时 push 返回 false。
+     * 验证 save 失败时 push 返回 false 且不推送 SSE。
      */
     @Test
     public void push_returns_false_when_save_fails() {
         when(notifyManager.save(any(NotifyMessagePO.class))).thenReturn(false);
         boolean ok = service.push(7L, "title", "content");
         assertFalse(ok);
+        verify(sseHub, never()).send(any(), any());
     }
 
     /**
@@ -82,5 +99,141 @@ public class NotifyServiceImplTest {
         List<NotifyMessagePO> result = service.listByUser(dto);
 
         assertTrue(result.isEmpty());
+    }
+
+    /**
+     * 验证 page 委托给 manager.page 并返回结果。
+     */
+    @Test
+    public void page_delegates_to_manager() {
+        NotifyListDTO dto = new NotifyListDTO();
+        dto.setPageNo(1);
+        dto.setPageSize(10);
+        dto.setUserId(7L);
+        dto.setRecipientType(RecipientTypeEnum.USER.intCode());
+        IPage<NotifyMessagePO> expected = new Page<>(1, 10);
+        when(notifyManager.page(any(IPage.class), any())).thenReturn(expected);
+
+        IPage<NotifyMessagePO> result = service.page(dto);
+        assertEquals(expected, result);
+        verify(notifyManager).page(any(IPage.class), any());
+    }
+
+    /**
+     * 验证 unreadCount 委托给 manager.count。
+     */
+    @Test
+    public void unreadCount_delegates_to_manager() {
+        when(notifyManager.count(any(Wrapper.class))).thenReturn(5L);
+
+        long count = service.unreadCount(RecipientTypeEnum.USER.intCode(), 7L);
+        assertEquals(5L, count);
+        verify(notifyManager).count(any(Wrapper.class));
+    }
+
+    /**
+     * 验证 markRead 将未读消息更新为已读。
+     */
+    @Test
+    public void markRead_updates_flag() {
+        NotifyMessagePO m = buildOwnedMessage(99L, 0);
+        when(notifyManager.getById(99L)).thenReturn(m);
+
+        service.markRead(99L, RecipientTypeEnum.USER.intCode(), 7L);
+        assertEquals(1, m.getReadFlag());
+        verify(notifyManager).updateById(m);
+    }
+
+    /**
+     * 验证 markRead 对已读消息幂等返回，不重复更新。
+     */
+    @Test
+    public void markRead_already_read_idempotent() {
+        NotifyMessagePO m = buildOwnedMessage(99L, 1);
+        when(notifyManager.getById(99L)).thenReturn(m);
+
+        service.markRead(99L, RecipientTypeEnum.USER.intCode(), 7L);
+        verify(notifyManager, never()).updateById(any(NotifyMessagePO.class));
+    }
+
+    /**
+     * 验证 markRead 在消息不存在时抛出 BizException。
+     */
+    @Test
+    public void markRead_missing_throws() {
+        when(notifyManager.getById(99L)).thenReturn(null);
+        assertThrows(BizException.class,
+            () -> service.markRead(99L, RecipientTypeEnum.USER.intCode(), 7L));
+    }
+
+    /**
+     * 验证 markAllRead 委托给 manager.update 批量更新。
+     */
+    @Test
+    public void markAllRead_delegates_to_update() {
+        service.markAllRead(RecipientTypeEnum.USER.intCode(), 7L);
+        verify(notifyManager).update(any());
+    }
+
+    /**
+     * 验证 delete 删除归属匹配的消息。
+     */
+    @Test
+    public void delete_removes_owned_message() {
+        NotifyMessagePO m = buildOwnedMessage(99L, 0);
+        when(notifyManager.getById(99L)).thenReturn(m);
+
+        service.delete(99L, RecipientTypeEnum.USER.intCode(), 7L);
+        verify(notifyManager).removeById(99L);
+    }
+
+    /**
+     * 验证 delete 在消息不存在时抛出 BizException。
+     */
+    @Test
+    public void delete_missing_throws() {
+        when(notifyManager.getById(99L)).thenReturn(null);
+        assertThrows(BizException.class,
+            () -> service.delete(99L, RecipientTypeEnum.USER.intCode(), 7L));
+    }
+
+    /**
+     * 验证 broadcast 指定 targetId 时落库并 SSE 推送。
+     */
+    @Test
+    public void broadcast_targetId_saves_and_sse() {
+        NotifyBroadcastDTO dto = new NotifyBroadcastDTO();
+        dto.setRecipientType(RecipientTypeEnum.USER.intCode());
+        dto.setMessageType(1);
+        dto.setTitle("公告");
+        dto.setContent("内容");
+        dto.setTargetId(7L);
+
+        service.broadcast(dto);
+        verify(notifyManager).save(any(NotifyMessagePO.class));
+        verify(sseHub).send(7L, "公告");
+    }
+
+    /**
+     * 验证 broadcast 非法接收方类型时抛出 BizException。
+     */
+    @Test
+    public void broadcast_invalid_recipient_type_throws() {
+        NotifyBroadcastDTO dto = new NotifyBroadcastDTO();
+        dto.setRecipientType(99);
+        dto.setMessageType(1);
+        dto.setTitle("公告");
+        dto.setContent("内容");
+
+        assertThrows(BizException.class, () -> service.broadcast(dto));
+    }
+
+    private NotifyMessagePO buildOwnedMessage(Long id, Integer readFlag) {
+        NotifyMessagePO m = new NotifyMessagePO();
+        m.setId(id);
+        m.setUserId(7L);
+        m.setRecipientType(RecipientTypeEnum.USER.intCode());
+        m.setReadFlag(readFlag);
+        return m;
     }
 }

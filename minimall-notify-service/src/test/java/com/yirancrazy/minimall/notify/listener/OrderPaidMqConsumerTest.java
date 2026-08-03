@@ -15,19 +15,17 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import com.yirancrazy.minimall.api.dto.order.OrderPaidDTO;
 import com.yirancrazy.minimall.notify.service.NotifyService;
-import com.yirancrazy.minimall.notify.sse.SseHub;
 
 
 /**
  * @Author: yirancrazy@gmail.com
  * @Description: OrderPaidMqConsumer 的单元测试类。
- * @Version: 1.1
- * @DateTime: 2026/08/02
+ * @Version: 1.2
+ * @DateTime: 2026/08/03
  **/
 class OrderPaidMqConsumerTest {
 
     private NotifyService notifyService;
-    private SseHub sseHub;
     @SuppressWarnings("unchecked")
     private final ValueOperations<String, String> valueOps = mock(ValueOperations.class);
     private StringRedisTemplate redis;
@@ -36,17 +34,16 @@ class OrderPaidMqConsumerTest {
     @BeforeEach
     void setUp() {
         notifyService = mock(NotifyService.class);
-        sseHub = mock(SseHub.class);
         redis = mock(StringRedisTemplate.class);
         lenient().when(redis.opsForValue()).thenReturn(valueOps);
         lenient().when(valueOps.setIfAbsent(anyString(), anyString(), any(Duration.class)))
             .thenReturn(Boolean.TRUE);
-        consumer = new OrderPaidMqConsumer(notifyService, sseHub, redis,
+        consumer = new OrderPaidMqConsumer(notifyService, redis,
             "localhost:9876", "events", "notify-test");
     }
 
     @Test
-    void onPaid_givenNormalEvent_thenPushesNotificationAndSse() {
+    void onPaid_givenNormalEvent_thenPushesNotification() {
         OrderPaidDTO event = new OrderPaidDTO(
             99L, 7L, new BigDecimal("100.00"), "2026-07-29T10:00:00");
 
@@ -54,14 +51,13 @@ class OrderPaidMqConsumerTest {
 
         String content = "订单 99 已支付，金额 100.00";
         verify(notifyService).push(7L, "订单支付成功", content);
-        verify(sseHub).send(7L, "订单支付成功: " + content);
     }
 
     @Test
     void onPaid_givenNullEvent_thenDoesNothing() {
         consumer.onPaid(null);
 
-        verifyNoInteractions(notifyService, sseHub);
+        verifyNoInteractions(notifyService);
     }
 
     @Test
@@ -71,7 +67,7 @@ class OrderPaidMqConsumerTest {
 
         consumer.onPaid(event);
 
-        verifyNoInteractions(notifyService, sseHub);
+        verifyNoInteractions(notifyService);
     }
 
     /**
@@ -86,6 +82,6 @@ class OrderPaidMqConsumerTest {
 
         consumer.onPaid(event);
 
-        verifyNoInteractions(notifyService, sseHub);
+        verifyNoInteractions(notifyService);
     }
 }

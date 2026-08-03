@@ -11,13 +11,12 @@ import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.api.dto.order.OrderPaidDTO;
 import com.yirancrazy.minimall.common.event.RocketMqEventConsumer;
 import com.yirancrazy.minimall.notify.service.NotifyService;
-import com.yirancrazy.minimall.notify.sse.SseHub;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: OrderPaidMq消费者，消费OrderPaidMq相关消息
- * @Version: 1.1
- * @DateTime: 2026/08/02
+ * @Description: OrderPaidMq消费者，消费OrderPaidMq相关消息并落库站内信
+ * @Version: 1.2
+ * @DateTime: 2026/08/03
  */
 @Slf4j
 @Component
@@ -27,7 +26,6 @@ public class OrderPaidMqConsumer {
     private static final Duration IDEMPOTENT_TTL = Duration.ofDays(7);
 
     private final NotifyService notifyService;
-    private final SseHub sseHub;
     private final StringRedisTemplate redis;
     private final String namesrv;
     private final String topic;
@@ -36,13 +34,11 @@ public class OrderPaidMqConsumer {
 
     public OrderPaidMqConsumer(
         NotifyService notifyService,
-        SseHub sseHub,
         StringRedisTemplate redis,
         @Value("${minimall.eventbus.rocketmq.namesrv-addr:127.0.0.1:9876}") String namesrv,
         @Value("${minimall.eventbus.rocketmq.topic:minimall-events}") String topic,
         @Value("${minimall.eventbus.rocketmq.group:minimall-notify}") String group) {
         this.notifyService = notifyService;
-        this.sseHub = sseHub;
         this.redis = redis;
         this.namesrv = namesrv;
         this.topic = topic;
@@ -59,12 +55,19 @@ public class OrderPaidMqConsumer {
 
     @PreDestroy
     void close() {
-        if (consumer != null) consumer.stop();
+        if (consumer != null) {
+            consumer.stop();
+        }
     }
 
-    /** Package-private for direct invocation from unit tests. */
+    /**
+     * 消费订单支付事件，Redis SETNX 幂等去重后落库站内信；SSE 推送由 push 内部统一负责。
+     * @param event 订单支付事件
+     */
     void onPaid(OrderPaidDTO event) {
-        if (event == null || event.getOrderId() == null) return;
+        if (event == null || event.getOrderId() == null) {
+            return;
+        }
         String key = "notify:order:paid:" + event.getOrderId();
         Boolean first = redis.opsForValue().setIfAbsent(key, "1", IDEMPOTENT_TTL);
         if (Boolean.FALSE.equals(first)) {
@@ -74,7 +77,6 @@ public class OrderPaidMqConsumer {
         String title = "订单支付成功";
         String content = "订单 " + event.getOrderId() + " 已支付，金额 " + event.getAmount();
         notifyService.push(event.getUserId(), title, content);
-        sseHub.send(event.getUserId(), title + ": " + content);
         log.info("notified user {} of order {} via mq", event.getUserId(), event.getOrderId());
     }
 }

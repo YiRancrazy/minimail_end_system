@@ -46,8 +46,8 @@ public class OrderPaidListenerTest {
             }
             return true;
         }).when(manager).save(any(NotifyMessagePO.class));
-        notifyService = new NotifyServiceImpl(manager);
-        listener = new OrderPaidListener(notifyService, sseHub);
+        notifyService = new NotifyServiceImpl(manager, sseHub);
+        listener = new OrderPaidListener(notifyService);
     }
 
     /**

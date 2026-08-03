@@ -388,6 +388,40 @@ public class OrderServiceImplTest {
         assertThrows(BizException.class, () -> service.delete(99L, 999L));
     }
 
+    /**
+     * 验证平台关闭待支付订单成功，状态推进为 CANCELLED 并释放库存。
+     */
+    @Test
+    public void platformClose_pending_succeeds() {
+        OrderPO existing = buildOrder(99L, 1L, 10L, OrderStatusEnum.PENDING.intCode());
+        when(manager.getById(99L)).thenReturn(existing);
+
+        service.platformClose(99L);
+        assertEquals(OrderStatusEnum.CANCELLED.intCode(), existing.getStatus());
+        verify(stockFeignClient).release(any());
+    }
+
+    /**
+     * 验证平台关闭已支付订单抛出异常（状态流转不合法）。
+     */
+    @Test
+    public void platformClose_paid_throws() {
+        OrderPO existing = buildOrder(99L, 1L, 10L, OrderStatusEnum.PAID.intCode());
+        when(manager.getById(99L)).thenReturn(existing);
+
+        assertThrows(BizException.class, () -> service.platformClose(99L));
+    }
+
+    /**
+     * 验证 pendingCount 委托给 manager.count 并返回统计值。
+     */
+    @Test
+    public void pendingCount_returns_count() {
+        when(manager.count(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class))).thenReturn(5L);
+        long count = service.pendingCount(10L);
+        assertEquals(5L, count);
+    }
+
     private OrderPO buildOrder(Long id, Long userId, Integer status) {
         OrderPO po = new OrderPO();
         po.setId(id);

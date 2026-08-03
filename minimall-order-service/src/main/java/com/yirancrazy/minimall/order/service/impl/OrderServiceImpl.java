@@ -2,6 +2,7 @@ package com.yirancrazy.minimall.order.service.impl;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import org.springframework.stereotype.Service;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
@@ -236,6 +237,37 @@ public class OrderServiceImpl implements OrderService {
         }
         orderManager.removeById(orderId);
         log.info("order deleted, orderId={}, userId={}", orderId, userId);
+    }
+
+    /**
+     * 平台强制关闭异常订单，仅允许 PENDING 状态关闭并释放库存。
+     * @param orderId 订单ID
+     */
+    @Override
+    public void platformClose(Long orderId) {
+        OrderPO po = getOrder(orderId);
+        transitStatus(orderId, OrderStatusEnum.CANCELLED);
+        Boolean released = stockFeignClient.release(
+            new StockReserveDTO(po.getSkuId(), po.getQuantity())).getData();
+        if (released == null || !released) {
+            log.warn("stock release failed on platform-close, orderId={}", orderId);
+        }
+        log.info("order platform-closed, orderId={}", orderId);
+    }
+
+    /**
+     * 商家待处理订单数量统计，包含 PENDING/PAID/REFUNDING 三种状态。
+     * @param merchantId 商家ID
+     * @return 待处理订单总数
+     */
+    @Override
+    public long pendingCount(Long merchantId) {
+        return orderManager.count(Wrappers.lambdaQuery(OrderPO.class)
+            .eq(OrderPO::getMerchantId, merchantId)
+            .in(OrderPO::getStatus, List.of(
+                OrderStatusEnum.PENDING.intCode(),
+                OrderStatusEnum.PAID.intCode(),
+                OrderStatusEnum.REFUNDING.intCode())));
     }
 
     private OrderPO getOrder(Long orderId) {

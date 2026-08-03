@@ -49,6 +49,19 @@ public interface OrderService {
     void delete(Long orderId, Long userId);
 
     /**
+     * 平台强制关闭异常订单，仅允许 PENDING 状态关闭并释放库存。
+     * @param orderId 订单ID
+     */
+    void platformClose(Long orderId);
+
+    /**
+     * 商家待处理订单数量统计，包含 PENDING/PAID/REFUNDING 三种状态。
+     * @param merchantId 商家ID
+     * @return 待处理订单总数
+     */
+    long pendingCount(Long merchantId);
+
+    /**
      * 分页查询订单，支持按用户/商家/状态过滤。
      * @param dto 分页查询入参
      * @return 订单分页结果

@@ -167,4 +167,24 @@ public class OrderControllerV1 {
         orderService.delete(orderId, userId);
         return Result.success(null);
     }
+
+    /**
+     * 平台强制关闭异常订单，仅允许待支付订单关闭并释放库存。
+     * @param orderId 订单ID
+     */
+    @PostMapping("/{orderId}/platform-close")
+    public Result<Void> platformClose(@PathVariable Long orderId) {
+        orderService.platformClose(orderId);
+        return Result.success(null);
+    }
+
+    /**
+     * 商家待处理订单数量统计，包含 PENDING/PAID/REFUNDING 三种状态。
+     * @param merchantId 商家ID
+     * @return 待处理订单总数
+     */
+    @GetMapping("/merchant/pending-count")
+    public Result<Long> merchantPendingCount(@RequestHeader("X-Merchant-Id") Long merchantId) {
+        return Result.success(orderService.pendingCount(merchantId));
+    }
 }

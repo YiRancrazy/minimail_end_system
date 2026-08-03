@@ -1,21 +1,30 @@
 package com.yirancrazy.minimall.auth.controller.v1;
 
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import jakarta.validation.Valid;
 import com.yirancrazy.minimall.api.dto.auth.TokenVO;
+import com.yirancrazy.minimall.auth.dto.AdminCreateDTO;
+import com.yirancrazy.minimall.auth.dto.AdminPageDTO;
+import com.yirancrazy.minimall.auth.dto.AdminUpdateDTO;
 import com.yirancrazy.minimall.auth.dto.LoginDTO;
+import com.yirancrazy.minimall.auth.entity.UserAuthPO;
 import com.yirancrazy.minimall.auth.service.PlatformAuthService;
 import com.yirancrazy.minimall.common.result.Result;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 平台端认证控制器，提供平台管理员登录、登出接口。
- * @Version: 1.0
- * @DateTime: 2026/08/02
+ * @Description: 平台端认证与管理控制器，提供平台管理员登录、登出与 CRUD 接口。
+ * @Version: 1.1
+ * @DateTime: 2026/08/03
  **/
 @RestController
 @RequestMapping("/api/v1/platform/auth")
@@ -48,5 +57,50 @@ public class PlatformAuthControllerV1 {
                                @RequestHeader("X-User-Jti") String jti) {
         platformAuthService.signOut(adminAccountId, jti);
         return Result.success();
+    }
+
+    /**
+     * 创建平台管理员。
+     * @param dto 创建入参
+     * @return 新管理员ID
+     */
+    @PostMapping("/admins")
+    public Result<Long> adminCreate(@Valid @RequestBody AdminCreateDTO dto) {
+        return Result.success(platformAuthService.adminCreate(dto));
+    }
+
+    /**
+     * 分页查询平台管理员。
+     * @param dto 分页入参
+     * @return 管理员分页结果
+     */
+    @GetMapping("/admins")
+    public Result<IPage<UserAuthPO>> adminPage(@Valid AdminPageDTO dto) {
+        return Result.success(platformAuthService.adminPage(dto));
+    }
+
+    /**
+     * 更新平台管理员昵称。
+     * @param id 管理员ID
+     * @param dto 更新入参
+     * @return 更新是否成功
+     */
+    @PutMapping("/admins/{id}")
+    public Result<Boolean> adminUpdate(@PathVariable("id") Long id,
+                                       @Valid @RequestBody AdminUpdateDTO dto) {
+        return Result.success(platformAuthService.adminUpdate(id, dto));
+    }
+
+    /**
+     * 逻辑删除平台管理员，不允许删除自己。
+     * @param operatorId 操作人ID（来自网关 X-User-Id）
+     * @param id 目标管理员ID
+     * @return 无业务数据的成功响应
+     */
+    @DeleteMapping("/admins/{id}")
+    public Result<Void> adminDelete(@RequestHeader("X-User-Id") Long operatorId,
+                                    @PathVariable("id") Long id) {
+        platformAuthService.adminDelete(operatorId, id);
+        return Result.success(null);
     }
 }

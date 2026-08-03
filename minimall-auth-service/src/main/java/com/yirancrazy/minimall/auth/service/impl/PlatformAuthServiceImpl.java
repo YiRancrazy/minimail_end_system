@@ -6,10 +6,15 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.stereotype.Service;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.api.dto.auth.TokenVO;
 import com.yirancrazy.minimall.auth.constant.AuthCodeEnum;
+import com.yirancrazy.minimall.auth.dto.AdminCreateDTO;
+import com.yirancrazy.minimall.auth.dto.AdminPageDTO;
+import com.yirancrazy.minimall.auth.dto.AdminUpdateDTO;
 import com.yirancrazy.minimall.auth.dto.LoginDTO;
 import com.yirancrazy.minimall.auth.entity.UserAuthPO;
 import com.yirancrazy.minimall.auth.manager.UserAuthManager;
@@ -88,6 +93,83 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
         redisTemplate.opsForValue().set(
             BLACKLIST_KEY_PREFIX + jti, "1", ttlSeconds, TimeUnit.SECONDS);
         log.info("platform admin signed out, accountId={}", adminAccountId);
+    }
+
+    /**
+     * 创建平台管理员，用户名不可重复，密码 BCrypt 加密存储。
+     * @param dto 创建入参
+     * @return 新管理员ID
+     * @throws BizException 用户名重复时
+     */
+    @Override
+    public Long adminCreate(AdminCreateDTO dto) {
+        UserAuthPO existing = userAuthManager.getOne(
+            Wrappers.lambdaQuery(UserAuthPO.class).eq(UserAuthPO::getUsername, dto.getUsername()));
+        if (existing != null) {
+            throw new BizException(AuthCodeEnum.ADMIN_USERNAME_EXISTS);
+        }
+        String salt = UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+        UserAuthPO po = new UserAuthPO();
+        po.setUsername(dto.getUsername());
+        po.setPasswordHash(BCrypt.hashpw(dto.getPassword() + salt, BCrypt.gensalt()));
+        po.setSalt(salt);
+        po.setRole(ROLE_PLATFORM);
+        po.setStatus(1);
+        po.setNickname(dto.getNickname());
+        userAuthManager.save(po);
+        log.info("admin created, id={}, username={}", po.getId(), dto.getUsername());
+        return po.getId();
+    }
+
+    /**
+     * 分页查询平台管理员，固定 role=PLATFORM，按 ID 降序返回。
+     * @param dto 分页入参
+     * @return 管理员分页结果
+     */
+    @Override
+    public IPage<UserAuthPO> adminPage(AdminPageDTO dto) {
+        Page<UserAuthPO> page = new Page<>(dto.getPageNo(), dto.getPageSize());
+        return userAuthManager.page(page, Wrappers.lambdaQuery(UserAuthPO.class)
+            .eq(UserAuthPO::getRole, ROLE_PLATFORM)
+            .orderByDesc(UserAuthPO::getId));
+    }
+
+    /**
+     * 更新平台管理员昵称。
+     * @param id 管理员ID
+     * @param dto 更新入参
+     * @return 更新是否成功
+     * @throws BizException 管理员不存在时
+     */
+    @Override
+    public boolean adminUpdate(Long id, AdminUpdateDTO dto) {
+        UserAuthPO po = userAuthManager.getById(id);
+        if (po == null) {
+            throw new BizException(AuthCodeEnum.USER_NOT_FOUND);
+        }
+        po.setNickname(dto.getNickname());
+        boolean ok = userAuthManager.updateById(po);
+        log.info("admin updated, id={}", id);
+        return ok;
+    }
+
+    /**
+     * 逻辑删除平台管理员，不允许删除自己。
+     * @param operatorId 操作人ID
+     * @param targetId 目标管理员ID
+     * @throws BizException 删除自己或管理员不存在时
+     */
+    @Override
+    public void adminDelete(Long operatorId, Long targetId) {
+        if (operatorId.equals(targetId)) {
+            throw new BizException(AuthCodeEnum.CANNOT_DELETE_SELF);
+        }
+        UserAuthPO po = userAuthManager.getById(targetId);
+        if (po == null) {
+            throw new BizException(AuthCodeEnum.USER_NOT_FOUND);
+        }
+        userAuthManager.removeById(targetId);
+        log.info("admin deleted, targetId={}, operatorId={}", targetId, operatorId);
     }
 
     private TokenVO issueTokens(Long accountId, String username) {

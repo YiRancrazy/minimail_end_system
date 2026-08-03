@@ -7,11 +7,10 @@ import com.yirancrazy.minimall.common.base.BaseEnum;
 /**
  * @Author: yirancrazy@gmail.com
  * @Description: 认证Auth错误码枚举，定义认证相关错误码
- * @Version: 1.0
- * @DateTime: 2026/07/31
+ * @Version: 1.1
+ * @DateTime: 2026/08/03
  */
 @Getter
-
 @AllArgsConstructor
 public enum AuthCodeEnum implements BaseEnum {
     USER_NOT_FOUND("14001", "USER_NOT_FOUND", "用户不存在"),
@@ -24,7 +23,9 @@ public enum AuthCodeEnum implements BaseEnum {
     VERIFY_CODE_INVALID("14008", "VERIFY_CODE_INVALID", "验证码无效或已过期"),
     ACCOUNT_DISABLED("14009", "ACCOUNT_DISABLED", "账号已禁用"),
     ACCOUNT_ROLE_MISMATCH("14010", "ACCOUNT_ROLE_MISMATCH", "账号角色不匹配"),
-    MERCHANT_NOT_FOUND("14011", "MERCHANT_NOT_FOUND", "商家账号不存在");
+    MERCHANT_NOT_FOUND("14011", "MERCHANT_NOT_FOUND", "商家账号不存在"),
+    ADMIN_USERNAME_EXISTS("14012", "ADMIN_USERNAME_EXISTS", "管理员用户名已存在"),
+    CANNOT_DELETE_SELF("14013", "CANNOT_DELETE_SELF", "不能删除自己");
 
     private final String code;
     private final String alias;

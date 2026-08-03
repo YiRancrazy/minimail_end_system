@@ -26,6 +26,7 @@ import com.yirancrazy.minimall.goods.entity.SpuAuditRecordPO;
 import com.yirancrazy.minimall.goods.entity.SpuPO;
 import com.yirancrazy.minimall.goods.manager.SpuAuditRecordManager;
 import com.yirancrazy.minimall.goods.manager.SpuManager;
+import com.yirancrazy.minimall.goods.search.SpuSearchService;
 import com.yirancrazy.minimall.goods.service.impl.SpuServiceImpl;
 
 /**
@@ -35,12 +36,14 @@ public class SpuServiceImplTest {
 
     private SpuManager spuManager;
     private SpuAuditRecordManager spuAuditRecordManager;
+    private SpuSearchService spuSearchService;
     private SpuServiceImpl service;
 
     @BeforeEach
     void setUp() {
         spuManager = mock(SpuManager.class);
         spuAuditRecordManager = mock(SpuAuditRecordManager.class);
+        spuSearchService = mock(SpuSearchService.class);
         lenient().doAnswer(inv -> {
             SpuPO p = inv.getArgument(0);
             if (p.getId() == null) {
@@ -51,7 +54,7 @@ public class SpuServiceImplTest {
         lenient().when(spuManager.updateById(any(SpuPO.class))).thenReturn(true);
         lenient().when(spuManager.removeById(100L)).thenReturn(true);
         lenient().when(spuAuditRecordManager.save(any(SpuAuditRecordPO.class))).thenReturn(true);
-        service = new SpuServiceImpl(spuManager, spuAuditRecordManager);
+        service = new SpuServiceImpl(spuManager, spuAuditRecordManager, spuSearchService);
     }
 
     /**

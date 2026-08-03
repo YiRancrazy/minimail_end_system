@@ -19,6 +19,8 @@ import com.yirancrazy.minimall.goods.entity.SpuAuditRecordPO;
 import com.yirancrazy.minimall.goods.entity.SpuPO;
 import com.yirancrazy.minimall.goods.manager.SpuAuditRecordManager;
 import com.yirancrazy.minimall.goods.manager.SpuManager;
+import com.yirancrazy.minimall.goods.search.SpuDocument;
+import com.yirancrazy.minimall.goods.search.SpuSearchService;
 import com.yirancrazy.minimall.goods.service.SpuService;
 
 /**
@@ -33,10 +35,14 @@ public class SpuServiceImpl implements SpuService {
 
     private final SpuManager spuManager;
     private final SpuAuditRecordManager spuAuditRecordManager;
+    private final SpuSearchService spuSearchService;
 
-    public SpuServiceImpl(SpuManager spuManager, SpuAuditRecordManager spuAuditRecordManager) {
+    public SpuServiceImpl(SpuManager spuManager,
+                          SpuAuditRecordManager spuAuditRecordManager,
+                          SpuSearchService spuSearchService) {
         this.spuManager = spuManager;
         this.spuAuditRecordManager = spuAuditRecordManager;
+        this.spuSearchService = spuSearchService;
     }
 
     /**
@@ -113,7 +119,11 @@ public class SpuServiceImpl implements SpuService {
         if (dto.getMainImageUrl() != null) {
             existing.setMainImageUrl(dto.getMainImageUrl());
         }
-        return spuManager.updateById(existing);
+        boolean ok = spuManager.updateById(existing);
+        if (ok) {
+            syncToEs(existing);
+        }
+        return ok;
     }
 
     /**
@@ -151,6 +161,9 @@ public class SpuServiceImpl implements SpuService {
         }
         existing.setStatus(SpuStatusEnum.PENDING_AUDIT.statusValue());
         boolean ok = spuManager.updateById(existing);
+        if (ok) {
+            syncToEs(existing);
+        }
         log.info("spu submit audit, spuId={}, ok={}", id, ok);
         return ok;
     }
@@ -172,6 +185,9 @@ public class SpuServiceImpl implements SpuService {
         }
         existing.setStatus(SpuStatusEnum.OFF_SHELF.statusValue());
         boolean ok = spuManager.updateById(existing);
+        if (ok) {
+            syncToEs(existing);
+        }
         log.info("spu off shelf, spuId={}, ok={}", id, ok);
         return ok;
     }
@@ -211,6 +227,9 @@ public class SpuServiceImpl implements SpuService {
         existing.setStatus(SpuStatusEnum.ON_SALE.statusValue());
         existing.setPublishAt(LocalDateTime.now());
         boolean ok = spuManager.updateById(existing);
+        if (ok) {
+            syncToEs(existing);
+        }
         saveAuditRecord(spuId, auditorId, AuditDecisionEnum.APPROVE, null);
         log.info("spu approved, spuId={}, auditorId={}", spuId, auditorId);
         return ok;
@@ -235,6 +254,9 @@ public class SpuServiceImpl implements SpuService {
         }
         existing.setStatus(SpuStatusEnum.REJECTED.statusValue());
         boolean ok = spuManager.updateById(existing);
+        if (ok) {
+            syncToEs(existing);
+        }
         saveAuditRecord(spuId, auditorId, AuditDecisionEnum.REJECT, reason);
         log.info("spu rejected, spuId={}, auditorId={}, reason={}", spuId, auditorId, reason);
         return ok;
@@ -262,5 +284,17 @@ public class SpuServiceImpl implements SpuService {
         record.setReason(reason);
         record.setAuditAt(LocalDateTime.now());
         spuAuditRecordManager.save(record);
+    }
+
+    private void syncToEs(SpuPO po) {
+        SpuDocument doc = new SpuDocument();
+        doc.setSpuId(po.getId());
+        doc.setTitle(po.getTitle());
+        doc.setCategoryId(po.getCategoryId());
+        doc.setMerchantId(po.getMerchantId());
+        doc.setSaleStatus(po.getStatus());
+        doc.setMainImage(po.getMainImageUrl());
+        doc.setCreateTime(po.getCreateTime());
+        spuSearchService.sync(doc);
     }
 }

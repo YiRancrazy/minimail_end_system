@@ -22,3 +22,5 @@ spring:
   mvc:
     pathmatch:
       matching-strategy: ant_path_matcher
+  elasticsearch:
+    uris: ${ES_URIS:http://127.0.0.1:9200}

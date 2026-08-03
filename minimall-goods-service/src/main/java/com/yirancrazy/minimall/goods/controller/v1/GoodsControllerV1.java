@@ -9,25 +9,31 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import jakarta.validation.Valid;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.goods.dto.GoodsPageDTO;
+import com.yirancrazy.minimall.goods.dto.SpuSearchDTO;
+import com.yirancrazy.minimall.goods.search.SpuSearchService;
 import com.yirancrazy.minimall.goods.service.GoodsQueryService;
 import com.yirancrazy.minimall.goods.vo.SkuVO;
 import com.yirancrazy.minimall.goods.vo.SpuDetailVO;
 import com.yirancrazy.minimall.goods.vo.SpuListVO;
+import com.yirancrazy.minimall.goods.vo.SpuSearchVO;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 用户端商品查询控制器，提供在售商品列表、详情与 SKU 列表接口
- * @Version: 1.0
- * @DateTime: 2026/08/02
+ * @Description: 用户端商品查询控制器，提供在售商品列表、详情、SKU 列表与搜索接口
+ * @Version: 1.1
+ * @DateTime: 2026/08/03
  **/
 @RestController
 @RequestMapping("/api/v1/goods")
 public class GoodsControllerV1 {
 
     private final GoodsQueryService goodsQueryService;
+    private final SpuSearchService spuSearchService;
 
-    public GoodsControllerV1(GoodsQueryService goodsQueryService) {
+    public GoodsControllerV1(GoodsQueryService goodsQueryService,
+                             SpuSearchService spuSearchService) {
         this.goodsQueryService = goodsQueryService;
+        this.spuSearchService = spuSearchService;
     }
 
     /**
@@ -58,5 +64,15 @@ public class GoodsControllerV1 {
     @GetMapping("/{spuId}/skus")
     public Result<List<SkuVO>> skus(@PathVariable("spuId") Long spuId) {
         return Result.success(goodsQueryService.listSkus(spuId));
+    }
+
+    /**
+     * ES 商品搜索，支持关键词全文检索 + 分类/价格范围过滤。
+     * @param dto 搜索入参
+     * @return 搜索结果列表
+     */
+    @GetMapping("/search")
+    public Result<List<SpuSearchVO>> search(@Valid SpuSearchDTO dto) {
+        return Result.success(spuSearchService.search(dto));
     }
 }

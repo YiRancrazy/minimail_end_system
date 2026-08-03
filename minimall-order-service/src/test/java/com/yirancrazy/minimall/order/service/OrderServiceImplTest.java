@@ -47,6 +47,7 @@ public class OrderServiceImplTest {
         payFeignClient = mock(PayFeignClient.class);
         eventBus = mock(EventBus.class);
         lenient().when(manager.updateById(any(OrderPO.class))).thenReturn(true);
+        lenient().when(manager.removeById(any(Long.class))).thenReturn(true);
         doAnswer(inv -> {
             OrderPO p = inv.getArgument(0);
             if (p.getId() == null) {
@@ -351,6 +352,40 @@ public class OrderServiceImplTest {
         when(manager.getById(99L)).thenReturn(existing);
 
         assertThrows(BizException.class, () -> service.merchantClose(99L, 10L));
+    }
+
+    /**
+     * 验证用户删除已取消订单成功（终态可删）。
+     */
+    @Test
+    public void delete_cancelled_succeeds() {
+        OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.CANCELLED.intCode());
+        when(manager.getById(99L)).thenReturn(existing);
+
+        service.delete(99L, 1L);
+        verify(manager).removeById(99L);
+    }
+
+    /**
+     * 验证删除待支付订单抛出 ORDER_DELETE_NOT_ALLOWED（非终态）。
+     */
+    @Test
+    public void delete_pending_throws() {
+        OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.PENDING.intCode());
+        when(manager.getById(99L)).thenReturn(existing);
+
+        assertThrows(BizException.class, () -> service.delete(99L, 1L));
+    }
+
+    /**
+     * 验证非归属用户删除订单抛出异常。
+     */
+    @Test
+    public void delete_wrong_user_throws() {
+        OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.CANCELLED.intCode());
+        when(manager.getById(99L)).thenReturn(existing);
+
+        assertThrows(BizException.class, () -> service.delete(99L, 999L));
     }
 
     private OrderPO buildOrder(Long id, Long userId, Integer status) {

@@ -15,10 +15,13 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.yirancrazy.minimall.api.feign.OrderFeignClient;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.pay.dto.PayCallbackDTO;
+import com.yirancrazy.minimall.pay.dto.PayPageDTO;
 import com.yirancrazy.minimall.pay.entity.PayTransactionPO;
 import com.yirancrazy.minimall.pay.gateway.AlipayGateway;
 import com.yirancrazy.minimall.pay.manager.PayManager;
@@ -176,5 +179,22 @@ public class PayServiceImplTest {
     public void getPaymentParams_missing_throws_biz() {
         when(manager.getOne(any())).thenReturn(null);
         assertThrows(BizException.class, () -> service.getPaymentParams("PAY999"));
+    }
+
+    /**
+     * 验证 page 委托给 manager.page 并强制绑定 merchantId。
+     */
+    @Test
+    public void page_delegates_to_manager() {
+        PayPageDTO dto = new PayPageDTO();
+        dto.setPageNo(1);
+        dto.setPageSize(10);
+        dto.setStatus(2);
+        IPage<PayTransactionPO> expected = new Page<>(1, 10);
+        when(manager.page(any(IPage.class), any())).thenReturn(expected);
+
+        IPage<PayTransactionPO> result = service.page(10L, dto);
+        assertEquals(expected, result);
+        verify(manager).page(any(IPage.class), any());
     }
 }

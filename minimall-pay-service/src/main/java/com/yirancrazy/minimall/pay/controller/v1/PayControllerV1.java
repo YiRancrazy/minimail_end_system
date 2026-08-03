@@ -6,8 +6,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
@@ -16,6 +18,7 @@ import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.pay.dto.PayCallbackDTO;
 import com.yirancrazy.minimall.pay.dto.PayCreateDTO;
+import com.yirancrazy.minimall.pay.dto.PayPageDTO;
 import com.yirancrazy.minimall.pay.entity.PayTransactionPO;
 import com.yirancrazy.minimall.pay.service.PayService;
 import com.yirancrazy.minimall.pay.vo.PaymentParamsVO;
@@ -106,5 +109,17 @@ public class PayControllerV1 {
     @GetMapping("/params/{paymentNo}")
     public Result<PaymentParamsVO> getParams(@PathVariable("paymentNo") String paymentNo) {
         return Result.success(payService.getPaymentParams(paymentNo));
+    }
+
+    /**
+     * 商家资金流水分页查询，merchantId 由可信 Header 注入。
+     * @param merchantId 商家ID
+     * @param dto 分页查询入参
+     * @return 支付流水分页结果
+     */
+    @GetMapping("/merchant/transactions")
+    public Result<IPage<PayTransactionPO>> merchantTransactions(@RequestHeader("X-Merchant-Id") Long merchantId,
+                                                               @Valid PayPageDTO dto) {
+        return Result.success(payService.page(merchantId, dto));
     }
 }

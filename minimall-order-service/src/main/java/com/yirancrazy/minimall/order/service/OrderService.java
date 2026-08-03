@@ -42,6 +42,13 @@ public interface OrderService {
     void merchantClose(Long orderId, Long merchantId);
 
     /**
+     * 用户删除订单，仅允许终态（CANCELLED/RECEIVED/REFUNDED）删除，归属不符抛出 ORDER_NOT_FOUND。
+     * @param orderId 订单ID
+     * @param userId 用户ID
+     */
+    void delete(Long orderId, Long userId);
+
+    /**
      * 分页查询订单，支持按用户/商家/状态过滤。
      * @param dto 分页查询入参
      * @return 订单分页结果

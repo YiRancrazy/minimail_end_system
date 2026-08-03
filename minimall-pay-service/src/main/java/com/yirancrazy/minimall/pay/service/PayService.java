@@ -1,8 +1,10 @@
 package com.yirancrazy.minimall.pay.service;
 
 import java.math.BigDecimal;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO;
 import com.yirancrazy.minimall.pay.dto.PayCallbackDTO;
+import com.yirancrazy.minimall.pay.dto.PayPageDTO;
 import com.yirancrazy.minimall.pay.entity.PayTransactionPO;
 import com.yirancrazy.minimall.pay.vo.PaymentParamsVO;
 import com.yirancrazy.minimall.pay.vo.RefundVO;
@@ -52,4 +54,12 @@ public interface PayService {
      * @return 支付参数VO
      */
     PaymentParamsVO getPaymentParams(String paymentNo);
+
+    /**
+     * 商家资金流水分页查询，merchantId 强制绑定，支持按状态与时间范围过滤。
+     * @param merchantId 商家ID
+     * @param dto 分页查询入参
+     * @return 支付流水分页结果
+     */
+    IPage<PayTransactionPO> page(Long merchantId, PayPageDTO dto);
 }

@@ -5,7 +5,9 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO;
 import com.yirancrazy.minimall.api.feign.OrderFeignClient;
@@ -15,6 +17,7 @@ import com.yirancrazy.minimall.pay.constant.PayCodeEnum;
 import com.yirancrazy.minimall.pay.constant.PayStatusEnum;
 import com.yirancrazy.minimall.pay.constant.RefundStatusEnum;
 import com.yirancrazy.minimall.pay.dto.PayCallbackDTO;
+import com.yirancrazy.minimall.pay.dto.PayPageDTO;
 import com.yirancrazy.minimall.pay.entity.PayRefundPO;
 import com.yirancrazy.minimall.pay.entity.PayTransactionPO;
 import com.yirancrazy.minimall.pay.gateway.AlipayGateway;
@@ -213,5 +216,22 @@ public class PayServiceImpl implements PayService {
         return new PaymentParamsVO(
             po.getPaymentNo(), po.getOrderNo(), po.getAmount(), po.getCurrency(),
             po.getChannel(), "Order " + po.getOrderNo(), po.getExpireAt());
+    }
+
+    /**
+     * 商家资金流水分页查询，merchantId 强制绑定，支持按状态与时间范围过滤。
+     * @param merchantId 商家ID
+     * @param dto 分页查询入参
+     * @return 支付流水分页结果
+     */
+    @Override
+    public IPage<PayTransactionPO> page(Long merchantId, PayPageDTO dto) {
+        Page<PayTransactionPO> page = new Page<>(dto.getPageNo(), dto.getPageSize());
+        return payManager.page(page, Wrappers.lambdaQuery(PayTransactionPO.class)
+            .eq(PayTransactionPO::getMerchantId, merchantId)
+            .eq(dto.getStatus() != null, PayTransactionPO::getStatus, dto.getStatus())
+            .ge(dto.getStartTime() != null, PayTransactionPO::getCreateTime, dto.getStartTime())
+            .le(dto.getEndTime() != null, PayTransactionPO::getCreateTime, dto.getEndTime())
+            .orderByDesc(PayTransactionPO::getCreateTime));
     }
 }

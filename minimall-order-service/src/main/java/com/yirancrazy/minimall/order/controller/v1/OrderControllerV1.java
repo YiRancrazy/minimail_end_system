@@ -1,5 +1,6 @@
 package com.yirancrazy.minimall.order.controller.v1;
 
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -152,6 +153,18 @@ public class OrderControllerV1 {
     public Result<Void> merchantClose(@PathVariable Long orderId,
                                       @RequestHeader("X-Merchant-Id") Long merchantId) {
         orderService.merchantClose(orderId, merchantId);
+        return Result.success(null);
+    }
+
+    /**
+     * 用户删除订单，仅允许终态订单软删除。
+     * @param orderId 订单ID
+     * @param userId 用户ID
+     */
+    @DeleteMapping("/{orderId}")
+    public Result<Void> delete(@PathVariable Long orderId,
+                               @RequestHeader("X-User-Id") Long userId) {
+        orderService.delete(orderId, userId);
         return Result.success(null);
     }
 }

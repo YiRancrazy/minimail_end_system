@@ -3,8 +3,11 @@ package com.yirancrazy.minimall.stock.service;
 import java.util.List;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.yirancrazy.minimall.stock.dto.StockPageDTO;
+import com.yirancrazy.minimall.stock.dto.StockTransferDTO;
+import com.yirancrazy.minimall.stock.dto.StockTransferPageDTO;
 import com.yirancrazy.minimall.stock.entity.StockJournalPO;
 import com.yirancrazy.minimall.stock.entity.StockPO;
+import com.yirancrazy.minimall.stock.entity.StockTransferPO;
 import com.yirancrazy.minimall.stock.vo.StockStatisticsVO;
 
 /**
@@ -80,4 +83,18 @@ public interface StockService {
      * @return 库存流水列表
      */
     List<StockJournalPO> exportJournal(Long skuId);
+
+    /**
+     * 跨商家库存调拨：扣减源SKU库存、增加目标SKU库存、记录调拨流水与调拨记录。
+     * @param dto 调拨入参，含源/目标SKU、数量、原因、操作人
+     * @throws com.yirancrazy.minimall.common.exception.BizException 源/目标SKU相同、源库存不足或目标不存在时
+     */
+    void transfer(StockTransferDTO dto);
+
+    /**
+     * 分页查询调拨记录，可选按源/目标SKU过滤，按ID降序返回。
+     * @param dto 分页查询入参
+     * @return 调拨记录分页结果
+     */
+    IPage<StockTransferPO> transferPage(StockTransferPageDTO dto);
 }

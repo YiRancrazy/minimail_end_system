@@ -14,10 +14,14 @@ import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.stock.constant.StockCodeEnum;
 import com.yirancrazy.minimall.stock.constant.StockJournalTypeEnum;
 import com.yirancrazy.minimall.stock.dto.StockPageDTO;
+import com.yirancrazy.minimall.stock.dto.StockTransferDTO;
+import com.yirancrazy.minimall.stock.dto.StockTransferPageDTO;
 import com.yirancrazy.minimall.stock.entity.StockJournalPO;
 import com.yirancrazy.minimall.stock.entity.StockPO;
+import com.yirancrazy.minimall.stock.entity.StockTransferPO;
 import com.yirancrazy.minimall.stock.manager.StockJournalManager;
 import com.yirancrazy.minimall.stock.manager.StockManager;
+import com.yirancrazy.minimall.stock.manager.StockTransferManager;
 import com.yirancrazy.minimall.stock.mapper.StockMapper;
 import com.yirancrazy.minimall.stock.service.StockService;
 import com.yirancrazy.minimall.stock.vo.StockStatisticsVO;
@@ -37,12 +41,14 @@ public class StockServiceImpl implements StockService {
     private final StockManager stockManager;
     private final StockJournalManager journalManager;
     private final StockMapper stockMapper;
+    private final StockTransferManager transferManager;
 
     public StockServiceImpl(StockManager stockManager, StockJournalManager journalManager,
-                            StockMapper stockMapper) {
+                            StockMapper stockMapper, StockTransferManager transferManager) {
         this.stockManager = stockManager;
         this.journalManager = journalManager;
         this.stockMapper = stockMapper;
+        this.transferManager = transferManager;
     }
 
     /**
@@ -210,6 +216,69 @@ public class StockServiceImpl implements StockService {
                 .eq(StockJournalPO::getSkuId, skuId)
                 .orderByDesc(StockJournalPO::getId)
                 .last("LIMIT " + EXPORT_MAX_ROWS));
+    }
+
+    /**
+     * 跨商家库存调拨：扣减源SKU库存、增加目标SKU库存、记录调拨流水与调拨记录。
+     * @param dto 调拨入参，含源/目标SKU、数量、原因、操作人
+     * @throws BizException 源/目标SKU相同、源库存不足或目标不存在时
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void transfer(StockTransferDTO dto) {
+        if (dto.getFromSkuId().equals(dto.getToSkuId())) {
+            throw new BizException(StockCodeEnum.STOCK_TRANSFER_SAME_SKU);
+        }
+        StockPO from = getStock(dto.getFromSkuId());
+        if (from.getAvailable() < dto.getQuantity()) {
+            throw new BizException(StockCodeEnum.STOCK_TRANSFER_INSUFFICIENT);
+        }
+        StockPO to = stockManager.getOne(
+            Wrappers.lambdaQuery(StockPO.class).eq(StockPO::getSkuId, dto.getToSkuId()));
+        if (to == null) {
+            throw new BizException(StockCodeEnum.STOCK_TRANSFER_TARGET_NOT_FOUND);
+        }
+        from.setAvailable(from.getAvailable() - dto.getQuantity());
+        to.setAvailable(to.getAvailable() + dto.getQuantity());
+        stockManager.updateById(from);
+        stockManager.updateById(to);
+
+        recordJournal(dto.getFromSkuId(), -dto.getQuantity(),
+            StockJournalTypeEnum.TRANSFER_OUT, dto.getReason(), null);
+        recordJournal(dto.getToSkuId(), dto.getQuantity(),
+            StockJournalTypeEnum.TRANSFER_IN, dto.getReason(), null);
+
+        StockTransferPO transfer = new StockTransferPO();
+        transfer.setFromSkuId(dto.getFromSkuId());
+        transfer.setToSkuId(dto.getToSkuId());
+        transfer.setQuantity(dto.getQuantity());
+        transfer.setReason(dto.getReason());
+        transfer.setOperatorId(dto.getOperatorId());
+        transferManager.save(transfer);
+
+        checkAlert(from);
+        checkAlert(to);
+        log.info("stock transfer, from={}, to={}, quantity={}",
+            dto.getFromSkuId(), dto.getToSkuId(), dto.getQuantity());
+    }
+
+    /**
+     * 分页查询调拨记录，可选按源/目标SKU过滤，按ID降序返回。
+     * @param dto 分页查询入参
+     * @return 调拨记录分页结果
+     */
+    @Override
+    public IPage<StockTransferPO> transferPage(StockTransferPageDTO dto) {
+        Page<StockTransferPO> page = new Page<>(dto.getPageNo(), dto.getPageSize());
+        LambdaQueryWrapper<StockTransferPO> wrapper = Wrappers.lambdaQuery(StockTransferPO.class);
+        if (dto.getFromSkuId() != null) {
+            wrapper.eq(StockTransferPO::getFromSkuId, dto.getFromSkuId());
+        }
+        if (dto.getToSkuId() != null) {
+            wrapper.eq(StockTransferPO::getToSkuId, dto.getToSkuId());
+        }
+        wrapper.orderByDesc(StockTransferPO::getId);
+        return transferManager.page(page, wrapper);
     }
 
     private StockPO getStock(Long skuId) {

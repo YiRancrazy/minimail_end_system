@@ -23,3 +23,16 @@ CREATE TABLE IF NOT EXISTS t_stock_journal (
   is_deleted TINYINT DEFAULT 0,
   PRIMARY KEY (id)
 );
+
+CREATE TABLE IF NOT EXISTS t_stock_transfer (
+  id BIGINT NOT NULL,
+  from_sku_id BIGINT NOT NULL,
+  to_sku_id BIGINT NOT NULL,
+  quantity BIGINT NOT NULL,
+  reason VARCHAR(256),
+  operator_id BIGINT NOT NULL,
+  create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+  update_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+  is_deleted TINYINT DEFAULT 0,
+  PRIMARY KEY (id)
+);

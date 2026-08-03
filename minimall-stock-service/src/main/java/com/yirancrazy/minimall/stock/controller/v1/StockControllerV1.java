@@ -6,6 +6,8 @@ import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -16,8 +18,11 @@ import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.common.util.CsvExporter;
 import com.yirancrazy.minimall.stock.constant.StockJournalTypeEnum;
 import com.yirancrazy.minimall.stock.dto.StockPageDTO;
+import com.yirancrazy.minimall.stock.dto.StockTransferDTO;
+import com.yirancrazy.minimall.stock.dto.StockTransferPageDTO;
 import com.yirancrazy.minimall.stock.entity.StockJournalPO;
 import com.yirancrazy.minimall.stock.entity.StockPO;
+import com.yirancrazy.minimall.stock.entity.StockTransferPO;
 import com.yirancrazy.minimall.stock.service.StockService;
 import com.yirancrazy.minimall.stock.vo.StockStatisticsVO;
 
@@ -106,6 +111,30 @@ public class StockControllerV1 {
     @GetMapping("/platform/statistics")
     public Result<StockStatisticsVO> platformStatistics() {
         return Result.success(stockService.platformStatistics());
+    }
+
+    /**
+     * 跨商家库存调拨，扣减源SKU库存并增加目标SKU库存。
+     * @param operatorId 操作人ID（Header注入）
+     * @param dto 调拨入参
+     * @return 统一响应体
+     */
+    @PostMapping("/platform/transfer")
+    public Result<Void> transfer(@RequestHeader("X-User-Id") Long operatorId,
+                                 @Valid @RequestBody StockTransferDTO dto) {
+        dto.setOperatorId(operatorId);
+        stockService.transfer(dto);
+        return Result.success(null);
+    }
+
+    /**
+     * 分页查询调拨记录，可选按源/目标SKU过滤。
+     * @param dto 分页查询入参
+     * @return 调拨记录分页结果
+     */
+    @GetMapping("/platform/transfers")
+    public Result<IPage<StockTransferPO>> transferPage(@Valid StockTransferPageDTO dto) {
+        return Result.success(stockService.transferPage(dto));
     }
 
     private static final String[] JOURNAL_HEADERS = {

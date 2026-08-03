@@ -15,10 +15,14 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.stock.dto.StockPageDTO;
+import com.yirancrazy.minimall.stock.dto.StockTransferDTO;
+import com.yirancrazy.minimall.stock.dto.StockTransferPageDTO;
 import com.yirancrazy.minimall.stock.entity.StockJournalPO;
 import com.yirancrazy.minimall.stock.entity.StockPO;
+import com.yirancrazy.minimall.stock.entity.StockTransferPO;
 import com.yirancrazy.minimall.stock.manager.StockJournalManager;
 import com.yirancrazy.minimall.stock.manager.StockManager;
+import com.yirancrazy.minimall.stock.manager.StockTransferManager;
 import com.yirancrazy.minimall.stock.mapper.StockMapper;
 import com.yirancrazy.minimall.stock.service.impl.StockServiceImpl;
 import com.yirancrazy.minimall.stock.vo.StockStatisticsVO;
@@ -32,6 +36,7 @@ public class StockServiceImplTest {
     private StockManager manager;
     private StockJournalManager journalManager;
     private StockMapper stockMapper;
+    private StockTransferManager transferManager;
     private StockServiceImpl service;
 
     @BeforeEach
@@ -39,9 +44,11 @@ public class StockServiceImplTest {
         manager = mock(StockManager.class);
         journalManager = mock(StockJournalManager.class);
         stockMapper = mock(StockMapper.class);
+        transferManager = mock(StockTransferManager.class);
         lenient().when(manager.updateById(any(StockPO.class))).thenReturn(true);
         lenient().when(journalManager.save(any(StockJournalPO.class))).thenReturn(true);
-        service = new StockServiceImpl(manager, journalManager, stockMapper);
+        lenient().when(transferManager.save(any(StockTransferPO.class))).thenReturn(true);
+        service = new StockServiceImpl(manager, journalManager, stockMapper, transferManager);
     }
 
     /**
@@ -204,5 +211,101 @@ public class StockServiceImplTest {
         assertEquals(1, result.size());
         assertEquals(1L, result.get(0).getId());
         verify(journalManager).list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class));
+    }
+
+    /**
+     * 验证调拨成功时扣减源库存、增加目标库存、记录调拨流水与调拨记录。
+     */
+    @Test
+    public void transfer_success_decrements_and_increments() {
+        StockPO from = new StockPO();
+        from.setId(1L);
+        from.setSkuId(100L);
+        from.setAvailable(10L);
+        from.setReserved(0L);
+        StockPO to = new StockPO();
+        to.setId(2L);
+        to.setSkuId(200L);
+        to.setAvailable(5L);
+        to.setReserved(0L);
+        when(manager.getOne(any())).thenReturn(from, to);
+
+        StockTransferDTO dto = new StockTransferDTO();
+        dto.setFromSkuId(100L);
+        dto.setToSkuId(200L);
+        dto.setQuantity(3L);
+        dto.setReason("test");
+        dto.setOperatorId(1L);
+        service.transfer(dto);
+
+        assertEquals(7L, from.getAvailable());
+        assertEquals(8L, to.getAvailable());
+        verify(transferManager).save(any(StockTransferPO.class));
+    }
+
+    /**
+     * 验证调拨相同SKU时抛出 BizException。
+     */
+    @Test
+    public void transfer_same_sku_throws() {
+        StockTransferDTO dto = new StockTransferDTO();
+        dto.setFromSkuId(100L);
+        dto.setToSkuId(100L);
+        dto.setQuantity(1L);
+        assertThrows(BizException.class, () -> service.transfer(dto));
+    }
+
+    /**
+     * 验证源库存不足时调拨抛出 BizException。
+     */
+    @Test
+    public void transfer_insufficient_throws() {
+        StockPO from = new StockPO();
+        from.setId(1L);
+        from.setSkuId(100L);
+        from.setAvailable(2L);
+        from.setReserved(0L);
+        when(manager.getOne(any())).thenReturn(from);
+
+        StockTransferDTO dto = new StockTransferDTO();
+        dto.setFromSkuId(100L);
+        dto.setToSkuId(200L);
+        dto.setQuantity(5L);
+        assertThrows(BizException.class, () -> service.transfer(dto));
+    }
+
+    /**
+     * 验证目标SKU库存不存在时调拨抛出 BizException。
+     */
+    @Test
+    public void transfer_target_not_found_throws() {
+        StockPO from = new StockPO();
+        from.setId(1L);
+        from.setSkuId(100L);
+        from.setAvailable(10L);
+        from.setReserved(0L);
+        when(manager.getOne(any())).thenReturn(from, null);
+
+        StockTransferDTO dto = new StockTransferDTO();
+        dto.setFromSkuId(100L);
+        dto.setToSkuId(200L);
+        dto.setQuantity(3L);
+        assertThrows(BizException.class, () -> service.transfer(dto));
+    }
+
+    /**
+     * 验证 transferPage 委托给 transferManager.page。
+     */
+    @Test
+    public void transferPage_delegates_to_manager() {
+        StockTransferPageDTO dto = new StockTransferPageDTO();
+        dto.setPageNo(1);
+        dto.setPageSize(10);
+        IPage<StockTransferPO> expected = new Page<>(1, 10);
+        when(transferManager.page(any(IPage.class), any())).thenReturn(expected);
+
+        IPage<StockTransferPO> result = service.transferPage(dto);
+        assertEquals(expected, result);
+        verify(transferManager).page(any(IPage.class), any());
     }
 }

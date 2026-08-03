@@ -6,16 +6,18 @@ import com.yirancrazy.minimall.common.base.BaseEnum;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 库存流水类型枚举，定义库存变动的类型（预占/释放/调整）。
- * @Version: 1.0
- * @DateTime: 2026/07/31
- **/
+ * @Description: 库存流水类型枚举，定义库存变动的类型（预占/释放/调整/调出/调入/纠正）。
+ * @Version: 1.1
+ * @DateTime: 2026/08/03
+**/
 @Getter
 @AllArgsConstructor
 public enum StockJournalTypeEnum implements BaseEnum {
     RESERVE(1, "RESERVE", "预占"),
     RELEASE(2, "RELEASE", "释放"),
-    ADJUST(3, "ADJUST", "调整");
+    ADJUST(3, "ADJUST", "调整"),
+    TRANSFER_OUT(4, "TRANSFER_OUT", "调出"),
+    TRANSFER_IN(5, "TRANSFER_IN", "调入");
 
     private final int code;
     private final String alias;

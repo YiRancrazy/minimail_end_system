@@ -22,6 +22,7 @@ import com.yirancrazy.minimall.notify.dto.NotifyViolationWarningDTO;
 import com.yirancrazy.minimall.notify.dto.SystemAlertPageDTO;
 import com.yirancrazy.minimall.notify.entity.NotifyMessagePO;
 import com.yirancrazy.minimall.notify.service.NotifyService;
+import com.yirancrazy.minimall.notify.vo.NotifyMessageVO;
 
 /**
  * @Author: yirancrazy@gmail.com
@@ -46,8 +47,8 @@ public class NotifyControllerV1 {
      * @return 通知消息列表的 Result 包装
      */
     @GetMapping
-    public Result<List<NotifyMessagePO>> list(@Valid NotifyListDTO dto) {
-        return Result.success(notifyService.listByUser(dto));
+    public Result<List<NotifyMessageVO>> list(@Valid NotifyListDTO dto) {
+        return Result.success(notifyService.listByUser(dto).stream().map(NotifyMessageVO::from).toList());
     }
 
     // ==================== USER 端 ====================
@@ -59,11 +60,11 @@ public class NotifyControllerV1 {
      * @return 站内信分页结果
      */
     @GetMapping("/messages")
-    public Result<IPage<NotifyMessagePO>> userPage(@RequestHeader("X-User-Id") Long userId,
+    public Result<IPage<NotifyMessageVO>> userPage(@RequestHeader("X-User-Id") Long userId,
                                                    @Valid NotifyListDTO dto) {
         dto.setUserId(userId);
         dto.setRecipientType(RecipientTypeEnum.USER.intCode());
-        return Result.success(notifyService.page(dto));
+        return Result.success(notifyService.page(dto).convert(NotifyMessageVO::from));
     }
 
     /**
@@ -132,11 +133,11 @@ public class NotifyControllerV1 {
      * @return 站内信分页结果
      */
     @GetMapping("/merchant/messages")
-    public Result<IPage<NotifyMessagePO>> merchantPage(@RequestHeader("X-Merchant-Id") Long merchantId,
+    public Result<IPage<NotifyMessageVO>> merchantPage(@RequestHeader("X-Merchant-Id") Long merchantId,
                                                        @Valid NotifyListDTO dto) {
         dto.setUserId(merchantId);
         dto.setRecipientType(RecipientTypeEnum.MERCHANT.intCode());
-        return Result.success(notifyService.page(dto));
+        return Result.success(notifyService.page(dto).convert(NotifyMessageVO::from));
     }
 
     /**

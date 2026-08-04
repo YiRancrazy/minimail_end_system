@@ -19,6 +19,7 @@ import com.yirancrazy.minimall.user.dto.UserProfileDTO;
 import com.yirancrazy.minimall.user.dto.UserUpdateDTO;
 import com.yirancrazy.minimall.user.entity.UserPO;
 import com.yirancrazy.minimall.user.service.UserService;
+import com.yirancrazy.minimall.user.vo.UserVO;
 
 /**
  * @Author: yirancrazy@gmail.com
@@ -42,8 +43,9 @@ public class UserControllerV1 {
      * @return 用户分页结果
      */
     @GetMapping
-    public Result<IPage<UserPO>> page(@Valid UserPageDTO dto) {
-        return Result.success(userService.page(dto));
+    public Result<IPage<UserVO>> page(@Valid UserPageDTO dto) {
+        IPage<UserPO> poPage = userService.page(dto);
+        return Result.success(poPage.convert(UserVO::from));
     }
 
     /**
@@ -53,8 +55,8 @@ public class UserControllerV1 {
      * @return 查询到的用户信息
      */
     @GetMapping("/{id}")
-    public Result<UserPO> get(@PathVariable("id") Long id) {
-        return Result.success(userService.getById(id));
+    public Result<UserVO> get(@PathVariable("id") Long id) {
+        return Result.success(UserVO.from(userService.getById(id)));
     }
 
     /**
@@ -95,8 +97,8 @@ public class UserControllerV1 {
      * @return 用户信息
      */
     @GetMapping("/profile")
-    public Result<UserPO> getProfile(@RequestHeader("X-User-Id") Long userId) {
-        return Result.success(userService.getProfile(userId));
+    public Result<UserVO> getProfile(@RequestHeader("X-User-Id") Long userId) {
+        return Result.success(UserVO.from(userService.getProfile(userId)));
     }
 
     /**

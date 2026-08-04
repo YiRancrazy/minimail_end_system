@@ -1,22 +1,39 @@
 package com.yirancrazy.minimall.goods.vo;
 
 import java.math.BigDecimal;
-import lombok.AllArgsConstructor;
+import java.time.LocalDateTime;
 import lombok.Data;
-import lombok.NoArgsConstructor;
+import com.yirancrazy.minimall.goods.entity.SkuPO;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: SKU 视图对象，用于用户端商品详情中的规格展示
+ * @Description: 商品SKU VO，用于Controller边界输出，隐藏内部字段
  * @Version: 1.0
- * @DateTime: 2026/08/02
+ * @DateTime: 2026/08/04
  **/
 @Data
-@AllArgsConstructor
-@NoArgsConstructor
 public class SkuVO {
-    private Long skuId;
+
+    private Long id;
+    private Long spuId;
     private String skuName;
     private BigDecimal price;
     private Integer stock;
+    private LocalDateTime createTime;
+
+    /**
+     * 将 SkuPO 转换为 SkuVO。
+     * @param po SKU持久化对象
+     * @return SKU VO
+     */
+    public static SkuVO from(SkuPO po) {
+        SkuVO vo = new SkuVO();
+        vo.setId(po.getId());
+        vo.setSpuId(po.getSpuId());
+        vo.setSkuName(po.getSkuName());
+        vo.setPrice(po.getPrice());
+        vo.setStock(po.getStock());
+        vo.setCreateTime(po.getCreateTime());
+        return vo;
+    }
 }

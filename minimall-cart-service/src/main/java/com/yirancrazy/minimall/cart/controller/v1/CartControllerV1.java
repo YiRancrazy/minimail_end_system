@@ -17,8 +17,8 @@ import com.yirancrazy.minimall.cart.dto.CartItemListDTO;
 import com.yirancrazy.minimall.cart.dto.CartSelectAllDTO;
 import com.yirancrazy.minimall.cart.dto.CartSelectDTO;
 import com.yirancrazy.minimall.cart.dto.CartUpdateDTO;
-import com.yirancrazy.minimall.cart.entity.CartItemPO;
 import com.yirancrazy.minimall.cart.service.CartService;
+import com.yirancrazy.minimall.cart.vo.CartItemVO;
 import com.yirancrazy.minimall.common.result.Result;
 
 /**
@@ -44,8 +44,8 @@ public class CartControllerV1 {
      * @return 该用户购物车条目列表
      */
     @GetMapping
-    public Result<List<CartItemPO>> list(@Valid CartItemListDTO dto) {
-        return Result.success(cartService.listByUser(dto));
+    public Result<List<CartItemVO>> list(@Valid CartItemListDTO dto) {
+        return Result.success(cartService.listByUser(dto).stream().map(CartItemVO::from).toList());
     }
 
     /**

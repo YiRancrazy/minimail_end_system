@@ -93,7 +93,7 @@ public class GoodsQueryServiceImpl implements GoodsQueryService {
         List<SkuPO> skuPos = skuManager.list(
             Wrappers.lambdaQuery(SkuPO.class).eq(SkuPO::getSpuId, spuId));
         return skuPos.stream()
-            .map(s -> new SkuVO(s.getId(), s.getSkuName(), s.getPrice(), s.getStock()))
+            .map(SkuVO::from)
             .collect(Collectors.toList());
     }
 }

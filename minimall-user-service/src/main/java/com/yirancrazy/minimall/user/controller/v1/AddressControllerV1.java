@@ -1,6 +1,7 @@
 package com.yirancrazy.minimall.user.controller.v1;
 
 import java.util.List;
+import java.util.stream.Collectors;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -16,6 +17,7 @@ import com.yirancrazy.minimall.user.dto.AddressCreateDTO;
 import com.yirancrazy.minimall.user.dto.AddressUpdateDTO;
 import com.yirancrazy.minimall.user.entity.AddressPO;
 import com.yirancrazy.minimall.user.service.AddressService;
+import com.yirancrazy.minimall.user.vo.AddressVO;
 
 /**
  * @Author: yirancrazy@gmail.com
@@ -39,8 +41,10 @@ public class AddressControllerV1 {
      * @return 收货地址列表
      */
     @GetMapping
-    public Result<List<AddressPO>> list(@RequestHeader("X-User-Id") Long userId) {
-        return Result.success(addressService.listByUserId(userId));
+    public Result<List<AddressVO>> list(@RequestHeader("X-User-Id") Long userId) {
+        List<AddressPO> poList = addressService.listByUserId(userId);
+        List<AddressVO> voList = poList.stream().map(AddressVO::from).toList();
+        return Result.success(voList);
     }
 
     /**

@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import jakarta.validation.Valid;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.goods.dto.SpuCreateDTO;
@@ -17,6 +18,7 @@ import com.yirancrazy.minimall.goods.dto.SpuPageDTO;
 import com.yirancrazy.minimall.goods.dto.SpuUpdateDTO;
 import com.yirancrazy.minimall.goods.entity.SpuPO;
 import com.yirancrazy.minimall.goods.service.SpuService;
+import com.yirancrazy.minimall.goods.vo.SpuVO;
 
 /**
  * @Author: yirancrazy@gmail.com
@@ -37,11 +39,11 @@ public class SpuControllerV1 {
     /**
      * 根据主键查询 SPU 详情。
      * @param id SPU 主键 ID
-     * @return SPU 实体，不存在时由 Service 层抛出业务异常
+     * @return SPU 视图，不存在时由 Service 层抛出业务异常
      */
     @GetMapping("/{id}")
-    public Result<SpuPO> get(@PathVariable("id") Long id) {
-        return Result.success(spuService.getById(id));
+    public Result<SpuVO> get(@PathVariable("id") Long id) {
+        return Result.success(SpuVO.from(spuService.getById(id)));
     }
 
     /**
@@ -63,10 +65,13 @@ public class SpuControllerV1 {
      * @return SPU 分页结果
      */
     @GetMapping
-    public Result<IPage<SpuPO>> page(@RequestHeader("X-Merchant-Id") Long merchantId,
+    public Result<IPage<SpuVO>> page(@RequestHeader("X-Merchant-Id") Long merchantId,
                                      @Valid SpuPageDTO dto) {
         dto.setMerchantId(merchantId);
-        return Result.success(spuService.page(dto));
+        IPage<SpuPO> poPage = spuService.page(dto);
+        IPage<SpuVO> voPage = new Page<>(poPage.getCurrent(), poPage.getSize(), poPage.getTotal());
+        voPage.setRecords(poPage.getRecords().stream().map(SpuVO::from).toList());
+        return Result.success(voPage);
     }
 
     /**

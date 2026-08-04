@@ -24,6 +24,7 @@ import com.yirancrazy.minimall.order.entity.OrderPO;
 import com.yirancrazy.minimall.order.service.OrderService;
 import com.yirancrazy.minimall.order.vo.OrderLogisticsVO;
 import com.yirancrazy.minimall.order.vo.OrderStatisticsVO;
+import com.yirancrazy.minimall.order.vo.OrderVO;
 
 /**
  * @Author: yirancrazy@gmail.com
@@ -47,8 +48,9 @@ public class OrderControllerV1 {
      * @return 订单分页结果
      */
     @GetMapping
-    public Result<IPage<OrderPO>> page(@Valid OrderPageDTO dto) {
-        return Result.success(orderService.page(dto));
+    public Result<IPage<OrderVO>> page(@Valid OrderPageDTO dto) {
+        IPage<OrderPO> poPage = orderService.page(dto);
+        return Result.success(poPage.convert(OrderVO::from));
     }
 
     /**
@@ -115,8 +117,8 @@ public class OrderControllerV1 {
      * @return 订单实体
      */
     @GetMapping("/{id}/detail")
-    public Result<OrderPO> detail(@PathVariable("id") Long id) {
-        return Result.success(orderService.getDetail(id));
+    public Result<OrderVO> detail(@PathVariable("id") Long id) {
+        return Result.success(OrderVO.from(orderService.getDetail(id)));
     }
 
     /**

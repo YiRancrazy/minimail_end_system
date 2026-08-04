@@ -32,6 +32,7 @@ import com.yirancrazy.minimall.pay.entity.PayTransactionPO;
 import com.yirancrazy.minimall.pay.service.PayService;
 import com.yirancrazy.minimall.pay.vo.PayStatementVO;
 import com.yirancrazy.minimall.pay.vo.PayStatisticsVO;
+import com.yirancrazy.minimall.pay.vo.PayTransactionVO;
 import com.yirancrazy.minimall.pay.vo.PaymentParamsVO;
 import com.yirancrazy.minimall.pay.vo.RefundVO;
 import com.yirancrazy.minimall.pay.vo.WithdrawVO;
@@ -106,11 +107,11 @@ public class PayControllerV1 {
     /**
      * 按订单号查询支付流水状态。
      * @param orderNo 订单号
-     * @return 支付流水实体
+     * @return 支付流水VO
      */
     @GetMapping("/status/{orderNo}")
-    public Result<PayTransactionPO> getStatus(@PathVariable("orderNo") String orderNo) {
-        return Result.success(payService.getByOrderNo(orderNo));
+    public Result<PayTransactionVO> getStatus(@PathVariable("orderNo") String orderNo) {
+        return Result.success(PayTransactionVO.from(payService.getByOrderNo(orderNo)));
     }
 
     /**
@@ -130,9 +131,9 @@ public class PayControllerV1 {
      * @return 支付流水分页结果
      */
     @GetMapping("/merchant/transactions")
-    public Result<IPage<PayTransactionPO>> merchantTransactions(@RequestHeader("X-Merchant-Id") Long merchantId,
+    public Result<IPage<PayTransactionVO>> merchantTransactions(@RequestHeader("X-Merchant-Id") Long merchantId,
                                                                @Valid PayPageDTO dto) {
-        return Result.success(payService.page(merchantId, dto));
+        return Result.success(payService.page(merchantId, dto).convert(PayTransactionVO::from));
     }
 
     /**
@@ -141,8 +142,8 @@ public class PayControllerV1 {
      * @return 支付流水分页结果
      */
     @GetMapping("/transactions")
-    public Result<IPage<PayTransactionPO>> platformTransactions(@Valid PayPageDTO dto) {
-        return Result.success(payService.platformPage(dto));
+    public Result<IPage<PayTransactionVO>> platformTransactions(@Valid PayPageDTO dto) {
+        return Result.success(payService.platformPage(dto).convert(PayTransactionVO::from));
     }
 
     /**

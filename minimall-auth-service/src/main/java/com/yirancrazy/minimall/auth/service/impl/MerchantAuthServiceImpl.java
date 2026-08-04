@@ -12,6 +12,7 @@ import com.yirancrazy.minimall.api.dto.auth.TokenVO;
 import com.yirancrazy.minimall.auth.constant.AuthCodeEnum;
 import com.yirancrazy.minimall.auth.dto.ChangePasswordDTO;
 import com.yirancrazy.minimall.auth.dto.LoginDTO;
+import com.yirancrazy.minimall.auth.dto.RegisterDTO;
 import com.yirancrazy.minimall.auth.entity.UserAuthPO;
 import com.yirancrazy.minimall.auth.manager.UserAuthManager;
 import com.yirancrazy.minimall.auth.service.MerchantAuthService;
@@ -48,6 +49,31 @@ public class MerchantAuthServiceImpl implements MerchantAuthService {
         this.redisTemplate = redisTemplate;
         this.ttlSeconds = ttlSeconds;
         this.refreshTtlSeconds = refreshTtlSeconds;
+    }
+
+    /**
+     * 商家注册，创建 role=MERCHANT 的账号并签发令牌。
+     * @param dto 注册DTO
+     * @return 令牌VO
+     */
+    @Override
+    public TokenVO register(RegisterDTO dto) {
+        long existing = userAuthManager.count(
+            Wrappers.lambdaQuery(UserAuthPO.class).eq(UserAuthPO::getUsername, dto.getUsername()));
+        if (existing > 0) {
+            throw new BizException(AuthCodeEnum.MERCHANT_EXISTS);
+        }
+        String salt = UUID.randomUUID().toString().replace("-", "");
+        String hash = BCrypt.hashpw(dto.getPassword() + salt, BCrypt.gensalt());
+        UserAuthPO po = new UserAuthPO();
+        po.setUsername(dto.getUsername());
+        po.setPasswordHash(hash);
+        po.setSalt(salt);
+        po.setRole(ROLE_MERCHANT);
+        po.setStatus(1);
+        userAuthManager.save(po);
+        log.info("merchant registered, accountId={}, username={}", po.getId(), po.getUsername());
+        return issueTokens(po.getId(), po.getUsername());
     }
 
     /**

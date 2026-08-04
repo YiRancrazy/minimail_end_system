@@ -15,7 +15,8 @@ import com.yirancrazy.minimall.common.base.BaseEnum;
 public enum RecipientTypeEnum implements BaseEnum {
     USER(1, "USER", "用户"),
     MERCHANT(2, "MERCHANT", "商家"),
-    PLATFORM(3, "PLATFORM", "平台");
+    PLATFORM(3, "PLATFORM", "平台"),
+    ALL(4, "ALL", "全部");
 
     private final int code;
     private final String alias;

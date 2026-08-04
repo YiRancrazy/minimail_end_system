@@ -2,6 +2,8 @@ package com.yirancrazy.minimall.common.constant;
 
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -77,5 +79,63 @@ public final class RolePermissionMapping {
             return false;
         }
         return MAPPING.getOrDefault(role, Collections.emptySet()).contains(permission);
+    }
+
+    /**
+     * 获取角色生效权限集合，优先读 Redis，无则 fallback 到硬编码映射。
+     * @param role 角色枚举
+     * @param redisTemplate 可为 null，为 null 时直接 fallback
+     * @return 权限集合
+     */
+    public static Set<PermissionEnum> getEffectivePermissions(
+            RoleEnum role, org.springframework.data.redis.core.StringRedisTemplate redisTemplate) {
+        if (role == null) {
+            return Collections.emptySet();
+        }
+        if (redisTemplate != null) {
+            String json = redisTemplate.opsForValue().get("platform:role-permissions:" + role.getCode());
+            if (json != null && !json.isEmpty()) {
+                Set<PermissionEnum> perms = new HashSet<>();
+                for (String code : json.replaceAll("[\\[\\]\"]", "").split(",")) {
+                    try {
+                        perms.add(PermissionEnum.valueOf(code.trim()));
+                    }
+                    catch (IllegalArgumentException ignored) {
+                        // skip invalid codes
+                    }
+                }
+                return Collections.unmodifiableSet(perms);
+            }
+        }
+        return permissionsOf(role);
+    }
+
+    /**
+     * 更新角色权限映射到 Redis，仅允许修改 MERCHANT 和 PLATFORM 角色。
+     * @param role 角色枚举
+     * @param permissionCodes 权限编码列表
+     * @param redisTemplate Redis 操作模板
+     * @throws IllegalArgumentException 尝试修改 USER 角色时
+     */
+    public static void updatePermissions(
+            RoleEnum role, List<String> permissionCodes,
+            org.springframework.data.redis.core.StringRedisTemplate redisTemplate) {
+        if (role == RoleEnum.USER) {
+            throw new IllegalArgumentException("USER role permissions are not modifiable");
+        }
+        // Validate all permission codes
+        for (String code : permissionCodes) {
+            try {
+                PermissionEnum.valueOf(code);
+            }
+            catch (IllegalArgumentException e) {
+                throw new IllegalArgumentException(
+                    "Invalid permission code: " + code);
+            }
+        }
+        String json = "[" + permissionCodes.stream()
+            .map(c -> "\"" + c + "\"")
+            .reduce((a, b) -> a + "," + b).orElse("") + "]";
+        redisTemplate.opsForValue().set("platform:role-permissions:" + role.getCode(), json);
     }
 }

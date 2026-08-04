@@ -1,5 +1,6 @@
 package com.yirancrazy.minimall.merchant.controller.v1;
 
+import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -13,6 +14,8 @@ import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.merchant.dto.QualificationSubmitDTO;
 import com.yirancrazy.minimall.merchant.service.MerchantService;
+import com.yirancrazy.minimall.merchant.vo.MerchantAuditLogVO;
+import com.yirancrazy.minimall.merchant.vo.MerchantInfoVO;
 import com.yirancrazy.minimall.merchant.vo.MerchantQualificationVO;
 
 /**
@@ -66,5 +69,25 @@ public class MerchantControllerV1 {
                               @RequestParam(required = false) String reason) {
         merchantService.audit(id, approved, reason);
         return Result.success(null);
+    }
+
+    /**
+     * 商家获取自身信息，merchantId 由可信 Header 注入。
+     * @param merchantId 商家ID
+     * @return 商家信息VO
+     */
+    @GetMapping("/me")
+    public Result<MerchantInfoVO> getMerchantInfo(@RequestHeader("X-Merchant-Id") Long merchantId) {
+        return Result.success(merchantService.getMerchantInfo(merchantId));
+    }
+
+    /**
+     * 商家查看审核记录，包含资质审核与商品审核日志。
+     * @param merchantId 商家ID
+     * @return 审核记录列表
+     */
+    @GetMapping("/audit-log")
+    public Result<List<MerchantAuditLogVO>> listAuditLog(@RequestHeader("X-Merchant-Id") Long merchantId) {
+        return Result.success(merchantService.listAuditLog(merchantId));
     }
 }

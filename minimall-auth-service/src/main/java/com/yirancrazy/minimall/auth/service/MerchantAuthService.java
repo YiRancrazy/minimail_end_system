@@ -3,14 +3,23 @@ package com.yirancrazy.minimall.auth.service;
 import com.yirancrazy.minimall.api.dto.auth.TokenVO;
 import com.yirancrazy.minimall.auth.dto.ChangePasswordDTO;
 import com.yirancrazy.minimall.auth.dto.LoginDTO;
+import com.yirancrazy.minimall.auth.dto.RegisterDTO;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 商家端认证服务，提供商家登录、登出、修改密码能力。
- * @Version: 1.0
- * @DateTime: 2026/08/02
+ * @Description: 商家端认证服务，提供商家注册、登录、登出、修改密码能力。
+ * @Version: 1.1
+ * @DateTime: 2026/08/04
  **/
 public interface MerchantAuthService {
+
+    /**
+     * 商家注册，创建 role=MERCHANT 的账号并签发令牌。
+     * @param dto 注册DTO
+     * @return 令牌VO
+     * @throws com.yirancrazy.minimall.common.exception.BizException 用户名已存在时
+     */
+    TokenVO register(RegisterDTO dto);
 
     /**
      * 商家登录，仅允许 role=MERCHANT 的账号通过。

@@ -1,6 +1,9 @@
 package com.yirancrazy.minimall.merchant.service;
 
+import java.util.List;
 import com.yirancrazy.minimall.merchant.dto.QualificationSubmitDTO;
+import com.yirancrazy.minimall.merchant.vo.MerchantAuditLogVO;
+import com.yirancrazy.minimall.merchant.vo.MerchantInfoVO;
 import com.yirancrazy.minimall.merchant.vo.MerchantQualificationVO;
 
 /**
@@ -33,4 +36,18 @@ public interface MerchantService {
      * @param reason 驳回原因，approved=false 时填写
      */
     void audit(Long merchantId, boolean approved, String reason);
+
+    /**
+     * 商家获取自身信息，不存在时抛出 MERCHANT_NOT_FOUND。
+     * @param merchantId 商家ID（即 userId，由可信 Header 注入）
+     * @return 商家信息VO
+     */
+    MerchantInfoVO getMerchantInfo(Long merchantId);
+
+    /**
+     * 商家查看审核记录，包含资质审核与商品审核日志。
+     * @param merchantId 商家ID
+     * @return 审核记录列表
+     */
+    List<MerchantAuditLogVO> listAuditLog(Long merchantId);
 }

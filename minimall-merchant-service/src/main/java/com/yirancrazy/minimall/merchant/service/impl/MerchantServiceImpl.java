@@ -1,6 +1,8 @@
 package com.yirancrazy.minimall.merchant.service.impl;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.List;
 import org.springframework.stereotype.Service;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.extern.slf4j.Slf4j;
@@ -11,6 +13,8 @@ import com.yirancrazy.minimall.merchant.dto.QualificationSubmitDTO;
 import com.yirancrazy.minimall.merchant.entity.MerchantPO;
 import com.yirancrazy.minimall.merchant.manager.MerchantManager;
 import com.yirancrazy.minimall.merchant.service.MerchantService;
+import com.yirancrazy.minimall.merchant.vo.MerchantAuditLogVO;
+import com.yirancrazy.minimall.merchant.vo.MerchantInfoVO;
 import com.yirancrazy.minimall.merchant.vo.MerchantQualificationVO;
 
 /**
@@ -101,6 +105,43 @@ public class MerchantServiceImpl implements MerchantService {
             throw new BizException(MerchantCodeEnum.MERCHANT_NOT_FOUND);
         }
         return po;
+    }
+
+    /**
+     * 商家获取自身信息，不存在时抛出 MERCHANT_NOT_FOUND。
+     * @param merchantId 商家ID
+     * @return 商家信息VO
+     */
+    @Override
+    public MerchantInfoVO getMerchantInfo(Long merchantId) {
+        MerchantPO po = merchantManager.getOne(
+            Wrappers.lambdaQuery(MerchantPO.class).eq(MerchantPO::getUserId, merchantId));
+        if (po == null) {
+            throw new BizException(MerchantCodeEnum.MERCHANT_NOT_FOUND);
+        }
+        return MerchantInfoVO.from(po);
+    }
+
+    /**
+     * 商家查看审核记录，返回资质审核记录。
+     * @param merchantId 商家ID
+     * @return 审核记录列表
+     */
+    @Override
+    public List<MerchantAuditLogVO> listAuditLog(Long merchantId) {
+        MerchantPO po = merchantManager.getOne(
+            Wrappers.lambdaQuery(MerchantPO.class).eq(MerchantPO::getUserId, merchantId));
+        if (po == null) {
+            return Collections.emptyList();
+        }
+        MerchantAuditLogVO vo = new MerchantAuditLogVO();
+        vo.setId(po.getId());
+        vo.setAuditType("QUALIFICATION");
+        vo.setTargetId(po.getUserId());
+        vo.setDecision(po.getAuditStatus());
+        vo.setReason(po.getAuditReason());
+        vo.setAuditAt(po.getAuditAt());
+        return Collections.singletonList(vo);
     }
 
     private MerchantQualificationVO toVO(MerchantPO po) {

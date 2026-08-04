@@ -12,6 +12,7 @@ import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.notify.constant.NotifyCodeEnum;
 import com.yirancrazy.minimall.notify.constant.NotifyMessageTypeEnum;
 import com.yirancrazy.minimall.notify.constant.RecipientTypeEnum;
+import com.yirancrazy.minimall.notify.dto.AnnouncementCreateDTO;
 import com.yirancrazy.minimall.notify.dto.NotifyBroadcastDTO;
 import com.yirancrazy.minimall.notify.dto.NotifyListDTO;
 import com.yirancrazy.minimall.notify.dto.NotifyMarketingPushDTO;
@@ -314,6 +315,24 @@ public class NotifyServiceImpl implements NotifyService {
             .eq(NotifyMessagePO::getMessageType, NotifyMessageTypeEnum.SYSTEM.intCode())
             .orderByDesc(NotifyMessagePO::getId);
         return notifyManager.page(page, wrapper);
+    }
+
+    /**
+     * 发布系统公告，落库为 messageType=ANNOUNCEMENT, recipientType=ALL 的站内信。
+     * @param dto 公告发布入参
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void publishAnnouncement(AnnouncementCreateDTO dto) {
+        NotifyMessagePO m = new NotifyMessagePO();
+        m.setUserId(0L);
+        m.setRecipientType(RecipientTypeEnum.ALL.intCode());
+        m.setMessageType(NotifyMessageTypeEnum.ANNOUNCEMENT.intCode());
+        m.setTitle(dto.getTitle());
+        m.setContent(dto.getContent());
+        m.setReadFlag(0);
+        notifyManager.save(m);
+        log.info("announcement published, title={}", dto.getTitle());
     }
 
     private NotifyMessagePO getOwnedMessage(Long id, Integer recipientType, Long userId) {

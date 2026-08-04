@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import com.yirancrazy.minimall.api.dto.auth.TokenVO;
 import com.yirancrazy.minimall.auth.dto.ChangePasswordDTO;
 import com.yirancrazy.minimall.auth.dto.LoginDTO;
+import com.yirancrazy.minimall.auth.dto.RegisterDTO;
 import com.yirancrazy.minimall.auth.service.MerchantAuthService;
 import com.yirancrazy.minimall.common.result.Result;
 
@@ -36,6 +37,16 @@ public class MerchantAuthControllerV1 {
     @PostMapping("/login")
     public Result<TokenVO> login(@Valid @RequestBody LoginDTO dto) {
         return Result.success(merchantAuthService.login(dto));
+    }
+
+    /**
+     * 商家注册，创建 role=MERCHANT 的账号并签发令牌。
+     * @param dto 注册DTO
+     * @return 令牌VO
+     */
+    @PostMapping("/register")
+    public Result<TokenVO> register(@Valid @RequestBody RegisterDTO dto) {
+        return Result.success(merchantAuthService.register(dto));
     }
 
     /**

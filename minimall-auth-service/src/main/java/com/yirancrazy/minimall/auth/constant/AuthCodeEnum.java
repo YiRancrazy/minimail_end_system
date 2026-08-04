@@ -25,7 +25,8 @@ public enum AuthCodeEnum implements BaseEnum {
     ACCOUNT_ROLE_MISMATCH("14010", "ACCOUNT_ROLE_MISMATCH", "账号角色不匹配"),
     MERCHANT_NOT_FOUND("14011", "MERCHANT_NOT_FOUND", "商家账号不存在"),
     ADMIN_USERNAME_EXISTS("14012", "ADMIN_USERNAME_EXISTS", "管理员用户名已存在"),
-    CANNOT_DELETE_SELF("14013", "CANNOT_DELETE_SELF", "不能删除自己");
+    CANNOT_DELETE_SELF("14013", "CANNOT_DELETE_SELF", "不能删除自己"),
+    MERCHANT_EXISTS("14014", "MERCHANT_EXISTS", "商家账号已存在");
 
     private final String code;
     private final String alias;

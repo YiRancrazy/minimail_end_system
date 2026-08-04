@@ -2,6 +2,7 @@ package com.yirancrazy.minimall.notify.service;
 
 import java.util.List;
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.yirancrazy.minimall.notify.dto.AnnouncementCreateDTO;
 import com.yirancrazy.minimall.notify.dto.NotifyBroadcastDTO;
 import com.yirancrazy.minimall.notify.dto.NotifyListDTO;
 import com.yirancrazy.minimall.notify.dto.NotifyMarketingPushDTO;
@@ -115,4 +116,10 @@ public interface NotifyService {
      * @return 系统告警分页结果
      */
     IPage<NotifyMessagePO> alertPage(SystemAlertPageDTO dto);
+
+    /**
+     * 发布系统公告，落库为 messageType=ANNOUNCEMENT, recipientType=ALL 的站内信。
+     * @param dto 公告发布入参
+     */
+    void publishAnnouncement(AnnouncementCreateDTO dto);
 }

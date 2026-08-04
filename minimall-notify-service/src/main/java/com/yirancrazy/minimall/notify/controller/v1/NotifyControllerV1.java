@@ -11,8 +11,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import jakarta.validation.Valid;
+import com.yirancrazy.minimall.common.annotation.RequirePermission;
+import com.yirancrazy.minimall.common.constant.PermissionEnum;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.notify.constant.RecipientTypeEnum;
+import com.yirancrazy.minimall.notify.dto.AnnouncementCreateDTO;
 import com.yirancrazy.minimall.notify.dto.NotifyBatchDeleteDTO;
 import com.yirancrazy.minimall.notify.dto.NotifyBroadcastDTO;
 import com.yirancrazy.minimall.notify.dto.NotifyListDTO;
@@ -257,5 +260,17 @@ public class NotifyControllerV1 {
     public Result<IPage<NotifyMessagePO>> platformAlerts(@RequestHeader("X-User-Id") Long adminId,
                                                          @Valid SystemAlertPageDTO dto) {
         return Result.success(notifyService.alertPage(dto));
+    }
+
+    /**
+     * 发布系统公告（平台端）。
+     * @param dto 公告发布入参
+     * @return 无业务数据的成功响应
+     */
+    @PostMapping("/announcements")
+    @RequirePermission(PermissionEnum.NOTIFY_BROADCAST)
+    public Result<Void> publishAnnouncement(@Valid @RequestBody AnnouncementCreateDTO dto) {
+        notifyService.publishAnnouncement(dto);
+        return Result.success(null);
     }
 }

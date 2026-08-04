@@ -512,4 +512,121 @@ public class StockServiceImplTest {
         when(manager.getOne(any())).thenReturn(null);
         assertThrows(BizException.class, () -> service.correctStock(999L, 10L, "test"));
     }
+
+    /**
+     * 验证 adjustStock 正数调整成功时增加可用量并记录流水。
+     */
+    @Test
+    public void adjustStock_positive_increments_available() {
+        StockPO s = new StockPO();
+        s.setId(1L);
+        s.setSkuId(100L);
+        s.setAvailable(10L);
+        s.setReserved(0L);
+        when(manager.getOne(any())).thenReturn(s);
+
+        service.adjustStock(100L, 5L, "replenish");
+
+        assertEquals(15L, s.getAvailable());
+        verify(manager).updateById(s);
+        verify(journalManager).save(any(StockJournalPO.class));
+    }
+
+    /**
+     * 验证 adjustStock 负数调整成功时扣减可用量。
+     */
+    @Test
+    public void adjustStock_negative_decrements_available() {
+        StockPO s = new StockPO();
+        s.setId(1L);
+        s.setSkuId(100L);
+        s.setAvailable(10L);
+        s.setReserved(0L);
+        when(manager.getOne(any())).thenReturn(s);
+
+        service.adjustStock(100L, -3L, "correction");
+
+        assertEquals(7L, s.getAvailable());
+        verify(manager).updateById(s);
+    }
+
+    /**
+     * 验证 adjustStock 调整数量为 null 时抛出 BizException。
+     */
+    @Test
+    public void adjustStock_null_quantity_throws() {
+        assertThrows(BizException.class, () -> service.adjustStock(100L, null, "test"));
+    }
+
+    /**
+     * 验证 setThreshold 正常设置预警阈值。
+     */
+    @Test
+    public void setThreshold_succeeds() {
+        StockPO s = new StockPO();
+        s.setId(1L);
+        s.setSkuId(100L);
+        s.setAvailable(10L);
+        when(manager.getOne(any())).thenReturn(s);
+
+        service.setThreshold(100L, 5L);
+
+        assertEquals(5L, s.getAlertThreshold());
+        verify(manager).updateById(s);
+    }
+
+    /**
+     * 验证 setThreshold 阈值为 null 时抛出 BizException。
+     */
+    @Test
+    public void setThreshold_null_throws() {
+        assertThrows(BizException.class, () -> service.setThreshold(100L, null));
+    }
+
+    /**
+     * 验证 setThreshold 阈值为负数时抛出 BizException。
+     */
+    @Test
+    public void setThreshold_negative_throws() {
+        assertThrows(BizException.class, () -> service.setThreshold(100L, -1L));
+    }
+
+    /**
+     * 验证 queryJournal 委托给 journalManager.list 并返回结果。
+     */
+    @Test
+    public void queryJournal_delegates_to_journalManager() {
+        StockJournalPO po = new StockJournalPO();
+        po.setId(1L);
+        po.setSkuId(100L);
+        po.setQuantity(-2L);
+        when(journalManager.list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class)))
+            .thenReturn(List.of(po));
+
+        List<StockJournalPO> result = service.queryJournal(100L);
+        assertEquals(1, result.size());
+        assertEquals(1L, result.get(0).getId());
+        verify(journalManager).list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class));
+    }
+
+    /**
+     * 验证 completeCountTask 在任务不存在时抛出 BizException。
+     */
+    @Test
+    public void completeCountTask_not_found_throws() {
+        when(countTaskManager.getById(999L)).thenReturn(null);
+
+        StockCountTaskCompleteDTO dto = new StockCountTaskCompleteDTO();
+        dto.setActualQuantity(10L);
+        assertThrows(BizException.class, () -> service.completeCountTask(999L, dto));
+    }
+
+    /**
+     * 验证 cancelCountTask 在任务不存在时抛出 BizException。
+     */
+    @Test
+    public void cancelCountTask_not_found_throws() {
+        when(countTaskManager.getById(999L)).thenReturn(null);
+        assertThrows(BizException.class, () -> service.cancelCountTask(999L, 99L));
+    }
 }

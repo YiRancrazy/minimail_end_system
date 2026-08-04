@@ -408,4 +408,97 @@ public class PayServiceImplTest {
         when(merchantWithdrawManager.getById(any())).thenReturn(null);
         assertThrows(BizException.class, () -> service.reviewWithdraw(999L, true, null));
     }
+
+    /**
+     * 验证 createRefund 在支付单不存在时抛出 PAY_NOT_FOUND。
+     */
+    @Test
+    public void createRefund_pay_not_found_throws() {
+        when(manager.getById(any())).thenReturn(null);
+        com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO dto =
+            new com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO(1L, new BigDecimal("50.00"), "test");
+        assertThrows(BizException.class, () -> service.createRefund(dto));
+    }
+
+    /**
+     * 验证 createRefund 在支付单非 SUCCESS 状态时抛出 PAY_NOT_SUCCESS。
+     */
+    @Test
+    public void createRefund_pay_not_success_throws() {
+        PayTransactionPO payTx = new PayTransactionPO();
+        payTx.setId(1L);
+        payTx.setStatus(1); // PENDING, not SUCCESS(2)
+        payTx.setPaymentNo("PAY123");
+        payTx.setAmount(new BigDecimal("100.00"));
+        when(manager.getById(1L)).thenReturn(payTx);
+
+        com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO dto =
+            new com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO(1L, new BigDecimal("50.00"), "test");
+        assertThrows(BizException.class, () -> service.createRefund(dto));
+    }
+
+    /**
+     * 验证 createRefund 退款金额超过支付金额时抛出 REFUND_AMOUNT_EXCEED。
+     */
+    @Test
+    public void createRefund_amount_exceed_throws() {
+        PayTransactionPO payTx = new PayTransactionPO();
+        payTx.setId(1L);
+        payTx.setStatus(2); // SUCCESS
+        payTx.setPaymentNo("PAY123");
+        payTx.setAmount(new BigDecimal("50.00"));
+        payTx.setOrderNo("100");
+        when(manager.getById(1L)).thenReturn(payTx);
+
+        com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO dto =
+            new com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO(1L, new BigDecimal("100.00"), "test");
+        assertThrows(BizException.class, () -> service.createRefund(dto));
+    }
+
+    /**
+     * 验证 createRefund 退款成功时返回 RefundVO 并推进支付单状态为 REFUNDED。
+     */
+    @Test
+    public void createRefund_success_returns_vo() {
+        PayTransactionPO payTx = new PayTransactionPO();
+        payTx.setId(1L);
+        payTx.setStatus(2); // SUCCESS
+        payTx.setPaymentNo("PAY123");
+        payTx.setAmount(new BigDecimal("100.00"));
+        payTx.setOrderNo("100");
+        when(manager.getById(1L)).thenReturn(payTx);
+        when(alipayGateway.refund(anyString(), anyString(), any(BigDecimal.class), anyString()))
+            .thenReturn("REFUND_TRADE_123");
+
+        com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO dto =
+            new com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO(1L, new BigDecimal("50.00"), "reason");
+        com.yirancrazy.minimall.pay.vo.RefundVO vo = service.createRefund(dto);
+
+        assertNotNull(vo);
+        assertNotNull(vo.getRefundNo());
+        assertEquals("PAY123", vo.getPaymentNo());
+        assertEquals(0, new BigDecimal("50.00").compareTo(vo.getAmount()));
+        verify(orderFeignClient).refundCallback(100L, true);
+    }
+
+    /**
+     * 验证 createRefund 退款网关异常时状态回退并抛出 REFUND_FAILED。
+     */
+    @Test
+    public void createRefund_gateway_exception_throws() {
+        PayTransactionPO payTx = new PayTransactionPO();
+        payTx.setId(1L);
+        payTx.setStatus(2); // SUCCESS
+        payTx.setPaymentNo("PAY123");
+        payTx.setAmount(new BigDecimal("100.00"));
+        payTx.setOrderNo("100");
+        when(manager.getById(1L)).thenReturn(payTx);
+        when(alipayGateway.refund(anyString(), anyString(), any(BigDecimal.class), anyString()))
+            .thenThrow(new RuntimeException("gateway down"));
+
+        com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO dto =
+            new com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO(1L, new BigDecimal("50.00"), "reason");
+        assertThrows(BizException.class, () -> service.createRefund(dto));
+        verify(orderFeignClient).refundCallback(100L, false);
+    }
 }

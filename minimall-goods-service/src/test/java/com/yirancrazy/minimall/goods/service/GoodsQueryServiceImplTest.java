@@ -116,7 +116,7 @@ public class GoodsQueryServiceImplTest {
         assertEquals("手机", detail.getTitle());
         assertTrue(detail.getIsOnSale());
         assertEquals(1, detail.getSkus().size());
-        assertEquals(300L, detail.getSkus().get(0).getSkuId());
+        assertEquals(300L, detail.getSkus().get(0).getId());
         assertEquals(new BigDecimal("1999.00"), detail.getSkus().get(0).getPrice());
     }
 
@@ -169,7 +169,7 @@ public class GoodsQueryServiceImplTest {
 
         assertNotNull(skus);
         assertEquals(2, skus.size());
-        assertEquals(301L, skus.get(0).getSkuId());
+        assertEquals(301L, skus.get(0).getId());
         assertEquals("白色", skus.get(1).getSkuName());
     }
 

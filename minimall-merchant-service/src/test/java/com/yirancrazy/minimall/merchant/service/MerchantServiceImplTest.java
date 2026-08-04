@@ -1,9 +1,12 @@
 package com.yirancrazy.minimall.merchant.service;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -15,6 +18,8 @@ import com.yirancrazy.minimall.merchant.dto.QualificationSubmitDTO;
 import com.yirancrazy.minimall.merchant.entity.MerchantPO;
 import com.yirancrazy.minimall.merchant.manager.MerchantManager;
 import com.yirancrazy.minimall.merchant.service.impl.MerchantServiceImpl;
+import com.yirancrazy.minimall.merchant.vo.MerchantAuditLogVO;
+import com.yirancrazy.minimall.merchant.vo.MerchantInfoVO;
 import com.yirancrazy.minimall.merchant.vo.MerchantQualificationVO;
 
 
@@ -138,6 +143,64 @@ public class MerchantServiceImplTest {
     public void audit_already_audited_throws() {
         when(manager.getById(1L)).thenReturn(buildPO(1L, 1L, 1));
         assertThrows(BizException.class, () -> service.audit(1L, true, null));
+    }
+
+    /**
+     * 验证 getMerchantInfo 返回 MerchantInfoVO 各字段正确映射。
+     */
+    @Test
+    public void getMerchantInfo_success() {
+        MerchantPO po = buildPO(1L, 10L, 1);
+        when(manager.getOne(any())).thenReturn(po);
+
+        MerchantInfoVO vo = service.getMerchantInfo(10L);
+
+        assertEquals(10L, vo.getMerchantId());
+        assertEquals("测试店", vo.getShopName());
+        assertEquals("LIC123", vo.getLicenseNo());
+        assertEquals(1, vo.getQualificationStatus());
+    }
+
+    /**
+     * 验证 getMerchantInfo 商家不存在时抛出 MERCHANT_NOT_FOUND。
+     */
+    @Test
+    public void getMerchantInfo_notFound_throws() {
+        when(manager.getOne(any())).thenReturn(null);
+        assertThrows(BizException.class, () -> service.getMerchantInfo(999L));
+    }
+
+    /**
+     * 验证 listAuditLog 返回包含审核记录的单元素列表。
+     */
+    @Test
+    public void listAuditLog_success() {
+        LocalDateTime auditAt = LocalDateTime.of(2026, 8, 4, 12, 0);
+        MerchantPO po = buildPO(1L, 10L, 2);
+        po.setAuditReason("证件不清晰");
+        po.setAuditAt(auditAt);
+        when(manager.getOne(any())).thenReturn(po);
+
+        List<MerchantAuditLogVO> list = service.listAuditLog(10L);
+
+        assertEquals(1, list.size());
+        MerchantAuditLogVO vo = list.get(0);
+        assertEquals(1L, vo.getId());
+        assertEquals("QUALIFICATION", vo.getAuditType());
+        assertEquals(10L, vo.getTargetId());
+        assertEquals(2, vo.getDecision());
+        assertEquals("证件不清晰", vo.getReason());
+        assertEquals(auditAt, vo.getAuditAt());
+    }
+
+    /**
+     * 验证 listAuditLog 商家不存在时返回空列表。
+     */
+    @Test
+    public void listAuditLog_empty() {
+        when(manager.getOne(any())).thenReturn(null);
+        List<MerchantAuditLogVO> list = service.listAuditLog(999L);
+        assertTrue(list.isEmpty());
     }
 
     private MerchantPO buildPO(Long id, Long userId, int auditStatus) {

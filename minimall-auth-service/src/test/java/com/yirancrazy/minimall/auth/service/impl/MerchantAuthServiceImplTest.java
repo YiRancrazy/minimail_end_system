@@ -12,6 +12,7 @@ import org.mockito.quality.Strictness;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.security.crypto.bcrypt.BCrypt;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -21,8 +22,10 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import com.yirancrazy.minimall.api.dto.auth.TokenVO;
+import com.yirancrazy.minimall.auth.constant.AuthCodeEnum;
 import com.yirancrazy.minimall.auth.dto.ChangePasswordDTO;
 import com.yirancrazy.minimall.auth.dto.LoginDTO;
+import com.yirancrazy.minimall.auth.dto.RegisterDTO;
 import com.yirancrazy.minimall.auth.entity.UserAuthPO;
 import com.yirancrazy.minimall.auth.manager.UserAuthManager;
 import com.yirancrazy.minimall.auth.util.JwtUtil;
@@ -30,7 +33,7 @@ import com.yirancrazy.minimall.common.exception.BizException;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: MerchantAuthServiceImpl 的单元测试类，覆盖登录/登出/修改密码的正常与失败场景。
+ * @Description: MerchantAuthServiceImpl 的单元测试类，覆盖注册/登录/登出/修改密码的正常与失败场景。
  * @Version: 1.0
  * @DateTime: 2026/08/02
  **/
@@ -155,5 +158,33 @@ class MerchantAuthServiceImplTest {
         when(userAuthManager.getById(100L)).thenReturn(po);
         assertThrows(BizException.class,
             () -> service.changePassword(100L, new ChangePasswordDTO("wrongpass", "newpass123")));
+    }
+
+    @Test
+    void register_success_returnsTokens() {
+        when(userAuthManager.count(any())).thenReturn(0L);
+        when(userAuthManager.save(any(UserAuthPO.class))).thenAnswer(invocation -> {
+            UserAuthPO po = invocation.getArgument(0);
+            po.setId(200L);
+            return true;
+        });
+        when(jwtUtil.sign(anyLong(), anyString(), anyString(), anyString())).thenReturn("access-token");
+        when(jwtUtil.generateRefreshToken()).thenReturn("refresh-token");
+
+        TokenVO vo = service.register(new RegisterDTO("shopowner", "pass123"));
+
+        assertNotNull(vo.getAccessToken());
+        assertNotNull(vo.getRefreshToken());
+        assertEquals("Bearer", vo.getTokenType());
+        verify(userAuthManager).save(any(UserAuthPO.class));
+    }
+
+    @Test
+    void register_duplicate_throws() {
+        when(userAuthManager.count(any())).thenReturn(1L);
+
+        BizException ex = assertThrows(BizException.class,
+            () -> service.register(new RegisterDTO("shopowner", "pass123")));
+        assertEquals(AuthCodeEnum.MERCHANT_EXISTS.getCode(), ex.getCode());
     }
 }

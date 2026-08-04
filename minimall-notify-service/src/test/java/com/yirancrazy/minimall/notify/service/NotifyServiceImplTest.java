@@ -24,6 +24,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.notify.constant.NotifyMessageTypeEnum;
 import com.yirancrazy.minimall.notify.constant.RecipientTypeEnum;
+import com.yirancrazy.minimall.notify.dto.AnnouncementCreateDTO;
 import com.yirancrazy.minimall.notify.dto.NotifyBroadcastDTO;
 import com.yirancrazy.minimall.notify.dto.NotifyListDTO;
 import com.yirancrazy.minimall.notify.dto.NotifyMarketingPushDTO;
@@ -403,5 +404,19 @@ public class NotifyServiceImplTest {
         IPage<NotifyMessagePO> result = service.alertPage(dto);
 
         assertEquals(0, result.getRecords().size());
+    }
+
+    /**
+     * 验证 publishAnnouncement 落库为 messageType=ANNOUNCEMENT, recipientType=ALL 的站内信。
+     */
+    @Test
+    public void publishAnnouncement_success() {
+        AnnouncementCreateDTO dto = new AnnouncementCreateDTO();
+        dto.setTitle("系统升级公告");
+        dto.setContent("系统将于今晚进行升级维护");
+
+        service.publishAnnouncement(dto);
+
+        verify(notifyManager).save(any(NotifyMessagePO.class));
     }
 }

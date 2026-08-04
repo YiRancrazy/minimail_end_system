@@ -7,15 +7,15 @@ import lombok.NoArgsConstructor;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 发送重置密码验证码数据传输对象，按用户名生成验证码。
- * @Version: 1.0
- * @DateTime: 2026/08/02
+ * @Description: 发送重置密码验证码数据传输对象，按账号生成验证码。
+ * @Version: 2.0
+ * @DateTime: 2026/08/04
  */
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 public class SendResetCodeDTO {
 
-    @NotBlank(message = "username cannot be blank")
-    private String username;
+    @NotBlank(message = "account cannot be blank")
+    private String account;
 }

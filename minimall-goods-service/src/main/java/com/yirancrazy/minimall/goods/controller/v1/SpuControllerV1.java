@@ -27,7 +27,7 @@ import com.yirancrazy.minimall.goods.vo.SpuVO;
  * @DateTime: 2026/08/02
  */
 @RestController
-@RequestMapping("/api/v1/spus")
+@RequestMapping("/api/v1/goods/spus")
 public class SpuControllerV1 {
 
     private final SpuService spuService;

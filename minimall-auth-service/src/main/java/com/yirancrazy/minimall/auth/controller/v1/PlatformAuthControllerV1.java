@@ -16,15 +16,15 @@ import com.yirancrazy.minimall.auth.dto.AdminCreateDTO;
 import com.yirancrazy.minimall.auth.dto.AdminPageDTO;
 import com.yirancrazy.minimall.auth.dto.AdminUpdateDTO;
 import com.yirancrazy.minimall.auth.dto.LoginDTO;
-import com.yirancrazy.minimall.auth.entity.UserAuthPO;
 import com.yirancrazy.minimall.auth.service.PlatformAuthService;
+import com.yirancrazy.minimall.auth.vo.AdminVO;
 import com.yirancrazy.minimall.common.result.Result;
 
 /**
  * @Author: yirancrazy@gmail.com
  * @Description: 平台端认证与管理控制器，提供平台管理员登录、登出与 CRUD 接口。
- * @Version: 1.1
- * @DateTime: 2026/08/03
+ * @Version: 2.0
+ * @DateTime: 2026/08/04
  **/
 @RestController
 @RequestMapping("/api/v1/platform/auth")
@@ -75,7 +75,7 @@ public class PlatformAuthControllerV1 {
      * @return 管理员分页结果
      */
     @GetMapping("/admins")
-    public Result<IPage<UserAuthPO>> adminPage(@Valid AdminPageDTO dto) {
+    public Result<IPage<AdminVO>> adminPage(@Valid AdminPageDTO dto) {
         return Result.success(platformAuthService.adminPage(dto));
     }
 

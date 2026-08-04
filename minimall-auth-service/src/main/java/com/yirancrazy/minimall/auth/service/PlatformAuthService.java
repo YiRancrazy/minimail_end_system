@@ -6,18 +6,18 @@ import com.yirancrazy.minimall.auth.dto.AdminCreateDTO;
 import com.yirancrazy.minimall.auth.dto.AdminPageDTO;
 import com.yirancrazy.minimall.auth.dto.AdminUpdateDTO;
 import com.yirancrazy.minimall.auth.dto.LoginDTO;
-import com.yirancrazy.minimall.auth.entity.UserAuthPO;
+import com.yirancrazy.minimall.auth.vo.AdminVO;
 
 /**
  * @Author: yirancrazy@gmail.com
  * @Description: 平台端认证服务，提供平台管理员登录、登出与 CRUD 能力。
- * @Version: 1.1
- * @DateTime: 2026/08/03
+ * @Version: 2.0
+ * @DateTime: 2026/08/04
  **/
 public interface PlatformAuthService {
 
     /**
-     * 平台管理员登录，仅允许 role=PLATFORM 的账号通过。
+     * 平台管理员登录，仅允许 accountType=PLATFORM 的账号通过。
      * @param dto 登录DTO
      * @return 令牌VO
      */
@@ -31,19 +31,19 @@ public interface PlatformAuthService {
     void signOut(Long adminAccountId, String jti);
 
     /**
-     * 创建平台管理员，用户名不可重复，密码 BCrypt 加密存储。
+     * 创建平台管理员，账号不可重复，密码 BCrypt 加密存储。
      * @param dto 创建入参
      * @return 新管理员ID
-     * @throws com.yirancrazy.minimall.common.exception.BizException 用户名重复时
+     * @throws com.yirancrazy.minimall.common.exception.BizException 账号重复时
      */
     Long adminCreate(AdminCreateDTO dto);
 
     /**
-     * 分页查询平台管理员，固定 role=PLATFORM。
+     * 分页查询平台管理员，固定 accountType=PLATFORM。
      * @param dto 分页入参
      * @return 管理员分页结果
      */
-    IPage<UserAuthPO> adminPage(AdminPageDTO dto);
+    IPage<AdminVO> adminPage(AdminPageDTO dto);
 
     /**
      * 更新平台管理员昵称。

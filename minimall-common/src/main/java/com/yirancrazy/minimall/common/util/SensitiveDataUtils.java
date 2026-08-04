@@ -88,7 +88,7 @@ public final class SensitiveDataUtils {
 
     /**
      * Token脱敏
-     * <p>保留前8位，后面用*替换</p>
+     * <p>保留前4位和后4位，中间用*替换</p>
      *
      * @param token Token
      * @return 脱敏后的Token
@@ -102,6 +102,8 @@ public final class SensitiveDataUtils {
             return token;
         }
 
-        return token.substring(0, 8) + "******";
+        int length = token.length();
+        String stars = "*".repeat(length - 8);
+        return token.substring(0, 4) + stars + token.substring(length - 4);
     }
 }

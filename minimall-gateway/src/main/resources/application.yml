@@ -22,3 +22,5 @@ spring:
 minimall:
   jwt:
     secret: dev-secret-change-me-32bytes-min!!
+  security:
+    internal-token: ${MINIMALL_INTERNAL_TOKEN:dev-internal-token-change-me}

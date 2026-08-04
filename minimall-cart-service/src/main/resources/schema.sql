@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS t_cart_item (
   create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
   update_time DATETIME DEFAULT CURRENT_TIMESTAMP,
   is_deleted TINYINT DEFAULT 0,
+  version INT NOT NULL DEFAULT 0,
   PRIMARY KEY (id),
   INDEX idx_user (user_id)
 );

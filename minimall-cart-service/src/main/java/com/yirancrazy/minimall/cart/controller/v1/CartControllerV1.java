@@ -3,6 +3,7 @@ package com.yirancrazy.minimall.cart.controller.v1;
 import java.util.List;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -15,7 +16,6 @@ import com.yirancrazy.minimall.cart.dto.CartClearDTO;
 import com.yirancrazy.minimall.cart.dto.CartItemAddDTO;
 import com.yirancrazy.minimall.cart.dto.CartItemListDTO;
 import com.yirancrazy.minimall.cart.dto.CartSelectAllDTO;
-import com.yirancrazy.minimall.cart.dto.CartSelectDTO;
 import com.yirancrazy.minimall.cart.dto.CartUpdateDTO;
 import com.yirancrazy.minimall.cart.service.CartService;
 import com.yirancrazy.minimall.cart.vo.CartItemVO;
@@ -70,25 +70,14 @@ public class CartControllerV1 {
     }
 
     /**
-     * 修改购物车项数量。
+     * 部分更新购物车项，支持同时修改数量和勾选状态。
      * @param id 购物车项ID
-     * @param dto 数量修改入参
+     * @param dto 更新入参，仅非空字段生效
      * @return 更新是否成功
      */
-    @PutMapping("/{id}/quantity")
-    public Result<Boolean> updateQuantity(@PathVariable("id") Long id, @Valid @RequestBody CartUpdateDTO dto) {
-        return Result.success(cartService.updateQuantity(id, dto));
-    }
-
-    /**
-     * 修改购物车项勾选状态。
-     * @param id 购物车项ID
-     * @param dto 勾选状态入参
-     * @return 更新是否成功
-     */
-    @PutMapping("/{id}/select")
-    public Result<Boolean> select(@PathVariable("id") Long id, @Valid @RequestBody CartSelectDTO dto) {
-        return Result.success(cartService.select(id, dto));
+    @PatchMapping("/{id}")
+    public Result<Boolean> update(@PathVariable("id") Long id, @Valid @RequestBody CartUpdateDTO dto) {
+        return Result.success(cartService.update(id, dto));
     }
 
     /**

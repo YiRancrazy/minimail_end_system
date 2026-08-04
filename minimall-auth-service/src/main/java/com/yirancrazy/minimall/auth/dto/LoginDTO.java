@@ -9,17 +9,27 @@ import lombok.NoArgsConstructor;
  * @Author: yirancrazy@gmail.com
  * @Description: Login数据传输对象，用于Login相关数据传输
  * @Version: 1.0
- * @DateTime: 2026/07/31
+ * @DateTime: 2026/08/04
  */
 @Data
-
-@AllArgsConstructor
 
 @NoArgsConstructor
 public class LoginDTO {
     @NotBlank
-    private String username;
+    private String account;
 
     @NotBlank
     private String password;
+
+    private String captchaToken;
+
+    /**
+     * 便利构造函数（不含验证码）。
+     * @param account 登录账号
+     * @param password 密码
+     */
+    public LoginDTO(String account, String password) {
+        this.account = account;
+        this.password = password;
+    }
 }

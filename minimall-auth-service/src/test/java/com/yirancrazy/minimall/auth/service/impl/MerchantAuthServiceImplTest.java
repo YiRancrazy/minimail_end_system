@@ -26,22 +26,27 @@ import com.yirancrazy.minimall.auth.constant.AuthCodeEnum;
 import com.yirancrazy.minimall.auth.dto.ChangePasswordDTO;
 import com.yirancrazy.minimall.auth.dto.LoginDTO;
 import com.yirancrazy.minimall.auth.dto.RegisterDTO;
-import com.yirancrazy.minimall.auth.entity.UserAuthPO;
-import com.yirancrazy.minimall.auth.manager.UserAuthManager;
+import com.yirancrazy.minimall.auth.entity.AuthRolePO;
+import com.yirancrazy.minimall.auth.entity.AuthUserPO;
+import com.yirancrazy.minimall.auth.manager.AuthRoleManager;
+import com.yirancrazy.minimall.auth.manager.AuthTokenBlacklistManager;
+import com.yirancrazy.minimall.auth.manager.AuthUserManager;
 import com.yirancrazy.minimall.auth.util.JwtUtil;
 import com.yirancrazy.minimall.common.exception.BizException;
 
 /**
  * @Author: yirancrazy@gmail.com
  * @Description: MerchantAuthServiceImpl 的单元测试类，覆盖注册/登录/登出/修改密码的正常与失败场景。
- * @Version: 1.0
- * @DateTime: 2026/08/02
+ * @Version: 2.0
+ * @DateTime: 2026/08/04
  **/
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class MerchantAuthServiceImplTest {
 
-    @Mock private UserAuthManager userAuthManager;
+    @Mock private AuthUserManager authUserManager;
+    @Mock private AuthRoleManager authRoleManager;
+    @Mock private AuthTokenBlacklistManager tokenBlacklistManager;
     @Mock private JwtUtil jwtUtil;
     @Mock private StringRedisTemplate redisTemplate;
     @Mock private ValueOperations<String, String> valueOperations;
@@ -51,52 +56,66 @@ class MerchantAuthServiceImplTest {
     @BeforeEach
     void setUp() {
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
-        service = new MerchantAuthServiceImpl(userAuthManager, jwtUtil, redisTemplate, 900L, 604800L);
+        service = new MerchantAuthServiceImpl(
+            authUserManager, authRoleManager, tokenBlacklistManager,
+            jwtUtil, redisTemplate, 900L, 604800L);
+    }
+
+    private AuthRolePO stubMerchantRole() {
+        AuthRolePO role = new AuthRolePO();
+        role.setId(2L);
+        role.setRoleCode("MERCHANT");
+        role.setRoleName("商家");
+        when(authRoleManager.getById(2L)).thenReturn(role);
+        return role;
     }
 
     @Test
     void login_success_returnsTokens() {
+        stubMerchantRole();
         String salt = "testsalt";
         String hash = BCrypt.hashpw("pass123" + salt, BCrypt.gensalt());
-        UserAuthPO po = new UserAuthPO();
+        AuthUserPO po = new AuthUserPO();
         po.setId(100L);
-        po.setUsername("shopowner");
-        po.setRole("MERCHANT");
+        po.setAccount("shopowner");
+        po.setAccountType(2);
+        po.setRoleId(2L);
         po.setStatus(1);
         po.setSalt(salt);
         po.setPasswordHash(hash);
-        when(userAuthManager.getOne(any())).thenReturn(po);
-        when(jwtUtil.sign(anyLong(), anyString(), anyString(), anyString())).thenReturn("access-token");
+        when(authUserManager.getOne(any())).thenReturn(po);
+        when(authUserManager.updateById(any(AuthUserPO.class))).thenReturn(true);
+        when(jwtUtil.sign(anyLong(), anyString(), anyString(), anyLong(), anyString())).thenReturn("access-token");
         when(jwtUtil.generateRefreshToken()).thenReturn("refresh-token");
 
         TokenVO vo = service.login(new LoginDTO("shopowner", "pass123"));
 
         assertNotNull(vo.getAccessToken());
         assertNotNull(vo.getRefreshToken());
-        verify(jwtUtil).sign(eq(100L), eq("shopowner"), eq("MERCHANT"), anyString());
+        verify(jwtUtil).sign(eq(100L), eq("shopowner"), eq("MERCHANT"), eq(2L), anyString());
     }
 
     @Test
     void login_accountNotFound_throws() {
-        when(userAuthManager.getOne(any())).thenReturn(null);
+        when(authUserManager.getOne(any())).thenReturn(null);
         assertThrows(BizException.class, () -> service.login(new LoginDTO("nobody", "pass")));
     }
 
     @Test
     void login_roleMismatch_throws() {
-        UserAuthPO po = new UserAuthPO();
-        po.setRole("USER");
+        AuthUserPO po = new AuthUserPO();
+        po.setAccountType(1);
         po.setStatus(1);
-        when(userAuthManager.getOne(any())).thenReturn(po);
+        when(authUserManager.getOne(any())).thenReturn(po);
         assertThrows(BizException.class, () -> service.login(new LoginDTO("alice", "pass")));
     }
 
     @Test
     void login_accountDisabled_throws() {
-        UserAuthPO po = new UserAuthPO();
-        po.setRole("MERCHANT");
+        AuthUserPO po = new AuthUserPO();
+        po.setAccountType(2);
         po.setStatus(0);
-        when(userAuthManager.getOne(any())).thenReturn(po);
+        when(authUserManager.getOne(any())).thenReturn(po);
         assertThrows(BizException.class, () -> service.login(new LoginDTO("shop", "pass")));
     }
 
@@ -104,45 +123,47 @@ class MerchantAuthServiceImplTest {
     void login_passwordInvalid_throws() {
         String salt = "testsalt";
         String hash = BCrypt.hashpw("correctpass" + salt, BCrypt.gensalt());
-        UserAuthPO po = new UserAuthPO();
+        AuthUserPO po = new AuthUserPO();
         po.setId(100L);
-        po.setRole("MERCHANT");
+        po.setAccountType(2);
         po.setStatus(1);
         po.setSalt(salt);
         po.setPasswordHash(hash);
-        when(userAuthManager.getOne(any())).thenReturn(po);
+        when(authUserManager.getOne(any())).thenReturn(po);
         assertThrows(BizException.class, () -> service.login(new LoginDTO("shop", "wrongpass")));
     }
 
     @Test
     void signOut_deletesRefreshAndBlacklistsJti() {
         when(redisTemplate.keys("refresh:100:*")).thenReturn(Set.of("refresh:100:abc"));
+        when(tokenBlacklistManager.save(any())).thenReturn(true);
         service.signOut(100L, "abc");
         verify(redisTemplate).delete(Set.of("refresh:100:abc"));
         verify(valueOperations).set(eq("blacklist:jti:abc"), eq("1"), eq(900L), any(TimeUnit.class));
+        verify(tokenBlacklistManager).save(any());
     }
 
     @Test
     void changePassword_success_updatesAndInvalidatesRefresh() {
         String salt = "testsalt";
         String hash = BCrypt.hashpw("oldpass" + salt, BCrypt.gensalt());
-        UserAuthPO po = new UserAuthPO();
+        AuthUserPO po = new AuthUserPO();
         po.setId(100L);
         po.setSalt(salt);
         po.setPasswordHash(hash);
-        when(userAuthManager.getById(100L)).thenReturn(po);
-        when(userAuthManager.updateById(any(UserAuthPO.class))).thenReturn(true);
+        when(authUserManager.getById(100L)).thenReturn(po);
+        when(authUserManager.updateById(any(AuthUserPO.class))).thenReturn(true);
         when(redisTemplate.keys("refresh:100:*")).thenReturn(Set.of("refresh:100:abc"));
 
         service.changePassword(100L, new ChangePasswordDTO("oldpass", "newpass123"));
 
-        verify(userAuthManager).updateById(any(UserAuthPO.class));
+        verify(authUserManager).updateById(any(AuthUserPO.class));
         verify(redisTemplate).delete(Set.of("refresh:100:abc"));
     }
 
     @Test
     void changePassword_accountNotFound_throws() {
-        when(userAuthManager.getById(999L)).thenReturn(null);
+        when(authUserManager.getById(999L)).thenReturn(null);
         assertThrows(BizException.class,
             () -> service.changePassword(999L, new ChangePasswordDTO("old", "newpass123")));
     }
@@ -151,24 +172,25 @@ class MerchantAuthServiceImplTest {
     void changePassword_oldPwdInvalid_throws() {
         String salt = "testsalt";
         String hash = BCrypt.hashpw("correctpass" + salt, BCrypt.gensalt());
-        UserAuthPO po = new UserAuthPO();
+        AuthUserPO po = new AuthUserPO();
         po.setId(100L);
         po.setSalt(salt);
         po.setPasswordHash(hash);
-        when(userAuthManager.getById(100L)).thenReturn(po);
+        when(authUserManager.getById(100L)).thenReturn(po);
         assertThrows(BizException.class,
             () -> service.changePassword(100L, new ChangePasswordDTO("wrongpass", "newpass123")));
     }
 
     @Test
     void register_success_returnsTokens() {
-        when(userAuthManager.count(any())).thenReturn(0L);
-        when(userAuthManager.save(any(UserAuthPO.class))).thenAnswer(invocation -> {
-            UserAuthPO po = invocation.getArgument(0);
+        stubMerchantRole();
+        when(authUserManager.count(any())).thenReturn(0L);
+        when(authUserManager.save(any(AuthUserPO.class))).thenAnswer(invocation -> {
+            AuthUserPO po = invocation.getArgument(0);
             po.setId(200L);
             return true;
         });
-        when(jwtUtil.sign(anyLong(), anyString(), anyString(), anyString())).thenReturn("access-token");
+        when(jwtUtil.sign(anyLong(), anyString(), anyString(), anyLong(), anyString())).thenReturn("access-token");
         when(jwtUtil.generateRefreshToken()).thenReturn("refresh-token");
 
         TokenVO vo = service.register(new RegisterDTO("shopowner", "pass123"));
@@ -176,12 +198,12 @@ class MerchantAuthServiceImplTest {
         assertNotNull(vo.getAccessToken());
         assertNotNull(vo.getRefreshToken());
         assertEquals("Bearer", vo.getTokenType());
-        verify(userAuthManager).save(any(UserAuthPO.class));
+        verify(authUserManager).save(any(AuthUserPO.class));
     }
 
     @Test
     void register_duplicate_throws() {
-        when(userAuthManager.count(any())).thenReturn(1L);
+        when(authUserManager.count(any())).thenReturn(1L);
 
         BizException ex = assertThrows(BizException.class,
             () -> service.register(new RegisterDTO("shopowner", "pass123")));

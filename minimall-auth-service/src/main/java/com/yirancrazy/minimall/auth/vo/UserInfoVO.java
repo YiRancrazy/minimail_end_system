@@ -6,14 +6,15 @@ import lombok.Data;
 /**
  * @Author: yirancrazy@gmail.com
  * @Description: UserInfo视图对象，用于UserInfo相关数据输出
- * @Version: 1.0
- * @DateTime: 2026/07/31
+ * @Version: 2.0
+ * @DateTime: 2026/08/04
  */
 @Data
 
 @AllArgsConstructor
 public class UserInfoVO {
     private Long userId;
-    private String username;
+    private String account;
     private String role;
+    private Long roleId;
 }

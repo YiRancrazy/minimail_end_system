@@ -4,7 +4,6 @@ import java.util.List;
 import com.yirancrazy.minimall.cart.dto.CartItemAddDTO;
 import com.yirancrazy.minimall.cart.dto.CartItemListDTO;
 import com.yirancrazy.minimall.cart.dto.CartSelectAllDTO;
-import com.yirancrazy.minimall.cart.dto.CartSelectDTO;
 import com.yirancrazy.minimall.cart.dto.CartUpdateDTO;
 import com.yirancrazy.minimall.cart.entity.CartItemPO;
 
@@ -44,20 +43,12 @@ public interface CartService {
     long countByUser(Long userId);
 
     /**
-     * 修改购物车项数量，不存在时抛出业务异常。
+     * 部分更新购物车项，仅更新非空字段（quantity / isSelected），不存在时抛出业务异常。
      * @param id 购物车项ID
-     * @param dto 数量修改入参
+     * @param dto 更新入参
      * @return 更新是否成功
      */
-    boolean updateQuantity(Long id, CartUpdateDTO dto);
-
-    /**
-     * 修改购物车项勾选状态，不存在时抛出业务异常。
-     * @param id 购物车项ID
-     * @param dto 勾选状态入参
-     * @return 更新是否成功
-     */
-    boolean select(Long id, CartSelectDTO dto);
+    boolean update(Long id, CartUpdateDTO dto);
 
     /**
      * 全选或取消全选指定用户的购物车项。

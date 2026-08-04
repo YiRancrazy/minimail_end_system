@@ -30,22 +30,28 @@ import com.yirancrazy.minimall.auth.dto.AdminCreateDTO;
 import com.yirancrazy.minimall.auth.dto.AdminPageDTO;
 import com.yirancrazy.minimall.auth.dto.AdminUpdateDTO;
 import com.yirancrazy.minimall.auth.dto.LoginDTO;
-import com.yirancrazy.minimall.auth.entity.UserAuthPO;
-import com.yirancrazy.minimall.auth.manager.UserAuthManager;
+import com.yirancrazy.minimall.auth.entity.AuthRolePO;
+import com.yirancrazy.minimall.auth.entity.AuthUserPO;
+import com.yirancrazy.minimall.auth.manager.AuthRoleManager;
+import com.yirancrazy.minimall.auth.manager.AuthTokenBlacklistManager;
+import com.yirancrazy.minimall.auth.manager.AuthUserManager;
 import com.yirancrazy.minimall.auth.util.JwtUtil;
+import com.yirancrazy.minimall.auth.vo.AdminVO;
 import com.yirancrazy.minimall.common.exception.BizException;
 
 /**
  * @Author: yirancrazy@gmail.com
  * @Description: PlatformAuthServiceImpl 的单元测试类，覆盖登录/登出与平台管理员 CRUD 的正常、失败、边界场景。
- * @Version: 1.1
- * @DateTime: 2026/08/03
+ * @Version: 2.0
+ * @DateTime: 2026/08/04
  **/
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class PlatformAuthServiceImplTest {
 
-    @Mock private UserAuthManager userAuthManager;
+    @Mock private AuthUserManager authUserManager;
+    @Mock private AuthRoleManager authRoleManager;
+    @Mock private AuthTokenBlacklistManager tokenBlacklistManager;
     @Mock private JwtUtil jwtUtil;
     @Mock private StringRedisTemplate redisTemplate;
     @Mock private ValueOperations<String, String> valueOperations;
@@ -56,59 +62,72 @@ class PlatformAuthServiceImplTest {
     void setUp() {
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
         lenient().doAnswer(inv -> {
-            UserAuthPO p = inv.getArgument(0);
+            AuthUserPO p = inv.getArgument(0);
             if (p.getId() == null) {
                 p.setId(System.nanoTime());
             }
             return true;
-        }).when(userAuthManager).save(any(UserAuthPO.class));
-        lenient().when(userAuthManager.updateById(any(UserAuthPO.class))).thenReturn(true);
-        service = new PlatformAuthServiceImpl(userAuthManager, jwtUtil, redisTemplate, 900L, 604800L);
+        }).when(authUserManager).save(any(AuthUserPO.class));
+        lenient().when(authUserManager.updateById(any(AuthUserPO.class))).thenReturn(true);
+        service = new PlatformAuthServiceImpl(
+            authUserManager, authRoleManager, tokenBlacklistManager,
+            jwtUtil, redisTemplate, 900L, 604800L);
+    }
+
+    private AuthRolePO stubPlatformRole() {
+        AuthRolePO role = new AuthRolePO();
+        role.setId(3L);
+        role.setRoleCode("PLATFORM");
+        role.setRoleName("平台管理员");
+        when(authRoleManager.getById(3L)).thenReturn(role);
+        return role;
     }
 
     @Test
     void login_success_returnsTokens() {
+        stubPlatformRole();
         String salt = "testsalt";
         String hash = BCrypt.hashpw("pass123" + salt, BCrypt.gensalt());
-        UserAuthPO po = new UserAuthPO();
+        AuthUserPO po = new AuthUserPO();
         po.setId(300L);
-        po.setUsername("admin");
-        po.setRole("PLATFORM");
+        po.setAccount("admin");
+        po.setAccountType(3);
+        po.setRoleId(3L);
         po.setStatus(1);
         po.setSalt(salt);
         po.setPasswordHash(hash);
-        when(userAuthManager.getOne(any())).thenReturn(po);
-        when(jwtUtil.sign(anyLong(), anyString(), anyString(), anyString())).thenReturn("access-token");
+        when(authUserManager.getOne(any())).thenReturn(po);
+        when(jwtUtil.sign(anyLong(), anyString(), anyString(), anyLong(), anyString())).thenReturn("access-token");
         when(jwtUtil.generateRefreshToken()).thenReturn("refresh-token");
 
         TokenVO vo = service.login(new LoginDTO("admin", "pass123"));
 
         assertNotNull(vo.getAccessToken());
         assertNotNull(vo.getRefreshToken());
-        verify(jwtUtil).sign(eq(300L), eq("admin"), eq("PLATFORM"), anyString());
+        verify(jwtUtil).sign(eq(300L), eq("admin"), eq("PLATFORM"), eq(3L), anyString());
     }
 
     @Test
     void login_accountNotFound_throws() {
-        when(userAuthManager.getOne(any())).thenReturn(null);
+        when(authUserManager.getOne(any())).thenReturn(null);
         assertThrows(BizException.class, () -> service.login(new LoginDTO("nobody", "pass")));
     }
 
     @Test
     void login_roleMismatch_throws() {
-        UserAuthPO po = new UserAuthPO();
-        po.setRole("USER");
+        AuthUserPO po = new AuthUserPO();
+        po.setAccountType(1);
         po.setStatus(1);
-        when(userAuthManager.getOne(any())).thenReturn(po);
+        when(authUserManager.getOne(any())).thenReturn(po);
         assertThrows(BizException.class, () -> service.login(new LoginDTO("alice", "pass")));
     }
 
     @Test
     void login_accountDisabled_throws() {
-        UserAuthPO po = new UserAuthPO();
-        po.setRole("PLATFORM");
+        AuthUserPO po = new AuthUserPO();
+        po.setAccountType(3);
         po.setStatus(2);
-        when(userAuthManager.getOne(any())).thenReturn(po);
+        when(authUserManager.getOne(any())).thenReturn(po);
         assertThrows(BizException.class, () -> service.login(new LoginDTO("admin", "pass")));
     }
 
@@ -116,22 +135,24 @@ class PlatformAuthServiceImplTest {
     void login_passwordInvalid_throws() {
         String salt = "testsalt";
         String hash = BCrypt.hashpw("correctpass" + salt, BCrypt.gensalt());
-        UserAuthPO po = new UserAuthPO();
+        AuthUserPO po = new AuthUserPO();
         po.setId(300L);
-        po.setRole("PLATFORM");
+        po.setAccountType(3);
         po.setStatus(1);
         po.setSalt(salt);
         po.setPasswordHash(hash);
-        when(userAuthManager.getOne(any())).thenReturn(po);
+        when(authUserManager.getOne(any())).thenReturn(po);
         assertThrows(BizException.class, () -> service.login(new LoginDTO("admin", "wrongpass")));
     }
 
     @Test
     void signOut_deletesRefreshAndBlacklistsJti() {
         when(redisTemplate.keys("refresh:300:*")).thenReturn(Set.of("refresh:300:abc"));
+        when(tokenBlacklistManager.save(any())).thenReturn(true);
         service.signOut(300L, "abc");
         verify(redisTemplate).delete(Set.of("refresh:300:abc"));
         verify(valueOperations).set(eq("blacklist:jti:abc"), eq("1"), eq(900L), any());
+        verify(tokenBlacklistManager).save(any());
     }
 
     /**
@@ -139,52 +160,52 @@ class PlatformAuthServiceImplTest {
      */
     @Test
     void adminCreate_persists_and_returns_id() {
-        when(userAuthManager.getOne(any())).thenReturn(null);
+        when(authUserManager.getOne(any())).thenReturn(null);
 
         AdminCreateDTO dto = new AdminCreateDTO();
-        dto.setUsername("admin01");
+        dto.setAccount("admin01");
         dto.setPassword("pass1234");
         dto.setNickname("管理员01");
 
         Long id = service.adminCreate(dto);
 
         assertNotNull(id);
-        verify(userAuthManager).save(any(UserAuthPO.class));
+        verify(authUserManager).save(any(AuthUserPO.class));
     }
 
     /**
-     * 验证 adminCreate 用户名重复时抛出 ADMIN_USERNAME_EXISTS。
+     * 验证 adminCreate 账号重复时抛出 ADMIN_USERNAME_EXISTS。
      */
     @Test
-    void adminCreate_throws_on_duplicate_username() {
-        UserAuthPO existing = new UserAuthPO();
+    void adminCreate_throws_on_duplicate_account() {
+        AuthUserPO existing = new AuthUserPO();
         existing.setId(1L);
-        existing.setUsername("admin01");
-        existing.setRole("PLATFORM");
-        when(userAuthManager.getOne(any())).thenReturn(existing);
+        existing.setAccount("admin01");
+        existing.setAccountType(3);
+        when(authUserManager.getOne(any())).thenReturn(existing);
 
         AdminCreateDTO dto = new AdminCreateDTO();
-        dto.setUsername("admin01");
+        dto.setAccount("admin01");
         dto.setPassword("pass1234");
 
         assertThrows(BizException.class, () -> service.adminCreate(dto));
-        verify(userAuthManager, never()).save(any(UserAuthPO.class));
+        verify(authUserManager, never()).save(any(AuthUserPO.class));
     }
 
     /**
-     * 验证 adminCreate 设置 role=PLATFORM 且密码 BCrypt 加密。
+     * 验证 adminCreate 设置 accountType=3 且密码 BCrypt 加密。
      */
     @Test
-    void adminCreate_sets_platform_role_and_encrypts_password() {
-        when(userAuthManager.getOne(any())).thenReturn(null);
+    void adminCreate_sets_platform_type_and_encrypts_password() {
+        when(authUserManager.getOne(any())).thenReturn(null);
 
         AdminCreateDTO dto = new AdminCreateDTO();
-        dto.setUsername("admin02");
+        dto.setAccount("admin02");
         dto.setPassword("secret123");
 
         service.adminCreate(dto);
 
-        verify(userAuthManager).save(any(UserAuthPO.class));
+        verify(authUserManager).save(any(AuthUserPO.class));
     }
 
     /**
@@ -196,13 +217,13 @@ class PlatformAuthServiceImplTest {
         dto.setPageNo(1);
         dto.setPageSize(10);
 
-        IPage<UserAuthPO> expected = new Page<>(1, 10);
-        when(userAuthManager.page(any(IPage.class), any())).thenReturn(expected);
+        IPage<AuthUserPO> expected = new Page<>(1, 10);
+        when(authUserManager.page(any(IPage.class), any())).thenReturn(expected);
 
-        IPage<UserAuthPO> result = service.adminPage(dto);
+        IPage<AdminVO> result = service.adminPage(dto);
 
-        assertEquals(expected, result);
-        verify(userAuthManager).page(any(IPage.class), any());
+        assertNotNull(result);
+        verify(authUserManager).page(any(IPage.class), any());
     }
 
     /**
@@ -210,12 +231,12 @@ class PlatformAuthServiceImplTest {
      */
     @Test
     void adminUpdate_updates_nickname_only() {
-        UserAuthPO po = new UserAuthPO();
+        AuthUserPO po = new AuthUserPO();
         po.setId(1L);
-        po.setUsername("admin01");
+        po.setAccount("admin01");
         po.setNickname("旧昵称");
-        po.setRole("PLATFORM");
-        when(userAuthManager.getById(1L)).thenReturn(po);
+        po.setAccountType(3);
+        when(authUserManager.getById(1L)).thenReturn(po);
 
         AdminUpdateDTO dto = new AdminUpdateDTO();
         dto.setNickname("新昵称");
@@ -224,7 +245,7 @@ class PlatformAuthServiceImplTest {
 
         assertEquals(true, ok);
         assertEquals("新昵称", po.getNickname());
-        verify(userAuthManager).updateById(po);
+        verify(authUserManager).updateById(po);
     }
 
     /**
@@ -232,7 +253,7 @@ class PlatformAuthServiceImplTest {
      */
     @Test
     void adminUpdate_throws_when_not_found() {
-        when(userAuthManager.getById(999L)).thenReturn(null);
+        when(authUserManager.getById(999L)).thenReturn(null);
 
         AdminUpdateDTO dto = new AdminUpdateDTO();
         dto.setNickname("新昵称");
@@ -245,16 +266,16 @@ class PlatformAuthServiceImplTest {
      */
     @Test
     void adminDelete_succeeds() {
-        UserAuthPO po = new UserAuthPO();
+        AuthUserPO po = new AuthUserPO();
         po.setId(2L);
-        po.setUsername("admin02");
-        po.setRole("PLATFORM");
-        when(userAuthManager.getById(2L)).thenReturn(po);
-        when(userAuthManager.removeById(2L)).thenReturn(true);
+        po.setAccount("admin02");
+        po.setAccountType(3);
+        when(authUserManager.getById(2L)).thenReturn(po);
+        when(authUserManager.removeById(2L)).thenReturn(true);
 
         service.adminDelete(1L, 2L);
 
-        verify(userAuthManager).removeById(2L);
+        verify(authUserManager).removeById(2L);
     }
 
     /**
@@ -263,7 +284,7 @@ class PlatformAuthServiceImplTest {
     @Test
     void adminDelete_throws_on_delete_self() {
         assertThrows(BizException.class, () -> service.adminDelete(1L, 1L));
-        verify(userAuthManager, never()).removeById(anyLong());
+        verify(authUserManager, never()).removeById(anyLong());
     }
 
     /**
@@ -271,7 +292,7 @@ class PlatformAuthServiceImplTest {
      */
     @Test
     void adminDelete_throws_when_not_found() {
-        when(userAuthManager.getById(999L)).thenReturn(null);
+        when(authUserManager.getById(999L)).thenReturn(null);
 
         assertThrows(BizException.class, () -> service.adminDelete(1L, 999L));
     }

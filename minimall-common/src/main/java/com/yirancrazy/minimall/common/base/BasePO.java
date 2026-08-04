@@ -7,10 +7,11 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableLogic;
+import com.baomidou.mybatisplus.annotation.Version;
 import lombok.Data;
 
 /**
-* 持久化实体基类，统一定义雪花算法主键、创建时间、更新时间和逻辑删除标记四个公共字段，并配置自动填充与逻辑删除注解。
+* 持久化实体基类，统一定义雪花算法主键、创建时间、更新时间、逻辑删除标记和乐观锁版本号五个公共字段，并配置自动填充与逻辑删除注解。
  */
 @Data
 public abstract class BasePO implements Serializable {
@@ -26,4 +27,7 @@ public abstract class BasePO implements Serializable {
     @TableLogic
     @TableField(fill = FieldFill.INSERT)
     private Integer isDeleted;
+
+    @Version
+    private Integer version;
 }

@@ -8,17 +8,17 @@ import lombok.NoArgsConstructor;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 重置密码数据传输对象，通过用户名+验证码设置新密码。
- * @Version: 1.0
- * @DateTime: 2026/08/02
+ * @Description: 重置密码数据传输对象，通过账号+验证码设置新密码。
+ * @Version: 2.0
+ * @DateTime: 2026/08/04
  */
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 public class ResetPasswordDTO {
 
-    @NotBlank(message = "username cannot be blank")
-    private String username;
+    @NotBlank(message = "account cannot be blank")
+    private String account;
 
     @NotBlank(message = "verifyCode cannot be blank")
     @Size(min = 6, max = 6, message = "verifyCode must be 6 digits")

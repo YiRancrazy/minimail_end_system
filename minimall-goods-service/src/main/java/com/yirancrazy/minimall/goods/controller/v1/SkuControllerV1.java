@@ -26,7 +26,7 @@ import com.yirancrazy.minimall.goods.vo.SkuVO;
  * @DateTime: 2026/08/02
  */
 @RestController
-@RequestMapping("/api/v1/skus")
+@RequestMapping("/api/v1/goods/skus")
 public class SkuControllerV1 {
 
     private final SkuService skuService;

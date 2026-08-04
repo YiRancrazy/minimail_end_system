@@ -12,6 +12,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */
+@Configuration
 public class JacksonConfig {
 
     @Bean

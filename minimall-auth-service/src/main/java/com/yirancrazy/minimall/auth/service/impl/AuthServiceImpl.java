@@ -1,5 +1,6 @@
 package com.yirancrazy.minimall.auth.service.impl;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import org.springframework.beans.factory.annotation.Value;
@@ -17,8 +18,12 @@ import com.yirancrazy.minimall.auth.dto.LoginDTO;
 import com.yirancrazy.minimall.auth.dto.RegisterDTO;
 import com.yirancrazy.minimall.auth.dto.ResetPasswordDTO;
 import com.yirancrazy.minimall.auth.dto.SendResetCodeDTO;
-import com.yirancrazy.minimall.auth.entity.UserAuthPO;
-import com.yirancrazy.minimall.auth.manager.UserAuthManager;
+import com.yirancrazy.minimall.auth.entity.AuthRolePO;
+import com.yirancrazy.minimall.auth.entity.AuthTokenBlacklistPO;
+import com.yirancrazy.minimall.auth.entity.AuthUserPO;
+import com.yirancrazy.minimall.auth.manager.AuthRoleManager;
+import com.yirancrazy.minimall.auth.manager.AuthTokenBlacklistManager;
+import com.yirancrazy.minimall.auth.manager.AuthUserManager;
 import com.yirancrazy.minimall.auth.service.AuthService;
 import com.yirancrazy.minimall.auth.util.JwtUtil;
 import com.yirancrazy.minimall.auth.vo.UserInfoVO;
@@ -28,30 +33,40 @@ import com.yirancrazy.minimall.common.exception.BizException;
 /**
  * @Author: yirancrazy@gmail.com
  * @Description: 业务服务实现，处理核心业务逻辑。
- * @Version: 1.0
- * @DateTime: 2026/7/31
+ * @Version: 2.0
+ * @DateTime: 2026/08/04
  **/
 @Slf4j
 @Service
 public class AuthServiceImpl implements AuthService {
+
+    private static final int BCRYPT_COST = 12;
+    private static final int ACCOUNT_TYPE_USER = 1;
+    private static final long DEFAULT_ROLE_ID_USER = 1L;
 
     private static final String REFRESH_KEY_PREFIX = "refresh:";
     private static final String BLACKLIST_KEY_PREFIX = "blacklist:jti:";
     private static final String RESET_CODE_KEY_PREFIX = "pwd:reset:code:";
     private static final long RESET_CODE_TTL_SECONDS = 600L;
 
-    private final UserAuthManager userAuthManager;
+    private final AuthUserManager authUserManager;
+    private final AuthRoleManager authRoleManager;
+    private final AuthTokenBlacklistManager tokenBlacklistManager;
     private final JwtUtil jwtUtil;
     private final StringRedisTemplate redisTemplate;
     private final long ttlSeconds;
     private final long refreshTtlSeconds;
 
-    public AuthServiceImpl(UserAuthManager userAuthManager,
+    public AuthServiceImpl(AuthUserManager authUserManager,
+                           AuthRoleManager authRoleManager,
+                           AuthTokenBlacklistManager tokenBlacklistManager,
                            JwtUtil jwtUtil,
                            StringRedisTemplate redisTemplate,
                            @Value("${minimall.jwt.ttl-seconds:900}") long ttlSeconds,
                            @Value("${minimall.jwt.refresh-ttl-seconds:604800}") long refreshTtlSeconds) {
-        this.userAuthManager = userAuthManager;
+        this.authUserManager = authUserManager;
+        this.authRoleManager = authRoleManager;
+        this.tokenBlacklistManager = tokenBlacklistManager;
         this.jwtUtil = jwtUtil;
         this.redisTemplate = redisTemplate;
         this.ttlSeconds = ttlSeconds;
@@ -65,21 +80,23 @@ public class AuthServiceImpl implements AuthService {
      */
     @Override
     public TokenVO register(RegisterDTO dto) {
-        UserAuthPO existing = userAuthManager.getOne(
-            Wrappers.lambdaQuery(UserAuthPO.class).eq(UserAuthPO::getUsername, dto.getUsername()));
+        AuthUserPO existing = authUserManager.getOne(
+            Wrappers.lambdaQuery(AuthUserPO.class).eq(AuthUserPO::getAccount, dto.getAccount()));
         if (existing != null) {
             throw new BizException(AuthCodeEnum.USER_EXISTS);
         }
         String salt = UUID.randomUUID().toString().replace("-", "");
-        String hash = BCrypt.hashpw(dto.getPassword() + salt, BCrypt.gensalt());
-        UserAuthPO po = new UserAuthPO();
-        po.setUsername(dto.getUsername());
+        String hash = BCrypt.hashpw(dto.getPassword() + salt, BCrypt.gensalt(BCRYPT_COST));
+        AuthUserPO po = new AuthUserPO();
+        po.setAccount(dto.getAccount());
         po.setPasswordHash(hash);
         po.setSalt(salt);
-        po.setRole("USER");
+        po.setAccountType(ACCOUNT_TYPE_USER);
+        po.setRoleId(DEFAULT_ROLE_ID_USER);
         po.setStatus(1);
-        userAuthManager.save(po);
-        return issueTokens(po.getId(), po.getUsername(), po.getRole());
+        authUserManager.save(po);
+        String roleCode = resolveRoleCode(po.getRoleId());
+        return issueTokens(po.getId(), po.getAccount(), roleCode, po.getRoleId());
     }
 
     /**
@@ -89,15 +106,17 @@ public class AuthServiceImpl implements AuthService {
      */
     @Override
     public TokenVO login(LoginDTO dto) {
-        UserAuthPO po = userAuthManager.getOne(
-            Wrappers.lambdaQuery(UserAuthPO.class).eq(UserAuthPO::getUsername, dto.getUsername()));
+        AuthUserPO po = authUserManager.getOne(
+            Wrappers.lambdaQuery(AuthUserPO.class).eq(AuthUserPO::getAccount, dto.getAccount()));
         if (po == null) {
             throw new BizException(AuthCodeEnum.USER_NOT_FOUND);
         }
         if (!BCrypt.checkpw(dto.getPassword() + po.getSalt(), po.getPasswordHash())) {
             throw new BizException(AuthCodeEnum.PWD_INVALID);
         }
-        return issueTokens(po.getId(), po.getUsername(), po.getRole());
+        updateLastLoginAt(po);
+        String roleCode = resolveRoleCode(po.getRoleId());
+        return issueTokens(po.getId(), po.getAccount(), roleCode, po.getRoleId());
     }
 
     /**
@@ -126,15 +145,15 @@ public class AuthServiceImpl implements AuthService {
         String[] parts = matchedKey.split(":");
         Long userId = Long.parseLong(parts[1]);
         String oldJti = parts[2];
-        redisTemplate.opsForValue().set(
-            BLACKLIST_KEY_PREFIX + oldJti, "1", ttlSeconds, TimeUnit.SECONDS);
+        revokeToken(oldJti, userId, "refresh_rotated");
 
-        UserAuthPO po = userAuthManager.getById(userId);
+        AuthUserPO po = authUserManager.getById(userId);
         if (po == null) {
             throw new BizException(AuthCodeEnum.USER_NOT_FOUND);
         }
         log.info("refresh token rotated, userId={}", userId);
-        return issueTokens(po.getId(), po.getUsername(), po.getRole());
+        String roleCode = resolveRoleCode(po.getRoleId());
+        return issueTokens(po.getId(), po.getAccount(), roleCode, po.getRoleId());
     }
 
     /**
@@ -148,8 +167,7 @@ public class AuthServiceImpl implements AuthService {
         if (keys != null) {
             redisTemplate.delete(keys);
         }
-        redisTemplate.opsForValue().set(
-            BLACKLIST_KEY_PREFIX + jti, "1", ttlSeconds, TimeUnit.SECONDS);
+        revokeToken(jti, userId, "sign_out");
         log.info("user signed out, userId={}", userId);
     }
 
@@ -169,8 +187,10 @@ public class AuthServiceImpl implements AuthService {
                 AuthCodeEnum.TOKEN_INVALID.getAlias(),
                 AuthCodeEnum.TOKEN_INVALID.getMessage());
         }
-        return new UserInfoVO(Long.parseLong(c.getSubject()), c.get("username", String.class),
-            c.get("role", String.class));
+        return new UserInfoVO(Long.parseLong(c.getSubject()),
+            c.get("account", String.class),
+            c.get("role", String.class),
+            c.get("roleId", Long.class));
     }
 
     /**
@@ -180,7 +200,7 @@ public class AuthServiceImpl implements AuthService {
      */
     @Override
     public void changePassword(Long userId, ChangePasswordDTO dto) {
-        UserAuthPO po = userAuthManager.getById(userId);
+        AuthUserPO po = authUserManager.getById(userId);
         if (po == null) {
             throw new BizException(AuthCodeEnum.USER_NOT_FOUND);
         }
@@ -198,17 +218,17 @@ public class AuthServiceImpl implements AuthService {
      */
     @Override
     public void sendResetCode(SendResetCodeDTO dto) {
-        UserAuthPO po = userAuthManager.getOne(
-            Wrappers.lambdaQuery(UserAuthPO.class).eq(UserAuthPO::getUsername, dto.getUsername()));
+        AuthUserPO po = authUserManager.getOne(
+            Wrappers.lambdaQuery(AuthUserPO.class).eq(AuthUserPO::getAccount, dto.getAccount()));
         if (po == null) {
             throw new BizException(AuthCodeEnum.USER_NOT_FOUND);
         }
         String code = String.format("%06d",
             java.util.concurrent.ThreadLocalRandom.current().nextInt(1_000_000));
         redisTemplate.opsForValue().set(
-            RESET_CODE_KEY_PREFIX + dto.getUsername(), code, RESET_CODE_TTL_SECONDS, TimeUnit.SECONDS);
+            RESET_CODE_KEY_PREFIX + dto.getAccount(), code, RESET_CODE_TTL_SECONDS, TimeUnit.SECONDS);
         // SMS channel not ready in first iteration; log code for integration debugging.
-        log.info("reset code generated, username={}, code={}", dto.getUsername(), code);
+        log.info("reset code generated, account={}", dto.getAccount());
     }
 
     /**
@@ -217,27 +237,32 @@ public class AuthServiceImpl implements AuthService {
      */
     @Override
     public void resetPassword(ResetPasswordDTO dto) {
-        UserAuthPO po = userAuthManager.getOne(
-            Wrappers.lambdaQuery(UserAuthPO.class).eq(UserAuthPO::getUsername, dto.getUsername()));
+        AuthUserPO po = authUserManager.getOne(
+            Wrappers.lambdaQuery(AuthUserPO.class).eq(AuthUserPO::getAccount, dto.getAccount()));
         if (po == null) {
             throw new BizException(AuthCodeEnum.USER_NOT_FOUND);
         }
-        String stored = redisTemplate.opsForValue().get(RESET_CODE_KEY_PREFIX + dto.getUsername());
+        String stored = redisTemplate.opsForValue().get(RESET_CODE_KEY_PREFIX + dto.getAccount());
         if (stored == null || !stored.equals(dto.getVerifyCode())) {
             throw new BizException(AuthCodeEnum.VERIFY_CODE_INVALID);
         }
         applyNewPassword(po, dto.getNewPassword());
-        redisTemplate.delete(RESET_CODE_KEY_PREFIX + dto.getUsername());
+        redisTemplate.delete(RESET_CODE_KEY_PREFIX + dto.getAccount());
         invalidateRefreshTokens(po.getId());
         log.info("password reset, userId={}", po.getId());
     }
 
-    private void applyNewPassword(UserAuthPO po, String newPassword) {
+    private void applyNewPassword(AuthUserPO po, String newPassword) {
         String salt = UUID.randomUUID().toString().replace("-", "");
-        String hash = BCrypt.hashpw(newPassword + salt, BCrypt.gensalt());
+        String hash = BCrypt.hashpw(newPassword + salt, BCrypt.gensalt(BCRYPT_COST));
         po.setPasswordHash(hash);
         po.setSalt(salt);
-        userAuthManager.updateById(po);
+        authUserManager.updateById(po);
+    }
+
+    private void updateLastLoginAt(AuthUserPO po) {
+        po.setLastLoginAt(LocalDateTime.now());
+        authUserManager.updateById(po);
     }
 
     private void invalidateRefreshTokens(Long userId) {
@@ -247,9 +272,31 @@ public class AuthServiceImpl implements AuthService {
         }
     }
 
-    private TokenVO issueTokens(Long userId, String username, String role) {
+    private void revokeToken(String jti, Long userId, String reason) {
+        // Persist to DB as source of truth
+        AuthTokenBlacklistPO bl = new AuthTokenBlacklistPO();
+        bl.setJti(jti);
+        bl.setUserId(userId);
+        bl.setExpiresAt(LocalDateTime.now().plusSeconds(ttlSeconds));
+        bl.setRevokedAt(LocalDateTime.now());
+        bl.setReason(reason);
+        tokenBlacklistManager.save(bl);
+        // Also write to Redis for Gateway fast lookup
+        redisTemplate.opsForValue().set(
+            BLACKLIST_KEY_PREFIX + jti, "1", ttlSeconds, TimeUnit.SECONDS);
+    }
+
+    private String resolveRoleCode(Long roleId) {
+        if (roleId == null) {
+            return "USER";
+        }
+        AuthRolePO role = authRoleManager.getById(roleId);
+        return role != null ? role.getRoleCode() : "USER";
+    }
+
+    private TokenVO issueTokens(Long userId, String account, String roleCode, Long roleId) {
         String jti = UUID.randomUUID().toString().replace("-", "");
-        String accessToken = jwtUtil.sign(userId, username, role, jti);
+        String accessToken = jwtUtil.sign(userId, account, roleCode, roleId, jti);
         String refreshToken = jwtUtil.generateRefreshToken();
         redisTemplate.opsForValue().set(
             REFRESH_KEY_PREFIX + userId + ":" + jti,

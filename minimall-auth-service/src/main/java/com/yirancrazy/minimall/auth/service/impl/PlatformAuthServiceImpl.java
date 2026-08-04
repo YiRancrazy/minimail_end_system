@@ -1,5 +1,6 @@
 package com.yirancrazy.minimall.auth.service.impl;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import org.springframework.beans.factory.annotation.Value;
@@ -16,38 +17,52 @@ import com.yirancrazy.minimall.auth.dto.AdminCreateDTO;
 import com.yirancrazy.minimall.auth.dto.AdminPageDTO;
 import com.yirancrazy.minimall.auth.dto.AdminUpdateDTO;
 import com.yirancrazy.minimall.auth.dto.LoginDTO;
-import com.yirancrazy.minimall.auth.entity.UserAuthPO;
-import com.yirancrazy.minimall.auth.manager.UserAuthManager;
+import com.yirancrazy.minimall.auth.entity.AuthRolePO;
+import com.yirancrazy.minimall.auth.entity.AuthTokenBlacklistPO;
+import com.yirancrazy.minimall.auth.entity.AuthUserPO;
+import com.yirancrazy.minimall.auth.manager.AuthRoleManager;
+import com.yirancrazy.minimall.auth.manager.AuthTokenBlacklistManager;
+import com.yirancrazy.minimall.auth.manager.AuthUserManager;
 import com.yirancrazy.minimall.auth.service.PlatformAuthService;
 import com.yirancrazy.minimall.auth.util.JwtUtil;
+import com.yirancrazy.minimall.auth.vo.AdminVO;
 import com.yirancrazy.minimall.common.exception.BizException;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 平台端认证服务实现，复用 t_user_auth 表与一致的密码、令牌、Redis 约定。
- * @Version: 1.0
- * @DateTime: 2026/08/02
+ * @Description: 平台端认证服务实现，复用 t_auth_user 表与一致的密码、令牌、Redis 约定。
+ * @Version: 2.0
+ * @DateTime: 2026/08/04
  **/
 @Slf4j
 @Service
 public class PlatformAuthServiceImpl implements PlatformAuthService {
 
-    private static final String ROLE_PLATFORM = "PLATFORM";
+    private static final int BCRYPT_COST = 12;
+    private static final int ACCOUNT_TYPE_PLATFORM = 3;
+    private static final long DEFAULT_ROLE_ID_PLATFORM = 3L;
+
     private static final String REFRESH_KEY_PREFIX = "refresh:";
     private static final String BLACKLIST_KEY_PREFIX = "blacklist:jti:";
 
-    private final UserAuthManager userAuthManager;
+    private final AuthUserManager authUserManager;
+    private final AuthRoleManager authRoleManager;
+    private final AuthTokenBlacklistManager tokenBlacklistManager;
     private final JwtUtil jwtUtil;
     private final StringRedisTemplate redisTemplate;
     private final long ttlSeconds;
     private final long refreshTtlSeconds;
 
-    public PlatformAuthServiceImpl(UserAuthManager userAuthManager,
+    public PlatformAuthServiceImpl(AuthUserManager authUserManager,
+                                   AuthRoleManager authRoleManager,
+                                   AuthTokenBlacklistManager tokenBlacklistManager,
                                    JwtUtil jwtUtil,
                                    StringRedisTemplate redisTemplate,
                                    @Value("${minimall.jwt.ttl-seconds:900}") long ttlSeconds,
                                    @Value("${minimall.jwt.refresh-ttl-seconds:604800}") long refreshTtlSeconds) {
-        this.userAuthManager = userAuthManager;
+        this.authUserManager = authUserManager;
+        this.authRoleManager = authRoleManager;
+        this.tokenBlacklistManager = tokenBlacklistManager;
         this.jwtUtil = jwtUtil;
         this.redisTemplate = redisTemplate;
         this.ttlSeconds = ttlSeconds;
@@ -55,18 +70,18 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
     }
 
     /**
-     * 平台管理员登录，仅允许 role=PLATFORM 且 status=1 的账号通过。
+     * 平台管理员登录，仅允许 accountType=PLATFORM 且 status=1 的账号通过。
      * @param dto 登录DTO
      * @return 令牌VO
      */
     @Override
     public TokenVO login(LoginDTO dto) {
-        UserAuthPO po = userAuthManager.getOne(
-            Wrappers.lambdaQuery(UserAuthPO.class).eq(UserAuthPO::getUsername, dto.getUsername()));
+        AuthUserPO po = authUserManager.getOne(
+            Wrappers.lambdaQuery(AuthUserPO.class).eq(AuthUserPO::getAccount, dto.getAccount()));
         if (po == null) {
             throw new BizException(AuthCodeEnum.USER_NOT_FOUND);
         }
-        if (!ROLE_PLATFORM.equals(po.getRole())) {
+        if (po.getAccountType() == null || po.getAccountType() != ACCOUNT_TYPE_PLATFORM) {
             throw new BizException(AuthCodeEnum.ACCOUNT_ROLE_MISMATCH);
         }
         if (po.getStatus() == null || po.getStatus() != 1) {
@@ -75,8 +90,10 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
         if (!BCrypt.checkpw(dto.getPassword() + po.getSalt(), po.getPasswordHash())) {
             throw new BizException(AuthCodeEnum.PWD_INVALID);
         }
-        log.info("platform admin login, accountId={}, username={}", po.getId(), po.getUsername());
-        return issueTokens(po.getId(), po.getUsername());
+        po.setLastLoginAt(LocalDateTime.now());
+        authUserManager.updateById(po);
+        log.info("platform admin login, accountId={}, account={}", po.getId(), po.getAccount());
+        return issueTokens(po.getId(), po.getAccount(), po.getRoleId());
     }
 
     /**
@@ -90,48 +107,54 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
         if (keys != null) {
             redisTemplate.delete(keys);
         }
-        redisTemplate.opsForValue().set(
-            BLACKLIST_KEY_PREFIX + jti, "1", ttlSeconds, TimeUnit.SECONDS);
+        revokeToken(jti, adminAccountId, "sign_out");
         log.info("platform admin signed out, accountId={}", adminAccountId);
     }
 
     /**
-     * 创建平台管理员，用户名不可重复，密码 BCrypt 加密存储。
+     * 创建平台管理员，账号不可重复，密码 BCrypt 加密存储。
      * @param dto 创建入参
      * @return 新管理员ID
-     * @throws BizException 用户名重复时
+     * @throws BizException 账号重复时
      */
     @Override
     public Long adminCreate(AdminCreateDTO dto) {
-        UserAuthPO existing = userAuthManager.getOne(
-            Wrappers.lambdaQuery(UserAuthPO.class).eq(UserAuthPO::getUsername, dto.getUsername()));
+        AuthUserPO existing = authUserManager.getOne(
+            Wrappers.lambdaQuery(AuthUserPO.class).eq(AuthUserPO::getAccount, dto.getAccount()));
         if (existing != null) {
             throw new BizException(AuthCodeEnum.ADMIN_USERNAME_EXISTS);
         }
         String salt = UUID.randomUUID().toString().replace("-", "").substring(0, 8);
-        UserAuthPO po = new UserAuthPO();
-        po.setUsername(dto.getUsername());
-        po.setPasswordHash(BCrypt.hashpw(dto.getPassword() + salt, BCrypt.gensalt()));
+        AuthUserPO po = new AuthUserPO();
+        po.setAccount(dto.getAccount());
+        po.setPasswordHash(BCrypt.hashpw(dto.getPassword() + salt, BCrypt.gensalt(BCRYPT_COST)));
         po.setSalt(salt);
-        po.setRole(ROLE_PLATFORM);
+        po.setAccountType(ACCOUNT_TYPE_PLATFORM);
+        po.setRoleId(DEFAULT_ROLE_ID_PLATFORM);
         po.setStatus(1);
         po.setNickname(dto.getNickname());
-        userAuthManager.save(po);
-        log.info("admin created, id={}, username={}", po.getId(), dto.getUsername());
+        authUserManager.save(po);
+        log.info("admin created, id={}, account={}", po.getId(), dto.getAccount());
         return po.getId();
     }
 
     /**
-     * 分页查询平台管理员，固定 role=PLATFORM，按 ID 降序返回。
+     * 分页查询平台管理员，固定 accountType=PLATFORM，按 ID 降序返回。
      * @param dto 分页入参
      * @return 管理员分页结果
      */
     @Override
-    public IPage<UserAuthPO> adminPage(AdminPageDTO dto) {
-        Page<UserAuthPO> page = new Page<>(dto.getPageNo(), dto.getPageSize());
-        return userAuthManager.page(page, Wrappers.lambdaQuery(UserAuthPO.class)
-            .eq(UserAuthPO::getRole, ROLE_PLATFORM)
-            .orderByDesc(UserAuthPO::getId));
+    public IPage<AdminVO> adminPage(AdminPageDTO dto) {
+        Page<AuthUserPO> page = new Page<>(dto.getPageNo(), dto.getPageSize());
+        IPage<AuthUserPO> poPage = authUserManager.page(page, Wrappers.lambdaQuery(AuthUserPO.class)
+            .eq(AuthUserPO::getAccountType, ACCOUNT_TYPE_PLATFORM)
+            .orderByDesc(AuthUserPO::getId));
+        return poPage.convert(po -> new AdminVO(
+            po.getId(),
+            po.getAccount(),
+            po.getNickname(),
+            po.getStatus(),
+            po.getCreateTime()));
     }
 
     /**
@@ -143,12 +166,12 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
      */
     @Override
     public boolean adminUpdate(Long id, AdminUpdateDTO dto) {
-        UserAuthPO po = userAuthManager.getById(id);
+        AuthUserPO po = authUserManager.getById(id);
         if (po == null) {
             throw new BizException(AuthCodeEnum.USER_NOT_FOUND);
         }
         po.setNickname(dto.getNickname());
-        boolean ok = userAuthManager.updateById(po);
+        boolean ok = authUserManager.updateById(po);
         log.info("admin updated, id={}", id);
         return ok;
     }
@@ -164,17 +187,38 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
         if (operatorId.equals(targetId)) {
             throw new BizException(AuthCodeEnum.CANNOT_DELETE_SELF);
         }
-        UserAuthPO po = userAuthManager.getById(targetId);
+        AuthUserPO po = authUserManager.getById(targetId);
         if (po == null) {
             throw new BizException(AuthCodeEnum.USER_NOT_FOUND);
         }
-        userAuthManager.removeById(targetId);
+        authUserManager.removeById(targetId);
         log.info("admin deleted, targetId={}, operatorId={}", targetId, operatorId);
     }
 
-    private TokenVO issueTokens(Long accountId, String username) {
+    private void revokeToken(String jti, Long userId, String reason) {
+        AuthTokenBlacklistPO bl = new AuthTokenBlacklistPO();
+        bl.setJti(jti);
+        bl.setUserId(userId);
+        bl.setExpiresAt(LocalDateTime.now().plusSeconds(ttlSeconds));
+        bl.setRevokedAt(LocalDateTime.now());
+        bl.setReason(reason);
+        tokenBlacklistManager.save(bl);
+        redisTemplate.opsForValue().set(
+            BLACKLIST_KEY_PREFIX + jti, "1", ttlSeconds, TimeUnit.SECONDS);
+    }
+
+    private String resolveRoleCode(Long roleId) {
+        if (roleId == null) {
+            return "PLATFORM";
+        }
+        AuthRolePO role = authRoleManager.getById(roleId);
+        return role != null ? role.getRoleCode() : "PLATFORM";
+    }
+
+    private TokenVO issueTokens(Long accountId, String account, Long roleId) {
+        String roleCode = resolveRoleCode(roleId);
         String jti = UUID.randomUUID().toString().replace("-", "");
-        String accessToken = jwtUtil.sign(accountId, username, ROLE_PLATFORM, jti);
+        String accessToken = jwtUtil.sign(accountId, account, roleCode, roleId, jti);
         String refreshToken = jwtUtil.generateRefreshToken();
         redisTemplate.opsForValue().set(
             REFRESH_KEY_PREFIX + accountId + ":" + jti,

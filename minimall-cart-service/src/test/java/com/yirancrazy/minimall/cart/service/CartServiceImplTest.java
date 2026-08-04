@@ -26,7 +26,6 @@ import com.yirancrazy.minimall.api.feign.UserFeignClient;
 import com.yirancrazy.minimall.cart.dto.CartItemAddDTO;
 import com.yirancrazy.minimall.cart.dto.CartItemListDTO;
 import com.yirancrazy.minimall.cart.dto.CartSelectAllDTO;
-import com.yirancrazy.minimall.cart.dto.CartSelectDTO;
 import com.yirancrazy.minimall.cart.dto.CartUpdateDTO;
 import com.yirancrazy.minimall.cart.entity.CartItemPO;
 import com.yirancrazy.minimall.cart.manager.CartItemManager;
@@ -177,63 +176,98 @@ public class CartServiceImplTest {
     }
 
     /**
-     * 验证 updateQuantity 在购物车项不存在时抛出 BizException。
+     * 验证 update 在购物车项不存在时抛出 BizException。
      */
     @Test
-    public void updateQuantity_throws_when_missing() {
+    public void update_throws_when_missing() {
         when(cartItemManager.getById(999L)).thenReturn(null);
         CartUpdateDTO dto = new CartUpdateDTO();
         dto.setQuantity(3);
-        assertThrows(BizException.class, () -> service.updateQuantity(999L, dto));
+        assertThrows(BizException.class, () -> service.update(999L, dto));
     }
 
     /**
-     * 验证 updateQuantity 成功时更新数量并返回 true。
+     * 验证 update 仅更新数量时更新 quantity 并返回 true。
      */
     @Test
-    public void updateQuantity_returns_true_on_success() {
+    public void update_quantity_only_returns_true_on_success() {
         CartItemPO existing = new CartItemPO();
         existing.setId(1L);
         existing.setQuantity(2);
+        existing.setSelected(0);
         when(cartItemManager.getById(1L)).thenReturn(existing);
         when(cartItemManager.updateById(any(CartItemPO.class))).thenReturn(true);
 
         CartUpdateDTO dto = new CartUpdateDTO();
         dto.setQuantity(5);
-        boolean ok = service.updateQuantity(1L, dto);
+        boolean ok = service.update(1L, dto);
 
         assertTrue(ok);
         assertEquals(5, existing.getQuantity());
+        assertEquals(0, existing.getSelected());
     }
 
     /**
-     * 验证 select 在购物车项不存在时抛出 BizException。
+     * 验证 update 仅更新勾选状态时更新 isSelected 并返回 true。
      */
     @Test
-    public void select_throws_when_missing() {
-        when(cartItemManager.getById(999L)).thenReturn(null);
-        CartSelectDTO dto = new CartSelectDTO();
-        dto.setSelected(1);
-        assertThrows(BizException.class, () -> service.select(999L, dto));
-    }
-
-    /**
-     * 验证 select 成功时更新勾选状态并返回 true。
-     */
-    @Test
-    public void select_returns_true_on_success() {
+    public void update_selected_only_returns_true_on_success() {
         CartItemPO existing = new CartItemPO();
         existing.setId(1L);
+        existing.setQuantity(3);
         existing.setSelected(0);
         when(cartItemManager.getById(1L)).thenReturn(existing);
         when(cartItemManager.updateById(any(CartItemPO.class))).thenReturn(true);
 
-        CartSelectDTO dto = new CartSelectDTO();
-        dto.setSelected(1);
-        boolean ok = service.select(1L, dto);
+        CartUpdateDTO dto = new CartUpdateDTO();
+        dto.setIsSelected(1);
+        boolean ok = service.update(1L, dto);
 
         assertTrue(ok);
         assertEquals(1, existing.getSelected());
+        assertEquals(3, existing.getQuantity());
+    }
+
+    /**
+     * 验证 update 同时更新数量和勾选状态。
+     */
+    @Test
+    public void update_both_fields_returns_true_on_success() {
+        CartItemPO existing = new CartItemPO();
+        existing.setId(1L);
+        existing.setQuantity(2);
+        existing.setSelected(0);
+        when(cartItemManager.getById(1L)).thenReturn(existing);
+        when(cartItemManager.updateById(any(CartItemPO.class))).thenReturn(true);
+
+        CartUpdateDTO dto = new CartUpdateDTO();
+        dto.setQuantity(5);
+        dto.setIsSelected(1);
+        boolean ok = service.update(1L, dto);
+
+        assertTrue(ok);
+        assertEquals(5, existing.getQuantity());
+        assertEquals(1, existing.getSelected());
+    }
+
+    /**
+     * 验证 update 在两个字段都为 null 时不修改任何字段但返回 true。
+     */
+    @Test
+    public void update_no_fields_changed_returns_true_on_success() {
+        CartItemPO existing = new CartItemPO();
+        existing.setId(1L);
+        existing.setQuantity(2);
+        existing.setSelected(0);
+        when(cartItemManager.getById(1L)).thenReturn(existing);
+        when(cartItemManager.updateById(any(CartItemPO.class))).thenReturn(true);
+
+        CartUpdateDTO dto = new CartUpdateDTO();
+        boolean ok = service.update(1L, dto);
+
+        assertTrue(ok);
+        assertEquals(2, existing.getQuantity());
+        assertEquals(0, existing.getSelected());
     }
 
     /**

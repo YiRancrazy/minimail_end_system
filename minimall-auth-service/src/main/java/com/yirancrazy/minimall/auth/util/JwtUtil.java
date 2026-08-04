@@ -10,12 +10,11 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 
-
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 工具类，提供静态工具方法。
- * @Version: 1.0
- * @DateTime: 2026/7/31
+ * @Description: JWT工具类，提供令牌签发与解析能力。
+ * @Version: 2.0
+ * @DateTime: 2026/08/04
  **/
 @Component
 public class JwtUtil {
@@ -32,17 +31,19 @@ public class JwtUtil {
     /**
      * 生成JWT令牌。
      * @param userId 用户ID
-     * @param username 用户名
-     * @param role 角色
+     * @param account 登录账号
+     * @param role 角色编码
+     * @param roleId 角色ID
      * @param jti 令牌唯一标识
      * @return JWT令牌
      */
-    public String sign(Long userId, String username, String role, String jti) {
+    public String sign(Long userId, String account, String role, Long roleId, String jti) {
         long now = System.currentTimeMillis();
         return Jwts.builder()
             .subject(String.valueOf(userId))
-            .claim("username", username)
+            .claim("account", account)
             .claim("role", role)
+            .claim("roleId", roleId)
             .claim("jti", jti)
             .issuedAt(new Date(now))
             .expiration(new Date(now + ttlMillis))

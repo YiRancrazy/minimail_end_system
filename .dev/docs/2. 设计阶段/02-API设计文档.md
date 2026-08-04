@@ -58,12 +58,12 @@
 |---|---|---|
 | A0 | 资源命名复数 + 名词化 | `/api/v1/orders`，禁止动词化（`/createOrder`） |
 | A1 | HTTP 语义化 | `GET` 安全幂等、`POST` 创建、`PUT` 全量替换、`PATCH` 部分更新、`DELETE` 删除 |
-| A2 | 错误统一遵循 RFC 7807 | `application/problem+json` |
+| A2 | 错误统一遵循 Result\<T\> | `application/json` |
 | A3 | 所有业务接口必须鉴权 | 不留「公开接口」特殊路径（除注册/登录） |
 | A4 | 写操作必须幂等 | `Idempotency-Key` 必填，TTL 24h |
 | A5 | 时间戳一律 ISO 8601 UTC | `2025-12-19T03:14:07.123Z` |
-| A6 | 金额一律以字符串返回，避免精度丢失 | `"pay_amount": "1234.56"` |
-| A7 | 分页基于 cursor 不可跳页 | cursor 即上一页最后一条的 `id` 或 `created_at` |
+| A6 | 金额一律以字符串返回，避免精度丢失 | `"payAmount": "1234.56"` |
+| A7 | 分页基于 cursor 不可跳页 | cursor 即上一页最后一条的 `id` 或 `createTime` |
 | A8 | ID 必须 BIGINT 雪花或业务号 | 禁止自增短 ID 暴露 |
 | A9 | 路径清晰区分角色 + 模块 | `/api/v1/user/...` `/api/v1/merchant/...` `/api/v1/platform/...` |
 | A10 | OpenAPI 3.0 规范 | 每个服务一个 OpenAPI YAML；网关聚合为统一文档 |
@@ -112,8 +112,8 @@ https://mall.example.com/api/v1/platform/...
 | 项 | 风格 | 示例 |
 |---|---|---|
 | 路径段 | kebab-case | `/api/v1/merchant-orders` |
-| 查询参数 | snake_case | `?merchant_id=&created_after=` |
-| 请求 / 响应字段 | snake_case | `pay_amount`、`receiver_name` |
+| 查询参数 | camelCase | `?merchantId=&createdAfter=` |
+| 请求 / 响应字段 | camelCase | `payAmount`、`receiverName` |
 | 错误类型 URL | kebab-case 域 | `/errors/order-not-found` |
 | 业务单号 | `<ENTITY>-<TS>-<RANDOM>` | `OD20251219-A1B2C3D4` |
 
@@ -136,8 +136,8 @@ GET    /api/v1/user/orders                    # 用户订单列表
 POST   /api/v1/user/orders                    # 创建订单
 GET    /api/v1/user/orders/{orderNo}         # 订单详情
 PATCH  /api/v1/user/orders/{orderNo}         # 局部更新（取消、改地址等）
-POST   /api/v1/user/orders/{orderNo}:pay      # 动作：对订单发起支付
-POST   /api/v1/user/orders/{orderNo}:cancel   # 动作：取消订单
+POST   /api/v1/user/orders/{orderNo}/pay      # 动作：对订单发起支付
+POST   /api/v1/user/orders/{orderNo}/cancel   # 动作：取消订单
 ```
 
 > Google API Design Guide 风格的「冒号动作」（`:pay`, `:cancel`）用于**对资源的非 CRUD 动词操作**，避免创建动名词资源。
@@ -167,7 +167,7 @@ POST   /api/v1/user/orders/{orderNo}:cancel   # 动作：取消订单
 | 场景 | 选择 | 例子 |
 |---|---|---|
 | 标准 CRUD | noun | `/goods/spus/{spuId}` |
-| 资源上动作（不改变 URL 资源语义） | `:action` | `/orders/{orderNo}:pay` |
+| 资源上动作（不改变 URL 资源语义） | `/action` | `/orders/{orderNo}/pay` |
 | 异步任务 | noun + `/tasks/{taskId}` | `/exports/{taskId}` |
 | 跨实体编排 | 不暴露 RPC → 编排为单端调用 | 由 `order-service` 内聚合 |
 
@@ -181,7 +181,7 @@ POST   /api/v1/user/orders/{orderNo}:cancel   # 动作：取消订单
 |---|---|---|
 | `Authorization` | 必填 | `Bearer <access_token>` |
 | `Content-Type` | POST/PUT/PATCH 必填 | `application/json` |
-| `Accept` | 建议 | `application/json, application/problem+json` |
+| `Accept` | 建议 | `application/json` |
 | `Accept-Language` | 可选 | 当前仅 `zh-CN` |
 | `X-Idempotency-Key` | 写必填 | UUID |
 | `X-Client-Ts` | 写必填 | ISO 8601 UTC |
@@ -192,9 +192,9 @@ POST   /api/v1/user/orders/{orderNo}:cancel   # 动作：取消订单
 ### 4.2 请求体（JSON）
 
 - 全部 UTF-8，缩进 0；
-- 字段 snake_case；
-- 时间字段：`"created_at": "2025-12-19T03:14:07.123Z"`；
-- 金额字段：字符串 `"pay_amount": "1234.56"`，前后端都用 `BigDecimal`；
+- 字段 camelCase（Java/Jackson 默认风格，与后端 POJO 字段名一致）；
+- 时间字段：`"createdAt": "2025-12-19T03:14:07.123Z"`；
+- 金额字段：字符串 `"payAmount": "1234.56"`，前后端都用 `BigDecimal`；
 - 枚举：`"status": "PAID"`（字符串 SCREAMING_SNAKE），便于前后端共享；
 - 集合：默认上限 100，超过需分页或异步导出；
 - 客户端时间戳必须 ±5 分钟，否则 400 `CLOCK_SKEW`。
@@ -211,10 +211,10 @@ X-Client-Ts: 2025-12-19T03:14:07.123Z
 Accept: application/json
 
 {
-  "cart_item_ids": [12345, 67890],
-  "address_id": 10086,
+  "cartItemIds": [12345, 67890],
+  "addressId": 10086,
   "remark": "请勿放门口",
-  "use_coupon_code": "NEW2025"
+  "useCouponCode": "NEW2025"
 }
 ```
 
@@ -233,17 +233,24 @@ Accept: application/json
 
 ### 5.2 响应体（JSON）
 
+统一使用 `Result<T>` 包装结构，字段 camelCase：
+
 ```json
 {
+  "code": "00000",
+  "message": null,
   "data": { /* 资源或资源集合 */ },
-  "meta": { /* 可选元信息：分页 cursor、trace_id 等 */ }
+  "traceId": "5f3a1b2c4d5e6f7g8h9i0j"
 }
 ```
 
-- 单资源：`{ "data": { ... } }`；
-- 集合：`{ "data": [...], "meta": { "next_cursor": "...", "has_more": true } }`；
-- `data` 必须始终存在（即使是空数组 `[]`），结构稳定便于前端解析；
-- 长任务响应：`{ "data": { "task_id": "...", "status_url": "..." } }`，前端轮询 `GET /tasks/{task_id}`。
+- `code`：5 位字符串，`"00000"` 表示成功，`"1xxxx"` 业务错误，`"2xxxx"` 系统错误；
+- `message`：面向用户的提示信息，成功时为 `null`；
+- `data`：业务数据，成功时始终存在（即使为空数组 `[]` 或 `null`），失败时为 `null`；
+- `traceId`：链路追踪 ID，便于排查问题；
+- 单资源：`{ "code": "00000", "data": { ... } }`；
+- 集合：`{ "code": "00000", "data": [...], "traceId": "..." }`；
+- 长任务响应：`{ "code": "00000", "data": { "taskId": "...", "statusUrl": "..." } }`，前端轮询 `GET /tasks/{taskId}`。
 
 ### 5.3 HTTP 状态码规范
 
@@ -312,27 +319,29 @@ Redis 存储 token，TTL = 业务超时时间 + 冗余时间。
 GET /api/v1/user/orders?limit=20&cursor=eyJpZCI6MTIzNDU2fQ==
 ```
 
-返回：
+返回（统一 `Result<T>` 包装，游标信息放入 `data` 内）：
 
 ```json
 {
-  "data": [ /* items */ ],
-  "meta": {
-    "next_cursor": "eyJpZCI6MTAyMzQ1Nn0=",
-    "has_more": true,
+  "code": "00000",
+  "data": {
+    "records": [ /* items */ ],
+    "nextCursor": "eyJpZCI6MTAyMzQ1Nn0=",
+    "hasMore": true,
     "limit": 20
-  }
+  },
+  "traceId": "5f3a1b2c4d5e6f7g8h9i0j"
 }
 ```
 
-- 游标字段为内部 cursor（ID 哈希或 `id:created_at`），不暴露业务信息；
+- 游标字段为内部 cursor（ID 哈希或 `id:createTime`），不暴露业务信息；
 - `limit` 上限 100，默认 20；
-- 没有下一页时 `next_cursor: null`，`has_more: false`。
+- 没有下一页时 `nextCursor: null`，`hasMore: false`。
 
 ### 7.2 排序
 
 ```http
-GET /api/v1/user/orders?sort=-created_at,id
+GET /api/v1/user/orders?sort=-createTime,id
 ```
 
 - `+` 升序 / `-` 降序；多字段逗号分隔；
@@ -352,7 +361,7 @@ GET /api/v1/user/orders?status=PAID,SHIPPED&created_after=2025-12-01T00:00:00Z
 ### 7.4 字段过滤
 
 ```http
-GET /api/v1/user/orders?fields=id,order_no,pay_amount,status
+GET /api/v1/user/orders?fields=id,orderNo,payAmount,status
 ```
 
 - 减少不必要字段返回；
@@ -368,25 +377,18 @@ GET /api/v1/user/orders/_count?status=PAID
 
 ---
 
-## 8. 错误规范（RFC 7807）
+## 8. 错误规范（Result\<T\> 统一返回）
 
 ### 8.1 响应 Content-Type
 
-错误响应必须为 `application/problem+json`，结构遵循 RFC 7807 `Problem Details for HTTP APIs`：
+错误响应统一使用 `application/json`，结构遵循 `Result<T>` 统一返回体：
 
 ```json
 {
-  "type": "https://mall.example.com/errors/order-not-found",
-  "title": "Order Not Found",
-  "status": 404,
-  "detail": "订单 OD20251219-A1B2C3D4 不存在或不属于当前用户",
-  "instance": "/api/v1/user/orders/OD20251219-A1B2C3D4",
   "code": "24001",
-  "errors": [
-    { "field": "order_no", "message": "订单号格式错误" }
-  ],
-  "trace_id": "5f3a1b2c4d5e6f7g8h9i0j",
-  "docs": "https://mall.example.com/docs/errors#RES_404"
+  "message": "订单 OD20251219-A1B2C3D4 不存在或不属于当前用户",
+  "data": null,
+  "traceId": "5f3a1b2c4d5e6f7g8h9i0j"
 }
 ```
 
@@ -394,15 +396,10 @@ GET /api/v1/user/orders/_count?status=PAID
 
 | 字段 | 含义 |
 |---|---|
-| `type` | 错误分类 URI，定位文档 |
-| `title` | 人类可读短标题 |
-| `status` | HTTP 状态（数字） |
-| `detail` | 本次请求的具体原因 |
-| `instance` | 当前请求 URI |
 | `code` | 5 位字符串错误码（阿里规约），`"00000"` 成功、`"1xxxx"` 业务错误、`"2xxxx"` 系统错误 |
-| `errors` | 字段级错误（用于 400/422） |
-| `trace_id` | 排查用 trace id |
-| `docs` | 错误文档链接 |
+| `message` | 面向用户的错误提示信息 |
+| `data` | 错误时为 `null` |
+| `traceId` | 排查用 trace id |
 
 ### 8.2 错误码分类
 
@@ -485,7 +482,7 @@ public interface StockInternalClient {
 | POST | `/auth/register` | USER-AUTH-0002 | 注册；需要图形验证码 |
 | POST | `/auth/login` | USER-AUTH-0001 | 登录；需图验/滑块；返回 access/refresh |
 | POST | `/auth/logout` | USER-AUTH-0003 | 注销当前 token |
-| POST | `/auth/password/change` | USER-AUTH-0004 | 改密（旧密 + 新密） |
+| PUT | `/auth/password` | USER-AUTH-0004 | 改密（旧密 + 新密） |
 | POST | `/auth/password/reset/request` | USER-AUTH-0005 | 短信下行验证码 |
 | POST | `/auth/password/reset/confirm` | USER-AUTH-0005 | 提交验证码 + 新密 |
 | POST | `/auth/token/refresh` | USER-AUTH-0007 | 用 refresh 换 access |
@@ -494,7 +491,7 @@ public interface StockInternalClient {
 请求体示例（登录）：
 
 ```json
-{ "account": "13812345678", "password": "P@ssw0rd!", "captcha_token": "..." }
+{ "account": "13812345678", "password": "P@ssw0rd!", "captchaToken": "..." }
 ```
 
 响应：
@@ -502,12 +499,10 @@ public interface StockInternalClient {
 ```json
 {
   "data": {
-    "user_id": 10086,
-    "nickname": "Yiran",
     "access_token": "eyJhbGciOi...",
     "refresh_token": "rft_3X9...",
     "expires_in": 900,
-    "scope": ["USER-AUTH-0001", "USER-ORDER-0001", "..."]
+    "token_type": "Bearer"
   }
 }
 ```
@@ -524,16 +519,18 @@ public interface StockInternalClient {
 
 ```json
 {
+  "code": "00000",
   "data": {
-    "spu_id": 20001,
+    "spuId": 20001,
     "title": "...",
-    "merchant": { "merchant_id": 5, "name": "..." },
+    "merchant": { "merchantId": 5, "name": "..." },
     "skus": [
-      { "sku_id": 30001, "spec": { "颜色": "红", "尺码": "XL" }, "price": "199.00", "image": "..." }
+      { "skuId": 30001, "spec": { "颜色": "红", "尺码": "XL" }, "price": "199.00", "image": "..." }
     ],
-    "detail_html": "...",
-    "is_on_sale": true
-  }
+    "detailHtml": "...",
+    "isOnSale": true
+  },
+  "traceId": "5f3a1b2c4d5e6f7g8h9i0j"
 }
 ```
 
@@ -545,10 +542,10 @@ public interface StockInternalClient {
 | DELETE | `/cart/items/{itemId}` | USER-CART-0002 |
 | GET | `/cart/items` | USER-CART-0003 |
 | PATCH | `/cart/items/{itemId}` | USER-CART-0004 / -0005 |
-| POST | `/cart/items:select-all` | USER-CART-0006 |
-| DELETE | `/cart/items:clear` | USER-CART-0007 |
-| POST | `/cart/items/{itemId}:favorite` | USER-CART-0008 |
-| POST | `/cart:checkout` | USER-CART-0009 |
+| PUT | `/cart/select-all` | USER-CART-0006 |
+| DELETE | `/cart/items/clear` | USER-CART-0007 |
+| POST | `/cart/items/{itemId}/favorite` | USER-CART-0008 |
+| POST | `/orders/checkout` | USER-CART-0009 |
 
 ### 11.4 订单 (USER-ORDER-*)
 
@@ -558,9 +555,9 @@ public interface StockInternalClient {
 | GET | `/orders` | USER-ORDER-0004 |
 | GET | `/orders/{orderNo}` | USER-ORDER-0005 |
 | DELETE | `/orders/{orderNo}` | USER-ORDER-0003 |
-| POST | `/orders/{orderNo}:cancel` | USER-ORDER-0002 |
-| POST | `/orders/{orderNo}:pay` | USER-ORDER-0006 |
-| POST | `/orders/{orderNo}:confirm` | USER-ORDER-0007 |
+| POST | `/orders/{orderNo}/cancel` | USER-ORDER-0002 |
+| POST | `/orders/{orderNo}/pay` | USER-ORDER-0006 |
+| POST | `/orders/{orderNo}/confirm` | USER-ORDER-0007 |
 | POST | `/orders/{orderNo}/refunds` | USER-ORDER-0008 |
 | GET | `/orders/{orderNo}/logistics` | USER-ORDER-0009 |
 
@@ -571,17 +568,17 @@ public interface StockInternalClient {
 | 方法 | 路径 | 权限码 |
 |---|---|---|
 | POST | `/orders/{orderNo}/payment` | USER-PAY-0001 / -0002 / -0004 |
-| GET | `/orders/{orderNo}/payment:status` | USER-PAY-0003 |
+| GET | `/orders/{orderNo}/payment/status` | USER-PAY-0003 |
 
 ### 11.6 消息 (USER-MSG-*)
 
 | 方法 | 路径 | 权限码 |
 |---|---|---|
-| GET | `/messages` | USER-MSG-0006 |
-| GET | `/messages/_count` | USER-MSG-0007 |
-| POST | `/messages/{id}/_read` | USER-MSG-0008 |
-| POST | `/messages:_read-all` | USER-MSG-0009 |
-| DELETE | `/messages/{id}` | USER-MSG-0010 |
+| GET | `/notify/messages` | USER-MSG-0006 |
+| GET | `/notify/messages/_count` | USER-MSG-0007 |
+| POST | `/notify/messages/{id}/_read` | USER-MSG-0008 |
+| POST | `/notify/messages/_read-all` | USER-MSG-0009 |
+| DELETE | `/notify/messages/{id}` | USER-MSG-0010 |
 
 推送通道：WebSocket `/api/v1/ws`，连接后由 `notify-service` 推送「新消息通知」事件，前端再主动调用 `/messages/_count` 或拉 `?is_read=false` 列表。
 
@@ -606,7 +603,7 @@ public interface StockInternalClient {
 | POST | `/auth/register` | 同 USER-AUTH-0002 流程，差别在角色标记 |
 | POST | `/auth/login` | MERCHANT-AUTH-0001 |
 | POST | `/auth/logout` | MERCHANT-AUTH-0002 |
-| POST | `/auth/password/change` | MERCHANT-AUTH-0003 |
+| PUT | `/auth/password` | MERCHANT-AUTH-0003 |
 
 ### 12.2 商家与资质
 
@@ -622,8 +619,8 @@ public interface StockInternalClient {
 |---|---|---|
 | POST | `/goods/spus` | MERCHANT-GOODS-0001 |
 | DELETE | `/goods/spus/{spuId}` | MERCHANT-GOODS-0002 |
-| POST | `/goods/spus/{spuId}:on-shelf` | MERCHANT-GOODS-0003 |
-| POST | `/goods/spus/{spuId}:off-shelf` | MERCHANT-GOODS-0004 |
+| POST | `/goods/spus/{spuId}/on-shelf` | MERCHANT-GOODS-0003 |
+| POST | `/goods/spus/{spuId}/off-shelf` | MERCHANT-GOODS-0004 |
 | PATCH | `/goods/spus/{spuId}` | MERCHANT-GOODS-0005 |
 | GET | `/goods/spus` | MERCHANT-GOODS-0006 |
 | GET | `/goods/spus/{spuId}/audit-records` | — 复用 PLATFORM-GOODS-0004 但限定自家 |
@@ -634,29 +631,29 @@ public interface StockInternalClient {
 |---|---|---|
 | GET | `/orders` | MERCHANT-ORDER-0001 |
 | GET | `/orders/{orderNo}` | MERCHANT-ORDER-0002 |
-| POST | `/orders/{orderNo}:ship` | MERCHANT-ORDER-0003（传运单号 + 物流公司） |
-| POST | `/orders/{orderNo}:cancel` | MERCHANT-ORDER-0004 |
-| POST | `/refunds/{refundNo}:approve` / `:reject` | MERCHANT-ORDER-0005 |
-| POST | `/orders:export` | MERCHANT-ORDER-0006（异步导出） |
+| POST | `/orders/{orderNo}/ship` | MERCHANT-ORDER-0003（传运单号 + 物流公司） |
+| POST | `/orders/{orderNo}/cancel` | MERCHANT-ORDER-0004 |
+| POST | `/refunds/{refundNo}/approve` / `/reject` | MERCHANT-ORDER-0005 |
+| POST | `/orders/export` | MERCHANT-ORDER-0006（异步导出） |
 | GET | `/orders/_count?status=...` | MERCHANT-ORDER-0007（待办红点） |
 
 ### 12.5 库存 (MERCHANT-STOCK-*)
 
 | 方法 | 路径 | 权限码 |
 |---|---|---|
-| POST | `/stock/skus/{skuId}:initialize` | MERCHANT-STOCK-0001 |
-| POST | `/stock/skus/{skuId}:adjust` | MERCHANT-STOCK-0002 |
+| POST | `/stock/skus/{skuId}/initialize` | MERCHANT-STOCK-0001 |
+| POST | `/stock/skus/{skuId}/adjust` | MERCHANT-STOCK-0002 |
 | PUT | `/stock/skus/{skuId}/threshold` | MERCHANT-STOCK-0003 |
 | GET | `/stock/skus/{skuId}` | MERCHANT-STOCK-0004 |
 | GET | `/stock/journals` | MERCHANT-STOCK-0005 |
-| POST | `/stock/journals:export` | MERCHANT-STOCK-0006 |
+| POST | `/stock/journals/export` | MERCHANT-STOCK-0006 |
 
 ### 12.6 支付 (MERCHANT-PAY-*)
 
 | 方法 | 路径 | 权限码 |
 |---|---|---|
 | GET | `/pay/journals` | MERCHANT-PAY-0001 收款流水 |
-| POST | `/refunds/{refundNo}:execute` | MERCHANT-PAY-0002 |
+| POST | `/refunds/{refundNo}/execute` | MERCHANT-PAY-0002 |
 | POST | `/withdrawals` | MERCHANT-PAY-0003 |
 | GET | `/pay/summary` | MERCHANT-PAY-0004 |
 
@@ -664,9 +661,9 @@ public interface StockInternalClient {
 
 | 方法 | 路径 | 权限码 |
 |---|---|---|
-| GET | `/messages` | MERCHANT-MSG-0005 |
-| GET | `/messages/_count` | 复用 |
-| POST | `/messages/{id}/_read` | MERCHANT-MSG-0006 |
+| GET | `/notify/messages` | MERCHANT-MSG-0005 |
+| GET | `/notify/messages/_count` | 复用 |
+| POST | `/notify/messages/{id}/_read` | MERCHANT-MSG-0006 |
 | WS | `/api/v1/ws?role=MERCHANT` | 推送 |
 
 ---
@@ -684,15 +681,15 @@ public interface StockInternalClient {
 | GET / POST | `/roles` | PLATFORM-AUTH-0003 角色 CRUD |
 | POST | `/roles/{roleId}/permissions` | 权限分配 |
 | GET / POST | `/admins` | 平台管理员 |
-| POST | `/merchants/{merchantId}/qualifications:audit` | PLATFORM-AUTH-0004（商家资质审核：body `decision ∈ {APPROVE, REJECT}`，对应 `t_merch_audit_log`） |
+| POST | `/merchants/{merchantId}/qualifications/audit` | PLATFORM-AUTH-0004（商家资质审核：body `decision ∈ {APPROVE, REJECT}`，对应 `t_merch_audit_log`） |
 
 ### 13.2 商品审核 (PLATFORM-GOODS-*)
 
 | 方法 | 路径 | 权限码 |
 |---|---|---|
 | GET | `/goods/spus/pending` | PLATFORM-GOODS-0001 |
-| POST | `/goods/spus/{spuId}:approve` | PLATFORM-GOODS-0002 |
-| POST | `/goods/spus/{spuId}:reject` | PLATFORM-GOODS-0003（必传 reason） |
+| POST | `/goods/spus/{spuId}/approve` | PLATFORM-GOODS-0002 |
+| POST | `/goods/spus/{spuId}/reject` | PLATFORM-GOODS-0003（必传 reason） |
 | GET | `/goods/spus/{spuId}/audit-records` | PLATFORM-GOODS-0004 |
 
 ### 13.3 订单 / 退款仲裁 (PLATFORM-ORDER-*)
@@ -701,20 +698,20 @@ public interface StockInternalClient {
 |---|---|---|
 | GET | `/orders` | PLATFORM-ORDER-0001 |
 | GET | `/orders/{orderNo}` | PLATFORM-ORDER-0002 |
-| POST | `/disputes/{caseNo}:arbitrate` | PLATFORM-ORDER-0003 |
-| POST | `/orders:export` | PLATFORM-ORDER-0004 |
+| POST | `/disputes/{caseNo}/arbitrate` | PLATFORM-ORDER-0003 |
+| POST | `/orders/export` | PLATFORM-ORDER-0004 |
 | GET | `/orders/summary` | PLATFORM-ORDER-0005（财务对账） |
-| POST | `/orders/{orderNo}:force-close` | PLATFORM-ORDER-0006 |
+| POST | `/orders/{orderNo}/force-close` | PLATFORM-ORDER-0006 |
 
 ### 13.4 支付 / 对账 (PLATFORM-PAY-*)
 
 | 方法 | 路径 | 权限码 |
 |---|---|---|
 | GET | `/pay/transactions` | PLATFORM-PAY-0001 |
-| POST | `/pay/reconciliation:export` | PLATFORM-PAY-0002 |
+| POST | `/pay/reconciliation/export` | PLATFORM-PAY-0002 |
 | GET | `/pay/statements` | PLATFORM-PAY-0003 |
-| POST | `/withdrawals/{withdrawNo}:approve` | PLATFORM-PAY-0004 |
-| POST | `/orders/{orderNo}/payment:freeze` | PLATFORM-PAY-0005 |
+| POST | `/withdrawals/{withdrawNo}/approve` | PLATFORM-PAY-0004 |
+| POST | `/orders/{orderNo}/payment/freeze` | PLATFORM-PAY-0005 |
 
 ### 13.5 库存治理 (PLATFORM-STOCK-*)
 
@@ -722,9 +719,9 @@ public interface StockInternalClient {
 |---|---|---|
 | GET | `/stock/summary` | PLATFORM-STOCK-0001 |
 | POST | `/stock/transfers` | PLATFORM-STOCK-0002 |
-| POST | `/stock/take-stock:start` | PLATFORM-STOCK-0003 |
+| POST | `/stock/take-stock/start` | PLATFORM-STOCK-0003 |
 | GET | `/stock/anomalies` | PLATFORM-STOCK-0004 |
-| POST | `/stock/warnings:broadcast` | PLATFORM-STOCK-0005 |
+| POST | `/stock/warnings/broadcast` | PLATFORM-STOCK-0005 |
 
 ### 13.6 消息 / 公告 (PLATFORM-MSG-*)
 
@@ -733,7 +730,7 @@ public interface StockInternalClient {
 | GET | `/system/alerts` | PLATFORM-MSG-0001 |
 | GET | `/complaints` | PLATFORM-MSG-0002 |
 | POST | `/announcements` | 公告发布 |
-| GET | `/messages` | PLATFORM-MSG-0004 |
+| GET | `/notify/messages` | PLATFORM-MSG-0004 |
 
 ---
 

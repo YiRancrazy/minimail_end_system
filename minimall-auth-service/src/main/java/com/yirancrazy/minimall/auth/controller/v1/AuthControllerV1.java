@@ -61,7 +61,7 @@ public class AuthControllerV1 {
      * @param dto 刷新令牌DTO
      * @return 新的令牌VO
      */
-    @PostMapping("/refresh-token")
+    @PostMapping("/token/refresh")
     public Result<TokenVO> refreshToken(@Valid @RequestBody RefreshTokenDTO dto) {
         return Result.success(authService.refreshToken(dto.getRefreshToken()));
     }
@@ -109,7 +109,7 @@ public class AuthControllerV1 {
      * @param dto 发送验证码DTO
      * @return 无返回值
      */
-    @PostMapping("/send-reset-code")
+    @PostMapping("/password/reset/request")
     public Result<Void> sendResetCode(@Valid @RequestBody SendResetCodeDTO dto) {
         authService.sendResetCode(dto);
         return Result.success();
@@ -120,7 +120,7 @@ public class AuthControllerV1 {
      * @param dto 重置密码DTO
      * @return 无返回值
      */
-    @PostMapping("/reset-password")
+    @PostMapping("/password/reset/confirm")
     public Result<Void> resetPassword(@Valid @RequestBody ResetPasswordDTO dto) {
         authService.resetPassword(dto);
         return Result.success();

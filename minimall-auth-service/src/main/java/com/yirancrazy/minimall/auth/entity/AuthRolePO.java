@@ -7,18 +7,19 @@ import com.yirancrazy.minimall.common.base.BasePO;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: UserAuth持久化对象，映射userauth表
- * @Version: 1.1
- * @DateTime: 2026/08/03
+ * @Description: AuthRole持久化对象，映射t_auth_role表
+ * @Version: 1.0
+ * @DateTime: 2026/08/04
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
-@TableName("t_user_auth")
-public class UserAuthPO extends BasePO {
-    private String username;
-    private String passwordHash;
-    private String salt;
-    private String role;
+@TableName("t_auth_role")
+public class AuthRolePO extends BasePO {
+    private String roleCode;
+
+    private String roleName;
+
+    private String description;
+
     private Integer status;
-    private String nickname;
 }

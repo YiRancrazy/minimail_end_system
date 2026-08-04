@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS t_goods_audit_record (
   create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
   update_time DATETIME DEFAULT CURRENT_TIMESTAMP,
   is_deleted TINYINT DEFAULT 0,
+  version INT NOT NULL DEFAULT 0,
   PRIMARY KEY (id),
   KEY idx_goods_audit_spu (spu_id, audit_at)
 );

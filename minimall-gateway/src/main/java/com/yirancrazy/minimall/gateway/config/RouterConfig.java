@@ -8,9 +8,10 @@ import org.springframework.context.annotation.Configuration;
 /**
  * @Author: yirancrazy@gmail.com
  * @Description: Router配置类，配置Router相关 Bean
- * @Version: 1.0
- * @DateTime: 2026/07/31
+ * @Version: 1.1
+ * @DateTime: 2026/08/04
  */
+@Configuration
 public class RouterConfig {
 
     @Bean

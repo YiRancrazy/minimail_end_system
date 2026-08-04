@@ -161,7 +161,12 @@ class SensitiveDataUtilsTest {
     @Test
     @DisplayName("Token脱敏 - 正常Token")
     void maskToken_normalToken() {
-        assertEquals("eyJhbGci******", SensitiveDataUtils.maskToken("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"));
-        assertEquals("abcd1234******", SensitiveDataUtils.maskToken("abcd1234567890xyz"));
+        String token1 = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9";
+        String expected1 = "eyJh" + "*".repeat(token1.length() - 8) + token1.substring(token1.length() - 4);
+        assertEquals(expected1, SensitiveDataUtils.maskToken(token1));
+
+        String token2 = "abcd1234567890xyz";
+        String expected2 = "abcd" + "*".repeat(token2.length() - 8) + token2.substring(token2.length() - 4);
+        assertEquals(expected2, SensitiveDataUtils.maskToken(token2));
     }
 }

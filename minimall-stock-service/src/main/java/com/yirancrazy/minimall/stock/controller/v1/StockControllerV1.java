@@ -38,7 +38,7 @@ import com.yirancrazy.minimall.stock.vo.StockStatisticsVO;
  * @DateTime: 2026/07/31
  */
 @RestController
-@RequestMapping("/v1/stock")
+@RequestMapping("/api/v1/stock")
 public class StockControllerV1 {
 
     private final StockService stockService;

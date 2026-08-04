@@ -28,8 +28,11 @@ import com.yirancrazy.minimall.auth.dto.LoginDTO;
 import com.yirancrazy.minimall.auth.dto.RegisterDTO;
 import com.yirancrazy.minimall.auth.dto.ResetPasswordDTO;
 import com.yirancrazy.minimall.auth.dto.SendResetCodeDTO;
-import com.yirancrazy.minimall.auth.entity.UserAuthPO;
-import com.yirancrazy.minimall.auth.manager.UserAuthManager;
+import com.yirancrazy.minimall.auth.entity.AuthRolePO;
+import com.yirancrazy.minimall.auth.entity.AuthUserPO;
+import com.yirancrazy.minimall.auth.manager.AuthRoleManager;
+import com.yirancrazy.minimall.auth.manager.AuthTokenBlacklistManager;
+import com.yirancrazy.minimall.auth.manager.AuthUserManager;
 import com.yirancrazy.minimall.auth.util.JwtUtil;
 import com.yirancrazy.minimall.auth.vo.UserInfoVO;
 import com.yirancrazy.minimall.common.exception.BizException;
@@ -38,14 +41,16 @@ import com.yirancrazy.minimall.common.exception.BizException;
 /**
  * @Author: yirancrazy@gmail.com
  * @Description: AuthServiceImpl 的单元测试类。
- * @Version: 1.0
- * @DateTime: 2026/7/31
+ * @Version: 2.0
+ * @DateTime: 2026/08/04
  **/
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class AuthServiceImplTest {
 
-    @Mock private UserAuthManager userAuthManager;
+    @Mock private AuthUserManager authUserManager;
+    @Mock private AuthRoleManager authRoleManager;
+    @Mock private AuthTokenBlacklistManager tokenBlacklistManager;
     @Mock private JwtUtil jwtUtil;
     @Mock private StringRedisTemplate redisTemplate;
     @Mock private ValueOperations<String, String> valueOperations;
@@ -55,18 +60,30 @@ class AuthServiceImplTest {
     @BeforeEach
     void setUp() {
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
-        authService = new AuthServiceImpl(userAuthManager, jwtUtil, redisTemplate, 900L, 604800L);
+        authService = new AuthServiceImpl(
+            authUserManager, authRoleManager, tokenBlacklistManager,
+            jwtUtil, redisTemplate, 900L, 604800L);
+    }
+
+    private AuthRolePO stubUserRole() {
+        AuthRolePO role = new AuthRolePO();
+        role.setId(1L);
+        role.setRoleCode("USER");
+        role.setRoleName("普通用户");
+        when(authRoleManager.getById(1L)).thenReturn(role);
+        return role;
     }
 
     @Test
     void register_success() {
-        when(userAuthManager.getOne(any())).thenReturn(null);
-        when(userAuthManager.save(any(UserAuthPO.class))).thenAnswer(invocation -> {
-            UserAuthPO po = invocation.getArgument(0);
+        stubUserRole();
+        when(authUserManager.getOne(any())).thenReturn(null);
+        when(authUserManager.save(any(AuthUserPO.class))).thenAnswer(invocation -> {
+            AuthUserPO po = invocation.getArgument(0);
             po.setId(42L);
             return true;
         });
-        when(jwtUtil.sign(anyLong(), anyString(), anyString(), anyString())).thenReturn("access-token");
+        when(jwtUtil.sign(anyLong(), anyString(), anyString(), anyLong(), anyString())).thenReturn("access-token");
         when(jwtUtil.generateRefreshToken()).thenReturn("refresh-token");
 
         TokenVO vo = authService.register(new RegisterDTO("testuser", "pass123"));
@@ -77,13 +94,13 @@ class AuthServiceImplTest {
 
     @Test
     void register_userExists_throws() {
-        when(userAuthManager.getOne(any())).thenReturn(new UserAuthPO());
+        when(authUserManager.getOne(any())).thenReturn(new AuthUserPO());
         assertThrows(BizException.class, () -> authService.register(new RegisterDTO("exists", "pass")));
     }
 
     @Test
     void login_userNotFound_throws() {
-        when(userAuthManager.getOne(any())).thenReturn(null);
+        when(authUserManager.getOne(any())).thenReturn(null);
         assertThrows(BizException.class, () -> authService.login(new LoginDTO("nobody", "pass")));
     }
 
@@ -96,32 +113,34 @@ class AuthServiceImplTest {
     @Test
     void signOut_deletesRefreshAndBlacklistsJti() {
         when(redisTemplate.keys("refresh:1:*")).thenReturn(Set.of("refresh:1:abc"));
+        when(tokenBlacklistManager.save(any())).thenReturn(true);
         authService.signOut(1L, "abc");
         verify(redisTemplate).delete(Set.of("refresh:1:abc"));
         verify(valueOperations).set(eq("blacklist:jti:abc"), eq("1"), eq(900L), any());
+        verify(tokenBlacklistManager).save(any());
     }
 
     @Test
     void changePassword_success_updatesAndInvalidatesRefresh() {
         String salt = "testsalt";
         String hash = BCrypt.hashpw("oldpass" + salt, BCrypt.gensalt());
-        UserAuthPO po = new UserAuthPO();
+        AuthUserPO po = new AuthUserPO();
         po.setId(1L);
         po.setSalt(salt);
         po.setPasswordHash(hash);
-        when(userAuthManager.getById(1L)).thenReturn(po);
-        when(userAuthManager.updateById(any(UserAuthPO.class))).thenReturn(true);
+        when(authUserManager.getById(1L)).thenReturn(po);
+        when(authUserManager.updateById(any(AuthUserPO.class))).thenReturn(true);
         when(redisTemplate.keys("refresh:1:*")).thenReturn(Set.of("refresh:1:abc"));
 
         authService.changePassword(1L, new ChangePasswordDTO("oldpass", "newpass123"));
 
-        verify(userAuthManager).updateById(any(UserAuthPO.class));
+        verify(authUserManager).updateById(any(AuthUserPO.class));
         verify(redisTemplate).delete(Set.of("refresh:1:abc"));
     }
 
     @Test
     void changePassword_userNotFound_throws() {
-        when(userAuthManager.getById(999L)).thenReturn(null);
+        when(authUserManager.getById(999L)).thenReturn(null);
         assertThrows(BizException.class,
             () -> authService.changePassword(999L, new ChangePasswordDTO("old", "newpass123")));
     }
@@ -130,11 +149,11 @@ class AuthServiceImplTest {
     void changePassword_oldPwdInvalid_throws() {
         String salt = "testsalt";
         String hash = BCrypt.hashpw("correctpass" + salt, BCrypt.gensalt());
-        UserAuthPO po = new UserAuthPO();
+        AuthUserPO po = new AuthUserPO();
         po.setId(1L);
         po.setSalt(salt);
         po.setPasswordHash(hash);
-        when(userAuthManager.getById(1L)).thenReturn(po);
+        when(authUserManager.getById(1L)).thenReturn(po);
 
         assertThrows(BizException.class,
             () -> authService.changePassword(1L, new ChangePasswordDTO("wrongpass", "newpass123")));
@@ -142,9 +161,9 @@ class AuthServiceImplTest {
 
     @Test
     void sendResetCode_success_storesCode() {
-        UserAuthPO po = new UserAuthPO();
-        po.setUsername("testuser");
-        when(userAuthManager.getOne(any())).thenReturn(po);
+        AuthUserPO po = new AuthUserPO();
+        po.setAccount("testuser");
+        when(authUserManager.getOne(any())).thenReturn(po);
 
         authService.sendResetCode(new SendResetCodeDTO("testuser"));
 
@@ -153,41 +172,41 @@ class AuthServiceImplTest {
 
     @Test
     void sendResetCode_userNotFound_throws() {
-        when(userAuthManager.getOne(any())).thenReturn(null);
+        when(authUserManager.getOne(any())).thenReturn(null);
         assertThrows(BizException.class,
             () -> authService.sendResetCode(new SendResetCodeDTO("nobody")));
     }
 
     @Test
     void resetPassword_success_updatesAndClearsCodeAndRefresh() {
-        UserAuthPO po = new UserAuthPO();
+        AuthUserPO po = new AuthUserPO();
         po.setId(1L);
-        po.setUsername("testuser");
-        when(userAuthManager.getOne(any())).thenReturn(po);
+        po.setAccount("testuser");
+        when(authUserManager.getOne(any())).thenReturn(po);
         when(valueOperations.get("pwd:reset:code:testuser")).thenReturn("123456");
-        when(userAuthManager.updateById(any(UserAuthPO.class))).thenReturn(true);
+        when(authUserManager.updateById(any(AuthUserPO.class))).thenReturn(true);
         when(redisTemplate.keys("refresh:1:*")).thenReturn(Set.of("refresh:1:abc"));
 
         authService.resetPassword(new ResetPasswordDTO("testuser", "123456", "newpass123"));
 
-        verify(userAuthManager).updateById(any(UserAuthPO.class));
+        verify(authUserManager).updateById(any(AuthUserPO.class));
         verify(redisTemplate).delete("pwd:reset:code:testuser");
         verify(redisTemplate).delete(Set.of("refresh:1:abc"));
     }
 
     @Test
     void resetPassword_userNotFound_throws() {
-        when(userAuthManager.getOne(any())).thenReturn(null);
+        when(authUserManager.getOne(any())).thenReturn(null);
         assertThrows(BizException.class,
             () -> authService.resetPassword(new ResetPasswordDTO("nobody", "123456", "newpass123")));
     }
 
     @Test
     void resetPassword_verifyCodeInvalid_throws() {
-        UserAuthPO po = new UserAuthPO();
+        AuthUserPO po = new AuthUserPO();
         po.setId(1L);
-        po.setUsername("testuser");
-        when(userAuthManager.getOne(any())).thenReturn(po);
+        po.setAccount("testuser");
+        when(authUserManager.getOne(any())).thenReturn(po);
         when(valueOperations.get("pwd:reset:code:testuser")).thenReturn(null);
 
         assertThrows(BizException.class,

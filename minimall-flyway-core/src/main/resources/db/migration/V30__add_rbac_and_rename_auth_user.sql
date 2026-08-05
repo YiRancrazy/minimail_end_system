@@ -64,7 +64,7 @@ ALTER TABLE t_user_auth RENAME TO t_auth_user;
 ALTER TABLE t_auth_user ADD COLUMN account      VARCHAR(64)     NOT NULL DEFAULT '' AFTER id;
 ALTER TABLE t_auth_user ADD COLUMN phone_enc    VARBINARY(256)  NULL AFTER account;
 ALTER TABLE t_auth_user ADD COLUMN email_enc    VARBINARY(256)  NULL AFTER phone_enc;
-ALTER TABLE t_auth_user ADD COLUMN account_type TINYINT         NOT NULL DEFAULT 1  AFTER salt COMMENT '1=USER 2=MERCHANT 3=PLATFORM';
+ALTER TABLE t_auth_user ADD COLUMN account_type TINYINT         NOT NULL DEFAULT 1  COMMENT '1=USER 2=MERCHANT 3=PLATFORM' AFTER salt;
 ALTER TABLE t_auth_user ADD COLUMN role_id      BIGINT UNSIGNED NOT NULL DEFAULT 1  AFTER account_type;
 ALTER TABLE t_auth_user ADD COLUMN last_login_at DATETIME(3)    NULL AFTER status;
 

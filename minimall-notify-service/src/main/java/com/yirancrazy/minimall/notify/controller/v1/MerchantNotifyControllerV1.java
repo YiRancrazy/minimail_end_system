@@ -50,7 +50,7 @@ public class MerchantNotifyControllerV1 {
      * @param merchantId 商家ID
      * @return 未读数
      */
-    @GetMapping("/messages/unread-count")
+    @GetMapping("/messages/_count")
     public Result<Long> unreadCount(@RequestHeader("X-Merchant-Id") Long merchantId) {
         return Result.success(notifyService.unreadCount(
             RecipientTypeEnum.MERCHANT.intCode(), merchantId));
@@ -62,7 +62,7 @@ public class MerchantNotifyControllerV1 {
      * @param merchantId 商家ID
      * @return 操作结果
      */
-    @PostMapping("/messages/{id}/read")
+    @PostMapping("/messages/{id}/_read")
     public Result<Void> markRead(@PathVariable Long id,
                                  @RequestHeader("X-Merchant-Id") Long merchantId) {
         notifyService.markRead(id, RecipientTypeEnum.MERCHANT.intCode(), merchantId);
@@ -74,7 +74,7 @@ public class MerchantNotifyControllerV1 {
      * @param merchantId 商家ID
      * @return 操作结果
      */
-    @PostMapping("/messages/read-all")
+    @PostMapping("/messages/_read-all")
     public Result<Void> markAllRead(@RequestHeader("X-Merchant-Id") Long merchantId) {
         notifyService.markAllRead(RecipientTypeEnum.MERCHANT.intCode(), merchantId);
         return Result.success(null);

@@ -81,7 +81,7 @@ public class MerchantOrderControllerV1 {
      * @param merchantId 商家ID
      * @return 待处理订单总数
      */
-    @GetMapping("/pending-count")
+    @GetMapping("/_count")
     public Result<Long> pendingCount(@RequestHeader("X-Merchant-Id") Long merchantId) {
         return Result.success(orderService.pendingCount(merchantId));
     }

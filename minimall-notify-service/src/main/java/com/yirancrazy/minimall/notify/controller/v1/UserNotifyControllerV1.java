@@ -63,7 +63,7 @@ public class UserNotifyControllerV1 {
      * @param userId 用户ID
      * @return 未读数
      */
-    @GetMapping("/messages/unread-count")
+    @GetMapping("/messages/_count")
     public Result<Long> unreadCount(@RequestHeader("X-User-Id") Long userId) {
         return Result.success(notifyService.unreadCount(RecipientTypeEnum.USER.intCode(), userId));
     }
@@ -74,7 +74,7 @@ public class UserNotifyControllerV1 {
      * @param userId 用户ID
      * @return 操作结果
      */
-    @PostMapping("/messages/{id}/read")
+    @PostMapping("/messages/{id}/_read")
     public Result<Void> markRead(@PathVariable Long id,
                                  @RequestHeader("X-User-Id") Long userId) {
         notifyService.markRead(id, RecipientTypeEnum.USER.intCode(), userId);
@@ -86,7 +86,7 @@ public class UserNotifyControllerV1 {
      * @param userId 用户ID
      * @return 操作结果
      */
-    @PostMapping("/messages/read-all")
+    @PostMapping("/messages/_read-all")
     public Result<Void> markAllRead(@RequestHeader("X-User-Id") Long userId) {
         notifyService.markAllRead(RecipientTypeEnum.USER.intCode(), userId);
         return Result.success(null);

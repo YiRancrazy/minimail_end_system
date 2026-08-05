@@ -24,6 +24,7 @@ import com.yirancrazy.minimall.common.util.CsvExporter;
 import com.yirancrazy.minimall.common.util.CursorUtils;
 import com.yirancrazy.minimall.order.constant.OrderCodeEnum;
 import com.yirancrazy.minimall.order.constant.OrderStatusEnum;
+import com.yirancrazy.minimall.order.constant.OrderStatusMachine;
 import com.yirancrazy.minimall.order.dto.OrderCheckoutItemDTO;
 import com.yirancrazy.minimall.order.dto.OrderPageDTO;
 import com.yirancrazy.minimall.order.entity.OrderItemPO;
@@ -55,6 +56,7 @@ public class OrderServiceImpl implements OrderService {
     private final StockFeignClient stockFeignClient;
     private final PayFeignClient payFeignClient;
     private final EventBus eventBus;
+    private final OrderStatusMachine statusMachine;
 
     public OrderServiceImpl(OrderManager orderManager,
                             OrderItemManager orderItemManager,
@@ -63,7 +65,8 @@ public class OrderServiceImpl implements OrderService {
                             GoodsFeignClient goodsFeignClient,
                             StockFeignClient stockFeignClient,
                             PayFeignClient payFeignClient,
-                            EventBus eventBus) {
+                            EventBus eventBus,
+                            OrderStatusMachine statusMachine) {
         this.orderManager = orderManager;
         this.orderItemManager = orderItemManager;
         this.orderLogisticsManager = orderLogisticsManager;
@@ -72,6 +75,7 @@ public class OrderServiceImpl implements OrderService {
         this.stockFeignClient = stockFeignClient;
         this.payFeignClient = payFeignClient;
         this.eventBus = eventBus;
+        this.statusMachine = statusMachine;
     }
 
     /**
@@ -130,7 +134,6 @@ public class OrderServiceImpl implements OrderService {
         }
 
         List<OrderItemPO> itemPOs = new ArrayList<>(items.size());
-        BigDecimal totalAmount = BigDecimal.ZERO;
 
         for (OrderCheckoutItemDTO item : items) {
             SkuSnapshotDTO snapshot = goodsFeignClient.skuSnapshot(item.getSkuId()).getData();
@@ -145,7 +148,6 @@ public class OrderServiceImpl implements OrderService {
 
             BigDecimal lineAmount = snapshot.getPrice()
                 .multiply(BigDecimal.valueOf(item.getQuantity()));
-            totalAmount = totalAmount.add(lineAmount);
 
             OrderItemPO itemPO = new OrderItemPO();
             itemPO.setSkuId(item.getSkuId());
@@ -155,6 +157,8 @@ public class OrderServiceImpl implements OrderService {
             itemPO.setAmount(lineAmount);
             itemPOs.add(itemPO);
         }
+
+        BigDecimal totalAmount = calcAmount(itemPOs);
 
         OrderPO po = new OrderPO();
         po.setUserId(userId);
@@ -238,8 +242,8 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public void refund(Long orderId) {
         OrderPO po = getOrder(orderId);
-        OrderStatusEnum current = fromCode(po.getStatus());
-        if (!current.canTransitTo(OrderStatusEnum.REFUNDING)) {
+        OrderStatusEnum current = statusMachine.fromCode(po.getStatus());
+        if (!statusMachine.canTransitTo(current, OrderStatusEnum.REFUNDING)) {
             throw new BizException(OrderCodeEnum.ORDER_STATUS_TRANSITION_INVALID);
         }
         po.setRefundFromStatus(po.getStatus());
@@ -384,21 +388,21 @@ public class OrderServiceImpl implements OrderService {
 
     private void transitStatus(Long orderId, OrderStatusEnum target) {
         OrderPO po = getOrder(orderId);
-        OrderStatusEnum current = fromCode(po.getStatus());
-        if (!current.canTransitTo(target)) {
-            throw new BizException(OrderCodeEnum.ORDER_STATUS_TRANSITION_INVALID);
-        }
-        po.setStatus(target.intCode());
+        statusMachine.transit(po, target);
         orderManager.updateById(po);
     }
 
-    private OrderStatusEnum fromCode(Integer code) {
-        for (OrderStatusEnum e : OrderStatusEnum.values()) {
-            if (e.getCode().equals(String.valueOf(code))) {
-                return e;
-            }
+    /**
+     * 计算订单总金额，等于各订单行金额之和。精度 scale=2，RoundingMode.HALF_EVEN。
+     * @param itemPOs 订单行列表
+     * @return 订单总金额
+     */
+    private BigDecimal calcAmount(List<OrderItemPO> itemPOs) {
+        BigDecimal total = BigDecimal.ZERO;
+        for (OrderItemPO item : itemPOs) {
+            total = total.add(item.getAmount());
         }
-        throw new BizException(OrderCodeEnum.ORDER_STATUS_TRANSITION_INVALID);
+        return total.setScale(2, java.math.RoundingMode.HALF_EVEN);
     }
 
     /**

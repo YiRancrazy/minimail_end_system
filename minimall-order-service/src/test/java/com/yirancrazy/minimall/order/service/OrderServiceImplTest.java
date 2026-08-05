@@ -27,6 +27,7 @@ import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.order.constant.OrderStatusEnum;
+import com.yirancrazy.minimall.order.constant.OrderStatusMachine;
 import com.yirancrazy.minimall.order.dto.OrderCheckoutItemDTO;
 import com.yirancrazy.minimall.order.dto.OrderPageDTO;
 import com.yirancrazy.minimall.order.entity.OrderItemPO;
@@ -52,6 +53,7 @@ public class OrderServiceImplTest {
     private StockFeignClient stockFeignClient;
     private PayFeignClient payFeignClient;
     private EventBus eventBus;
+    private OrderStatusMachine statusMachine;
     private OrderServiceImpl service;
 
     @BeforeEach
@@ -64,6 +66,7 @@ public class OrderServiceImplTest {
         stockFeignClient = mock(StockFeignClient.class);
         payFeignClient = mock(PayFeignClient.class);
         eventBus = mock(EventBus.class);
+        statusMachine = new OrderStatusMachine();
         lenient().when(manager.updateById(any(OrderPO.class))).thenReturn(true);
         lenient().when(manager.removeById(any(Long.class))).thenReturn(true);
         doAnswer(inv -> {
@@ -87,7 +90,7 @@ public class OrderServiceImplTest {
             return null;
         }).when(eventBus).publishInTx(any(), any(Runnable.class), any());
         service = new OrderServiceImpl(manager, orderItemManager, logisticsManager, orderMapper,
-            goodsFeignClient, stockFeignClient, payFeignClient, eventBus);
+            goodsFeignClient, stockFeignClient, payFeignClient, eventBus, statusMachine);
     }
 
     /**

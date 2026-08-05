@@ -6,9 +6,9 @@ import com.yirancrazy.minimall.common.base.BaseEnum;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 订单状态枚举，定义订单生命周期各阶段状态及合法转移规则。
- * @Version: 1.0
- * @DateTime: 2026/7/31
+ * @Description: 订单状态枚举，定义订单生命周期各阶段状态。状态转换规则由 OrderStatusMachine 封装。
+ * @Version: 1.1
+ * @DateTime: 2026/8/5
  **/
 @Getter
 @AllArgsConstructor
@@ -36,20 +36,5 @@ public enum OrderStatusEnum implements BaseEnum {
      */
     public int intCode() {
         return code;
-    }
-
-    /**
-     * Check if transition from current to target is allowed.
-     * @param target the target status to transition to
-     * @return true if the transition is valid
-     */
-    public boolean canTransitTo(OrderStatusEnum target) {
-        return switch (this) {
-            case PENDING -> target == PAID || target == CANCELED;
-            case PAID -> target == SHIPPED || target == REFUNDING;
-            case SHIPPED -> target == COMPLETED || target == REFUNDING;
-            case REFUNDING -> target == REFUNDED || target == PAID || target == SHIPPED;
-            default -> false;
-        };
     }
 }

@@ -31,7 +31,8 @@ public class OrderStatusMachine {
             case SHIPPED -> target == OrderStatusEnum.COMPLETED || target == OrderStatusEnum.REFUNDING;
             case REFUNDING -> target == OrderStatusEnum.REFUNDED
                 || target == OrderStatusEnum.PAID
-                || target == OrderStatusEnum.SHIPPED;
+                || target == OrderStatusEnum.SHIPPED
+                || target == OrderStatusEnum.CANCELED;
             default -> false;
         };
     }

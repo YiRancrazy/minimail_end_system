@@ -326,7 +326,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     /**
-     * 平台强制关闭异常订单，仅允许 PENDING 状态关闭并释放库存。
+     * 平台强制关闭异常订单，允许 PENDING 或 REFUNDING 状态关闭并释放库存。
      * @param orderId 订单ID
      */
     @Override

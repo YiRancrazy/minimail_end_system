@@ -24,6 +24,7 @@
     <knife4j.version>4.5.0</knife4j.version>
     <druid.version>1.2.22</druid.version>
     <mysql-connector.version>8.0.33</mysql-connector.version>
+    <xxl-job.version>3.1.0</xxl-job.version>
   </properties>
 
   <modules>
@@ -76,6 +77,11 @@
         <version>${lombok.version}</version>
         <scope>provided</scope>
         <optional>true</optional>
+      </dependency>
+      <dependency>
+        <groupId>com.xuxueli</groupId>
+        <artifactId>xxl-job-core</artifactId>
+        <version>${xxl-job.version}</version>
       </dependency>
       <!-- 子模块按需引入 starter，版本由 mybatis-plus-bom 统一管理（坐标：com.baomidou:mybatis-plus-spring-boot3-starter） -->
       <dependency>

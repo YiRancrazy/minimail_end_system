@@ -1,6 +1,7 @@
 package com.yirancrazy.minimall.order.controller.v1;
 
 import java.util.List;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -8,6 +9,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
@@ -53,6 +55,7 @@ public class UserOrderControllerV1 {
      * @return 新创建的订单标识
      */
     @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
     public Result<Long> create(@Valid @RequestBody OrderCreateDTO dto) {
         return Result.success(orderService.create(dto.getUserId(), dto.getSkuId(), dto.getQuantity()));
     }
@@ -64,6 +67,7 @@ public class UserOrderControllerV1 {
      * @return 新创建的订单ID
      */
     @PostMapping("/checkout")
+    @ResponseStatus(HttpStatus.CREATED)
     public Result<Long> checkout(@RequestHeader("X-User-Id") Long userId,
                                  @Valid @RequestBody OrderCheckoutDTO dto) {
         return Result.success(orderService.checkout(userId, dto.getItems()));

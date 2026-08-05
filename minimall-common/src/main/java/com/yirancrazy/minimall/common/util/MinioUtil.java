@@ -1,8 +1,6 @@
 package com.yirancrazy.minimall.common.util;
 
 import java.util.UUID;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
 import io.minio.GetPresignedObjectUrlArgs;
 import io.minio.MinioClient;
 import io.minio.http.Method;
@@ -15,18 +13,17 @@ import com.yirancrazy.minimall.common.result.CommonCode;
  * @Version: 1.0
  * @DateTime: 2026/08/05
  **/
-@Component
 public class MinioUtil {
 
     private static final int EXPIRY_SECONDS = 900;
 
     private final MinioClient minioClient;
 
-    @Value("${minimall.minio.bucket:mall-files}")
-    private String bucket;
+    private final String bucket;
 
-    public MinioUtil(MinioClient minioClient) {
+    public MinioUtil(MinioClient minioClient, String bucket) {
         this.minioClient = minioClient;
+        this.bucket = bucket;
     }
 
     /**

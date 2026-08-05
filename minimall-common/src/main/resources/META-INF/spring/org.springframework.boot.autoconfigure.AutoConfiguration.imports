@@ -1,1 +1,2 @@
 com.yirancrazy.minimall.common.event.EventBusAutoConfiguration
+com.yirancrazy.minimall.common.config.MinioConfig

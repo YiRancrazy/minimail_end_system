@@ -5,10 +5,11 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import io.minio.MinioClient;
+import com.yirancrazy.minimall.common.util.MinioUtil;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: MinIO 客户端配置，当 minimall.minio.endpoint 配置存在时自动装配。
+ * @Description: MinIO 自动装配，当 minimall.minio.endpoint 配置存在时注册 MinioClient 与 MinioUtil。
  * @Version: 1.0
  * @DateTime: 2026/08/05
  **/
@@ -41,10 +42,11 @@ public class MinioConfig {
     }
 
     /**
-     * Get default bucket name.
-     * @return bucket name
+     * Build MinioUtil bean for presigned URL generation.
+     * @return MinioUtil instance
      */
-    public String getBucket() {
-        return bucket;
+    @Bean
+    public MinioUtil minioUtil() {
+        return new MinioUtil(minioClient(), bucket);
     }
 }

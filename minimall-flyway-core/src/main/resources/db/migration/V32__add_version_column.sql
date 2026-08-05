@@ -1,7 +1,7 @@
 -- V32: Add version column for MyBatis-Plus optimistic locking on all business tables.
 -- The OptimisticLockerInnerInterceptor is already registered in MybatisPlusGlobalConfig.
 
-ALTER TABLE t_user_auth ADD COLUMN version INT NOT NULL DEFAULT 0 COMMENT 'Optimistic lock version';
+ALTER TABLE t_auth_user ADD COLUMN version INT NOT NULL DEFAULT 0 COMMENT 'Optimistic lock version';
 ALTER TABLE t_user ADD COLUMN version INT NOT NULL DEFAULT 0 COMMENT 'Optimistic lock version';
 ALTER TABLE t_merch_shop ADD COLUMN version INT NOT NULL DEFAULT 0 COMMENT 'Optimistic lock version';
 ALTER TABLE t_merch_merchant ADD COLUMN version INT NOT NULL DEFAULT 0 COMMENT 'Optimistic lock version';
@@ -27,4 +27,4 @@ ALTER TABLE t_auth_role ADD COLUMN version INT NOT NULL DEFAULT 0 COMMENT 'Optim
 ALTER TABLE t_auth_permission ADD COLUMN version INT NOT NULL DEFAULT 0 COMMENT 'Optimistic lock version';
 ALTER TABLE t_auth_role_permission ADD COLUMN version INT NOT NULL DEFAULT 0 COMMENT 'Optimistic lock version';
 ALTER TABLE t_auth_token_blacklist ADD COLUMN version INT NOT NULL DEFAULT 0 COMMENT 'Optimistic lock version';
-ALTER TABLE t_id_segment ADD COLUMN version INT NOT NULL DEFAULT 0 COMMENT 'Optimistic lock version';
+-- t_id_segment 已在 V10 建表时声明 version INT DEFAULT 0，此处跳过避免 Duplicate column

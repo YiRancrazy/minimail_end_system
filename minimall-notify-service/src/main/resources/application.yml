@@ -34,3 +34,8 @@ minimall:
       namesrv-addr: ${ROCKETMQ_NAMESRV_ADDR:127.0.0.1:9876}
       topic: minimall-events
       group: minimall-notify
+  notify:
+    sms:
+      enabled: false
+    mail:
+      enabled: false

@@ -28,3 +28,7 @@ minimall:
       enabled: false
       namesrv-addr: ${ROCKETMQ_NAMESRV_ADDR:127.0.0.1:9876}
       topic: minimall-events
+  schedule:
+    enabled: false
+    scan-expired-ms: 60000
+    scan-auto-confirm-ms: 3600000

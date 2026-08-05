@@ -48,6 +48,9 @@ import com.yirancrazy.minimall.order.vo.OrderStatisticsVO;
 @Service
 public class OrderServiceImpl implements OrderService {
 
+    private static final int PAY_EXPIRE_MINUTES = 30;
+    private static final int AUTO_CONFIRM_DAYS = 15;
+
     private final OrderManager orderManager;
     private final OrderItemManager orderItemManager;
     private final OrderLogisticsManager orderLogisticsManager;
@@ -540,5 +543,59 @@ public class OrderServiceImpl implements OrderService {
         vo.setDescription(po.getDescription());
         vo.setCreateTime(po.getCreateTime());
         return vo;
+    }
+
+    /**
+     * 扫描超时未支付订单（PENDING 且 create_time + 30min < NOW()），逐个取消并释放库存。
+     * ponytail: 用 create_time+30min 计算而非引入 pay_expire_at 字段，YAGNI。
+     * @return 处理的订单数
+     */
+    @Override
+    public int scanExpiredOrders() {
+        LocalDateTime expireThreshold = LocalDateTime.now().minusMinutes(PAY_EXPIRE_MINUTES);
+        List<OrderPO> expired = orderManager.list(Wrappers.lambdaQuery(OrderPO.class)
+            .eq(OrderPO::getStatus, OrderStatusEnum.PENDING.intCode())
+            .lt(OrderPO::getCreateTime, expireThreshold));
+        int count = 0;
+        for (OrderPO po : expired) {
+            try {
+                transitStatus(po.getId(), OrderStatusEnum.CANCELED);
+                releaseStockForOrder(po);
+                count++;
+            }
+            catch (Exception e) {
+                log.warn("scanExpiredOrders cancel failed, orderId={}, err={}", po.getId(), e.getMessage());
+            }
+        }
+        if (count > 0) {
+            log.info("scanExpiredOrders cancelled {} orders", count);
+        }
+        return count;
+    }
+
+    /**
+     * 扫描发货后超期未确认收货订单（SHIPPED 且 shipped_at + 15d < NOW()），逐个推进 COMPLETED。
+     * @return 处理的订单数
+     */
+    @Override
+    public int scanAutoConfirm() {
+        LocalDateTime confirmThreshold = LocalDateTime.now().minusDays(AUTO_CONFIRM_DAYS);
+        List<OrderPO> overdue = orderManager.list(Wrappers.lambdaQuery(OrderPO.class)
+            .eq(OrderPO::getStatus, OrderStatusEnum.SHIPPED.intCode())
+            .lt(OrderPO::getShippedAt, confirmThreshold));
+        int count = 0;
+        for (OrderPO po : overdue) {
+            try {
+                transitStatus(po.getId(), OrderStatusEnum.COMPLETED);
+                count++;
+            }
+            catch (Exception e) {
+                log.warn("scanAutoConfirm confirm failed, orderId={}, err={}", po.getId(), e.getMessage());
+            }
+        }
+        if (count > 0) {
+            log.info("scanAutoConfirm completed {} orders", count);
+        }
+        return count;
     }
 }

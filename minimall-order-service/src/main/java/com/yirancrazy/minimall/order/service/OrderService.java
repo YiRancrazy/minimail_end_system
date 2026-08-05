@@ -123,4 +123,16 @@ public interface OrderService {
      * @return 订单统计VO
      */
     OrderStatisticsVO statistics(OrderPageDTO dto);
+
+    /**
+     * 扫描超时未支付订单，逐个推进 PENDING→CANCELED 并释放库存。由定时任务调度。
+     * @return 本次扫描处理的订单数
+     */
+    int scanExpiredOrders();
+
+    /**
+     * 扫描发货后超期未确认收货订单，逐个推进 SHIPPED→COMPLETED。由定时任务调度。
+     * @return 本次扫描处理的订单数
+     */
+    int scanAutoConfirm();
 }

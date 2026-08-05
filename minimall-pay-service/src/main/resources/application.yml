@@ -30,3 +30,6 @@ minimall:
     gateway-url: https://openapi.alipay.com/gateway.do
     notify-url: ${ALIPAY_NOTIFY_URL:https://mall.example.com/api/v1/pay/callback/alipay}
     return-url: ${ALIPAY_RETURN_URL:https://mall.example.com/pay/result}
+  schedule:
+    enabled: false
+    scan-callback-ms: 30000

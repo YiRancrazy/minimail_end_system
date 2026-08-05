@@ -680,6 +680,78 @@ public class OrderServiceImplTest {
         verify(stockFeignClient, times(2)).release(any());
     }
 
+    /**
+     * 验证 scanExpiredOrders 取消所有 PENDING 且超期订单并释放库存。
+     */
+    @Test
+    public void scanExpiredOrders_cancels_pending_orders() {
+        OrderPO o1 = buildOrder(1L, 1L, OrderStatusEnum.PENDING.intCode());
+        OrderPO o2 = buildOrder(2L, 1L, OrderStatusEnum.PENDING.intCode());
+        when(manager.list(any(Wrapper.class))).thenReturn(java.util.List.of(o1, o2));
+        when(manager.getById(1L)).thenReturn(o1);
+        when(manager.getById(2L)).thenReturn(o2);
+
+        int count = service.scanExpiredOrders();
+
+        assertEquals(2, count);
+        assertEquals(OrderStatusEnum.CANCELED.intCode(), o1.getStatus());
+        assertEquals(OrderStatusEnum.CANCELED.intCode(), o2.getStatus());
+        verify(stockFeignClient, times(2)).release(any());
+    }
+
+    /**
+     * 验证 scanExpiredOrders 在状态机异常时跳过单条继续处理其余订单。
+     */
+    @Test
+    public void scanExpiredOrders_skips_failed_cancel() {
+        OrderPO o1 = buildOrder(1L, 1L, OrderStatusEnum.COMPLETED.intCode());
+        OrderPO o2 = buildOrder(2L, 1L, OrderStatusEnum.PENDING.intCode());
+        when(manager.list(any(Wrapper.class))).thenReturn(java.util.List.of(o1, o2));
+        when(manager.getById(1L)).thenReturn(o1);
+        when(manager.getById(2L)).thenReturn(o2);
+
+        int count = service.scanExpiredOrders();
+
+        assertEquals(1, count);
+        assertEquals(OrderStatusEnum.COMPLETED.intCode(), o1.getStatus());
+        assertEquals(OrderStatusEnum.CANCELED.intCode(), o2.getStatus());
+    }
+
+    /**
+     * 验证 scanExpiredOrders 无超期订单时返回 0。
+     */
+    @Test
+    public void scanExpiredOrders_returns_zero_when_empty() {
+        when(manager.list(any(Wrapper.class))).thenReturn(java.util.Collections.emptyList());
+
+        assertEquals(0, service.scanExpiredOrders());
+    }
+
+    /**
+     * 验证 scanAutoConfirm 推进 SHIPPED 超期订单为 COMPLETED。
+     */
+    @Test
+    public void scanAutoConfirm_completes_shipped_orders() {
+        OrderPO o1 = buildOrder(1L, 1L, OrderStatusEnum.SHIPPED.intCode());
+        when(manager.list(any(Wrapper.class))).thenReturn(java.util.List.of(o1));
+        when(manager.getById(1L)).thenReturn(o1);
+
+        int count = service.scanAutoConfirm();
+
+        assertEquals(1, count);
+        assertEquals(OrderStatusEnum.COMPLETED.intCode(), o1.getStatus());
+    }
+
+    /**
+     * 验证 scanAutoConfirm 无超期订单时返回 0。
+     */
+    @Test
+    public void scanAutoConfirm_returns_zero_when_empty() {
+        when(manager.list(any(Wrapper.class))).thenReturn(java.util.Collections.emptyList());
+
+        assertEquals(0, service.scanAutoConfirm());
+    }
+
     private OrderPO buildOrder(Long id, Long userId, Integer status) {
         OrderPO po = new OrderPO();
         po.setId(id);

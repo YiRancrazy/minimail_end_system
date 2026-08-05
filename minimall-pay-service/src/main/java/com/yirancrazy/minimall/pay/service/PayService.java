@@ -135,4 +135,10 @@ public interface PayService {
      * @return 对账单 VO
      */
     PayStatementVO statement(PayStatementDTO dto);
+
+    /**
+     * 扫描支付成功但订单状态仍为 PENDING 的流水（paid_at + 30s < NOW()），主动调 Order RPC 兜底推进。
+     * @return 处理的流水数
+     */
+    int scanPaidButOrderPending();
 }

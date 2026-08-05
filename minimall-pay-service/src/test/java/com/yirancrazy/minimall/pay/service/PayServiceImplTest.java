@@ -501,4 +501,76 @@ public class PayServiceImplTest {
         assertThrows(BizException.class, () -> service.createRefund(dto));
         verify(orderFeignClient).refundCallback(100L, false);
     }
+
+    /**
+     * 验证 scanPaidButOrderPending 在订单仍 PENDING 时主动调用 order.pay 兜底。
+     */
+    @Test
+    public void scanPaidButOrderPending_calls_pay_when_pending() {
+        PayTransactionPO tx = new PayTransactionPO();
+        tx.setPaymentNo("PAY1");
+        tx.setOrderNo("100");
+        tx.setStatus(2);
+        when(manager.list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class)))
+            .thenReturn(java.util.List.of(tx));
+        when(orderFeignClient.status(100L)).thenReturn(com.yirancrazy.minimall.common.result.Result.success(1));
+
+        int count = service.scanPaidButOrderPending();
+
+        assertEquals(1, count);
+        verify(orderFeignClient).pay(100L);
+    }
+
+    /**
+     * 验证 scanPaidButOrderPending 在订单已非 PENDING 时不调用 order.pay。
+     */
+    @Test
+    public void scanPaidButOrderPending_skips_when_order_already_paid() {
+        PayTransactionPO tx = new PayTransactionPO();
+        tx.setPaymentNo("PAY1");
+        tx.setOrderNo("100");
+        tx.setStatus(2);
+        when(manager.list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class)))
+            .thenReturn(java.util.List.of(tx));
+        when(orderFeignClient.status(100L)).thenReturn(com.yirancrazy.minimall.common.result.Result.success(2));
+
+        int count = service.scanPaidButOrderPending();
+
+        assertEquals(0, count);
+        verify(orderFeignClient, never()).pay(any());
+    }
+
+    /**
+     * 验证 scanPaidButOrderPending 在 orderNo 非数字时跳过该条继续处理。
+     */
+    @Test
+    public void scanPaidButOrderPending_skips_non_numeric_order_no() {
+        PayTransactionPO tx1 = new PayTransactionPO();
+        tx1.setPaymentNo("PAY1");
+        tx1.setOrderNo("NOT_AN_ID");
+        tx1.setStatus(2);
+        PayTransactionPO tx2 = new PayTransactionPO();
+        tx2.setPaymentNo("PAY2");
+        tx2.setOrderNo("200");
+        tx2.setStatus(2);
+        when(manager.list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class)))
+            .thenReturn(java.util.List.of(tx1, tx2));
+        when(orderFeignClient.status(200L)).thenReturn(com.yirancrazy.minimall.common.result.Result.success(1));
+
+        int count = service.scanPaidButOrderPending();
+
+        assertEquals(1, count);
+        verify(orderFeignClient).pay(200L);
+    }
+
+    /**
+     * 验证 scanPaidButOrderPending 无候选流水时返回 0。
+     */
+    @Test
+    public void scanPaidButOrderPending_returns_zero_when_empty() {
+        when(manager.list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class)))
+            .thenReturn(java.util.Collections.emptyList());
+
+        assertEquals(0, service.scanPaidButOrderPending());
+    }
 }

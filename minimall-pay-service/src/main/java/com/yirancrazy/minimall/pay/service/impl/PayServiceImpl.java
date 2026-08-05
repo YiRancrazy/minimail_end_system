@@ -52,6 +52,8 @@ public class PayServiceImpl implements PayService {
     private static final String PAYMENT_NO_PREFIX = "PAY";
     private static final String WITHDRAW_NO_PREFIX = "WD";
     private static final DateTimeFormatter EXPIRE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final int PAY_CALLBACK_RPC_BUFFER_SECONDS = 30;
+    private static final int ORDER_PENDING_CODE = 1;
 
     private final PayManager payManager;
     private final AlipayGateway alipayGateway;
@@ -425,5 +427,45 @@ public class PayServiceImpl implements PayService {
         LocalDateTime startTime = dto.getStartDate().atStartOfDay();
         LocalDateTime endTime = dto.getEndDate().plusDays(1).atStartOfDay();
         return payTransactionMapper.statement(startTime, endTime);
+    }
+
+    /**
+     * 扫描支付成功但订单状态仍为 PENDING 的流水（paid_at + 30s < NOW()），主动调 Order RPC 兜底推进。
+     * ponytail: 主路径已是同步 RPC，此任务只作为回调丢失时的补偿。
+     * @return 处理的流水数
+     */
+    @Override
+    public int scanPaidButOrderPending() {
+        LocalDateTime threshold = LocalDateTime.now().minusSeconds(PAY_CALLBACK_RPC_BUFFER_SECONDS);
+        int successCode = Integer.parseInt(PayStatusEnum.SUCCESS.getCode());
+        List<PayTransactionPO> paid = payManager.list(Wrappers.lambdaQuery(PayTransactionPO.class)
+            .eq(PayTransactionPO::getStatus, successCode)
+            .lt(PayTransactionPO::getPaidAt, threshold));
+        int count = 0;
+        for (PayTransactionPO po : paid) {
+            Long orderId;
+            try {
+                orderId = Long.valueOf(po.getOrderNo());
+            }
+            catch (NumberFormatException e) {
+                log.warn("scanPaidButOrderPending skip non-numeric orderNo, paymentNo={}", po.getPaymentNo());
+                continue;
+            }
+            try {
+                Integer orderStatus = orderFeignClient.status(orderId).getData();
+                if (orderStatus != null && orderStatus == ORDER_PENDING_CODE) {
+                    orderFeignClient.pay(orderId);
+                    count++;
+                }
+            }
+            catch (Exception e) {
+                log.warn("scanPaidButOrderPending probe failed, paymentNo={}, orderId={}, err={}",
+                    po.getPaymentNo(), orderId, e.getMessage());
+            }
+        }
+        if (count > 0) {
+            log.info("scanPaidButOrderPending compensated {} payments", count);
+        }
+        return count;
     }
 }

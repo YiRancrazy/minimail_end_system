@@ -2,8 +2,8 @@ package com.yirancrazy.minimall.pay.service;
 
 import java.math.BigDecimal;
 import java.util.List;
-import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO;
+import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.pay.dto.PayCallbackDTO;
 import com.yirancrazy.minimall.pay.dto.PayPageDTO;
 import com.yirancrazy.minimall.pay.dto.PayStatementDTO;
@@ -63,19 +63,19 @@ public interface PayService {
     PaymentParamsVO getPaymentParams(String paymentNo);
 
     /**
-     * 商家资金流水分页查询，merchantId 强制绑定，支持按状态与时间范围过滤。
+     * 商家资金流水游标分页查询，merchantId 强制绑定，支持按状态与时间范围过滤。
      * @param merchantId 商家ID
-     * @param dto 分页查询入参
-     * @return 支付流水分页结果
+     * @param dto 游标分页查询入参
+     * @return 支付流水游标分页结果
      */
-    IPage<PayTransactionPO> page(Long merchantId, PayPageDTO dto);
+    CursorPageVO<PayTransactionPO> page(Long merchantId, PayPageDTO dto);
 
     /**
-     * 平台全平台交易流水分页查询，不绑定 merchantId。
-     * @param dto 分页查询入参
-     * @return 支付流水分页结果
+     * 平台全平台交易流水游标分页查询，不绑定 merchantId。
+     * @param dto 游标分页查询入参
+     * @return 支付流水游标分页结果
      */
-    IPage<PayTransactionPO> platformPage(PayPageDTO dto);
+    CursorPageVO<PayTransactionPO> platformPage(PayPageDTO dto);
 
     /**
      * 资金统计聚合查询，merchantId 为空时统计全平台。
@@ -100,19 +100,19 @@ public interface PayService {
     WithdrawVO applyWithdraw(Long merchantId, WithdrawApplyDTO dto);
 
     /**
-     * 商家提现记录分页查询，merchantId 强制绑定，支持按状态与时间范围过滤。
+     * 商家提现记录游标分页查询，merchantId 强制绑定，支持按状态与时间范围过滤。
      * @param merchantId 商家ID
-     * @param dto 分页查询入参
-     * @return 提现单分页结果
+     * @param dto 游标分页查询入参
+     * @return 提现单游标分页结果
      */
-    IPage<MerchantWithdrawPO> pageWithdraw(Long merchantId, PayPageDTO dto);
+    CursorPageVO<MerchantWithdrawPO> pageWithdraw(Long merchantId, PayPageDTO dto);
 
     /**
-     * 平台提现记录分页查询，不绑定 merchantId。
-     * @param dto 分页查询入参
-     * @return 提现单分页结果
+     * 平台提现记录游标分页查询，不绑定 merchantId。
+     * @param dto 游标分页查询入参
+     * @return 提现单游标分页结果
      */
-    IPage<MerchantWithdrawPO> platformPageWithdraw(PayPageDTO dto);
+    CursorPageVO<MerchantWithdrawPO> platformPageWithdraw(PayPageDTO dto);
 
     /**
      * 平台审核提现申请，approved=true 时状态置为 PAID，approved=false 时状态置为 REJECTED 并记录原因。

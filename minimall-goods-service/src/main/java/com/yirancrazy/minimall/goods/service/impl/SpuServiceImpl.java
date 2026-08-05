@@ -4,11 +4,11 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
-import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.common.exception.BizException;
+import com.yirancrazy.minimall.common.result.CursorPageVO;
+import com.yirancrazy.minimall.common.util.CursorUtils;
 import com.yirancrazy.minimall.goods.constant.AuditDecisionEnum;
 import com.yirancrazy.minimall.goods.constant.SpuCodeEnum;
 import com.yirancrazy.minimall.goods.constant.SpuStatusEnum;
@@ -81,18 +81,23 @@ public class SpuServiceImpl implements SpuService {
     }
 
     /**
-     * 分页查询 SPU，按 merchantId/status 等值、title like 过滤。
-     * @param dto 分页查询入参
-     * @return SPU 分页结果
+     * 游标分页查询 SPU，按 merchantId/status 等值、title like 过滤，按 ID 倒序。
+     * @param dto 游标分页查询入参
+     * @return SPU 游标分页结果
      */
     @Override
-    public IPage<SpuPO> page(SpuPageDTO dto) {
-        Page<SpuPO> page = new Page<>(dto.getPageNo(), dto.getPageSize());
-        return spuManager.page(page, Wrappers.lambdaQuery(SpuPO.class)
+    public CursorPageVO<SpuPO> page(SpuPageDTO dto) {
+        Long lastId = CursorUtils.decode(dto.getCursor());
+        int limit = dto.getLimit();
+        List<SpuPO> records = spuManager.list(Wrappers.lambdaQuery(SpuPO.class)
             .eq(dto.getMerchantId() != null, SpuPO::getMerchantId, dto.getMerchantId())
             .eq(dto.getStatus() != null, SpuPO::getStatus, dto.getStatus())
             .like(dto.getTitle() != null && !dto.getTitle().isBlank(),
-                SpuPO::getTitle, dto.getTitle()));
+                SpuPO::getTitle, dto.getTitle())
+            .lt(lastId != null, SpuPO::getId, lastId)
+            .orderByDesc(SpuPO::getId)
+            .last("LIMIT " + (limit + 1)));
+        return CursorPageVO.of(records, limit, SpuPO::getId);
     }
 
     /**
@@ -193,19 +198,20 @@ public class SpuServiceImpl implements SpuService {
     }
 
     /**
-     * 平台分页查询待审核 SPU，按更新时间倒序。
-     * @param pageNo 页码
-     * @param pageSize 每页大小
-     * @return 待审核 SPU 分页结果
+     * 平台游标分页查询待审核 SPU，按 ID 倒序。
+     * @param dto 游标分页查询入参
+     * @return 待审核 SPU 游标分页结果
      */
     @Override
-    public IPage<SpuPO> pagePending(Integer pageNo, Integer pageSize) {
-        Page<SpuPO> page = new Page<>(
-            pageNo == null || pageNo < 1 ? 1 : pageNo,
-            pageSize == null || pageSize < 1 ? 20 : pageSize);
-        return spuManager.page(page, Wrappers.lambdaQuery(SpuPO.class)
+    public CursorPageVO<SpuPO> pagePending(SpuPageDTO dto) {
+        Long lastId = CursorUtils.decode(dto.getCursor());
+        int limit = dto.getLimit();
+        List<SpuPO> records = spuManager.list(Wrappers.lambdaQuery(SpuPO.class)
             .eq(SpuPO::getStatus, SpuStatusEnum.PENDING_AUDIT.statusValue())
-            .orderByDesc(SpuPO::getUpdateTime));
+            .lt(lastId != null, SpuPO::getId, lastId)
+            .orderByDesc(SpuPO::getId)
+            .last("LIMIT " + (limit + 1)));
+        return CursorPageVO.of(records, limit, SpuPO::getId);
     }
 
     /**

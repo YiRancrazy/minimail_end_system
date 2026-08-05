@@ -5,8 +5,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import com.baomidou.mybatisplus.core.metadata.IPage;
 import jakarta.validation.Valid;
+import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.goods.dto.GoodsPageDTO;
 import com.yirancrazy.minimall.goods.dto.SpuSearchDTO;
@@ -20,11 +20,11 @@ import com.yirancrazy.minimall.goods.vo.SpuSearchVO;
 /**
  * @Author: yirancrazy@gmail.com
  * @Description: 用户端商品查询控制器，提供在售商品列表、详情、SKU 列表与搜索接口
- * @Version: 1.1
- * @DateTime: 2026/08/03
+ * @Version: 1.2
+ * @DateTime: 2026/08/04
  **/
 @RestController
-@RequestMapping("/api/v1/goods")
+@RequestMapping("/api/v1/user/goods")
 public class GoodsControllerV1 {
 
     private final GoodsQueryService goodsQueryService;
@@ -37,12 +37,12 @@ public class GoodsControllerV1 {
     }
 
     /**
-     * 分页获取在售商品列表，支持关键词搜索与分类过滤。
-     * @param dto 分页查询入参
-     * @return 在售商品列表分页
+     * 游标分页获取在售商品列表，支持关键词搜索与分类过滤。
+     * @param dto 游标分页查询入参
+     * @return 在售商品游标分页结果
      */
     @GetMapping
-    public Result<IPage<SpuListVO>> page(@Valid GoodsPageDTO dto) {
+    public Result<CursorPageVO<SpuListVO>> page(@Valid GoodsPageDTO dto) {
         return Result.success(goodsQueryService.pageOnSale(dto));
     }
 

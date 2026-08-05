@@ -1,5 +1,6 @@
 package com.yirancrazy.minimall.goods.service;
 
+import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -14,9 +15,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
-import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.yirancrazy.minimall.common.exception.BizException;
+import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.goods.constant.AuditDecisionEnum;
 import com.yirancrazy.minimall.goods.constant.SpuStatusEnum;
 import com.yirancrazy.minimall.goods.dto.SpuCreateDTO;
@@ -105,19 +105,18 @@ public class SpuServiceImplTest {
     }
 
     /**
-     * 验证 page 返回分页结果。
+     * 验证 page 返回游标分页结果。
      */
     @Test
     public void page_returns_results() {
-        Page<SpuPO> mockPage = new Page<>(1, 20);
-        mockPage.setRecords(java.util.List.of(new SpuPO()));
-        when(spuManager.page(any(Page.class), any(Wrapper.class))).thenReturn(mockPage);
+        List<SpuPO> mockRecords = new ArrayList<>();
+        mockRecords.add(new SpuPO());
+        when(spuManager.list(any(Wrapper.class))).thenReturn(mockRecords);
 
         SpuPageDTO dto = new SpuPageDTO();
-        dto.setPageNo(1);
-        dto.setPageSize(20);
+        dto.setLimit(20);
         dto.setMerchantId(10L);
-        IPage<SpuPO> result = service.page(dto);
+        CursorPageVO<SpuPO> result = service.page(dto);
 
         assertEquals(1, result.getRecords().size());
     }
@@ -252,15 +251,18 @@ public class SpuServiceImplTest {
     }
 
     /**
-     * 验证 pagePending 返回待审核分页结果。
+     * 验证 pagePending 返回待审核游标分页结果。
      */
     @Test
     public void pagePending_returns_results() {
-        Page<SpuPO> mockPage = new Page<>(1, 20);
-        mockPage.setRecords(List.of(new SpuPO()));
-        when(spuManager.page(any(Page.class), any(Wrapper.class))).thenReturn(mockPage);
+        List<SpuPO> mockRecords = new ArrayList<>();
+        SpuPO spu = new SpuPO();
+        spu.setId(100L);
+        mockRecords.add(spu);
+        when(spuManager.list(any(Wrapper.class))).thenReturn(mockRecords);
 
-        IPage<SpuPO> result = service.pagePending(1, 20);
+        SpuPageDTO dto = new SpuPageDTO();
+        CursorPageVO<SpuPO> result = service.pagePending(dto);
         assertEquals(1, result.getRecords().size());
     }
 

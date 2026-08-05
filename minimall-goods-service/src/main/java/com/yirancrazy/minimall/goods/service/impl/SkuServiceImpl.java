@@ -1,11 +1,12 @@
 package com.yirancrazy.minimall.goods.service.impl;
 
 import java.math.BigDecimal;
+import java.util.List;
 import org.springframework.stereotype.Service;
-import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.yirancrazy.minimall.common.exception.BizException;
+import com.yirancrazy.minimall.common.result.CursorPageVO;
+import com.yirancrazy.minimall.common.util.CursorUtils;
 import com.yirancrazy.minimall.goods.constant.SkuCodeEnum;
 import com.yirancrazy.minimall.goods.dto.SkuCreateDTO;
 import com.yirancrazy.minimall.goods.dto.SkuPageDTO;
@@ -62,17 +63,22 @@ public class SkuServiceImpl implements SkuService {
     }
 
     /**
-     * 分页查询 SKU，skuName 非空时按 like 模糊匹配。
+     * 游标分页查询 SKU，skuName 非空时按 like 模糊匹配，按 ID 倒序。
      *
-     * @param dto 分页查询入参
-     * @return SKU 分页结果
+     * @param dto 游标分页查询入参
+     * @return SKU 游标分页结果
      */
     @Override
-    public IPage<SkuPO> page(SkuPageDTO dto) {
-        Page<SkuPO> page = new Page<>(dto.getPageNo(), dto.getPageSize());
-        return skuManager.page(page, Wrappers.lambdaQuery(SkuPO.class)
+    public CursorPageVO<SkuPO> page(SkuPageDTO dto) {
+        Long lastId = CursorUtils.decode(dto.getCursor());
+        int limit = dto.getLimit();
+        List<SkuPO> records = skuManager.list(Wrappers.lambdaQuery(SkuPO.class)
+            .lt(lastId != null, SkuPO::getId, lastId)
             .like(dto.getSkuName() != null && !dto.getSkuName().isBlank(),
-                SkuPO::getSkuName, dto.getSkuName()));
+                SkuPO::getSkuName, dto.getSkuName())
+            .orderByDesc(SkuPO::getId)
+            .last("LIMIT " + (limit + 1)));
+        return CursorPageVO.of(records, limit, SkuPO::getId);
     }
 
     /**

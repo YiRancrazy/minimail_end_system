@@ -4,11 +4,11 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.common.exception.BizException;
+import com.yirancrazy.minimall.common.result.CursorPageVO;
+import com.yirancrazy.minimall.common.util.CursorUtils;
 import com.yirancrazy.minimall.notify.constant.NotifyCodeEnum;
 import com.yirancrazy.minimall.notify.constant.NotifyMessageTypeEnum;
 import com.yirancrazy.minimall.notify.constant.RecipientTypeEnum;
@@ -89,10 +89,12 @@ public class NotifyServiceImpl implements NotifyService {
      * @return 站内信分页结果
      */
     @Override
-    public IPage<NotifyMessagePO> page(NotifyListDTO dto) {
-        Page<NotifyMessagePO> page = new Page<>(dto.getPageNo(), dto.getPageSize());
+    public CursorPageVO<NotifyMessagePO> page(NotifyListDTO dto) {
+        Long lastId = CursorUtils.decode(dto.getCursor());
+        int limit = dto.getLimit();
         LambdaQueryWrapper<NotifyMessagePO> wrapper = Wrappers.lambdaQuery(NotifyMessagePO.class)
             .eq(NotifyMessagePO::getUserId, dto.getUserId());
+        wrapper.lt(lastId != null, NotifyMessagePO::getId, lastId);
         if (dto.getRecipientType() != null) {
             wrapper.eq(NotifyMessagePO::getRecipientType, dto.getRecipientType());
         }
@@ -103,7 +105,9 @@ public class NotifyServiceImpl implements NotifyService {
             wrapper.eq(NotifyMessagePO::getReadFlag, dto.getReadFlag());
         }
         wrapper.orderByDesc(NotifyMessagePO::getId);
-        return notifyManager.page(page, wrapper);
+        wrapper.last("LIMIT " + (limit + 1));
+        List<NotifyMessagePO> records = notifyManager.list(wrapper);
+        return CursorPageVO.of(records, limit, NotifyMessagePO::getId);
     }
 
     /**
@@ -308,13 +312,17 @@ public class NotifyServiceImpl implements NotifyService {
      * @return 系统告警分页结果
      */
     @Override
-    public IPage<NotifyMessagePO> alertPage(SystemAlertPageDTO dto) {
-        Page<NotifyMessagePO> page = new Page<>(dto.getPageNo(), dto.getPageSize());
+    public CursorPageVO<NotifyMessagePO> alertPage(SystemAlertPageDTO dto) {
+        Long lastId = CursorUtils.decode(dto.getCursor());
+        int limit = dto.getLimit();
         LambdaQueryWrapper<NotifyMessagePO> wrapper = Wrappers.lambdaQuery(NotifyMessagePO.class)
             .eq(NotifyMessagePO::getRecipientType, RecipientTypeEnum.PLATFORM.intCode())
             .eq(NotifyMessagePO::getMessageType, NotifyMessageTypeEnum.SYSTEM.intCode())
-            .orderByDesc(NotifyMessagePO::getId);
-        return notifyManager.page(page, wrapper);
+            .lt(lastId != null, NotifyMessagePO::getId, lastId)
+            .orderByDesc(NotifyMessagePO::getId)
+            .last("LIMIT " + (limit + 1));
+        List<NotifyMessagePO> records = notifyManager.list(wrapper);
+        return CursorPageVO.of(records, limit, NotifyMessagePO::getId);
     }
 
     /**

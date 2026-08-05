@@ -1,15 +1,14 @@
 package com.yirancrazy.minimall.auth.service.impl;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.stereotype.Service;
-import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.api.dto.auth.TokenVO;
 import com.yirancrazy.minimall.auth.constant.AuthCodeEnum;
@@ -27,6 +26,8 @@ import com.yirancrazy.minimall.auth.service.PlatformAuthService;
 import com.yirancrazy.minimall.auth.util.JwtUtil;
 import com.yirancrazy.minimall.auth.vo.AdminVO;
 import com.yirancrazy.minimall.common.exception.BizException;
+import com.yirancrazy.minimall.common.result.CursorPageVO;
+import com.yirancrazy.minimall.common.util.CursorUtils;
 
 /**
  * @Author: yirancrazy@gmail.com
@@ -139,17 +140,21 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
     }
 
     /**
-     * 分页查询平台管理员，固定 accountType=PLATFORM，按 ID 降序返回。
-     * @param dto 分页入参
-     * @return 管理员分页结果
+     * 游标分页查询平台管理员，固定 accountType=PLATFORM，按 ID 降序返回。
+     * @param dto 游标分页入参
+     * @return 管理员游标分页结果
      */
     @Override
-    public IPage<AdminVO> adminPage(AdminPageDTO dto) {
-        Page<AuthUserPO> page = new Page<>(dto.getPageNo(), dto.getPageSize());
-        IPage<AuthUserPO> poPage = authUserManager.page(page, Wrappers.lambdaQuery(AuthUserPO.class)
+    public CursorPageVO<AdminVO> adminPage(AdminPageDTO dto) {
+        Long lastId = CursorUtils.decode(dto.getCursor());
+        int limit = dto.getLimit();
+        List<AuthUserPO> records = authUserManager.list(Wrappers.lambdaQuery(AuthUserPO.class)
+            .lt(lastId != null, AuthUserPO::getId, lastId)
             .eq(AuthUserPO::getAccountType, ACCOUNT_TYPE_PLATFORM)
-            .orderByDesc(AuthUserPO::getId));
-        return poPage.convert(po -> new AdminVO(
+            .orderByDesc(AuthUserPO::getId)
+            .last("LIMIT " + (limit + 1)));
+        CursorPageVO<AuthUserPO> poPage = CursorPageVO.of(records, limit, AuthUserPO::getId);
+        return poPage.map(po -> new AdminVO(
             po.getId(),
             po.getAccount(),
             po.getNickname(),

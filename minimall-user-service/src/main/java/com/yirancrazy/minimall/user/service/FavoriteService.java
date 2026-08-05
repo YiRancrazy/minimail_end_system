@@ -1,6 +1,6 @@
 package com.yirancrazy.minimall.user.service;
 
-import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.user.dto.FavoritePageDTO;
 import com.yirancrazy.minimall.user.vo.FavoriteVO;
 
@@ -32,7 +32,7 @@ public interface FavoriteService {
      * @param dto 分页入参
      * @return 收藏分页结果
      */
-    IPage<FavoriteVO> pageFavorites(Long userId, FavoritePageDTO dto);
+    CursorPageVO<FavoriteVO> pageFavorites(Long userId, FavoritePageDTO dto);
 
     /**
      * 统计用户收藏数量。

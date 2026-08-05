@@ -9,14 +9,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import jakarta.validation.Valid;
+import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.goods.dto.SpuCreateDTO;
 import com.yirancrazy.minimall.goods.dto.SpuPageDTO;
 import com.yirancrazy.minimall.goods.dto.SpuUpdateDTO;
-import com.yirancrazy.minimall.goods.entity.SpuPO;
 import com.yirancrazy.minimall.goods.service.SpuService;
 import com.yirancrazy.minimall.goods.vo.SpuVO;
 
@@ -27,7 +25,7 @@ import com.yirancrazy.minimall.goods.vo.SpuVO;
  * @DateTime: 2026/08/02
  */
 @RestController
-@RequestMapping("/api/v1/goods/spus")
+@RequestMapping("/api/v1/merchant/goods/spus")
 public class SpuControllerV1 {
 
     private final SpuService spuService;
@@ -59,19 +57,16 @@ public class SpuControllerV1 {
     }
 
     /**
-     * 分页查询 SPU 列表，按商家、状态、标题过滤。
+     * 游标分页查询 SPU 列表，按商家、状态、标题过滤。
      * @param merchantId 商家ID
-     * @param dto 分页查询入参
-     * @return SPU 分页结果
+     * @param dto 游标分页查询入参
+     * @return SPU 游标分页结果
      */
     @GetMapping
-    public Result<IPage<SpuVO>> page(@RequestHeader("X-Merchant-Id") Long merchantId,
-                                     @Valid SpuPageDTO dto) {
+    public Result<CursorPageVO<SpuVO>> page(@RequestHeader("X-Merchant-Id") Long merchantId,
+                                            @Valid SpuPageDTO dto) {
         dto.setMerchantId(merchantId);
-        IPage<SpuPO> poPage = spuService.page(dto);
-        IPage<SpuVO> voPage = new Page<>(poPage.getCurrent(), poPage.getSize(), poPage.getTotal());
-        voPage.setRecords(poPage.getRecords().stream().map(SpuVO::from).toList());
-        return Result.success(voPage);
+        return Result.success(spuService.page(dto).map(SpuVO::from));
     }
 
     /**

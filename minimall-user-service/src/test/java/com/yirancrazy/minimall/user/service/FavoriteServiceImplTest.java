@@ -15,10 +15,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
-import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.yirancrazy.minimall.common.exception.BizException;
+import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.user.dto.FavoritePageDTO;
 import com.yirancrazy.minimall.user.entity.UserFavoritePO;
 import com.yirancrazy.minimall.user.manager.UserFavoriteManager;
@@ -115,18 +114,15 @@ public class FavoriteServiceImplTest {
     @Test
     public void pageFavorites_returns_vos() {
         FavoritePageDTO dto = new FavoritePageDTO();
-        dto.setPageNo(1);
-        dto.setPageSize(10);
+        dto.setLimit(10);
         UserFavoritePO po = new UserFavoritePO();
         po.setId(1L);
         po.setUserId(7L);
         po.setSkuId(100L);
         po.setCreateTime(LocalDateTime.now());
-        Page<UserFavoritePO> page = new Page<>(1, 10);
-        page.setRecords(List.of(po));
-        when(userFavoriteManager.page(any(IPage.class), any(Wrapper.class))).thenReturn(page);
+        when(userFavoriteManager.list(any(Wrapper.class))).thenReturn(List.of(po));
 
-        IPage<FavoriteVO> result = service.pageFavorites(7L, dto);
+        CursorPageVO<FavoriteVO> result = service.pageFavorites(7L, dto);
 
         assertEquals(1, result.getRecords().size());
         assertEquals(1L, result.getRecords().get(0).getId());

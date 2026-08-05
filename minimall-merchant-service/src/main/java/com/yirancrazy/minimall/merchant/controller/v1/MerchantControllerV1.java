@@ -26,7 +26,7 @@ import com.yirancrazy.minimall.merchant.vo.MerchantQualificationVO;
  **/
 @Slf4j
 @RestController
-@RequestMapping("/api/v1/merchant")
+@RequestMapping("/api/v1/merchant/merchants")
 public class MerchantControllerV1 {
 
     private final MerchantService merchantService;

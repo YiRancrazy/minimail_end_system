@@ -2,6 +2,8 @@ package com.yirancrazy.minimall.pay.service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -16,11 +18,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.yirancrazy.minimall.api.feign.OrderFeignClient;
 import com.yirancrazy.minimall.common.exception.BizException;
+import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.pay.dto.PayCallbackDTO;
 import com.yirancrazy.minimall.pay.dto.PayPageDTO;
 import com.yirancrazy.minimall.pay.dto.PayStatementDTO;
@@ -204,34 +204,34 @@ public class PayServiceImplTest {
     }
 
     /**
-     * 验证 page 委托给 manager.page 并强制绑定 merchantId。
+     * 验证 page 委托给 manager.list 并强制绑定 merchantId。
      */
     @Test
     public void page_delegates_to_manager() {
         PayPageDTO dto = new PayPageDTO();
-        dto.setPageNo(1);
-        dto.setPageSize(10);
         dto.setStatus(2);
-        IPage<PayTransactionPO> expected = new Page<>(1, 10);
-        when(manager.page(any(IPage.class), any())).thenReturn(expected);
+        List<PayTransactionPO> mockRecords = new ArrayList<>();
+        when(manager.list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class)))
+            .thenReturn(mockRecords);
 
-        IPage<PayTransactionPO> result = service.page(10L, dto);
-        assertEquals(expected, result);
-        verify(manager).page(any(IPage.class), any());
+        CursorPageVO<PayTransactionPO> result = service.page(10L, dto);
+        assertNotNull(result);
+        verify(manager).list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class));
     }
 
     /**
-     * 验证 platformPage 委托给 manager.page，不绑定 merchantId。
+     * 验证 platformPage 委托给 manager.list，不绑定 merchantId。
      */
     @Test
     public void platformPage_delegates_to_manager() {
         PayPageDTO dto = new PayPageDTO();
-        IPage<PayTransactionPO> expected = new Page<>(1, 20);
-        when(manager.page(any(IPage.class), any())).thenReturn(expected);
+        List<PayTransactionPO> mockRecords = new ArrayList<>();
+        when(manager.list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class)))
+            .thenReturn(mockRecords);
 
-        IPage<PayTransactionPO> result = service.platformPage(dto);
-        assertEquals(expected, result);
-        verify(manager).page(any(IPage.class), any());
+        CursorPageVO<PayTransactionPO> result = service.platformPage(dto);
+        assertNotNull(result);
+        verify(manager).list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class));
     }
 
     /**
@@ -340,33 +340,33 @@ public class PayServiceImplTest {
     }
 
     /**
-     * 验证 pageWithdraw 委托给 merchantWithdrawManager.page 并强制绑定 merchantId。
+     * 验证 pageWithdraw 委托给 merchantWithdrawManager.list 并强制绑定 merchantId。
      */
     @Test
     public void pageWithdraw_delegates_to_manager() {
         PayPageDTO dto = new PayPageDTO();
-        dto.setPageNo(1);
-        dto.setPageSize(10);
-        IPage<MerchantWithdrawPO> expected = new Page<>(1, 10);
-        when(merchantWithdrawManager.page(any(IPage.class), any())).thenReturn(expected);
+        List<MerchantWithdrawPO> mockRecords = new ArrayList<>();
+        when(merchantWithdrawManager.list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class)))
+            .thenReturn(mockRecords);
 
-        IPage<MerchantWithdrawPO> result = service.pageWithdraw(10L, dto);
-        assertEquals(expected, result);
-        verify(merchantWithdrawManager).page(any(IPage.class), any());
+        CursorPageVO<MerchantWithdrawPO> result = service.pageWithdraw(10L, dto);
+        assertNotNull(result);
+        verify(merchantWithdrawManager).list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class));
     }
 
     /**
-     * 验证 platformPageWithdraw 委托给 merchantWithdrawManager.page，不绑定 merchantId。
+     * 验证 platformPageWithdraw 委托给 merchantWithdrawManager.list，不绑定 merchantId。
      */
     @Test
     public void platformPageWithdraw_delegates_to_manager() {
         PayPageDTO dto = new PayPageDTO();
-        IPage<MerchantWithdrawPO> expected = new Page<>(1, 20);
-        when(merchantWithdrawManager.page(any(IPage.class), any())).thenReturn(expected);
+        List<MerchantWithdrawPO> mockRecords = new ArrayList<>();
+        when(merchantWithdrawManager.list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class)))
+            .thenReturn(mockRecords);
 
-        IPage<MerchantWithdrawPO> result = service.platformPageWithdraw(dto);
-        assertEquals(expected, result);
-        verify(merchantWithdrawManager).page(any(IPage.class), any());
+        CursorPageVO<MerchantWithdrawPO> result = service.platformPageWithdraw(dto);
+        assertNotNull(result);
+        verify(merchantWithdrawManager).list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class));
     }
 
     /**

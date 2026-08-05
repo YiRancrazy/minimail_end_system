@@ -7,8 +7,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import com.baomidou.mybatisplus.core.metadata.IPage;
 import jakarta.validation.Valid;
+import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.notify.dto.ComplaintCreateDTO;
 import com.yirancrazy.minimall.notify.dto.ComplaintHandleDTO;
@@ -23,7 +23,7 @@ import com.yirancrazy.minimall.notify.service.ComplaintService;
  * @DateTime: 2026/08/03
  **/
 @RestController
-@RequestMapping("/api/v1/complaints")
+@RequestMapping("/api/v1/platform/complaints")
 public class ComplaintControllerV1 {
 
     private final ComplaintService complaintService;
@@ -50,7 +50,7 @@ public class ComplaintControllerV1 {
      * @return 投诉分页结果
      */
     @GetMapping
-    public Result<IPage<ComplaintPO>> page(@Valid ComplaintPageDTO dto) {
+    public Result<CursorPageVO<ComplaintPO>> page(@Valid ComplaintPageDTO dto) {
         return Result.success(complaintService.page(dto));
     }
 

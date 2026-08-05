@@ -1,7 +1,7 @@
 package com.yirancrazy.minimall.stock.service;
 
 import java.util.List;
-import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.stock.dto.StockCountTaskCompleteDTO;
 import com.yirancrazy.minimall.stock.dto.StockCountTaskCreateDTO;
 import com.yirancrazy.minimall.stock.dto.StockCountTaskPageDTO;
@@ -73,7 +73,7 @@ public interface StockService {
      * @param dto 分页查询入参
      * @return 库存分页结果
      */
-    IPage<StockPO> page(StockPageDTO dto);
+    CursorPageVO<StockPO> page(StockPageDTO dto);
 
     /**
      * 全平台库存统计聚合，返回SKU总数、可用/预占总量、预警SKU数及预警比例。
@@ -100,7 +100,7 @@ public interface StockService {
      * @param dto 分页查询入参
      * @return 调拨记录分页结果
      */
-    IPage<StockTransferPO> transferPage(StockTransferPageDTO dto);
+    CursorPageVO<StockTransferPO> transferPage(StockTransferPageDTO dto);
 
     /**
      * 下发库存盘点任务，查询当前可用库存作为期望数量。
@@ -115,7 +115,7 @@ public interface StockService {
      * @param dto 分页查询入参
      * @return 盘点任务分页结果
      */
-    IPage<StockCountTaskPO> countTaskPage(StockCountTaskPageDTO dto);
+    CursorPageVO<StockCountTaskPO> countTaskPage(StockCountTaskPageDTO dto);
 
     /**
      * 完成盘点任务，计算差异并调整库存。

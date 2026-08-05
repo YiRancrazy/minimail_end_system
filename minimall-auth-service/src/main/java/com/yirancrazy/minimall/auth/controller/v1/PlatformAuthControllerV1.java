@@ -9,7 +9,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import com.baomidou.mybatisplus.core.metadata.IPage;
 import jakarta.validation.Valid;
 import com.yirancrazy.minimall.api.dto.auth.TokenVO;
 import com.yirancrazy.minimall.auth.dto.AdminCreateDTO;
@@ -18,6 +17,7 @@ import com.yirancrazy.minimall.auth.dto.AdminUpdateDTO;
 import com.yirancrazy.minimall.auth.dto.LoginDTO;
 import com.yirancrazy.minimall.auth.service.PlatformAuthService;
 import com.yirancrazy.minimall.auth.vo.AdminVO;
+import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.result.Result;
 
 /**
@@ -70,12 +70,12 @@ public class PlatformAuthControllerV1 {
     }
 
     /**
-     * 分页查询平台管理员。
-     * @param dto 分页入参
-     * @return 管理员分页结果
+     * 游标分页查询平台管理员。
+     * @param dto 游标分页入参
+     * @return 管理员游标分页结果
      */
     @GetMapping("/admins")
-    public Result<IPage<AdminVO>> adminPage(@Valid AdminPageDTO dto) {
+    public Result<CursorPageVO<AdminVO>> adminPage(@Valid AdminPageDTO dto) {
         return Result.success(platformAuthService.adminPage(dto));
     }
 

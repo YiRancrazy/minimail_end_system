@@ -1,7 +1,7 @@
 package com.yirancrazy.minimall.goods.service;
 
 import java.util.List;
-import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.goods.dto.SpuCreateDTO;
 import com.yirancrazy.minimall.goods.dto.SpuPageDTO;
 import com.yirancrazy.minimall.goods.dto.SpuUpdateDTO;
@@ -11,8 +11,8 @@ import com.yirancrazy.minimall.goods.entity.SpuPO;
 /**
  * @Author: yirancrazy@gmail.com
  * @Description: 商品领域服务接口，定义Spu相关业务契约
- * @Version: 1.1
- * @DateTime: 2026/08/02
+ * @Version: 1.2
+ * @DateTime: 2026/08/04
  */
 public interface SpuService {
 
@@ -32,11 +32,11 @@ public interface SpuService {
     Long create(Long merchantId, SpuCreateDTO dto);
 
     /**
-     * 分页查询SPU，支持按商家、状态、标题过滤。
-     * @param dto 分页查询入参
-     * @return SPU 分页结果
+     * 游标分页查询SPU，支持按商家、状态、标题过滤。
+     * @param dto 游标分页查询入参
+     * @return SPU 游标分页结果
      */
-    IPage<SpuPO> page(SpuPageDTO dto);
+    CursorPageVO<SpuPO> page(SpuPageDTO dto);
 
     /**
      * 根据ID更新SPU信息，字段为空表示不更新。
@@ -68,12 +68,11 @@ public interface SpuService {
     boolean offShelf(Long id);
 
     /**
-     * 平台分页查询待审核 SPU。
-     * @param pageNo 页码
-     * @param pageSize 每页大小
-     * @return 待审核 SPU 分页结果
+     * 平台游标分页查询待审核 SPU。
+     * @param dto 游标分页查询入参
+     * @return 待审核 SPU 游标分页结果
      */
-    IPage<SpuPO> pagePending(Integer pageNo, Integer pageSize);
+    CursorPageVO<SpuPO> pagePending(SpuPageDTO dto);
 
     /**
      * 平台审核通过，将 SPU 从待审核置为在售并记录审核日志。

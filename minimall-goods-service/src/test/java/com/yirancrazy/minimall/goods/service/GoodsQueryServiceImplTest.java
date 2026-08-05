@@ -1,6 +1,7 @@
 package com.yirancrazy.minimall.goods.service;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -13,8 +14,8 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.yirancrazy.minimall.common.exception.BizException;
+import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.goods.constant.SpuStatusEnum;
 import com.yirancrazy.minimall.goods.dto.GoodsPageDTO;
 import com.yirancrazy.minimall.goods.entity.SkuPO;
@@ -51,15 +52,13 @@ public class GoodsQueryServiceImplTest {
         po.setSpuNo("SPU200");
         po.setTitle("手机");
         po.setMerchantId(10L);
-        Page<SpuPO> mockPage = new Page<>(1, 20);
-        mockPage.setRecords(List.of(po));
-        when(spuManager.page(any(Page.class), any(Wrapper.class))).thenReturn(mockPage);
+        List<SpuPO> mockRecords = new ArrayList<>();
+        mockRecords.add(po);
+        when(spuManager.list(any(Wrapper.class))).thenReturn(mockRecords);
 
         GoodsPageDTO dto = new GoodsPageDTO();
-        dto.setPageNo(1);
-        dto.setPageSize(20);
 
-        var result = service.pageOnSale(dto);
+        CursorPageVO<SpuListVO> result = service.pageOnSale(dto);
 
         assertEquals(1, result.getRecords().size());
         SpuListVO vo = result.getRecords().get(0);
@@ -73,9 +72,7 @@ public class GoodsQueryServiceImplTest {
      */
     @Test
     public void pageOnSale_with_keyword_and_category_returns_empty() {
-        Page<SpuPO> mockPage = new Page<>(1, 20);
-        mockPage.setRecords(List.of());
-        when(spuManager.page(any(Page.class), any(Wrapper.class))).thenReturn(mockPage);
+        when(spuManager.list(any(Wrapper.class))).thenReturn(List.of());
 
         GoodsPageDTO dto = new GoodsPageDTO();
         dto.setKeyword("耳机");

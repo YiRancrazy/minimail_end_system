@@ -1,12 +1,14 @@
 package com.yirancrazy.minimall.notify.service.impl;
 
+import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.common.exception.BizException;
+import com.yirancrazy.minimall.common.result.CursorPageVO;
+import com.yirancrazy.minimall.common.util.CursorUtils;
 import com.yirancrazy.minimall.notify.constant.ComplaintStatusEnum;
 import com.yirancrazy.minimall.notify.constant.NotifyCodeEnum;
 import com.yirancrazy.minimall.notify.dto.ComplaintCreateDTO;
@@ -62,13 +64,21 @@ public class ComplaintServiceImpl implements ComplaintService {
      * @return 投诉分页结果
      */
     @Override
-    public IPage<ComplaintPO> page(ComplaintPageDTO dto) {
-        Page<ComplaintPO> page = new Page<>(dto.getPageNo(), dto.getPageSize());
-        return complaintManager.page(page, Wrappers.lambdaQuery(ComplaintPO.class)
-            .eq(dto.getStatus() != null, ComplaintPO::getStatus, dto.getStatus())
-            .like(dto.getOrderNo() != null && !dto.getOrderNo().isBlank(),
-                ComplaintPO::getOrderNo, dto.getOrderNo())
-            .orderByDesc(ComplaintPO::getId));
+    public CursorPageVO<ComplaintPO> page(ComplaintPageDTO dto) {
+        Long lastId = CursorUtils.decode(dto.getCursor());
+        int limit = dto.getLimit();
+        LambdaQueryWrapper<ComplaintPO> wrapper = Wrappers.lambdaQuery(ComplaintPO.class);
+        wrapper.lt(lastId != null, ComplaintPO::getId, lastId);
+        if (dto.getStatus() != null) {
+            wrapper.eq(ComplaintPO::getStatus, dto.getStatus());
+        }
+        if (dto.getOrderNo() != null && !dto.getOrderNo().isBlank()) {
+            wrapper.like(ComplaintPO::getOrderNo, dto.getOrderNo());
+        }
+        wrapper.orderByDesc(ComplaintPO::getId);
+        wrapper.last("LIMIT " + (limit + 1));
+        List<ComplaintPO> records = complaintManager.list(wrapper);
+        return CursorPageVO.of(records, limit, ComplaintPO::getId);
     }
 
     /**

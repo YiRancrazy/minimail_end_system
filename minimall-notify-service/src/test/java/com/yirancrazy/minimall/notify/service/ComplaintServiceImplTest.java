@@ -1,5 +1,7 @@
 package com.yirancrazy.minimall.notify.service;
 
+import java.util.Collections;
+import java.util.List;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -14,10 +16,9 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
-import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.yirancrazy.minimall.common.exception.BizException;
+import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.notify.constant.ComplaintStatusEnum;
 import com.yirancrazy.minimall.notify.constant.ComplaintTypeEnum;
 import com.yirancrazy.minimall.notify.dto.ComplaintCreateDTO;
@@ -101,16 +102,15 @@ public class ComplaintServiceImplTest {
     @Test
     public void page_delegates_to_manager() {
         ComplaintPageDTO dto = new ComplaintPageDTO();
-        dto.setPageNo(1);
-        dto.setPageSize(10);
+        dto.setLimit(10);
 
-        IPage<ComplaintPO> expected = new Page<>(1, 10);
-        when(complaintManager.page(any(IPage.class), any())).thenReturn(expected);
+        List<ComplaintPO> records = Collections.emptyList();
+        when(complaintManager.list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class))).thenReturn(records);
 
-        IPage<ComplaintPO> result = service.page(dto);
+        CursorPageVO<ComplaintPO> result = service.page(dto);
 
-        assertEquals(expected, result);
-        verify(complaintManager).page(any(IPage.class), any());
+        assertNotNull(result);
+        verify(complaintManager).list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class));
     }
 
     /**
@@ -119,18 +119,17 @@ public class ComplaintServiceImplTest {
     @Test
     public void page_filters_by_status_and_order_no() {
         ComplaintPageDTO dto = new ComplaintPageDTO();
-        dto.setPageNo(1);
-        dto.setPageSize(10);
+        dto.setLimit(10);
         dto.setStatus(ComplaintStatusEnum.PENDING.intCode());
         dto.setOrderNo("ORDER001");
 
-        IPage<ComplaintPO> expected = new Page<>(1, 10);
-        when(complaintManager.page(any(IPage.class), any())).thenReturn(expected);
+        List<ComplaintPO> records = Collections.emptyList();
+        when(complaintManager.list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class))).thenReturn(records);
 
-        IPage<ComplaintPO> result = service.page(dto);
+        CursorPageVO<ComplaintPO> result = service.page(dto);
 
-        assertEquals(expected, result);
-        verify(complaintManager).page(any(IPage.class), any());
+        assertNotNull(result);
+        verify(complaintManager).list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class));
     }
 
     /**

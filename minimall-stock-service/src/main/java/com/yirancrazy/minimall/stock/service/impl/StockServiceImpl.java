@@ -6,11 +6,11 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.common.exception.BizException;
+import com.yirancrazy.minimall.common.result.CursorPageVO;
+import com.yirancrazy.minimall.common.util.CursorUtils;
 import com.yirancrazy.minimall.stock.constant.StockCodeEnum;
 import com.yirancrazy.minimall.stock.constant.StockCountTaskStatusEnum;
 import com.yirancrazy.minimall.stock.constant.StockJournalTypeEnum;
@@ -180,9 +180,11 @@ public class StockServiceImpl implements StockService {
      * @return 库存分页结果
      */
     @Override
-    public IPage<StockPO> page(StockPageDTO dto) {
-        Page<StockPO> page = new Page<>(dto.getPageNo(), dto.getPageSize());
+    public CursorPageVO<StockPO> page(StockPageDTO dto) {
+        Long lastId = CursorUtils.decode(dto.getCursor());
+        int limit = dto.getLimit();
         LambdaQueryWrapper<StockPO> wrapper = Wrappers.lambdaQuery(StockPO.class);
+        wrapper.lt(lastId != null, StockPO::getId, lastId);
         if (dto.getSkuId() != null) {
             wrapper.eq(StockPO::getSkuId, dto.getSkuId());
         }
@@ -191,7 +193,9 @@ public class StockServiceImpl implements StockService {
                 .apply("available <= alert_threshold");
         }
         wrapper.orderByDesc(StockPO::getId);
-        return stockManager.page(page, wrapper);
+        wrapper.last("LIMIT " + (limit + 1));
+        List<StockPO> records = stockManager.list(wrapper);
+        return CursorPageVO.of(records, limit, StockPO::getId);
     }
 
     /**
@@ -277,9 +281,11 @@ public class StockServiceImpl implements StockService {
      * @return 调拨记录分页结果
      */
     @Override
-    public IPage<StockTransferPO> transferPage(StockTransferPageDTO dto) {
-        Page<StockTransferPO> page = new Page<>(dto.getPageNo(), dto.getPageSize());
+    public CursorPageVO<StockTransferPO> transferPage(StockTransferPageDTO dto) {
+        Long lastId = CursorUtils.decode(dto.getCursor());
+        int limit = dto.getLimit();
         LambdaQueryWrapper<StockTransferPO> wrapper = Wrappers.lambdaQuery(StockTransferPO.class);
+        wrapper.lt(lastId != null, StockTransferPO::getId, lastId);
         if (dto.getFromSkuId() != null) {
             wrapper.eq(StockTransferPO::getFromSkuId, dto.getFromSkuId());
         }
@@ -287,7 +293,9 @@ public class StockServiceImpl implements StockService {
             wrapper.eq(StockTransferPO::getToSkuId, dto.getToSkuId());
         }
         wrapper.orderByDesc(StockTransferPO::getId);
-        return transferManager.page(page, wrapper);
+        wrapper.last("LIMIT " + (limit + 1));
+        List<StockTransferPO> records = transferManager.list(wrapper);
+        return CursorPageVO.of(records, limit, StockTransferPO::getId);
     }
 
     /**
@@ -318,10 +326,12 @@ public class StockServiceImpl implements StockService {
      * @return 盘点任务分页结果
      */
     @Override
-    public IPage<StockCountTaskPO> countTaskPage(StockCountTaskPageDTO dto) {
-        Page<StockCountTaskPO> page = new Page<>(dto.getPageNo(), dto.getPageSize());
+    public CursorPageVO<StockCountTaskPO> countTaskPage(StockCountTaskPageDTO dto) {
+        Long lastId = CursorUtils.decode(dto.getCursor());
+        int limit = dto.getLimit();
         LambdaQueryWrapper<StockCountTaskPO> wrapper =
             Wrappers.lambdaQuery(StockCountTaskPO.class);
+        wrapper.lt(lastId != null, StockCountTaskPO::getId, lastId);
         if (dto.getSkuId() != null) {
             wrapper.eq(StockCountTaskPO::getSkuId, dto.getSkuId());
         }
@@ -329,7 +339,9 @@ public class StockServiceImpl implements StockService {
             wrapper.eq(StockCountTaskPO::getStatus, dto.getStatus());
         }
         wrapper.orderByDesc(StockCountTaskPO::getId);
-        return countTaskManager.page(page, wrapper);
+        wrapper.last("LIMIT " + (limit + 1));
+        List<StockCountTaskPO> records = countTaskManager.list(wrapper);
+        return CursorPageVO.of(records, limit, StockCountTaskPO::getId);
     }
 
     /**

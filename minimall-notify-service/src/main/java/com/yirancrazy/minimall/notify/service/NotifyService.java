@@ -1,7 +1,7 @@
 package com.yirancrazy.minimall.notify.service;
 
 import java.util.List;
-import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.notify.dto.AnnouncementCreateDTO;
 import com.yirancrazy.minimall.notify.dto.NotifyBroadcastDTO;
 import com.yirancrazy.minimall.notify.dto.NotifyListDTO;
@@ -42,7 +42,7 @@ public interface NotifyService {
      * @param dto 分页查询入参
      * @return 站内信分页结果
      */
-    IPage<NotifyMessagePO> page(NotifyListDTO dto);
+    CursorPageVO<NotifyMessagePO> page(NotifyListDTO dto);
 
     /**
      * 统计指定接收方的未读消息数量。
@@ -115,7 +115,7 @@ public interface NotifyService {
      * @param dto 分页入参
      * @return 系统告警分页结果
      */
-    IPage<NotifyMessagePO> alertPage(SystemAlertPageDTO dto);
+    CursorPageVO<NotifyMessagePO> alertPage(SystemAlertPageDTO dto);
 
     /**
      * 发布系统公告，落库为 messageType=ANNOUNCEMENT, recipientType=ALL 的站内信。

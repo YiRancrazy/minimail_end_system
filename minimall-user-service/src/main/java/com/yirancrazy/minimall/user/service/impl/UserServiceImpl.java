@@ -1,11 +1,12 @@
 package com.yirancrazy.minimall.user.service.impl;
 
+import java.util.List;
 import org.springframework.stereotype.Service;
-import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.common.exception.BizException;
+import com.yirancrazy.minimall.common.result.CursorPageVO;
+import com.yirancrazy.minimall.common.util.CursorUtils;
 import com.yirancrazy.minimall.user.constant.UserCodeEnum;
 import com.yirancrazy.minimall.user.dto.UserCreateDTO;
 import com.yirancrazy.minimall.user.dto.UserPageDTO;
@@ -99,12 +100,17 @@ public class UserServiceImpl implements UserService {
      * @return 用户分页结果
      */
     @Override
-    public IPage<UserPO> page(UserPageDTO dto) {
-        Page<UserPO> page = new Page<>(dto.getPageNo(), dto.getPageSize());
-        return userManager.page(page, Wrappers.lambdaQuery(UserPO.class)
+    public CursorPageVO<UserPO> page(UserPageDTO dto) {
+        Long lastId = CursorUtils.decode(dto.getCursor());
+        int limit = dto.getLimit();
+        List<UserPO> records = userManager.list(Wrappers.lambdaQuery(UserPO.class)
+            .lt(lastId != null, UserPO::getId, lastId)
             .and(dto.getKeyword() != null && !dto.getKeyword().isBlank(),
                 w -> w.like(UserPO::getUsername, dto.getKeyword())
-                    .or().like(UserPO::getNickname, dto.getKeyword())));
+                    .or().like(UserPO::getNickname, dto.getKeyword()))
+            .orderByDesc(UserPO::getId)
+            .last("LIMIT " + (limit + 1)));
+        return CursorPageVO.of(records, limit, UserPO::getId);
     }
 
     /**

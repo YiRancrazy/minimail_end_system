@@ -7,11 +7,11 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import com.baomidou.mybatisplus.core.metadata.IPage;
 import jakarta.validation.Valid;
+import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.result.Result;
+import com.yirancrazy.minimall.goods.dto.SpuPageDTO;
 import com.yirancrazy.minimall.goods.dto.SpuRejectDTO;
 import com.yirancrazy.minimall.goods.entity.SpuAuditRecordPO;
 import com.yirancrazy.minimall.goods.entity.SpuPO;
@@ -34,15 +34,13 @@ public class PlatformGoodsControllerV1 {
     }
 
     /**
-     * 分页查询待审核 SPU 列表。
-     * @param pageNo 页码
-     * @param pageSize 每页大小
-     * @return 待审核 SPU 分页结果
+     * 游标分页查询待审核 SPU 列表。
+     * @param dto 游标分页查询入参
+     * @return 待审核 SPU 游标分页结果
      */
     @GetMapping("/spus/pending")
-    public Result<IPage<SpuPO>> pending(@RequestParam(value = "pageNo", defaultValue = "1") Integer pageNo,
-                                        @RequestParam(value = "pageSize", defaultValue = "20") Integer pageSize) {
-        return Result.success(spuService.pagePending(pageNo, pageSize));
+    public Result<CursorPageVO<SpuPO>> pending(@Valid SpuPageDTO dto) {
+        return Result.success(spuService.pagePending(dto));
     }
 
     /**

@@ -18,14 +18,13 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
-import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.yirancrazy.minimall.api.dto.goods.SkuSnapshotDTO;
 import com.yirancrazy.minimall.api.feign.GoodsFeignClient;
 import com.yirancrazy.minimall.api.feign.PayFeignClient;
 import com.yirancrazy.minimall.api.feign.StockFeignClient;
 import com.yirancrazy.minimall.common.event.EventBus;
 import com.yirancrazy.minimall.common.exception.BizException;
+import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.order.constant.OrderStatusEnum;
 import com.yirancrazy.minimall.order.dto.OrderCheckoutItemDTO;
@@ -305,20 +304,19 @@ public class OrderServiceImplTest {
     }
 
     /**
-     * 验证 page 委托给 manager.page 并返回其结果。
+     * 验证 page 委托给 manager.list 并返回游标分页结果。
      */
     @Test
     public void page_delegates_to_manager() {
         OrderPageDTO dto = new OrderPageDTO();
-        dto.setPageNo(1);
-        dto.setPageSize(10);
         dto.setUserId(1L);
-        IPage<OrderPO> expected = new Page<>(1, 10);
-        when(manager.page(any(IPage.class), any())).thenReturn(expected);
+        List<OrderPO> mockRecords = new ArrayList<>();
+        when(manager.list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class)))
+            .thenReturn(mockRecords);
 
-        IPage<OrderPO> result = service.page(dto);
-        assertEquals(expected, result);
-        verify(manager).page(any(IPage.class), any());
+        CursorPageVO<OrderPO> result = service.page(dto);
+        assertNotNull(result);
+        verify(manager).list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class));
     }
 
     /**

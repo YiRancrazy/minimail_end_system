@@ -1,7 +1,7 @@
 package com.yirancrazy.minimall.order.service;
 
 import java.util.List;
-import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.order.dto.OrderCheckoutItemDTO;
 import com.yirancrazy.minimall.order.dto.OrderPageDTO;
 import com.yirancrazy.minimall.order.entity.OrderPO;
@@ -74,11 +74,11 @@ public interface OrderService {
     long pendingCount(Long merchantId);
 
     /**
-     * 分页查询订单，支持按用户/商家/状态过滤。
-     * @param dto 分页查询入参
-     * @return 订单分页结果
+     * 游标分页查询订单，支持按用户/商家/状态过滤。
+     * @param dto 游标分页查询入参
+     * @return 订单游标分页结果
      */
-    IPage<OrderPO> page(OrderPageDTO dto);
+    CursorPageVO<OrderPO> page(OrderPageDTO dto);
 
     /**
      * 商家审核退款，仅允许 REFUNDING 状态订单；approved=false 回退到 refundFromStatus，true 仅记录审核通过。

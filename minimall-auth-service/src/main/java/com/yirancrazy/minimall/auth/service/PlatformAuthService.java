@@ -1,12 +1,12 @@
 package com.yirancrazy.minimall.auth.service;
 
-import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.yirancrazy.minimall.api.dto.auth.TokenVO;
 import com.yirancrazy.minimall.auth.dto.AdminCreateDTO;
 import com.yirancrazy.minimall.auth.dto.AdminPageDTO;
 import com.yirancrazy.minimall.auth.dto.AdminUpdateDTO;
 import com.yirancrazy.minimall.auth.dto.LoginDTO;
 import com.yirancrazy.minimall.auth.vo.AdminVO;
+import com.yirancrazy.minimall.common.result.CursorPageVO;
 
 /**
  * @Author: yirancrazy@gmail.com
@@ -39,11 +39,11 @@ public interface PlatformAuthService {
     Long adminCreate(AdminCreateDTO dto);
 
     /**
-     * 分页查询平台管理员，固定 accountType=PLATFORM。
-     * @param dto 分页入参
-     * @return 管理员分页结果
+     * 游标分页查询平台管理员，固定 accountType=PLATFORM，按 ID 降序返回。
+     * @param dto 游标分页入参
+     * @return 管理员游标分页结果
      */
-    IPage<AdminVO> adminPage(AdminPageDTO dto);
+    CursorPageVO<AdminVO> adminPage(AdminPageDTO dto);
 
     /**
      * 更新平台管理员昵称。

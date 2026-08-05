@@ -1,5 +1,7 @@
 package com.yirancrazy.minimall.user.service;
 
+import java.util.Collections;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -14,9 +16,9 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.yirancrazy.minimall.common.exception.BizException;
+import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.user.dto.UserCreateDTO;
 import com.yirancrazy.minimall.user.dto.UserPageDTO;
 import com.yirancrazy.minimall.user.dto.UserProfileDTO;
@@ -136,20 +138,19 @@ public class UserServiceImplTest {
     }
 
     /**
-     * 验证 page 委托给 userManager.page 并返回其结果。
+     * 验证 page 委托给 userManager.list 并返回游标分页结果。
      */
     @Test
     public void page_delegates_to_manager() {
         UserPageDTO dto = new UserPageDTO();
-        dto.setPageNo(1);
-        dto.setPageSize(10);
+        dto.setLimit(10);
         dto.setKeyword("ali");
-        IPage<UserPO> expected = new Page<>(1, 10);
-        when(userManager.page(any(IPage.class), any())).thenReturn(expected);
+        List<UserPO> records = Collections.emptyList();
+        when(userManager.list(any(Wrapper.class))).thenReturn(records);
 
-        IPage<UserPO> result = service.page(dto);
-        assertEquals(expected, result);
-        verify(userManager).page(any(IPage.class), any());
+        CursorPageVO<UserPO> result = service.page(dto);
+        assertNotNull(result);
+        verify(userManager).list(any(Wrapper.class));
     }
 
     /**

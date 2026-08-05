@@ -1,7 +1,7 @@
 package com.yirancrazy.minimall.goods.service;
 
 import java.util.List;
-import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.goods.dto.GoodsPageDTO;
 import com.yirancrazy.minimall.goods.vo.SkuVO;
 import com.yirancrazy.minimall.goods.vo.SpuDetailVO;
@@ -16,11 +16,11 @@ import com.yirancrazy.minimall.goods.vo.SpuListVO;
 public interface GoodsQueryService {
 
     /**
-     * 分页查询在售商品，支持关键词与分类过滤。
-     * @param dto 分页查询入参
-     * @return 在售商品列表分页
+     * 游标分页查询在售商品，支持关键词与分类过滤。
+     * @param dto 游标分页查询入参
+     * @return 在售商品游标分页结果
      */
-    IPage<SpuListVO> pageOnSale(GoodsPageDTO dto);
+    CursorPageVO<SpuListVO> pageOnSale(GoodsPageDTO dto);
 
     /**
      * 查询商品详情，聚合 SPU 基础信息与其下 SKU 列表；非在售商品对用户不可见。

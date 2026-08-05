@@ -27,7 +27,7 @@ import com.yirancrazy.minimall.common.result.Result;
  * @DateTime: 2026/7/31
  **/
 @RestController
-@RequestMapping("/api/v1/auth")
+@RequestMapping("/api/v1/user/auth")
 public class AuthControllerV1 {
 
     private final AuthService authService;

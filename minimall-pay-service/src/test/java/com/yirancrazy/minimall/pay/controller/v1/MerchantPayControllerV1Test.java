@@ -5,20 +5,15 @@ import org.junit.jupiter.api.Test;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: PayControllerV1 的单元测试类。
+ * @Description: MerchantPayControllerV1 的单元测试类。
  * @Version: 1.0
- * @DateTime: 2026/7/31
+ * @DateTime: 2026/08/04
  **/
 @Disabled("integration test - needs full web context")
-class PayControllerV1Test {
+class MerchantPayControllerV1Test {
 
     @Test
-    void callback_should_success_with_valid_params() {
-        // placeholder - needs full Spring Boot web context
-    }
-
-    @Test
-    void callback_should_fail_when_payId_is_null() {
+    void placeholder() {
         // placeholder - needs full Spring Boot web context
     }
 }

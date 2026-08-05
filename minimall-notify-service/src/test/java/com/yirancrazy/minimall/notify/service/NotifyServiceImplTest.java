@@ -8,6 +8,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -18,10 +19,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
-import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.yirancrazy.minimall.common.exception.BizException;
+import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.notify.constant.NotifyMessageTypeEnum;
 import com.yirancrazy.minimall.notify.constant.RecipientTypeEnum;
 import com.yirancrazy.minimall.notify.dto.AnnouncementCreateDTO;
@@ -120,16 +120,15 @@ public class NotifyServiceImplTest {
     @Test
     public void page_delegates_to_manager() {
         NotifyListDTO dto = new NotifyListDTO();
-        dto.setPageNo(1);
-        dto.setPageSize(10);
+        dto.setLimit(10);
         dto.setUserId(7L);
         dto.setRecipientType(RecipientTypeEnum.USER.intCode());
-        IPage<NotifyMessagePO> expected = new Page<>(1, 10);
-        when(notifyManager.page(any(IPage.class), any())).thenReturn(expected);
+        List<NotifyMessagePO> records = Collections.emptyList();
+        when(notifyManager.list(any(Wrapper.class))).thenReturn(records);
 
-        IPage<NotifyMessagePO> result = service.page(dto);
-        assertEquals(expected, result);
-        verify(notifyManager).page(any(IPage.class), any());
+        CursorPageVO<NotifyMessagePO> result = service.page(dto);
+        assertNotNull(result);
+        verify(notifyManager).list(any(Wrapper.class));
     }
 
     /**
@@ -375,18 +374,16 @@ public class NotifyServiceImplTest {
         alert.setRecipientType(RecipientTypeEnum.PLATFORM.intCode());
         alert.setMessageType(NotifyMessageTypeEnum.SYSTEM.intCode());
         alert.setTitle("CPU 告警");
-        IPage<NotifyMessagePO> expected = new Page<>(1, 10);
-        expected.setRecords(List.of(alert));
-        when(notifyManager.page(any(IPage.class), any())).thenReturn(expected);
+        List<NotifyMessagePO> records = List.of(alert);
+        when(notifyManager.list(any(Wrapper.class))).thenReturn(records);
 
         SystemAlertPageDTO dto = new SystemAlertPageDTO();
-        dto.setPageNo(1);
-        dto.setPageSize(10);
-        IPage<NotifyMessagePO> result = service.alertPage(dto);
+        dto.setLimit(10);
+        CursorPageVO<NotifyMessagePO> result = service.alertPage(dto);
 
         assertEquals(1, result.getRecords().size());
         assertEquals("CPU 告警", result.getRecords().get(0).getTitle());
-        verify(notifyManager).page(any(IPage.class), any());
+        verify(notifyManager).list(any(Wrapper.class));
     }
 
     /**
@@ -394,14 +391,12 @@ public class NotifyServiceImplTest {
      */
     @Test
     public void alertPage_returns_empty_when_no_alerts() {
-        IPage<NotifyMessagePO> expected = new Page<>(1, 10);
-        expected.setRecords(Collections.emptyList());
-        when(notifyManager.page(any(IPage.class), any())).thenReturn(expected);
+        List<NotifyMessagePO> records = Collections.emptyList();
+        when(notifyManager.list(any(Wrapper.class))).thenReturn(records);
 
         SystemAlertPageDTO dto = new SystemAlertPageDTO();
-        dto.setPageNo(1);
-        dto.setPageSize(10);
-        IPage<NotifyMessagePO> result = service.alertPage(dto);
+        dto.setLimit(10);
+        CursorPageVO<NotifyMessagePO> result = service.alertPage(dto);
 
         assertEquals(0, result.getRecords().size());
     }

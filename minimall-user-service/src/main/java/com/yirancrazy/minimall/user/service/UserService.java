@@ -1,6 +1,6 @@
 package com.yirancrazy.minimall.user.service;
 
-import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.user.dto.UserCreateDTO;
 import com.yirancrazy.minimall.user.dto.UserPageDTO;
 import com.yirancrazy.minimall.user.dto.UserProfileDTO;
@@ -10,9 +10,9 @@ import com.yirancrazy.minimall.user.entity.UserPO;
 /**
  * 用户领域服务接口，定义用户查询、创建、更新、删除与个人资料管理业务契约。
  * @Author: yirancrazy@gmail.com
- * @Description: 用户服务接口，提供用户 CRUD、分页查询与个人资料管理业务契约。
- * @Version: 1.2
- * @DateTime: 2026/08/03
+ * @Description: 用户服务接口，提供用户 CRUD、游标分页查询与个人资料管理业务契约。
+ * @Version: 1.3
+ * @DateTime: 2026/08/04
  */
 public interface UserService {
     /**
@@ -45,11 +45,11 @@ public interface UserService {
     boolean delete(Long id);
 
     /**
-     * 分页查询用户，keyword 非空时按用户名/昵称模糊匹配。
-     * @param dto 分页查询入参
-     * @return 用户分页结果
+     * 游标分页查询用户，keyword 非空时按用户名/昵称模糊匹配。
+     * @param dto 游标分页查询入参
+     * @return 用户游标分页结果
      */
-    IPage<UserPO> page(UserPageDTO dto);
+    CursorPageVO<UserPO> page(UserPageDTO dto);
 
     /**
      * 查询当前用户个人资料。

@@ -1,6 +1,8 @@
 package com.yirancrazy.minimall.goods.service;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -14,9 +16,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
-import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.yirancrazy.minimall.common.exception.BizException;
+import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.goods.dto.SkuCreateDTO;
 import com.yirancrazy.minimall.goods.dto.SkuPageDTO;
 import com.yirancrazy.minimall.goods.dto.SkuUpdateDTO;
@@ -109,18 +110,18 @@ public class SkuServiceImplTest {
     }
 
     /**
-     * 验证 page 返回分页结果。
+     * 验证 page 返回游标分页结果。
      */
     @Test
     public void page_returns_results() {
-        Page<SkuPO> mockPage = new Page<>(1, 20);
-        mockPage.setRecords(java.util.List.of(new SkuPO()));
-        when(skuManager.page(any(Page.class), any(Wrapper.class))).thenReturn(mockPage);
+        List<SkuPO> mockRecords = new ArrayList<>();
+        SkuPO sku = new SkuPO();
+        sku.setId(100L);
+        mockRecords.add(sku);
+        when(skuManager.list(any(Wrapper.class))).thenReturn(mockRecords);
 
         SkuPageDTO dto = new SkuPageDTO();
-        dto.setPageNo(1);
-        dto.setPageSize(20);
-        IPage<SkuPO> result = service.page(dto);
+        CursorPageVO<SkuPO> result = service.page(dto);
 
         assertEquals(1, result.getRecords().size());
     }

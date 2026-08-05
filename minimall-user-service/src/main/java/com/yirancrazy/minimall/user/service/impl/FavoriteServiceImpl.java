@@ -1,11 +1,12 @@
 package com.yirancrazy.minimall.user.service.impl;
 
+import java.util.List;
 import org.springframework.stereotype.Service;
-import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.common.exception.BizException;
+import com.yirancrazy.minimall.common.result.CursorPageVO;
+import com.yirancrazy.minimall.common.util.CursorUtils;
 import com.yirancrazy.minimall.user.constant.UserCodeEnum;
 import com.yirancrazy.minimall.user.dto.FavoritePageDTO;
 import com.yirancrazy.minimall.user.entity.UserFavoritePO;
@@ -79,12 +80,15 @@ public class FavoriteServiceImpl implements FavoriteService {
      * @return 收藏分页结果
      */
     @Override
-    public IPage<FavoriteVO> pageFavorites(Long userId, FavoritePageDTO dto) {
-        Page<UserFavoritePO> page = new Page<>(dto.getPageNo(), dto.getPageSize());
-        IPage<UserFavoritePO> result = userFavoriteManager.page(page, Wrappers.lambdaQuery(UserFavoritePO.class)
+    public CursorPageVO<FavoriteVO> pageFavorites(Long userId, FavoritePageDTO dto) {
+        Long lastId = CursorUtils.decode(dto.getCursor());
+        int limit = dto.getLimit();
+        List<UserFavoritePO> records = userFavoriteManager.list(Wrappers.lambdaQuery(UserFavoritePO.class)
+            .lt(lastId != null, UserFavoritePO::getId, lastId)
             .eq(UserFavoritePO::getUserId, userId)
-            .orderByDesc(UserFavoritePO::getCreateTime));
-        return result.convert(this::toVO);
+            .orderByDesc(UserFavoritePO::getId)
+            .last("LIMIT " + (limit + 1)));
+        return CursorPageVO.of(records, limit, UserFavoritePO::getId).map(this::toVO);
     }
 
     /**

@@ -1,5 +1,7 @@
 package com.yirancrazy.minimall.auth.service.impl;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,8 +25,7 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.yirancrazy.minimall.api.dto.auth.TokenVO;
 import com.yirancrazy.minimall.auth.dto.AdminCreateDTO;
 import com.yirancrazy.minimall.auth.dto.AdminPageDTO;
@@ -38,6 +39,7 @@ import com.yirancrazy.minimall.auth.manager.AuthUserManager;
 import com.yirancrazy.minimall.auth.util.JwtUtil;
 import com.yirancrazy.minimall.auth.vo.AdminVO;
 import com.yirancrazy.minimall.common.exception.BizException;
+import com.yirancrazy.minimall.common.result.CursorPageVO;
 
 /**
  * @Author: yirancrazy@gmail.com
@@ -209,21 +211,20 @@ class PlatformAuthServiceImplTest {
     }
 
     /**
-     * 验证 adminPage 分页查询委托给 manager。
+     * 验证 adminPage 游标分页查询委托给 manager。
      */
     @Test
     void adminPage_delegates_to_manager() {
         AdminPageDTO dto = new AdminPageDTO();
-        dto.setPageNo(1);
-        dto.setPageSize(10);
+        dto.setLimit(10);
 
-        IPage<AuthUserPO> expected = new Page<>(1, 10);
-        when(authUserManager.page(any(IPage.class), any())).thenReturn(expected);
+        List<AuthUserPO> mockRecords = new ArrayList<>();
+        when(authUserManager.list(any(Wrapper.class))).thenReturn(mockRecords);
 
-        IPage<AdminVO> result = service.adminPage(dto);
+        CursorPageVO<AdminVO> result = service.adminPage(dto);
 
         assertNotNull(result);
-        verify(authUserManager).page(any(IPage.class), any());
+        verify(authUserManager).list(any(Wrapper.class));
     }
 
     /**

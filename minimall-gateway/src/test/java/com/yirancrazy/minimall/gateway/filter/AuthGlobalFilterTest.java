@@ -57,7 +57,7 @@ class AuthGlobalFilterTest {
     @Test
     void whitelist_path_passes_through() {
         ServerWebExchange ex = MockServerWebExchange.from(
-            MockServerHttpRequest.post("/api/v1/auth/login"));
+            MockServerHttpRequest.post("/api/v1/user/auth/login"));
         Mono<Void> r = filter.filter(ex, e -> Mono.empty());
         assertNotNull(r);
     }
@@ -65,7 +65,7 @@ class AuthGlobalFilterTest {
     @Test
     void missing_authorization_returns_401() {
         ServerWebExchange ex = MockServerWebExchange.from(
-            MockServerHttpRequest.get("/api/v1/user/1"));
+            MockServerHttpRequest.get("/api/v1/user/users/1"));
         StepVerifier.create(filter.filter(ex, e -> Mono.empty()))
             .verifyComplete();
         assertEquals(HttpStatus.UNAUTHORIZED, ex.getResponse().getStatusCode());
@@ -87,7 +87,7 @@ class AuthGlobalFilterTest {
         when(redisTemplate.hasKey(anyString())).thenReturn(Mono.just(false));
 
         ServerWebExchange ex = MockServerWebExchange.from(
-            MockServerHttpRequest.get("/api/v1/user/42")
+            MockServerHttpRequest.get("/api/v1/user/users/42")
                 .header("Authorization", "Bearer " + token));
         StepVerifier.create(filter.filter(ex, e -> Mono.empty()))
             .verifyComplete();
@@ -144,7 +144,7 @@ class AuthGlobalFilterTest {
         when(redisTemplate.hasKey(anyString())).thenReturn(Mono.just(false));
 
         ServerWebExchange ex = MockServerWebExchange.from(
-            MockServerHttpRequest.post("/api/v1/user/profile")
+            MockServerHttpRequest.post("/api/v1/user/users/42")
                 .header("Authorization", "Bearer " + token));
         StepVerifier.create(filter.filter(ex, e -> Mono.empty()))
             .verifyComplete();
@@ -157,7 +157,7 @@ class AuthGlobalFilterTest {
         when(redisTemplate.hasKey(anyString())).thenReturn(Mono.just(false));
 
         ServerWebExchange ex = MockServerWebExchange.from(
-            MockServerHttpRequest.post("/api/v1/user/profile")
+            MockServerHttpRequest.post("/api/v1/user/users/42")
                 .header("Authorization", "Bearer " + token)
                 .header("X-Idempotency-Key", "idem-uuid-123"));
         StepVerifier.create(filter.filter(ex, e -> Mono.empty()))
@@ -170,7 +170,7 @@ class AuthGlobalFilterTest {
         when(redisTemplate.hasKey(anyString())).thenReturn(Mono.just(false));
 
         ServerWebExchange ex = MockServerWebExchange.from(
-            MockServerHttpRequest.post("/api/v1/pay/create")
+            MockServerHttpRequest.post("/api/v1/user/pay/create")
                 .header("Authorization", "Bearer " + token)
                 .header("X-Idempotency-Key", "idem-uuid-456"));
         StepVerifier.create(filter.filter(ex, e -> Mono.empty()))
@@ -188,7 +188,7 @@ class AuthGlobalFilterTest {
 
         long ts = System.currentTimeMillis();
         ServerWebExchange ex = MockServerWebExchange.from(
-            MockServerHttpRequest.post("/api/v1/pay/create")
+            MockServerHttpRequest.post("/api/v1/user/pay/create")
                 .header("Authorization", "Bearer " + token)
                 .header("X-Idempotency-Key", "idem-uuid-789")
                 .header("X-Client-Ts", String.valueOf(ts))
@@ -207,7 +207,7 @@ class AuthGlobalFilterTest {
 
         long ts = System.currentTimeMillis();
         ServerWebExchange ex = MockServerWebExchange.from(
-            MockServerHttpRequest.post("/api/v1/pay/create")
+            MockServerHttpRequest.post("/api/v1/user/pay/create")
                 .header("Authorization", "Bearer " + token)
                 .header("X-Idempotency-Key", "idem-uuid-replay")
                 .header("X-Client-Ts", String.valueOf(ts))
@@ -224,7 +224,7 @@ class AuthGlobalFilterTest {
 
         long expiredTs = System.currentTimeMillis() - 10 * 60 * 1000L;
         ServerWebExchange ex = MockServerWebExchange.from(
-            MockServerHttpRequest.post("/api/v1/pay/create")
+            MockServerHttpRequest.post("/api/v1/user/pay/create")
                 .header("Authorization", "Bearer " + token)
                 .header("X-Idempotency-Key", "idem-uuid-expired")
                 .header("X-Client-Ts", String.valueOf(expiredTs))

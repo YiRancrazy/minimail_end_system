@@ -10,14 +10,13 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import com.baomidou.mybatisplus.core.metadata.IPage;
 import jakarta.validation.Valid;
+import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.user.dto.UserCreateDTO;
 import com.yirancrazy.minimall.user.dto.UserPageDTO;
 import com.yirancrazy.minimall.user.dto.UserProfileDTO;
 import com.yirancrazy.minimall.user.dto.UserUpdateDTO;
-import com.yirancrazy.minimall.user.entity.UserPO;
 import com.yirancrazy.minimall.user.service.UserService;
 import com.yirancrazy.minimall.user.vo.UserVO;
 
@@ -28,7 +27,7 @@ import com.yirancrazy.minimall.user.vo.UserVO;
  * @DateTime: 2026/07/31
  */
 @RestController
-@RequestMapping("/api/v1/users")
+@RequestMapping("/api/v1/user/users")
 public class UserControllerV1 {
 
     private final UserService userService;
@@ -43,9 +42,8 @@ public class UserControllerV1 {
      * @return 用户分页结果
      */
     @GetMapping
-    public Result<IPage<UserVO>> page(@Valid UserPageDTO dto) {
-        IPage<UserPO> poPage = userService.page(dto);
-        return Result.success(poPage.convert(UserVO::from));
+    public Result<CursorPageVO<UserVO>> page(@Valid UserPageDTO dto) {
+        return Result.success(userService.page(dto).map(UserVO::from));
     }
 
     /**

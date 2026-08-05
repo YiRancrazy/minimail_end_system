@@ -1,6 +1,6 @@
 package com.yirancrazy.minimall.notify.service;
 
-import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.notify.dto.ComplaintCreateDTO;
 import com.yirancrazy.minimall.notify.dto.ComplaintHandleDTO;
 import com.yirancrazy.minimall.notify.dto.ComplaintPageDTO;
@@ -27,7 +27,7 @@ public interface ComplaintService {
      * @param dto 分页入参
      * @return 投诉分页结果
      */
-    IPage<ComplaintPO> page(ComplaintPageDTO dto);
+    CursorPageVO<ComplaintPO> page(ComplaintPageDTO dto);
 
     /**
      * 平台处理投诉，校验状态流转合法性：PENDING→PROCESSING，PROCESSING→RESOLVED/REJECTED。

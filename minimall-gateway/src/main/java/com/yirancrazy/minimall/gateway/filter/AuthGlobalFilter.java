@@ -36,11 +36,12 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
         "^[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$");
 
     private static final Set<String> WHITELIST = Set.of(
-        "/api/v1/auth/login",
-        "/api/v1/auth/register",
-        "/api/v1/auth/refresh-token",
-        "/api/v1/auth/send-reset-code",
-        "/api/v1/auth/reset-password",
+        "/api/v1/user/auth/login",
+        "/api/v1/user/auth/register",
+        "/api/v1/user/auth/token/refresh",
+        "/api/v1/user/auth/password/reset/request",
+        "/api/v1/user/auth/password/reset/confirm",
+        "/api/v1/user/pay/callback/alipay",
         "/api/v1/merchant/auth/login",
         "/api/v1/platform/auth/login",
         "/actuator/health"
@@ -66,9 +67,9 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
     private static final int NONCE_MAX_LEN = 16;
 
     private static final Set<String> SENSITIVE_WRITE_PREFIXES = Set.of(
-        "/api/v1/pay/",
-        "/api/v1/orders/checkout",
-        "/api/v1/cart/checkout"
+        "/api/v1/user/pay/",
+        "/api/v1/merchant/pay/",
+        "/api/v1/platform/pay/"
     );
 
     private final JwtVerifier verifier;

@@ -7,9 +7,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import com.baomidou.mybatisplus.core.metadata.IPage;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
+import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.user.dto.FavoritePageDTO;
 import com.yirancrazy.minimall.user.service.FavoriteService;
@@ -23,7 +23,7 @@ import com.yirancrazy.minimall.user.vo.FavoriteVO;
  */
 @Slf4j
 @RestController
-@RequestMapping("/api/v1/favorites")
+@RequestMapping("/api/v1/user/favorites")
 public class FavoriteControllerV1 {
 
     private final FavoriteService favoriteService;
@@ -63,7 +63,7 @@ public class FavoriteControllerV1 {
      * @return 收藏分页结果
      */
     @GetMapping
-    public Result<IPage<FavoriteVO>> page(@RequestHeader("X-User-Id") Long userId, @Valid FavoritePageDTO dto) {
+    public Result<CursorPageVO<FavoriteVO>> page(@RequestHeader("X-User-Id") Long userId, @Valid FavoritePageDTO dto) {
         return Result.success(favoriteService.pageFavorites(userId, dto));
     }
 

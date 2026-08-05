@@ -6,9 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
-import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.seata.spring.annotation.GlobalTransactional;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.api.dto.goods.SkuSnapshotDTO;
@@ -21,7 +19,9 @@ import com.yirancrazy.minimall.api.feign.PayFeignClient;
 import com.yirancrazy.minimall.api.feign.StockFeignClient;
 import com.yirancrazy.minimall.common.event.EventBus;
 import com.yirancrazy.minimall.common.exception.BizException;
+import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.util.CsvExporter;
+import com.yirancrazy.minimall.common.util.CursorUtils;
 import com.yirancrazy.minimall.order.constant.OrderCodeEnum;
 import com.yirancrazy.minimall.order.constant.OrderStatusEnum;
 import com.yirancrazy.minimall.order.dto.OrderCheckoutItemDTO;
@@ -402,20 +402,24 @@ public class OrderServiceImpl implements OrderService {
     }
 
     /**
-     * 分页查询订单，按 userId/merchantId/status 等值过滤，按创建时间倒序。
-     * @param dto 分页查询入参
-     * @return 订单分页结果
+     * 游标分页查询订单，按 userId/merchantId/status 等值过滤，按ID倒序。
+     * @param dto 游标分页查询入参
+     * @return 订单游标分页结果
      */
     @Override
-    public IPage<OrderPO> page(OrderPageDTO dto) {
-        Page<OrderPO> page = new Page<>(dto.getPageNo(), dto.getPageSize());
-        return orderManager.page(page, Wrappers.lambdaQuery(OrderPO.class)
+    public CursorPageVO<OrderPO> page(OrderPageDTO dto) {
+        Long lastId = CursorUtils.decode(dto.getCursor());
+        int limit = dto.getLimit();
+        List<OrderPO> records = orderManager.list(Wrappers.lambdaQuery(OrderPO.class)
+            .lt(lastId != null, OrderPO::getId, lastId)
             .eq(dto.getUserId() != null, OrderPO::getUserId, dto.getUserId())
             .eq(dto.getMerchantId() != null, OrderPO::getMerchantId, dto.getMerchantId())
             .eq(dto.getStatus() != null, OrderPO::getStatus, dto.getStatus())
             .ge(dto.getStartTime() != null, OrderPO::getCreateTime, dto.getStartTime())
             .le(dto.getEndTime() != null, OrderPO::getCreateTime, dto.getEndTime())
-            .orderByDesc(OrderPO::getCreateTime));
+            .orderByDesc(OrderPO::getId)
+            .last("LIMIT " + (limit + 1)));
+        return CursorPageVO.of(records, limit, OrderPO::getId);
     }
 
     /**

@@ -26,7 +26,7 @@ import com.yirancrazy.minimall.user.vo.AddressVO;
  * @DateTime: 2026/08/03
  **/
 @RestController
-@RequestMapping("/api/v1/addresses")
+@RequestMapping("/api/v1/user/addresses")
 public class AddressControllerV1 {
 
     private final AddressService addressService;

@@ -1,10 +1,12 @@
 package com.yirancrazy.minimall.stock.service;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
@@ -12,9 +14,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.yirancrazy.minimall.common.exception.BizException;
+import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.stock.constant.StockCountTaskStatusEnum;
 import com.yirancrazy.minimall.stock.dto.StockCountTaskCompleteDTO;
 import com.yirancrazy.minimall.stock.dto.StockCountTaskCreateDTO;
@@ -163,19 +164,17 @@ public class StockServiceImplTest {
     }
 
     /**
-     * 验证 page 委托给 manager.page 并返回其结果。
+     * 验证 page 委托给 manager.list 并返回游标分页结果。
      */
     @Test
     public void page_delegates_to_manager() {
         StockPageDTO dto = new StockPageDTO();
-        dto.setPageNo(1);
-        dto.setPageSize(10);
-        IPage<StockPO> expected = new Page<>(1, 10);
-        when(manager.page(any(IPage.class), any())).thenReturn(expected);
+        List<StockPO> mockRecords = new ArrayList<>();
+        when(manager.list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class))).thenReturn(mockRecords);
 
-        IPage<StockPO> result = service.page(dto);
-        assertEquals(expected, result);
-        verify(manager).page(any(IPage.class), any());
+        CursorPageVO<StockPO> result = service.page(dto);
+        assertNotNull(result);
+        verify(manager).list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class));
     }
 
     /**
@@ -305,19 +304,17 @@ public class StockServiceImplTest {
     }
 
     /**
-     * 验证 transferPage 委托给 transferManager.page。
+     * 验证 transferPage 委托给 transferManager.list 并返回游标分页结果。
      */
     @Test
     public void transferPage_delegates_to_manager() {
         StockTransferPageDTO dto = new StockTransferPageDTO();
-        dto.setPageNo(1);
-        dto.setPageSize(10);
-        IPage<StockTransferPO> expected = new Page<>(1, 10);
-        when(transferManager.page(any(IPage.class), any())).thenReturn(expected);
+        List<StockTransferPO> mockRecords = new ArrayList<>();
+        when(transferManager.list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class))).thenReturn(mockRecords);
 
-        IPage<StockTransferPO> result = service.transferPage(dto);
-        assertEquals(expected, result);
-        verify(transferManager).page(any(IPage.class), any());
+        CursorPageVO<StockTransferPO> result = service.transferPage(dto);
+        assertNotNull(result);
+        verify(transferManager).list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class));
     }
 
     /**
@@ -430,19 +427,18 @@ public class StockServiceImplTest {
     }
 
     /**
-     * 验证 countTaskPage 委托给 countTaskManager.page。
+     * 验证 countTaskPage 委托给 countTaskManager.list 并返回游标分页结果。
      */
     @Test
     public void countTaskPage_delegates_to_manager() {
         StockCountTaskPageDTO dto = new StockCountTaskPageDTO();
-        dto.setPageNo(1);
-        dto.setPageSize(10);
-        IPage<StockCountTaskPO> expected = new Page<>(1, 10);
-        when(countTaskManager.page(any(IPage.class), any())).thenReturn(expected);
+        List<StockCountTaskPO> mockRecords = new ArrayList<>();
+        when(countTaskManager.list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class)))
+            .thenReturn(mockRecords);
 
-        IPage<StockCountTaskPO> result = service.countTaskPage(dto);
-        assertEquals(expected, result);
-        verify(countTaskManager).page(any(IPage.class), any());
+        CursorPageVO<StockCountTaskPO> result = service.countTaskPage(dto);
+        assertNotNull(result);
+        verify(countTaskManager).list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class));
     }
 
     /**

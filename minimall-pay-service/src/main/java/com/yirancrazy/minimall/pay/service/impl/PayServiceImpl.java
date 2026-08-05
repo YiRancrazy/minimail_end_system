@@ -6,14 +6,14 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
-import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO;
 import com.yirancrazy.minimall.api.feign.OrderFeignClient;
 import com.yirancrazy.minimall.common.exception.BizException;
+import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.util.CsvExporter;
+import com.yirancrazy.minimall.common.util.CursorUtils;
 import com.yirancrazy.minimall.pay.constant.PayChannelEnum;
 import com.yirancrazy.minimall.pay.constant.PayCodeEnum;
 import com.yirancrazy.minimall.pay.constant.PayStatusEnum;
@@ -237,35 +237,43 @@ public class PayServiceImpl implements PayService {
     }
 
     /**
-     * 商家资金流水分页查询，merchantId 强制绑定，支持按状态与时间范围过滤。
+     * 商家资金流水游标分页查询，merchantId 强制绑定，支持按状态与时间范围过滤。
      * @param merchantId 商家ID
-     * @param dto 分页查询入参
-     * @return 支付流水分页结果
+     * @param dto 游标分页查询入参
+     * @return 支付流水游标分页结果
      */
     @Override
-    public IPage<PayTransactionPO> page(Long merchantId, PayPageDTO dto) {
-        Page<PayTransactionPO> page = new Page<>(dto.getPageNo(), dto.getPageSize());
-        return payManager.page(page, Wrappers.lambdaQuery(PayTransactionPO.class)
+    public CursorPageVO<PayTransactionPO> page(Long merchantId, PayPageDTO dto) {
+        Long lastId = CursorUtils.decode(dto.getCursor());
+        int limit = dto.getLimit();
+        List<PayTransactionPO> records = payManager.list(Wrappers.lambdaQuery(PayTransactionPO.class)
+            .lt(lastId != null, PayTransactionPO::getId, lastId)
             .eq(PayTransactionPO::getMerchantId, merchantId)
             .eq(dto.getStatus() != null, PayTransactionPO::getStatus, dto.getStatus())
             .ge(dto.getStartTime() != null, PayTransactionPO::getCreateTime, dto.getStartTime())
             .le(dto.getEndTime() != null, PayTransactionPO::getCreateTime, dto.getEndTime())
-            .orderByDesc(PayTransactionPO::getCreateTime));
+            .orderByDesc(PayTransactionPO::getId)
+            .last("LIMIT " + (limit + 1)));
+        return CursorPageVO.of(records, limit, PayTransactionPO::getId);
     }
 
     /**
-     * 平台全平台交易流水分页查询，不绑定 merchantId。
-     * @param dto 分页查询入参
-     * @return 支付流水分页结果
+     * 平台全平台交易流水游标分页查询，不绑定 merchantId。
+     * @param dto 游标分页查询入参
+     * @return 支付流水游标分页结果
      */
     @Override
-    public IPage<PayTransactionPO> platformPage(PayPageDTO dto) {
-        Page<PayTransactionPO> page = new Page<>(dto.getPageNo(), dto.getPageSize());
-        return payManager.page(page, Wrappers.lambdaQuery(PayTransactionPO.class)
+    public CursorPageVO<PayTransactionPO> platformPage(PayPageDTO dto) {
+        Long lastId = CursorUtils.decode(dto.getCursor());
+        int limit = dto.getLimit();
+        List<PayTransactionPO> records = payManager.list(Wrappers.lambdaQuery(PayTransactionPO.class)
+            .lt(lastId != null, PayTransactionPO::getId, lastId)
             .eq(dto.getStatus() != null, PayTransactionPO::getStatus, dto.getStatus())
             .ge(dto.getStartTime() != null, PayTransactionPO::getCreateTime, dto.getStartTime())
             .le(dto.getEndTime() != null, PayTransactionPO::getCreateTime, dto.getEndTime())
-            .orderByDesc(PayTransactionPO::getCreateTime));
+            .orderByDesc(PayTransactionPO::getId)
+            .last("LIMIT " + (limit + 1)));
+        return CursorPageVO.of(records, limit, PayTransactionPO::getId);
     }
 
     /**
@@ -326,35 +334,45 @@ public class PayServiceImpl implements PayService {
     }
 
     /**
-     * 商家提现记录分页查询，merchantId 强制绑定，支持按状态与时间范围过滤。
+     * 商家提现记录游标分页查询，merchantId 强制绑定，支持按状态与时间范围过滤。
      * @param merchantId 商家ID
-     * @param dto 分页查询入参
-     * @return 提现单分页结果
+     * @param dto 游标分页查询入参
+     * @return 提现单游标分页结果
      */
     @Override
-    public IPage<MerchantWithdrawPO> pageWithdraw(Long merchantId, PayPageDTO dto) {
-        Page<MerchantWithdrawPO> page = new Page<>(dto.getPageNo(), dto.getPageSize());
-        return merchantWithdrawManager.page(page, Wrappers.lambdaQuery(MerchantWithdrawPO.class)
-            .eq(MerchantWithdrawPO::getMerchantId, merchantId)
-            .eq(dto.getStatus() != null, MerchantWithdrawPO::getStatus, dto.getStatus())
-            .ge(dto.getStartTime() != null, MerchantWithdrawPO::getCreateTime, dto.getStartTime())
-            .le(dto.getEndTime() != null, MerchantWithdrawPO::getCreateTime, dto.getEndTime())
-            .orderByDesc(MerchantWithdrawPO::getCreateTime));
+    public CursorPageVO<MerchantWithdrawPO> pageWithdraw(Long merchantId, PayPageDTO dto) {
+        Long lastId = CursorUtils.decode(dto.getCursor());
+        int limit = dto.getLimit();
+        List<MerchantWithdrawPO> records = merchantWithdrawManager.list(
+            Wrappers.lambdaQuery(MerchantWithdrawPO.class)
+                .lt(lastId != null, MerchantWithdrawPO::getId, lastId)
+                .eq(MerchantWithdrawPO::getMerchantId, merchantId)
+                .eq(dto.getStatus() != null, MerchantWithdrawPO::getStatus, dto.getStatus())
+                .ge(dto.getStartTime() != null, MerchantWithdrawPO::getCreateTime, dto.getStartTime())
+                .le(dto.getEndTime() != null, MerchantWithdrawPO::getCreateTime, dto.getEndTime())
+                .orderByDesc(MerchantWithdrawPO::getId)
+                .last("LIMIT " + (limit + 1)));
+        return CursorPageVO.of(records, limit, MerchantWithdrawPO::getId);
     }
 
     /**
-     * 平台提现记录分页查询，不绑定 merchantId。
-     * @param dto 分页查询入参
-     * @return 提现单分页结果
+     * 平台提现记录游标分页查询，不绑定 merchantId。
+     * @param dto 游标分页查询入参
+     * @return 提现单游标分页结果
      */
     @Override
-    public IPage<MerchantWithdrawPO> platformPageWithdraw(PayPageDTO dto) {
-        Page<MerchantWithdrawPO> page = new Page<>(dto.getPageNo(), dto.getPageSize());
-        return merchantWithdrawManager.page(page, Wrappers.lambdaQuery(MerchantWithdrawPO.class)
-            .eq(dto.getStatus() != null, MerchantWithdrawPO::getStatus, dto.getStatus())
-            .ge(dto.getStartTime() != null, MerchantWithdrawPO::getCreateTime, dto.getStartTime())
-            .le(dto.getEndTime() != null, MerchantWithdrawPO::getCreateTime, dto.getEndTime())
-            .orderByDesc(MerchantWithdrawPO::getCreateTime));
+    public CursorPageVO<MerchantWithdrawPO> platformPageWithdraw(PayPageDTO dto) {
+        Long lastId = CursorUtils.decode(dto.getCursor());
+        int limit = dto.getLimit();
+        List<MerchantWithdrawPO> records = merchantWithdrawManager.list(
+            Wrappers.lambdaQuery(MerchantWithdrawPO.class)
+                .lt(lastId != null, MerchantWithdrawPO::getId, lastId)
+                .eq(dto.getStatus() != null, MerchantWithdrawPO::getStatus, dto.getStatus())
+                .ge(dto.getStartTime() != null, MerchantWithdrawPO::getCreateTime, dto.getStartTime())
+                .le(dto.getEndTime() != null, MerchantWithdrawPO::getCreateTime, dto.getEndTime())
+                .orderByDesc(MerchantWithdrawPO::getId)
+                .last("LIMIT " + (limit + 1)));
+        return CursorPageVO.of(records, limit, MerchantWithdrawPO::getId);
     }
 
     /**

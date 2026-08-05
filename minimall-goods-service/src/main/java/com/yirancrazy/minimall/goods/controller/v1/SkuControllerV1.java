@@ -8,14 +8,12 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import jakarta.validation.Valid;
+import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.goods.dto.SkuCreateDTO;
 import com.yirancrazy.minimall.goods.dto.SkuPageDTO;
 import com.yirancrazy.minimall.goods.dto.SkuUpdateDTO;
-import com.yirancrazy.minimall.goods.entity.SkuPO;
 import com.yirancrazy.minimall.goods.service.SkuService;
 import com.yirancrazy.minimall.goods.vo.SkuVO;
 
@@ -26,7 +24,7 @@ import com.yirancrazy.minimall.goods.vo.SkuVO;
  * @DateTime: 2026/08/02
  */
 @RestController
-@RequestMapping("/api/v1/goods/skus")
+@RequestMapping("/api/v1/merchant/goods/skus")
 public class SkuControllerV1 {
 
     private final SkuService skuService;
@@ -57,16 +55,13 @@ public class SkuControllerV1 {
     }
 
     /**
-     * 分页查询SKU列表，支持按名称模糊搜索。
-     * @param dto 分页查询入参
-     * @return SKU 分页结果
+     * 游标分页查询SKU列表，支持按名称模糊搜索。
+     * @param dto 游标分页查询入参
+     * @return SKU 游标分页结果
      */
     @GetMapping
-    public Result<IPage<SkuVO>> page(@Valid SkuPageDTO dto) {
-        IPage<SkuPO> poPage = skuService.page(dto);
-        IPage<SkuVO> voPage = new Page<>(poPage.getCurrent(), poPage.getSize(), poPage.getTotal());
-        voPage.setRecords(poPage.getRecords().stream().map(SkuVO::from).toList());
-        return Result.success(voPage);
+    public Result<CursorPageVO<SkuVO>> page(@Valid SkuPageDTO dto) {
+        return Result.success(skuService.page(dto).map(SkuVO::from));
     }
 
     /**

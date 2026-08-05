@@ -3,11 +3,11 @@ package com.yirancrazy.minimall.goods.service.impl;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
-import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.common.exception.BizException;
+import com.yirancrazy.minimall.common.result.CursorPageVO;
+import com.yirancrazy.minimall.common.util.CursorUtils;
 import com.yirancrazy.minimall.goods.constant.SpuCodeEnum;
 import com.yirancrazy.minimall.goods.constant.SpuStatusEnum;
 import com.yirancrazy.minimall.goods.dto.GoodsPageDTO;
@@ -39,20 +39,25 @@ public class GoodsQueryServiceImpl implements GoodsQueryService {
     }
 
     /**
-     * 分页查询在售商品，keyword 非空时按标题模糊匹配，categoryId 非空时等值过滤。
-     * @param dto 分页查询入参
-     * @return 在售商品列表分页
+     * 游标分页查询在售商品，keyword 非空时按标题模糊匹配，categoryId 非空时等值过滤，按 ID 倒序。
+     * @param dto 游标分页查询入参
+     * @return 在售商品游标分页结果
      */
     @Override
-    public IPage<SpuListVO> pageOnSale(GoodsPageDTO dto) {
-        Page<SpuPO> page = new Page<>(dto.getPageNo(), dto.getPageSize());
-        IPage<SpuPO> spuPage = spuManager.page(page, Wrappers.lambdaQuery(SpuPO.class)
+    public CursorPageVO<SpuListVO> pageOnSale(GoodsPageDTO dto) {
+        Long lastId = CursorUtils.decode(dto.getCursor());
+        int limit = dto.getLimit();
+        List<SpuPO> records = spuManager.list(Wrappers.lambdaQuery(SpuPO.class)
+            .lt(lastId != null, SpuPO::getId, lastId)
             .eq(SpuPO::getStatus, SpuStatusEnum.ON_SALE.statusValue())
             .eq(dto.getCategoryId() != null, SpuPO::getCategoryId, dto.getCategoryId())
             .like(dto.getKeyword() != null && !dto.getKeyword().isBlank(),
-                SpuPO::getTitle, dto.getKeyword()));
-        return spuPage.convert(po -> new SpuListVO(po.getId(), po.getSpuNo(), po.getTitle(),
-            po.getSubtitle(), po.getMainImageUrl(), po.getMerchantId()));
+                SpuPO::getTitle, dto.getKeyword())
+            .orderByDesc(SpuPO::getId)
+            .last("LIMIT " + (limit + 1)));
+        return CursorPageVO.of(records, limit, SpuPO::getId)
+            .map(po -> new SpuListVO(po.getId(), po.getSpuNo(), po.getTitle(),
+                po.getSubtitle(), po.getMainImageUrl(), po.getMerchantId()));
     }
 
     /**

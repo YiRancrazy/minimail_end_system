@@ -28,7 +28,7 @@ import com.yirancrazy.minimall.common.result.Result;
  * @DateTime: 2026/08/03
  */
 @RestController
-@RequestMapping("/api/v1/cart")
+@RequestMapping("/api/v1/user/cart")
 public class CartControllerV1 {
 
     private final CartService cartService;

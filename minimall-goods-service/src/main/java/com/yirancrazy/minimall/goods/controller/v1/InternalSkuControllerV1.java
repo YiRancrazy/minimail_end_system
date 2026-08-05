@@ -7,34 +7,39 @@ import org.springframework.web.bind.annotation.RestController;
 import com.yirancrazy.minimall.api.dto.goods.SkuSnapshotDTO;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.goods.entity.SkuPO;
+import com.yirancrazy.minimall.goods.entity.SpuPO;
 import com.yirancrazy.minimall.goods.service.SkuService;
+import com.yirancrazy.minimall.goods.service.SpuService;
 
 /**
  * @Author: yirancrazy@gmail.com
  * @Description: 商品内部控制器，提供Sku相关内部接口
- * @Version: 1.0
- * @DateTime: 2026/07/31
+ * @Version: 1.1
+ * @DateTime: 2026/08/05
  */
 @RestController
 @RequestMapping("/internal/goods/sku")
 public class InternalSkuControllerV1 {
 
     private final SkuService skuService;
+    private final SpuService spuService;
 
-    public InternalSkuControllerV1(SkuService skuService) {
+    public InternalSkuControllerV1(SkuService skuService, SpuService spuService) {
         this.skuService = skuService;
+        this.spuService = spuService;
     }
 
     /**
-     * 查询 SKU 快照信息，供其他服务在跨链路调用时获取精简字段。
-     *
+     * 查询 SKU 快照信息，供其他服务在跨链路调用时获取精简字段，含归属商家 ID。
      * @param id SKU 主键 ID
-     * @return SKU 快照 DTO，含名称、价格、库存等核心展示字段
+     * @return SKU 快照 DTO，含名称、价格、库存、商家ID等核心字段
      */
     @GetMapping("/{id}")
     public Result<SkuSnapshotDTO> snapshot(@PathVariable Long id) {
         SkuPO s = skuService.getById(id);
+        SpuPO spu = s.getSpuId() == null ? null : spuService.getById(s.getSpuId());
+        Long merchantId = spu == null ? null : spu.getMerchantId();
         return Result.success(new SkuSnapshotDTO(s.getId(), s.getSpuId(), s.getSkuName(),
-            s.getPrice(), s.getStock()));
+            s.getPrice(), s.getStock(), merchantId));
     }
 }

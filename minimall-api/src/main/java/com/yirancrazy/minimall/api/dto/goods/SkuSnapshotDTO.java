@@ -20,4 +20,5 @@ public class SkuSnapshotDTO {
     private String skuName;
     private BigDecimal price;
     private Integer stock;
+    private Long merchantId;
 }

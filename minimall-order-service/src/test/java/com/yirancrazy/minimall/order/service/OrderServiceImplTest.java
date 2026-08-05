@@ -80,7 +80,7 @@ public class OrderServiceImplTest {
         lenient().when(orderItemManager.list(any(Wrapper.class))).thenReturn(java.util.Collections.emptyList());
         lenient().when(logisticsManager.save(any(OrderLogisticsPO.class))).thenReturn(true);
         lenient().when(goodsFeignClient.skuSnapshot(any())).thenReturn(Result.success(
-            new SkuSnapshotDTO(100L, 1L, "sku-100", new BigDecimal("9.90"), 100)));
+            new SkuSnapshotDTO(100L, 1L, "sku-100", new BigDecimal("9.90"), 100, 10L)));
         lenient().when(stockFeignClient.reserve(any())).thenReturn(Result.success(Boolean.TRUE));
         lenient().when(stockFeignClient.release(any())).thenReturn(Result.success(Boolean.TRUE));
         lenient().when(payFeignClient.create(any())).thenReturn(Result.success(2001L));
@@ -614,7 +614,7 @@ public class OrderServiceImplTest {
             new OrderCheckoutItemDTO(100L, 2),
             new OrderCheckoutItemDTO(200L, 1));
         when(goodsFeignClient.skuSnapshot(any())).thenReturn(Result.success(
-            new SkuSnapshotDTO(100L, 1L, "sku-100", new BigDecimal("9.90"), 100)));
+            new SkuSnapshotDTO(100L, 1L, "sku-100", new BigDecimal("9.90"), 100, 10L)));
 
         Long orderId = service.checkout(1L, items);
 
@@ -622,6 +622,39 @@ public class OrderServiceImplTest {
         verify(stockFeignClient, times(2)).reserve(any());
         verify(orderItemManager, times(2)).save(any(OrderItemPO.class));
         verify(payFeignClient).create(any());
+    }
+
+    /**
+     * 验证跨商家结算按 merchantId 拆分为多个子订单，共享同一 orderGroupNo，每个子订单各自调用 payFeignClient.create。
+     */
+    @Test
+    public void checkout_cross_merchant_splits_orders() {
+        OrderCheckoutItemDTO itemA = new OrderCheckoutItemDTO(100L, 1);
+        OrderCheckoutItemDTO itemB = new OrderCheckoutItemDTO(200L, 1);
+        SkuSnapshotDTO snapA = new SkuSnapshotDTO(100L, 1L, "sku-A", new BigDecimal("10.00"), 100, 10L);
+        SkuSnapshotDTO snapB = new SkuSnapshotDTO(200L, 2L, "sku-B", new BigDecimal("20.00"), 100, 20L);
+        when(goodsFeignClient.skuSnapshot(100L)).thenReturn(Result.success(snapA));
+        when(goodsFeignClient.skuSnapshot(200L)).thenReturn(Result.success(snapB));
+
+        Long mainOrderId = service.checkout(1L, List.of(itemA, itemB));
+
+        assertNotNull(mainOrderId);
+        verify(stockFeignClient, times(2)).reserve(any());
+        verify(orderItemManager, times(2)).save(any(OrderItemPO.class));
+        verify(payFeignClient, times(2)).create(any());
+        verify(manager, times(2)).save(any(OrderPO.class));
+    }
+
+    /**
+     * 验证结算时 SKU 缺少 merchantId 抛出 ORDER_SKU_SNAPSHOT_MISSING。
+     */
+    @Test
+    public void checkout_snapshot_without_merchant_throws() {
+        when(goodsFeignClient.skuSnapshot(any())).thenReturn(Result.success(
+            new SkuSnapshotDTO(100L, 1L, "sku-100", new BigDecimal("9.90"), 100, null)));
+        List<OrderCheckoutItemDTO> items = List.of(new OrderCheckoutItemDTO(100L, 1));
+
+        assertThrows(BizException.class, () -> service.checkout(1L, items));
     }
 
     /**

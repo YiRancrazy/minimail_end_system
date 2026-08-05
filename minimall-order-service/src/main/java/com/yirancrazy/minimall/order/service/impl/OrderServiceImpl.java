@@ -124,10 +124,11 @@ public class OrderServiceImpl implements OrderService {
     }
 
     /**
-     * 多SKU结算下单：批量取商品快照、逐条锁库存、创建订单头与明细行、初始化支付流水。
+     * 多SKU结算下单：按商家分组拆单，每组创建独立 t_order 共享同一 orderGroupNo，并各自初始化支付流水。
+     * ponytail: 单商家时退化为单订单，行为与旧版本兼容。
      * @param userId 用户ID
      * @param items 结算明细列表
-     * @return 订单ID
+     * @return 主订单ID（首个创建的子订单）
      */
     @Override
     @GlobalTransactional
@@ -136,11 +137,15 @@ public class OrderServiceImpl implements OrderService {
             throw new BizException(OrderCodeEnum.ORDER_ITEMS_EMPTY);
         }
 
-        List<OrderItemPO> itemPOs = new ArrayList<>(items.size());
+        String orderGroupNo = "OG" + System.currentTimeMillis() + (int)(Math.random() * 1000);
+        java.util.Map<Long, List<OrderItemPO>> itemsByMerchant = new java.util.LinkedHashMap<>();
 
         for (OrderCheckoutItemDTO item : items) {
             SkuSnapshotDTO snapshot = goodsFeignClient.skuSnapshot(item.getSkuId()).getData();
             if (snapshot == null || snapshot.getPrice() == null) {
+                throw new BizException(OrderCodeEnum.ORDER_SKU_SNAPSHOT_MISSING);
+            }
+            if (snapshot.getMerchantId() == null) {
                 throw new BizException(OrderCodeEnum.ORDER_SKU_SNAPSHOT_MISSING);
             }
             Boolean reserved = stockFeignClient.reserve(
@@ -158,33 +163,48 @@ public class OrderServiceImpl implements OrderService {
             itemPO.setQuantity(item.getQuantity());
             itemPO.setUnitPrice(snapshot.getPrice());
             itemPO.setAmount(lineAmount);
-            itemPOs.add(itemPO);
+
+            Long merchantId = snapshot.getMerchantId();
+            itemsByMerchant.computeIfAbsent(merchantId, k -> new ArrayList<>()).add(itemPO);
         }
 
-        BigDecimal totalAmount = calcAmount(itemPOs);
+        Long mainOrderId = null;
+        for (java.util.Map.Entry<Long, List<OrderItemPO>> entry : itemsByMerchant.entrySet()) {
+            Long merchantId = entry.getKey();
+            List<OrderItemPO> merchantItems = entry.getValue();
+            BigDecimal groupAmount = calcAmount(merchantItems);
 
-        OrderPO po = new OrderPO();
-        po.setUserId(userId);
-        po.setAmount(totalAmount);
-        po.setStatus(OrderStatusEnum.PENDING.intCode());
-        orderManager.save(po);
+            OrderPO po = new OrderPO();
+            po.setUserId(userId);
+            po.setMerchantId(merchantId);
+            po.setAmount(groupAmount);
+            po.setStatus(OrderStatusEnum.PENDING.intCode());
+            po.setOrderGroupNo(orderGroupNo);
+            orderManager.save(po);
 
-        for (OrderItemPO itemPO : itemPOs) {
-            itemPO.setOrderId(po.getId());
-            orderItemManager.save(itemPO);
+            for (OrderItemPO itemPO : merchantItems) {
+                itemPO.setOrderId(po.getId());
+                orderItemManager.save(itemPO);
+            }
+
+            Long payId = payFeignClient.create(
+                new PayCreateDTO(String.valueOf(po.getId()), userId, merchantId, groupAmount, null)).getData();
+            if (payId == null || payId < 0) {
+                throw new BizException(OrderCodeEnum.ORDER_PAY_CREATE_FAIL);
+            }
+            po.setPayId(payId);
+            orderManager.updateById(po);
+
+            if (mainOrderId == null) {
+                mainOrderId = po.getId();
+            }
+            log.info("order checkout split, orderId={}, userId={}, merchantId={}, groupNo={}, items={}, amount={}",
+                po.getId(), userId, merchantId, orderGroupNo, merchantItems.size(), groupAmount);
         }
 
-        Long payId = payFeignClient.create(
-            new PayCreateDTO(String.valueOf(po.getId()), userId, 0L, totalAmount, null)).getData();
-        if (payId == null || payId < 0) {
-            throw new BizException(OrderCodeEnum.ORDER_PAY_CREATE_FAIL);
-        }
-        po.setPayId(payId);
-        orderManager.updateById(po);
-
-        log.info("order checkout, orderId={}, userId={}, items={}, amount={}, payId={}",
-            po.getId(), userId, items.size(), totalAmount, payId);
-        return po.getId();
+        log.info("order checkout done, userId={}, groupNo={}, subOrders={}",
+            userId, orderGroupNo, itemsByMerchant.size());
+        return mainOrderId;
     }
 
     @Override

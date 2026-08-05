@@ -26,4 +26,5 @@ public class OrderPO extends BasePO {
     private Integer status;
     private Integer refundFromStatus;
     private LocalDateTime shippedAt;
+    private String orderGroupNo;
 }

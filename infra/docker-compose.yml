@@ -25,5 +25,55 @@ services:
     container_name: minimall-redis
     ports: ["6379:6379"]
 
+  rocketmq-namesrv:
+    image: apache/rocketmq:5.3.1
+    container_name: minimall-rocketmq-namesrv
+    command: sh mqnamesrv
+    environment:
+      JAVA_OPT_EXT: "-Xms256m -Xmx256m -Xmn128m"
+    ports: ["9876:9876"]
+
+  rocketmq-broker:
+    image: apache/rocketmq:5.3.1
+    container_name: minimall-rocketmq-broker
+    command: sh mqbroker -n rocketmq-namesrv:9876 --enable-proxy
+    depends_on: [rocketmq-namesrv]
+    environment:
+      JAVA_OPT_EXT: "-Xms512m -Xmx512m -Xmn256m"
+    ports: ["10909:10909", "10911:10911", "8081:8081"]
+
+  seata-server:
+    image: seata/seata-server:2.0.0
+    container_name: minimall-seata
+    environment:
+      SEATA_PORT: 8091
+      STORE_MODE: db
+      SEATA_IP: seata-server
+    ports: ["8091:8091", "7091:7091"]
+
+  minio:
+    image: minio/minio:latest
+    container_name: minimall-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports: ["9000:9000", "9001:9001"]
+    volumes:
+      - minio-data:/data
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: minimall-es
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms256m -Xmx256m
+    ports: ["9200:9200", "9300:9300"]
+    volumes:
+      - es-data:/usr/share/elasticsearch/data
+
 volumes:
   mysql-data:
+  minio-data:
+  es-data:

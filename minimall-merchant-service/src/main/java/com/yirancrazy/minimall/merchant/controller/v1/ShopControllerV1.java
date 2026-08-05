@@ -18,9 +18,11 @@ import com.yirancrazy.minimall.merchant.service.ShopService;
 /**
  * @Author: yirancrazy@gmail.com
  * @Description: 商户控制器，提供Shop RESTful API
- * @Version: 1.0
- * @DateTime: 2026/07/31
- */
+ * @Version: 1.1
+ * @DateTime: 2026/08/05
+ **/
+@RestController
+@RequestMapping("/api/v1/merchant/shops")
 public class ShopControllerV1 {
 
     private final ShopService shopService;

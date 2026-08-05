@@ -8,9 +8,11 @@ import com.yirancrazy.minimall.common.result.Result;
 /**
  * @Author: yirancrazy@gmail.com
  * @Description: 平台控制器，提供Health RESTful API
- * @Version: 1.0
- * @DateTime: 2026/07/31
- */
+ * @Version: 1.1
+ * @DateTime: 2026/08/05
+ **/
+@RestController
+@RequestMapping("/api/v1/platform")
 public class HealthControllerV1 {
 
     /**

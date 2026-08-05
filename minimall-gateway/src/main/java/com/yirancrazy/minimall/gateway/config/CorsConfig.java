@@ -10,9 +10,10 @@ import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 /**
  * @Author: yirancrazy@gmail.com
  * @Description: Cors配置类，配置Cors相关 Bean
- * @Version: 1.0
- * @DateTime: 2026/07/31
- */
+ * @Version: 1.1
+ * @DateTime: 2026/08/05
+ **/
+@Configuration
 public class CorsConfig {
 
     @Bean

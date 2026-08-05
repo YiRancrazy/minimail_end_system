@@ -69,21 +69,21 @@ class SensitiveDataUtilsTest {
     @Test
     @DisplayName("身份证脱敏 - 正常18位身份证")
     void maskIdCard_normal18DigitIdCard() {
-        assertEquals("320106********1234", SensitiveDataUtils.maskIdCard("320106199001011234"));
-        assertEquals("110101********5678", SensitiveDataUtils.maskIdCard("110101199001015678"));
+        assertEquals("320***********1234", SensitiveDataUtils.maskIdCard("320106199001011234"));
+        assertEquals("110***********5678", SensitiveDataUtils.maskIdCard("110101199001015678"));
     }
 
     @Test
     @DisplayName("身份证脱敏 - 15位老身份证")
     void maskIdCard_old15DigitIdCard() {
-        assertEquals("320106*****1123", SensitiveDataUtils.maskIdCard("320106900101123"));
-        assertEquals("110101*****1567", SensitiveDataUtils.maskIdCard("110101900101567"));
+        assertEquals("320********1123", SensitiveDataUtils.maskIdCard("320106900101123"));
+        assertEquals("110********1567", SensitiveDataUtils.maskIdCard("110101900101567"));
     }
 
     @Test
     @DisplayName("身份证脱敏 - 包含非数字字符")
     void maskIdCard_nonDigitCharacters() {
-        assertEquals("320106********1234", SensitiveDataUtils.maskIdCard("320106199001011234"));
+        assertEquals("320***********1234", SensitiveDataUtils.maskIdCard("320106199001011234"));
     }
 
     @Test

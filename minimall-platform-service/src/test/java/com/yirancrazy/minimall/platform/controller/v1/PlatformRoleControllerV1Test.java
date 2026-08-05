@@ -11,12 +11,14 @@ import org.mockito.quality.Strictness;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.platform.dto.RolePermissionUpdateDTO;
 import com.yirancrazy.minimall.platform.vo.RoleVO;
@@ -101,8 +103,9 @@ class PlatformRoleControllerV1Test {
         RolePermissionUpdateDTO dto = new RolePermissionUpdateDTO();
         dto.setPermissionCodes(List.of("GOODS_VIEW"));
 
-        Result<Void> result = controller.updatePermissions("USER", dto);
+        BizException ex = assertThrows(BizException.class,
+            () -> controller.updatePermissions("USER", dto));
 
-        assertEquals("12010", result.getCode());
+        assertEquals("12010", ex.getCode());
     }
 }

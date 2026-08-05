@@ -30,7 +30,7 @@ public final class SensitiveDataUtils {
 
     /**
      * 身份证号脱敏
-     * <p>保留前6位和后4位，中间用*替换</p>
+     * <p>保留前3位和后4位，中间用*替换</p>
      *
      * @param idCard 身份证号
      * @return 脱敏后的身份证号
@@ -41,13 +41,13 @@ public final class SensitiveDataUtils {
         }
 
         String digits = idCard.replaceAll("[^0-9]", "");
-        if (digits.length() < 8) {
+        if (digits.length() < 7) {
             return idCard;
         }
 
         int length = digits.length();
-        String stars = "*".repeat(length - 10);
-        return digits.substring(0, 6) + stars + digits.substring(length - 4);
+        String stars = "*".repeat(length - 7);
+        return digits.substring(0, 3) + stars + digits.substring(length - 4);
     }
 
     /**

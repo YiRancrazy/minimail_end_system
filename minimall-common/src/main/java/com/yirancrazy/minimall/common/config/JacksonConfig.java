@@ -1,9 +1,11 @@
 package com.yirancrazy.minimall.common.config;
 
+import java.math.BigDecimal;
 import org.springframework.boot.autoconfigure.jackson.Jackson2ObjectMapperBuilderCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 /**
@@ -19,6 +21,7 @@ public class JacksonConfig {
     public Jackson2ObjectMapperBuilderCustomizer jacksonCustomizer() {
         return builder -> builder
             .modules(new JavaTimeModule())
-            .featuresToDisable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+            .featuresToDisable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+            .serializerByType(BigDecimal.class, ToStringSerializer.instance);
     }
 }

@@ -15,6 +15,7 @@ import com.yirancrazy.minimall.common.annotation.RequirePermission;
 import com.yirancrazy.minimall.common.constant.PermissionEnum;
 import com.yirancrazy.minimall.common.constant.RoleEnum;
 import com.yirancrazy.minimall.common.constant.RolePermissionMapping;
+import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.platform.dto.RolePermissionUpdateDTO;
 import com.yirancrazy.minimall.platform.vo.PermissionVO;
@@ -73,16 +74,16 @@ public class PlatformRoleControllerV1 {
                                           @Valid @RequestBody RolePermissionUpdateDTO dto) {
         RoleEnum role = RoleEnum.fromCode(roleCode);
         if (role == null) {
-            return Result.fail("12010", "角色不存在");
+            throw new BizException("12010", "角色不存在");
         }
         try {
             RolePermissionMapping.updatePermissions(role, dto.getPermissionCodes(), redisTemplate);
         }
         catch (IllegalArgumentException e) {
             if (e.getMessage().contains("not modifiable")) {
-                return Result.fail("12010", "该角色不允许修改权限");
+                throw new BizException("12010", "该角色不允许修改权限");
             }
-            return Result.fail("12011", e.getMessage());
+            throw new BizException("12011", e.getMessage());
         }
         return Result.success(null);
     }

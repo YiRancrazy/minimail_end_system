@@ -54,7 +54,7 @@ public interface OrderService {
     void merchantClose(Long orderId, Long merchantId);
 
     /**
-     * 用户删除订单，仅允许终态（CANCELLED/RECEIVED/REFUNDED）删除，归属不符抛出 ORDER_NOT_FOUND。
+     * 用户删除订单，仅允许终态（CANCELED/COMPLETED/REFUNDED）删除，归属不符抛出 ORDER_NOT_FOUND。
      * @param orderId 订单ID
      * @param userId 用户ID
      */

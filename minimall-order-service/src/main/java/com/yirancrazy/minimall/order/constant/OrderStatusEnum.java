@@ -16,8 +16,8 @@ public enum OrderStatusEnum implements BaseEnum {
     PENDING(1, "PENDING", "待支付"),
     PAID(2, "PAID", "已支付"),
     SHIPPED(3, "SHIPPED", "已发货"),
-    RECEIVED(4, "RECEIVED", "已收货"),
-    CANCELLED(5, "CANCELLED", "已取消"),
+    COMPLETED(4, "COMPLETED", "已完成"),
+    CANCELED(5, "CANCELED", "已取消"),
     REFUNDING(6, "REFUNDING", "退款中"),
     REFUNDED(7, "REFUNDED", "已退款");
 
@@ -45,9 +45,9 @@ public enum OrderStatusEnum implements BaseEnum {
      */
     public boolean canTransitTo(OrderStatusEnum target) {
         return switch (this) {
-            case PENDING -> target == PAID || target == CANCELLED;
+            case PENDING -> target == PAID || target == CANCELED;
             case PAID -> target == SHIPPED || target == REFUNDING;
-            case SHIPPED -> target == RECEIVED || target == REFUNDING;
+            case SHIPPED -> target == COMPLETED || target == REFUNDING;
             case REFUNDING -> target == REFUNDED || target == PAID || target == SHIPPED;
             default -> false;
         };

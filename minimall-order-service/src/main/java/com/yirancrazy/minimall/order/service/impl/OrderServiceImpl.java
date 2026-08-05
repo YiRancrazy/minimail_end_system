@@ -208,7 +208,7 @@ public class OrderServiceImpl implements OrderService {
         if (!po.getUserId().equals(userId)) {
             throw new BizException(OrderCodeEnum.ORDER_NOT_FOUND);
         }
-        transitStatus(orderId, OrderStatusEnum.CANCELLED);
+        transitStatus(orderId, OrderStatusEnum.CANCELED);
         releaseStockForOrder(po);
         log.info("order cancelled, orderId={}, userId={}", orderId, userId);
     }
@@ -231,7 +231,7 @@ public class OrderServiceImpl implements OrderService {
         if (!po.getUserId().equals(userId)) {
             throw new BizException(OrderCodeEnum.ORDER_NOT_FOUND);
         }
-        transitStatus(orderId, OrderStatusEnum.RECEIVED);
+        transitStatus(orderId, OrderStatusEnum.COMPLETED);
         log.info("order confirmed, orderId={}, userId={}", orderId, userId);
     }
 
@@ -295,13 +295,13 @@ public class OrderServiceImpl implements OrderService {
         if (!po.getMerchantId().equals(merchantId)) {
             throw new BizException(OrderCodeEnum.ORDER_NOT_FOUND);
         }
-        transitStatus(orderId, OrderStatusEnum.CANCELLED);
+        transitStatus(orderId, OrderStatusEnum.CANCELED);
         releaseStockForOrder(po);
         log.info("order merchant-closed, orderId={}, merchantId={}", orderId, merchantId);
     }
 
     /**
-     * 用户删除订单，仅允许终态（CANCELLED/RECEIVED/REFUNDED）删除，归属不符抛出 ORDER_NOT_FOUND。
+     * 用户删除订单，仅允许终态（CANCELED/COMPLETED/REFUNDED）删除，归属不符抛出 ORDER_NOT_FOUND。
      * @param orderId 订单ID
      * @param userId 用户ID
      */
@@ -312,8 +312,8 @@ public class OrderServiceImpl implements OrderService {
             throw new BizException(OrderCodeEnum.ORDER_NOT_FOUND);
         }
         Integer status = po.getStatus();
-        if (!status.equals(OrderStatusEnum.CANCELLED.intCode())
-            && !status.equals(OrderStatusEnum.RECEIVED.intCode())
+        if (!status.equals(OrderStatusEnum.CANCELED.intCode())
+            && !status.equals(OrderStatusEnum.COMPLETED.intCode())
             && !status.equals(OrderStatusEnum.REFUNDED.intCode())) {
             throw new BizException(OrderCodeEnum.ORDER_DELETE_NOT_ALLOWED);
         }
@@ -328,7 +328,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public void platformClose(Long orderId) {
         OrderPO po = getOrder(orderId);
-        transitStatus(orderId, OrderStatusEnum.CANCELLED);
+        transitStatus(orderId, OrderStatusEnum.CANCELED);
         releaseStockForOrder(po);
         log.info("order platform-closed, orderId={}", orderId);
     }

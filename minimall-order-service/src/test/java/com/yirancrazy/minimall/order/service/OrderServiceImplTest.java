@@ -170,7 +170,7 @@ public class OrderServiceImplTest {
         when(manager.getById(99L)).thenReturn(existing);
 
         service.cancel(99L, 1L);
-        assertEquals(OrderStatusEnum.CANCELLED.intCode(), existing.getStatus());
+        assertEquals(OrderStatusEnum.CANCELED.intCode(), existing.getStatus());
     }
 
     /**
@@ -208,7 +208,7 @@ public class OrderServiceImplTest {
     }
 
     /**
-     * 验证确认收货成功后状态为 RECEIVED。
+     * 验证确认收货成功后状态为 COMPLETED。
      */
     @Test
     public void confirm_transitions_to_received() {
@@ -216,7 +216,7 @@ public class OrderServiceImplTest {
         when(manager.getById(99L)).thenReturn(existing);
 
         service.confirm(99L, 1L);
-        assertEquals(OrderStatusEnum.RECEIVED.intCode(), existing.getStatus());
+        assertEquals(OrderStatusEnum.COMPLETED.intCode(), existing.getStatus());
     }
 
     /**
@@ -341,7 +341,7 @@ public class OrderServiceImplTest {
     }
 
     /**
-     * 验证商家关闭待支付订单成功，状态推进为 CANCELLED 并释放库存。
+     * 验证商家关闭待支付订单成功，状态推进为 CANCELED 并释放库存。
      */
     @Test
     public void merchantClose_pending_succeeds() {
@@ -349,7 +349,7 @@ public class OrderServiceImplTest {
         when(manager.getById(99L)).thenReturn(existing);
 
         service.merchantClose(99L, 10L);
-        assertEquals(OrderStatusEnum.CANCELLED.intCode(), existing.getStatus());
+        assertEquals(OrderStatusEnum.CANCELED.intCode(), existing.getStatus());
         verify(stockFeignClient).release(any());
     }
 
@@ -380,7 +380,7 @@ public class OrderServiceImplTest {
      */
     @Test
     public void delete_cancelled_succeeds() {
-        OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.CANCELLED.intCode());
+        OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.CANCELED.intCode());
         when(manager.getById(99L)).thenReturn(existing);
 
         service.delete(99L, 1L);
@@ -403,14 +403,14 @@ public class OrderServiceImplTest {
      */
     @Test
     public void delete_wrong_user_throws() {
-        OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.CANCELLED.intCode());
+        OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.CANCELED.intCode());
         when(manager.getById(99L)).thenReturn(existing);
 
         assertThrows(BizException.class, () -> service.delete(99L, 999L));
     }
 
     /**
-     * 验证平台关闭待支付订单成功，状态推进为 CANCELLED 并释放库存。
+     * 验证平台关闭待支付订单成功，状态推进为 CANCELED 并释放库存。
      */
     @Test
     public void platformClose_pending_succeeds() {
@@ -418,7 +418,7 @@ public class OrderServiceImplTest {
         when(manager.getById(99L)).thenReturn(existing);
 
         service.platformClose(99L);
-        assertEquals(OrderStatusEnum.CANCELLED.intCode(), existing.getStatus());
+        assertEquals(OrderStatusEnum.CANCELED.intCode(), existing.getStatus());
         verify(stockFeignClient).release(any());
     }
 
@@ -673,7 +673,7 @@ public class OrderServiceImplTest {
 
         service.cancel(99L, 1L);
 
-        assertEquals(OrderStatusEnum.CANCELLED.intCode(), existing.getStatus());
+        assertEquals(OrderStatusEnum.CANCELED.intCode(), existing.getStatus());
         verify(stockFeignClient, times(2)).release(any());
     }
 

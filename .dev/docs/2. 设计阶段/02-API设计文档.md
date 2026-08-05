@@ -41,7 +41,7 @@
 5. [响应规范](#5-响应规范)
 6. [幂等与防重放](#6-幂等与防重放)
 7. [分页、排序、过滤](#7-分页排序过滤)
-8. [错误规范（RFC 7807）](#8-错误规范rfc-7807)
+8. [错误规范（Result\<T\> 统一返回）](#8-错误规范resultt-统一返回)
 9. [安全相关 Header](#9-安全相关-header)
 10. [OpenFeign 内部契约约定](#10-openfeign-内部契约约定)
 11. [USER 端接口清单](#11-user-端接口清单)
@@ -747,8 +747,8 @@ type ApiResponse<T> = {
 type ApiResponseList<T> = {
   data: T[];
   meta: {
-    next_cursor: string | null;
-    has_more: boolean;
+    nextCursor: string | null;
+    hasMore: boolean;
     limit: number;
   };
 };
@@ -855,7 +855,7 @@ sequenceDiagram
     App->>GW: GET /api/v1/user/goods?q=...&limit=20&cursor=...
     GW->>GDS: 转
     GDS->>ES: 搜索 (n+1 缓存)
-    GDS-->>App: { data: [...], meta: {next_cursor} }
+    GDS-->>App: { data: [...], meta: {nextCursor} }
 ```
 
 ### 15.3 退款申请

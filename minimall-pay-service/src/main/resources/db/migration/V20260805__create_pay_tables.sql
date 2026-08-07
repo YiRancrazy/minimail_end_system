@@ -1,6 +1,6 @@
--- V20260730__create_pay_transaction.sql
+-- V20260805__create_pay_tables.sql
 
--- Drop old table
+-- Drop legacy table from early schema.sql
 DROP TABLE IF EXISTS t_pay_record;
 
 -- Create t_pay_transaction

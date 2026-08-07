@@ -13,6 +13,7 @@ import io.swagger.v3.oas.models.info.License;
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */
+@Configuration
 public class OpenApiConfig {
 
     @Bean

@@ -27,15 +27,20 @@ public class RouterConfig {
             .route("user-service", r -> r.path(
                 "/api/v1/user/users/**",
                 "/api/v1/user/addresses/**",
-                "/api/v1/user/favorites/**")
+                "/api/v1/user/favorites/**",
+                "/api/v1/user/upload/**")
                 .uri("lb://minimall-user-service"))
             .route("merchant-service", r -> r.path(
-                "/api/v1/merchant/merchants/**")
+                "/api/v1/merchant/merchants/**",
+                "/api/v1/merchant/shops/**",
+                "/api/v1/merchant/withdraws/**",
+                "/api/v1/platform/withdraws/**")
                 .uri("lb://minimall-merchant-service"))
             .route("goods-service", r -> r.path(
                 "/api/v1/user/goods/**",
                 "/api/v1/merchant/goods/**",
-                "/api/v1/platform/goods/**")
+                "/api/v1/platform/goods/**",
+                "/api/v1/merchant/upload/**")
                 .uri("lb://minimall-goods-service"))
             .route("cart-service", r -> r.path("/api/v1/user/cart/**")
                 .uri("lb://minimall-cart-service"))
@@ -57,7 +62,8 @@ public class RouterConfig {
                 "/api/v1/user/notify/**",
                 "/api/v1/merchant/notify/**",
                 "/api/v1/platform/notify/**",
-                "/api/v1/platform/complaints/**")
+                "/api/v1/platform/complaints/**",
+                "/api/v1/notify/sse")
                 .uri("lb://minimall-notify-service"))
             .route("platform-service", r -> r.path(
                 "/api/v1/platform/roles/**")

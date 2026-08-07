@@ -6,6 +6,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -18,6 +19,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.order.dto.OrderCheckoutDTO;
 import com.yirancrazy.minimall.order.dto.OrderCheckoutItemDTO;
+import com.yirancrazy.minimall.order.dto.OrderCreateDTO;
 import com.yirancrazy.minimall.order.dto.OrderPageDTO;
 import com.yirancrazy.minimall.order.entity.OrderPO;
 import com.yirancrazy.minimall.order.service.OrderService;
@@ -67,6 +69,22 @@ class UserOrderControllerV1Test {
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.data").value(100));
         verify(service).checkout(anyLong(), any());
+    }
+
+    /**
+     * 验证 POST /api/v1/user/orders 带 X-User-Id 头创建订单并返回 201。
+     */
+    @Test
+    void create_with_header_returns_created() throws Exception {
+        when(service.create(anyLong(), anyLong(), anyInt())).thenReturn(100L);
+        OrderCreateDTO dto = new OrderCreateDTO(100L, 2);
+        mockMvc.perform(post("/api/v1/user/orders")
+                .header("X-User-Id", 1L)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(mapper.writeValueAsString(dto)))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.data").value(100));
+        verify(service).create(1L, 100L, 2);
     }
 
     /**

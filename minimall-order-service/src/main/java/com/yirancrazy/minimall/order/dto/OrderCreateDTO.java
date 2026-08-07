@@ -18,9 +18,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class OrderCreateDTO {
 
-    @NotNull(message = "用户ID不能为空")
-    private Long userId;
-
     @NotNull(message = "商品SKU ID不能为空")
     private Long skuId;
 

@@ -51,13 +51,15 @@ public class UserOrderControllerV1 {
     /**
      * 创建订单并完成库存锁定及支付流水初始化。
      *
+     * @param userId 用户ID，来自网关 X-User-Id 头
      * @param dto 订单创建请求参数
      * @return 新创建的订单标识
      */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Result<Long> create(@Valid @RequestBody OrderCreateDTO dto) {
-        return Result.success(orderService.create(dto.getUserId(), dto.getSkuId(), dto.getQuantity()));
+    public Result<Long> create(@RequestHeader("X-User-Id") Long userId,
+                               @Valid @RequestBody OrderCreateDTO dto) {
+        return Result.success(orderService.create(userId, dto.getSkuId(), dto.getQuantity()));
     }
 
     /**

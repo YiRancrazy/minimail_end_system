@@ -15,6 +15,7 @@ import com.yirancrazy.minimall.merchant.service.ShopService;
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */
+@Service
 public class ShopServiceImpl implements ShopService {
 
     private final ShopManager shopManager;

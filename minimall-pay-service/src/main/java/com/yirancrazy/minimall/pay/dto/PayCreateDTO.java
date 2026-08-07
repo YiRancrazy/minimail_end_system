@@ -23,12 +23,6 @@ public class PayCreateDTO {
     @NotBlank(message = "订单号不能为空")
     private String orderNo;
 
-    @NotNull(message = "用户ID不能为空")
-    private Long userId;
-
-    @NotNull(message = "商户ID不能为空")
-    private Long merchantId;
-
     @NotNull(message = "支付金额不能为空")
     @Positive(message = "支付金额必须大于0")
     private BigDecimal amount;

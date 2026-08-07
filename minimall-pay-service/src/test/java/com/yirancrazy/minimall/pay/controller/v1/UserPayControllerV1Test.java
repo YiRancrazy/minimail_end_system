@@ -47,8 +47,9 @@ class UserPayControllerV1Test {
     @Test
     void create_returns_payment_id() throws Exception {
         when(service.createPayment(any(), any(), any(), any(), any())).thenReturn(100L);
-        PayCreateDTO dto = new PayCreateDTO("NO20260805001", 1L, 2L, new BigDecimal("10.00"), 1);
+        PayCreateDTO dto = new PayCreateDTO("NO20260805001", new BigDecimal("10.00"), 1);
         mockMvc.perform(post("/api/v1/user/pay/create")
+                .header("X-User-Id", "1")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(mapper.writeValueAsString(dto)))
             .andExpect(status().isOk())

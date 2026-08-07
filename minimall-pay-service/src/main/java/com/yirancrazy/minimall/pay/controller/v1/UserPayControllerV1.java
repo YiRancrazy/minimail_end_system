@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -44,9 +45,11 @@ public class UserPayControllerV1 {
      * @return 支付流水ID
      */
     @PostMapping("/create")
-    public Result<Long> create(@Valid @RequestBody PayCreateDTO dto) {
+    public Result<Long> create(@Valid @RequestBody PayCreateDTO dto,
+                               @RequestHeader("X-User-Id") Long userId,
+                               @RequestHeader(value = "X-Merchant-Id", required = false) Long merchantId) {
         Long paymentId = payService.createPayment(
-            dto.getOrderNo(), dto.getUserId(), dto.getMerchantId(), dto.getAmount(), dto.getChannel());
+            dto.getOrderNo(), userId, merchantId, dto.getAmount(), dto.getChannel());
         return Result.success(paymentId);
     }
 

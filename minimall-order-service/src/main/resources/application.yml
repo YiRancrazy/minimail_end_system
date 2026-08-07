@@ -22,6 +22,17 @@ spring:
   mvc:
     pathmatch:
       matching-strategy: ant_path_matcher
+seata:
+  tx-service-group: default_tx_group
+  service:
+    vgroup-mapping:
+      default_tx_group: default
+    grouplist:
+      default: ${SEATA_HOST:127.0.0.1}:${SEATA_PORT:8091}
+  registry:
+    type: file
+  config:
+    type: file
 minimall:
   eventbus:
     rocketmq:

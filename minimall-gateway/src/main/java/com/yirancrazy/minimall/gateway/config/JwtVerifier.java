@@ -14,6 +14,7 @@ import io.jsonwebtoken.security.Keys;
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */
+@Component
 public class JwtVerifier {
 
     private final SecretKey key;

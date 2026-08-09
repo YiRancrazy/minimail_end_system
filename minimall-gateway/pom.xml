@@ -18,8 +18,37 @@
       <scope>provided</scope>
       <optional>true</optional>
     </dependency>
-    <dependency><groupId>com.yirancrazy</groupId><artifactId>minimall-common</artifactId></dependency>
+    <!--
+      The gateway intentionally does NOT depend on minimall-common: that module
+      pulls in spring-boot-starter-web and springdoc-openapi-starter-webmvc-ui
+      via transitive dependencies, which then register the Servlet MVC auto
+      configuration and compete with Spring Cloud Gateway's reactive web
+      factory. Keeping gateway free of those classes lets Reactor Netty start
+      cleanly.
+    -->
     <dependency><groupId>org.springframework.cloud</groupId><artifactId>spring-cloud-starter-gateway</artifactId></dependency>
+    <!--
+      spring-cloud-starter-gateway already pulls in spring-boot-starter-webflux,
+      but declaring it explicitly here guarantees that Spring Boot's
+      ReactiveWebServerFactoryAutoConfiguration is loaded even when the
+      implicit transitive graph is reshuffled by Maven's nearest-wins rules.
+    -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-webflux</artifactId>
+    </dependency>
+    <!--
+      spring-boot-starter-webflux does NOT pull in jakarta.servlet-api on its
+      own, but Spring Boot's ReactiveWebServerFactoryAutoConfiguration
+      @ConditionalOnClass({Servlet.class, HttpHandler.class}) needs the
+      Servlet class on the classpath. Adding the servlet API at provided scope
+      satisfies the condition without bringing a servlet container.
+    -->
+    <dependency>
+      <groupId>jakarta.servlet</groupId>
+      <artifactId>jakarta.servlet-api</artifactId>
+      <scope>provided</scope>
+    </dependency>
     <dependency>
       <groupId>io.jsonwebtoken</groupId>
       <artifactId>jjwt-api</artifactId>

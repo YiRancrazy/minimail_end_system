@@ -19,6 +19,15 @@ public interface ShopService {
     ShopPO getById(Long id);
 
     /**
+     * 分页查询店铺列表。
+     * @param merchantId 商家账号 ID
+     * @param cursor 游标
+     * @param limit 每页数量
+     * @return 店铺列表
+     */
+    java.util.List<ShopPO> list(Long merchantId, String cursor, Integer limit);
+
+    /**
      * 创建店铺。
      * @param dto 店铺创建DTO
      * @return 店铺ID

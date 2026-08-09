@@ -6,7 +6,9 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
 import com.yirancrazy.minimall.common.result.Result;
@@ -40,6 +42,21 @@ public class ShopControllerV1 {
     @GetMapping("/{id}")
     public Result<ShopPO> get(@PathVariable("id") Long id) {
         return Result.success(shopService.getById(id));
+    }
+
+    /**
+     * 分页查询当前商家名下的店铺列表。
+     *
+     * @param merchantId 商家账号 ID（来自网关 X-Merchant-Id）
+     * @param cursor 上一页最后一条记录的 ID；为空表示首页
+     * @param limit 每页大小，默认 20，最大 100
+     */
+    @GetMapping
+    public Result<java.util.List<ShopPO>> list(
+            @RequestHeader("X-Merchant-Id") Long merchantId,
+            @RequestParam(value = "cursor", required = false) String cursor,
+            @RequestParam(value = "limit", required = false) Integer limit) {
+        return Result.success(shopService.list(merchantId, cursor, limit));
     }
 
     /**

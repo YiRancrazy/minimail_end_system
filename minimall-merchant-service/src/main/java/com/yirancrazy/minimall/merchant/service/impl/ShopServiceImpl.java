@@ -40,6 +40,23 @@ public class ShopServiceImpl implements ShopService {
     }
 
     /**
+     * 分页查询某商家名下的店铺列表，空游标或非法游标降级为首页。
+     */
+    @Override
+    public java.util.List<ShopPO> list(Long merchantId, String cursor, Integer limit) {
+        int safeLimit = limit == null || limit <= 0 ? 20 : Math.min(limit, 100);
+        com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<ShopPO> q =
+                new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<>();
+        if (cursor != null && !cursor.isBlank()) {
+            try {
+                q.lt("id", Long.parseLong(cursor));
+            } catch (NumberFormatException ignored) { /* fall through */ }
+        }
+        q.orderByDesc("id").last("LIMIT " + safeLimit);
+        return shopManager.list(q);
+    }
+
+    /**
      * 新增店铺记录，并返回持久化后的主键 ID。
      *
      * @param dto 待创建的店铺信息

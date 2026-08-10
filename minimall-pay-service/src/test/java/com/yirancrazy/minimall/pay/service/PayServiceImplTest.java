@@ -573,4 +573,114 @@ public class PayServiceImplTest {
 
         assertEquals(0, service.scanPaidButOrderPending());
     }
+
+    /**
+     * 验证 createPayment 在显式传 ALIPAY channel=1 时走主路径持久化。
+     */
+    @Test
+    public void createPayment_explicit_alipay_channel_persists() {
+        Long id = service.createPayment("ORDER200", 2L, 3L, new BigDecimal("50.00"), 1);
+        assertNotNull(id);
+        ArgumentCaptor<PayTransactionPO> cap = ArgumentCaptor.forClass(PayTransactionPO.class);
+        verify(manager).save(cap.capture());
+        assertEquals(1, cap.getValue().getChannel());
+        assertEquals(1, cap.getValue().getStatus());
+    }
+
+    /**
+     * 验证 handleCallback 在失败 + orderNo 为 null 时不调 orderFeignClient.pay。
+     */
+    @Test
+    public void handleCallback_failed_with_null_order_no_skips_feign() {
+        PayTransactionPO rec = new PayTransactionPO();
+        rec.setId(1L);
+        rec.setStatus(1);
+        rec.setOrderNo(null);
+        when(manager.getOne(any())).thenReturn(rec);
+
+        PayCallbackDTO dto = new PayCallbackDTO("PAY1", "TRADE1", false, "fail-response");
+        service.handleCallback(dto);
+
+        assertEquals(3, rec.getStatus());
+        verify(orderFeignClient, never()).pay(any());
+    }
+
+    /**
+     * 验证 scanPaidButOrderPending 在 feign.status 抛异常时不计数且不中断循环。
+     */
+    @Test
+    public void scanPaidButOrderPending_probe_exception_skips() {
+        PayTransactionPO tx1 = new PayTransactionPO();
+        tx1.setPaymentNo("PAY1");
+        tx1.setOrderNo("100");
+        tx1.setStatus(2);
+        PayTransactionPO tx2 = new PayTransactionPO();
+        tx2.setPaymentNo("PAY2");
+        tx2.setOrderNo("200");
+        tx2.setStatus(2);
+        when(manager.list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class)))
+            .thenReturn(java.util.List.of(tx1, tx2));
+        when(orderFeignClient.status(100L)).thenThrow(new RuntimeException("rpc down"));
+        when(orderFeignClient.status(200L)).thenReturn(com.yirancrazy.minimall.common.result.Result.success(1));
+
+        int count = service.scanPaidButOrderPending();
+
+        assertEquals(1, count);
+        verify(orderFeignClient).pay(200L);
+        verify(orderFeignClient, never()).pay(100L);
+    }
+
+    /**
+     * 验证 scanPaidButOrderPending 在 feign.status 返 null 时跳过该条不调 order.pay。
+     */
+    @Test
+    public void scanPaidButOrderPending_probe_null_status_skips() {
+        PayTransactionPO tx = new PayTransactionPO();
+        tx.setPaymentNo("PAY1");
+        tx.setOrderNo("100");
+        tx.setStatus(2);
+        when(manager.list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class)))
+            .thenReturn(java.util.List.of(tx));
+        when(orderFeignClient.status(100L)).thenReturn(com.yirancrazy.minimall.common.result.Result.success(null));
+
+        int count = service.scanPaidButOrderPending();
+
+        assertEquals(0, count);
+        verify(orderFeignClient, never()).pay(any());
+    }
+
+    /**
+     * 验证 page 在 cursor 与 status 与时间范围三个条件同时提供时仍委托 manager.list。
+     */
+    @Test
+    public void page_with_full_filters_delegates_to_manager() {
+        PayPageDTO dto = new PayPageDTO();
+        dto.setCursor("MTAw");
+        dto.setStatus(2);
+        dto.setStartTime(java.time.LocalDateTime.of(2026, 7, 1, 0, 0));
+        dto.setEndTime(java.time.LocalDateTime.of(2026, 7, 31, 23, 59));
+        dto.setLimit(20);
+        when(manager.list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class)))
+            .thenReturn(new java.util.ArrayList<>());
+
+        CursorPageVO<PayTransactionPO> result = service.page(10L, dto);
+
+        assertNotNull(result);
+        verify(manager).list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class));
+    }
+
+    /**
+     * 验证 exportTransactions 在无任何过滤条件下仍委托 manager.list 并返回空列表。
+     */
+    @Test
+    public void exportTransactions_empty_filters_returns_empty() {
+        when(manager.list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class)))
+            .thenReturn(new java.util.ArrayList<>());
+
+        java.util.List<PayTransactionPO> result = service.exportTransactions(new PayPageDTO());
+
+        assertNotNull(result);
+        assertEquals(0, result.size());
+        verify(manager).list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class));
+    }
 }

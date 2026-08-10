@@ -13,13 +13,14 @@ import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.platform.dto.MerchantQualificationAuditDTO;
+import com.yirancrazy.minimall.platform.vo.MerchantQualificationVO;
 
 /**
  * @Author: yirancrazy@gmail.com
  * @Description: 平台商家资质审核控制器。merchant-service 通过 MQ/Feign 提供数据；
  *              本端点提供契约占位，前端 MSW 在 dev 环境兜底。
- * @Version: 1.0
- * @DateTime: 2026/08/09
+ * @Version: 1.1
+ * @DateTime: 2026/08/10
  **/
 @Slf4j
 @RestController
@@ -33,9 +34,10 @@ public class PlatformMerchantQualificationControllerV1 {
      * @param limit  每页条数
      */
     @GetMapping("/qualifications")
-    public Result<CursorPageVO<Object>> listPending(@RequestParam(required = false) String cursor,
-                                                     @RequestParam(defaultValue = "20") int limit) {
-        CursorPageVO<Object> page = new CursorPageVO<>(List.of(), null, false, limit);
+    public Result<CursorPageVO<MerchantQualificationVO>> listPending(@RequestParam(required = false) String cursor,
+                                                                    @RequestParam(defaultValue = "20") int limit) {
+        CursorPageVO<MerchantQualificationVO> page =
+                new CursorPageVO<>(List.of(), null, false, limit);
         log.info("list pending merchant qualifications, cursor={}, limit={}", cursor, limit);
         return Result.success(page);
     }

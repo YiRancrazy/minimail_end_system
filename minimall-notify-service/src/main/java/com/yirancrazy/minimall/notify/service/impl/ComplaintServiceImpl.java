@@ -75,6 +75,12 @@ public class ComplaintServiceImpl implements ComplaintService {
         if (dto.getOrderNo() != null && !dto.getOrderNo().isBlank()) {
             wrapper.like(ComplaintPO::getOrderNo, dto.getOrderNo());
         }
+        if (dto.getUserId() != null) {
+            wrapper.eq(ComplaintPO::getComplainantId, dto.getUserId());
+        }
+        if (dto.getDefendantId() != null) {
+            wrapper.eq(ComplaintPO::getDefendantId, dto.getDefendantId());
+        }
         wrapper.orderByDesc(ComplaintPO::getId);
         wrapper.last("LIMIT " + (limit + 1));
         List<ComplaintPO> records = complaintManager.list(wrapper);
@@ -103,6 +109,20 @@ public class ComplaintServiceImpl implements ComplaintService {
         po.setHandlerResult(dto.getResult());
         complaintManager.updateById(po);
         log.info("complaint handled, id={}, handlerId={}, newStatus={}", id, handlerId, dto.getStatus());
+    }
+
+    /**
+     * 查询投诉详情，不存在时抛 COMPLAINT_NOT_FOUND。
+     * @param id 投诉ID
+     * @return 投诉实体
+     */
+    @Override
+    public ComplaintPO detail(Long id) {
+        ComplaintPO po = complaintManager.getById(id);
+        if (po == null) {
+            throw new BizException(NotifyCodeEnum.COMPLAINT_NOT_FOUND);
+        }
+        return po;
     }
 
     private boolean isValidTransition(Integer current, Integer target) {

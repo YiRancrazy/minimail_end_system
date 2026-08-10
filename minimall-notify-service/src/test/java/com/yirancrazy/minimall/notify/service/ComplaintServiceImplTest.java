@@ -258,4 +258,28 @@ public class ComplaintServiceImplTest {
 
         assertThrows(BizException.class, () -> service.handle(1L, 10L, dto));
     }
+
+    /**
+     * 验证 detail 正常返回投诉实体。
+     */
+    @Test
+    public void detail_returns_po() {
+        ComplaintPO po = new ComplaintPO();
+        po.setId(7L);
+        when(complaintManager.getById(7L)).thenReturn(po);
+
+        ComplaintPO got = service.detail(7L);
+
+        assertEquals(7L, got.getId());
+    }
+
+    /**
+     * 验证 detail 在投诉不存在时抛 COMPLAINT_NOT_FOUND。
+     */
+    @Test
+    public void detail_throws_when_not_found() {
+        when(complaintManager.getById(99L)).thenReturn(null);
+
+        assertThrows(BizException.class, () -> service.detail(99L));
+    }
 }

@@ -37,4 +37,11 @@ public interface ComplaintService {
      * @throws com.yirancrazy.minimall.common.exception.BizException 投诉不存在或状态非法时
      */
     void handle(Long id, Long handlerId, ComplaintHandleDTO dto);
+
+    /**
+     * 查询投诉详情，不存在时抛 COMPLAINT_NOT_FOUND。
+     * @param id 投诉ID
+     * @return 投诉实体
+     */
+    ComplaintPO detail(Long id);
 }

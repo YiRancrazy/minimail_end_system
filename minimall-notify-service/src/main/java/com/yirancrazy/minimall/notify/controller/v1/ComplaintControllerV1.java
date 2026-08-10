@@ -68,4 +68,14 @@ public class ComplaintControllerV1 {
         complaintService.handle(id, handlerId, dto);
         return Result.success(null);
     }
+
+    /**
+     * 平台查询投诉详情。
+     * @param id 投诉ID
+     * @return 投诉实体
+     */
+    @GetMapping("/{id}")
+    public Result<ComplaintPO> detail(@PathVariable("id") Long id) {
+        return Result.success(complaintService.detail(id));
+    }
 }

@@ -19,4 +19,10 @@ public class ComplaintPageDTO extends CursorPageDTO {
 
     /** 按订单号模糊匹配，null 不限制 */
     private String orderNo;
+
+    /** 按投诉方ID过滤（用户端"我的投诉"使用），null 不限制 */
+    private Long userId;
+
+    /** 按被诉方ID过滤（商家端"被投诉我"使用），null 不限制 */
+    private Long defendantId;
 }

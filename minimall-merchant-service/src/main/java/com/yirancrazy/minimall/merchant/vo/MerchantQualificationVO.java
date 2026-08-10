@@ -16,6 +16,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class MerchantQualificationVO {
     private Long id;
+    /** 与 userId 同义，对外暴露稳定别名 merchantId。 */
+    private Long merchantId;
     private Long userId;
     private String merchantName;
     private String licenseNo;

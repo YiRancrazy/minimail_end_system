@@ -146,7 +146,11 @@ public class MerchantServiceImpl implements MerchantService {
 
     private MerchantQualificationVO toVO(MerchantPO po) {
         return new MerchantQualificationVO(
-            po.getId(), po.getUserId(), po.getMerchantName(), po.getLicenseNo(),
+            po.getId(),
+            // merchantId 与 userId 同义，对外暴露稳定字段名
+            po.getUserId(),
+            po.getUserId(),
+            po.getMerchantName(), po.getLicenseNo(),
             po.getAuditStatus(), po.getAuditReason(), po.getAuditAt());
     }
 }

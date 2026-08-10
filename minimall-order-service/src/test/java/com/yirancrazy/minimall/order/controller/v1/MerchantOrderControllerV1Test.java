@@ -3,10 +3,12 @@ package com.yirancrazy.minimall.order.controller.v1;
 import java.util.Collections;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -52,10 +54,14 @@ class MerchantOrderControllerV1Test {
      */
     @Test
     void ship_invokes_service() throws Exception {
-        mockMvc.perform(post("/api/v1/merchant/orders/99/ship").header("X-User-Id", 1L))
+        String body = "{\"carrier\":\"顺丰\",\"trackingNo\":\"SF12345678\"}";
+        mockMvc.perform(post("/api/v1/merchant/orders/99/ship")
+                .header("X-User-Id", 1L)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.code").value("00000"));
-        verify(service).ship(99L, 1L);
+        verify(service).ship(eq(99L), eq(1L), eq("顺丰"), eq("SF12345678"));
     }
 
     /**

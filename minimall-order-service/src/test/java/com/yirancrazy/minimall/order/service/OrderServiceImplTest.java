@@ -203,10 +203,10 @@ public class OrderServiceImplTest {
      */
     @Test
     public void ship_transitions_to_shipped() {
-        OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.PAID.intCode());
+        OrderPO existing = buildOrder(99L, 1L, 10L, OrderStatusEnum.PAID.intCode());
         when(manager.getById(99L)).thenReturn(existing);
 
-        service.ship(99L, 10L);
+        service.ship(99L, 10L, "顺丰", "SF12345678");
         assertEquals(OrderStatusEnum.SHIPPED.intCode(), existing.getStatus());
     }
 
@@ -597,10 +597,10 @@ public class OrderServiceImplTest {
      */
     @Test
     public void ship_inserts_logistics_node() {
-        OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.PAID.intCode());
+        OrderPO existing = buildOrder(99L, 1L, 10L, OrderStatusEnum.PAID.intCode());
         when(manager.getById(99L)).thenReturn(existing);
 
-        service.ship(99L, 10L);
+        service.ship(99L, 10L, "顺丰", "SF12345678");
         assertEquals(OrderStatusEnum.SHIPPED.intCode(), existing.getStatus());
         verify(logisticsManager).save(any(OrderLogisticsPO.class));
     }

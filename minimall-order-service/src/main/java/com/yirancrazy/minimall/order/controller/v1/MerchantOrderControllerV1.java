@@ -6,6 +6,7 @@ import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -15,7 +16,9 @@ import jakarta.validation.Valid;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.common.util.CsvExporter;
+import com.yirancrazy.minimall.order.dto.MerchantRefundExecuteDTO;
 import com.yirancrazy.minimall.order.dto.OrderPageDTO;
+import com.yirancrazy.minimall.order.dto.OrderShipDTO;
 import com.yirancrazy.minimall.order.entity.OrderPO;
 import com.yirancrazy.minimall.order.service.OrderService;
 
@@ -59,9 +62,38 @@ public class MerchantOrderControllerV1 {
      */
     @PostMapping("/{orderId}/ship")
     public Result<Void> ship(@PathVariable Long orderId,
-                             @RequestHeader("X-User-Id") Long merchantId) {
-        orderService.ship(orderId, merchantId);
+                             @RequestHeader("X-User-Id") Long merchantId,
+                             @Valid @RequestBody OrderShipDTO dto) {
+        orderService.ship(orderId, merchantId, dto.getCarrier(), dto.getTrackingNo());
         return Result.success(null);
+    }
+
+    /**
+     * 商家主动发起退款。退款单号由调用方生成（业务幂等键），此处直接复用 orderId 形式。
+     * @param refundNo 退款单号
+     * @param merchantId 商家ID
+     * @param dto 退款入参（金额 + 原因）
+     */
+    @PostMapping("/refunds/{refundNo}/execute")
+    public Result<Void> executeRefund(@PathVariable String refundNo,
+                                       @RequestHeader("X-User-Id") Long merchantId,
+                                       @Valid @RequestBody MerchantRefundExecuteDTO dto) {
+        Long orderId = parseOrderIdFromRefundNo(refundNo);
+        orderService.merchantInitiateRefund(orderId, merchantId, dto.getRefundAmount(), dto.getReason());
+        return Result.success(null);
+    }
+
+    private Long parseOrderIdFromRefundNo(String refundNo) {
+        if (refundNo == null || refundNo.isEmpty()) {
+            throw new IllegalArgumentException("refundNo 不能为空");
+        }
+        // 约定：refundNo 以 R 开头，后跟订单ID
+        String tail = refundNo.startsWith("R") ? refundNo.substring(1) : refundNo;
+        try {
+            return Long.parseLong(tail);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("refundNo 格式错误：" + refundNo);
+        }
     }
 
     /**

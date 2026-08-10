@@ -241,15 +241,38 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public void ship(Long orderId, Long merchantId) {
+    public void ship(Long orderId, Long merchantId, String carrier, String trackingNo) {
+        OrderPO po = getOrder(orderId);
+        if (po.getMerchantId() == null || !po.getMerchantId().equals(merchantId)) {
+            throw new BizException(OrderCodeEnum.ORDER_NOT_FOUND);
+        }
         transitStatus(orderId, OrderStatusEnum.SHIPPED);
         OrderLogisticsPO node = new OrderLogisticsPO();
         node.setOrderId(orderId);
         node.setNode("已发货");
-        node.setDescription("商家已发货");
+        node.setDescription(String.format("%s · %s", carrier, trackingNo));
         node.setCreatedTime(LocalDateTime.now());
         orderLogisticsManager.save(node);
-        log.info("order shipped, orderId={}, merchantId={}", orderId, merchantId);
+        log.info("order shipped, orderId={}, merchantId={}, carrier={}, trackingNo={}", orderId, merchantId, carrier, trackingNo);
+    }
+
+    @Override
+    public void merchantInitiateRefund(Long orderId, Long merchantId, String refundAmount, String reason) {
+        OrderPO po = getOrder(orderId);
+        if (po.getMerchantId() == null || !po.getMerchantId().equals(merchantId)) {
+            throw new BizException(OrderCodeEnum.ORDER_NOT_FOUND);
+        }
+        OrderStatusEnum current = statusMachine.fromCode(po.getStatus());
+        if (current != OrderStatusEnum.PAID && current != OrderStatusEnum.SHIPPED && current != OrderStatusEnum.COMPLETED) {
+            throw new BizException(OrderCodeEnum.ORDER_STATUS_TRANSITION_INVALID);
+        }
+        // 商家主动发起退款与用户申请走相同状态机：PAID/SHIPPED/COMPLETED → REFUNDING，由商家审核后进入 REFUNDED
+        if (current == OrderStatusEnum.COMPLETED) {
+            // 已完成的订单需要回退到 SHIPPED 状态机入口走相同路径
+            throw new BizException(OrderCodeEnum.ORDER_STATUS_TRANSITION_INVALID);
+        }
+        refund(orderId);
+        log.info("merchant initiated refund, orderId={}, merchantId={}, amount={}, reason={}", orderId, merchantId, refundAmount, reason);
     }
 
     @Override

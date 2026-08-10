@@ -29,11 +29,21 @@ public interface OrderService {
 
     void cancel(Long orderId, Long userId);
 
-    void ship(Long orderId, Long merchantId);
+    void ship(Long orderId, Long merchantId, String carrier, String trackingNo);
 
     void confirm(Long orderId, Long userId);
 
     void refund(Long orderId);
+
+    /**
+     * 商家主动发起退款，仅允许 PAID/SHIPPED/COMPLETED 三种状态的订单。
+     * 退款走与用户申请退款相同的链路，但默认直接置 REFUNDING，由商家审核后再到 REFUNDED。
+     * @param orderId   订单ID
+     * @param merchantId 商家ID（归属校验）
+     * @param refundAmount 退款金额（字符串由调用方决定精度，内部转 BigDecimal）
+     * @param reason 退款原因
+     */
+    void merchantInitiateRefund(Long orderId, Long merchantId, String refundAmount, String reason);
 
     void handleRefundCallback(Long orderId, boolean success);
 

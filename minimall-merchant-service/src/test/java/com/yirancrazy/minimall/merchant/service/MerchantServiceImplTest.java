@@ -212,4 +212,62 @@ public class MerchantServiceImplTest {
         po.setAuditStatus(auditStatus);
         return po;
     }
+
+    /**
+     * 验证 page 在无记录时返回空分页。
+     */
+    @Test
+    public void page_returns_empty() {
+        when(manager.list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class)))
+                .thenReturn(java.util.Collections.emptyList());
+
+        com.yirancrazy.minimall.merchant.dto.MerchantPageDTO dto =
+                new com.yirancrazy.minimall.merchant.dto.MerchantPageDTO();
+        dto.setLimit(20);
+        com.yirancrazy.minimall.common.result.CursorPageVO<MerchantPO> page = service.page(dto);
+
+        assertTrue(page.getRecords().isEmpty());
+        assertEquals(false, page.isHasMore());
+    }
+
+    /**
+     * 验证 page 委托 manager 并按 keyword/auditStatus 过滤。
+     */
+    @Test
+    public void page_filters_combined() {
+        MerchantPO a = buildPO(1L, 100L, 1);
+        when(manager.list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class)))
+                .thenReturn(java.util.List.of(a));
+
+        com.yirancrazy.minimall.merchant.dto.MerchantPageDTO dto =
+                new com.yirancrazy.minimall.merchant.dto.MerchantPageDTO();
+        dto.setLimit(20);
+        dto.setKeyword("shop");
+        dto.setAuditStatus(1);
+        com.yirancrazy.minimall.common.result.CursorPageVO<MerchantPO> page = service.page(dto);
+
+        assertEquals(1, page.getRecords().size());
+        verify(manager).list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class));
+    }
+
+    /**
+     * 验证 detail 正常返回商家 PO。
+     */
+    @Test
+    public void detail_returns_po() {
+        when(manager.getById(1L)).thenReturn(buildPO(1L, 100L, 1));
+
+        MerchantPO got = service.detail(1L);
+        assertEquals(100L, got.getUserId());
+    }
+
+    /**
+     * 验证 detail 在商家不存在时抛 MERCHANT_NOT_FOUND。
+     */
+    @Test
+    public void detail_throws_when_not_found() {
+        when(manager.getById(99L)).thenReturn(null);
+
+        assertThrows(BizException.class, () -> service.detail(99L));
+    }
 }

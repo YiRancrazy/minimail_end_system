@@ -1,7 +1,10 @@
 package com.yirancrazy.minimall.merchant.service;
 
 import java.util.List;
+import com.yirancrazy.minimall.common.result.CursorPageVO;
+import com.yirancrazy.minimall.merchant.dto.MerchantPageDTO;
 import com.yirancrazy.minimall.merchant.dto.QualificationSubmitDTO;
+import com.yirancrazy.minimall.merchant.entity.MerchantPO;
 import com.yirancrazy.minimall.merchant.vo.MerchantAuditLogVO;
 import com.yirancrazy.minimall.merchant.vo.MerchantInfoVO;
 import com.yirancrazy.minimall.merchant.vo.MerchantQualificationVO;
@@ -9,8 +12,8 @@ import com.yirancrazy.minimall.merchant.vo.MerchantQualificationVO;
 /**
  * @Author: yirancrazy@gmail.com
  * @Description: 商家资质领域服务接口，定义资质提交与审核契约。
- * @Version: 1.0
- * @DateTime: 2026/08/03
+ * @Version: 1.1
+ * @DateTime: 2026/08/10
  **/
 public interface MerchantService {
 
@@ -50,4 +53,19 @@ public interface MerchantService {
      * @return 审核记录列表
      */
     List<MerchantAuditLogVO> listAuditLog(Long merchantId);
+
+    /**
+     * 平台商家管理分页查询。
+     * @param dto 分页入参
+     * @return 商家游标分页结果
+     */
+    CursorPageVO<MerchantPO> page(MerchantPageDTO dto);
+
+    /**
+     * 平台商家详情。
+     * @param merchantId 商家主体ID
+     * @return 商家PO
+     * @throws com.yirancrazy.minimall.common.exception.BizException 商家不存在时
+     */
+    MerchantPO detail(Long merchantId);
 }

@@ -4,11 +4,15 @@ import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import org.springframework.stereotype.Service;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.common.exception.BizException;
+import com.yirancrazy.minimall.common.result.CursorPageVO;
+import com.yirancrazy.minimall.common.util.CursorUtils;
 import com.yirancrazy.minimall.merchant.constant.MerchantAuditStatusEnum;
 import com.yirancrazy.minimall.merchant.constant.MerchantCodeEnum;
+import com.yirancrazy.minimall.merchant.dto.MerchantPageDTO;
 import com.yirancrazy.minimall.merchant.dto.QualificationSubmitDTO;
 import com.yirancrazy.minimall.merchant.entity.MerchantPO;
 import com.yirancrazy.minimall.merchant.manager.MerchantManager;
@@ -152,5 +156,43 @@ public class MerchantServiceImpl implements MerchantService {
             po.getUserId(),
             po.getMerchantName(), po.getLicenseNo(),
             po.getAuditStatus(), po.getAuditReason(), po.getAuditAt());
+    }
+
+    /**
+     * 平台商家管理分页查询，支持按名称/审核状态过滤；按 ID 降序返回。
+     * @param dto 分页入参
+     * @return 商家游标分页结果
+     */
+    @Override
+    public CursorPageVO<MerchantPO> page(MerchantPageDTO dto) {
+        int limit = dto.getLimit();
+        Long lastId = CursorUtils.decode(dto.getCursor());
+        LambdaQueryWrapper<MerchantPO> wrapper = Wrappers.lambdaQuery(MerchantPO.class);
+        wrapper.lt(lastId != null, MerchantPO::getId, lastId);
+        if (dto.getKeyword() != null && !dto.getKeyword().isBlank()) {
+            wrapper.like(MerchantPO::getMerchantName, dto.getKeyword());
+        }
+        if (dto.getAuditStatus() != null) {
+            wrapper.eq(MerchantPO::getAuditStatus, dto.getAuditStatus());
+        }
+        wrapper.orderByDesc(MerchantPO::getId);
+        wrapper.last("LIMIT " + (limit + 1));
+        List<MerchantPO> records = merchantManager.list(wrapper);
+        return CursorPageVO.of(records, limit, MerchantPO::getId);
+    }
+
+    /**
+     * 平台商家详情。
+     * @param merchantId 商家主体ID
+     * @return 商家PO
+     * @throws BizException 商家不存在时
+     */
+    @Override
+    public MerchantPO detail(Long merchantId) {
+        MerchantPO po = merchantManager.getById(merchantId);
+        if (po == null) {
+            throw new BizException(MerchantCodeEnum.MERCHANT_NOT_FOUND);
+        }
+        return po;
     }
 }

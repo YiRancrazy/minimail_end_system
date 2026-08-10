@@ -50,7 +50,10 @@ public class ShopServiceImpl implements ShopService {
         if (cursor != null && !cursor.isBlank()) {
             try {
                 q.lt("id", Long.parseLong(cursor));
-            } catch (NumberFormatException ignored) { /* fall through */ }
+            }
+            catch (NumberFormatException ignored) {
+                // cursor 非数字时按忽略处理，依赖兜底分页
+            }
         }
         q.orderByDesc("id").last("LIMIT " + safeLimit);
         return shopManager.list(q);

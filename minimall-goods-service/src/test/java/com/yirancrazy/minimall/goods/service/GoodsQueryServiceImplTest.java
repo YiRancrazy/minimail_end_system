@@ -7,6 +7,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -55,6 +56,7 @@ public class GoodsQueryServiceImplTest {
         List<SpuPO> mockRecords = new ArrayList<>();
         mockRecords.add(po);
         when(spuManager.list(any(Wrapper.class))).thenReturn(mockRecords);
+        when(skuManager.list(any(Wrapper.class))).thenReturn(List.of());
 
         GoodsPageDTO dto = new GoodsPageDTO();
 
@@ -65,6 +67,7 @@ public class GoodsQueryServiceImplTest {
         assertEquals(200L, vo.getSpuId());
         assertEquals("手机", vo.getTitle());
         assertEquals(10L, vo.getMerchantId());
+        assertNull(vo.getMinPrice());
     }
 
     /**
@@ -73,6 +76,7 @@ public class GoodsQueryServiceImplTest {
     @Test
     public void pageOnSale_with_keyword_and_category_returns_empty() {
         when(spuManager.list(any(Wrapper.class))).thenReturn(List.of());
+        when(skuManager.list(any(Wrapper.class))).thenReturn(List.of());
 
         GoodsPageDTO dto = new GoodsPageDTO();
         dto.setKeyword("耳机");
@@ -81,6 +85,43 @@ public class GoodsQueryServiceImplTest {
         var result = service.pageOnSale(dto);
 
         assertTrue(result.getRecords().isEmpty());
+    }
+
+    /**
+     * 验证 pageOnSale 批量聚合各 SPU 最低售价，无 SKU 的 SPU 返回 null。
+     */
+    @Test
+    public void pageOnSale_aggregates_min_price() {
+        SpuPO po1 = new SpuPO();
+        po1.setId(1L);
+        po1.setSpuNo("SPU1");
+        po1.setTitle("商品一");
+        po1.setMerchantId(10L);
+        SpuPO po2 = new SpuPO();
+        po2.setId(2L);
+        po2.setSpuNo("SPU2");
+        po2.setTitle("商品二");
+        po2.setMerchantId(10L);
+        when(spuManager.list(any(Wrapper.class))).thenReturn(List.of(po1, po2));
+
+        SkuPO s1 = new SkuPO();
+        s1.setSpuId(1L);
+        s1.setPrice(new BigDecimal("199.00"));
+        SkuPO s2 = new SkuPO();
+        s2.setSpuId(1L);
+        s2.setPrice(new BigDecimal("99.00"));
+        SkuPO s3 = new SkuPO();
+        s3.setSpuId(2L);
+        s3.setPrice(new BigDecimal("59.00"));
+        when(skuManager.list(any(Wrapper.class))).thenReturn(List.of(s1, s2, s3));
+
+        GoodsPageDTO dto = new GoodsPageDTO();
+
+        var result = service.pageOnSale(dto);
+
+        assertEquals(2, result.getRecords().size());
+        assertEquals(new BigDecimal("99.00"), result.getRecords().get(0).getMinPrice());
+        assertEquals(new BigDecimal("59.00"), result.getRecords().get(1).getMinPrice());
     }
 
     /**

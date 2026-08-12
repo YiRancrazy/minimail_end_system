@@ -515,6 +515,26 @@ public interface StockInternalClient {
 | GET | `/goods/{spuId}` | USER-GOODS-0002 |
 | GET | `/goods/{spuId}/skus` | USER-GOODS-0002 |
 
+列表响应（游标分页，`records[].minPrice` 为最低售价，单位元；无 SKU 时为 null）：
+
+```json
+{
+  "code": "00000",
+  "data": {
+    "records": [
+      { "spuId": 20001, "spuNo": "SPU20001", "title": "...", "subtitle": "...",
+        "mainImageUrl": "...", "merchantId": 5, "minPrice": "199.00" }
+    ],
+    "nextCursor": "eyJpZCI6MTAyMzQ1Nn0=",
+    "hasMore": false,
+    "limit": 20
+  },
+  "traceId": "5f3a1b2c4d5e6f7g8h9i0j"
+}
+```
+
+> 说明：`minPrice` 由列表接口按 `t_sku.price` 聚合，前端无需逐卡调详情取价。
+
 详情响应（含 SPU/SKU 聚合）：
 
 ```json

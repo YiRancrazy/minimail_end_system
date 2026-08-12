@@ -1,6 +1,10 @@
 package com.yirancrazy.minimall.goods.service.impl;
 
+import java.math.BigDecimal;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
@@ -40,24 +44,48 @@ public class GoodsQueryServiceImpl implements GoodsQueryService {
 
     /**
      * 游标分页查询在售商品，keyword 非空时按标题模糊匹配，categoryId 非空时等值过滤，按 ID 倒序。
+     * 列表聚合各 SPU 最低售价，避免前端逐卡调详情形成 N+1。
      * @param dto 游标分页查询入参
-     * @return 在售商品游标分页结果
+     * @return 在售商品游标分页结果，含 minPrice（元）
      */
     @Override
     public CursorPageVO<SpuListVO> pageOnSale(GoodsPageDTO dto) {
-        Long lastId = CursorUtils.decode(dto.getCursor());
-        int limit = dto.getLimit();
+        Long lastId = CursorUtils.decode(dto.getCursor());  // 上一页最后一条记录的id
+        int limit = dto.getLimit();  // 每页数量
         List<SpuPO> records = spuManager.list(Wrappers.lambdaQuery(SpuPO.class)
-            .lt(lastId != null, SpuPO::getId, lastId)
-            .eq(SpuPO::getStatus, SpuStatusEnum.ON_SALE.statusValue())
-            .eq(dto.getCategoryId() != null, SpuPO::getCategoryId, dto.getCategoryId())
-            .like(dto.getKeyword() != null && !dto.getKeyword().isBlank(),
-                SpuPO::getTitle, dto.getKeyword())
+            .lt(lastId != null, SpuPO::getId, lastId)  // 上一页最后一条记录的id
+            .eq(SpuPO::getStatus, SpuStatusEnum.ON_SALE.statusValue())  // 在售状态
+            .eq(dto.getCategoryId() != null, SpuPO::getCategoryId, dto.getCategoryId())  // 类目过滤
+            .like(dto.getKeyword() != null && !dto.getKeyword().isBlank(),  // 标题模糊匹配
+                SpuPO::getTitle, dto.getKeyword())  // 标题
             .orderByDesc(SpuPO::getId)
             .last("LIMIT " + (limit + 1)));
+        Map<Long, BigDecimal> minPriceMap = batchMinPrice(records.stream()
+            .map(SpuPO::getId).collect(Collectors.toList()));
         return CursorPageVO.of(records, limit, SpuPO::getId)
             .map(po -> new SpuListVO(po.getId(), po.getSpuNo(), po.getTitle(),
-                po.getSubtitle(), po.getMainImageUrl(), po.getMerchantId()));
+                po.getSubtitle(), po.getMainImageUrl(), po.getMerchantId(),
+                minPriceMap.get(po.getId())));
+    }
+
+    /**
+     * 批量查询多个 SPU 的最低售价，一次 IN 查询替代逐 SPU 的 N 次详情请求。
+     * @param spuIds SPU 主键集合，允许为空
+     * @return spuId -> 最低售价（元）；无 SKU 的 SPU 不在结果中
+     */
+    private Map<Long, BigDecimal> batchMinPrice(List<Long> spuIds) {
+        if (spuIds == null || spuIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        List<SkuPO> skus = skuManager.list(
+            Wrappers.lambdaQuery(SkuPO.class).in(SkuPO::getSpuId, spuIds));
+        return skus.stream()
+            .collect(Collectors.groupingBy(SkuPO::getSpuId,
+                Collectors.mapping(SkuPO::getPrice,
+                    Collectors.minBy(Comparator.naturalOrder()))))
+            .entrySet().stream()
+            .collect(Collectors.toMap(Map.Entry::getKey,
+                e -> e.getValue().orElse(null)));
     }
 
     /**
@@ -94,6 +122,11 @@ public class GoodsQueryServiceImpl implements GoodsQueryService {
         return listSkusInternal(spuId);
     }
 
+    /**
+     * 内部方法，查询指定 SPU 下的 SKU 列表，非在售 SPU 视为不存在。
+     * @param spuId SPU 主键 ID
+     * @return SKU 视图列表
+     */
     private List<SkuVO> listSkusInternal(Long spuId) {
         List<SkuPO> skuPos = skuManager.list(
             Wrappers.lambdaQuery(SkuPO.class).eq(SkuPO::getSpuId, spuId));

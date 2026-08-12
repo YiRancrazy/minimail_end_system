@@ -7,7 +7,8 @@ CREATE TABLE IF NOT EXISTS t_sku (
   create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
   update_time DATETIME DEFAULT CURRENT_TIMESTAMP,
   is_deleted TINYINT DEFAULT 0,
-  PRIMARY KEY (id)
+  PRIMARY KEY (id),
+  KEY idx_goods_sku_spu (spu_id)
 );
 
 CREATE TABLE IF NOT EXISTS t_goods_spu (

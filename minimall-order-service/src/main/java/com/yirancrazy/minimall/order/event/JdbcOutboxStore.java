@@ -23,9 +23,8 @@ public class JdbcOutboxStore implements OutboxStore {
     }
 
     /**
-     * Record the commit of a half-message. Duplicate transactionId inserts
-     * are tolerated as idempotent commits.
-     * @param messageKey the RocketMQ transaction id
+     * 记录半消息的提交。重复的 transactionId 插入被视为幂等提交，可以容忍。
+     * @param messageKey RocketMQ 事务 ID
      */
     @Override
     public void recordCommit(String messageKey) {
@@ -40,9 +39,9 @@ public class JdbcOutboxStore implements OutboxStore {
     }
 
     /**
-     * Probe whether a half-message committed.
-     * @param messageKey the RocketMQ transaction id
-     * @return true if a record exists for the transactionId
+     * 查询半消息是否已提交。
+     * @param messageKey RocketMQ 事务 ID
+     * @return true 如果存在 transactionId 的记录
      */
     @Override
     public boolean isCommitted(String messageKey) {

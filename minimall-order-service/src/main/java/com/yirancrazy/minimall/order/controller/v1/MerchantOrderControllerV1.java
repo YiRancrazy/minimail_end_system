@@ -91,7 +91,8 @@ public class MerchantOrderControllerV1 {
         String tail = refundNo.startsWith("R") ? refundNo.substring(1) : refundNo;
         try {
             return Long.parseLong(tail);
-        } catch (NumberFormatException e) {
+        }
+        catch (NumberFormatException e) {
             throw new IllegalArgumentException("refundNo 格式错误：" + refundNo);
         }
     }

@@ -14,7 +14,6 @@ import com.yirancrazy.minimall.common.dto.CursorPageDTO;
 @EqualsAndHashCode(callSuper = true)
 public class GoodsPageDTO extends CursorPageDTO {
 
-    private String keyword;
-
-    private Long categoryId;
+    private String keyword;      // 查询关键字
+    private Long categoryId;     // 查询分类ID
 }

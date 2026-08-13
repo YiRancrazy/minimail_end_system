@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.goods.dto.GoodsPageDTO;
@@ -25,16 +26,11 @@ import com.yirancrazy.minimall.goods.vo.SpuSearchVO;
  **/
 @RestController
 @RequestMapping("/api/v1/user/goods")
+@RequiredArgsConstructor
 public class GoodsControllerV1 {
 
     private final GoodsQueryService goodsQueryService;
     private final SpuSearchService spuSearchService;
-
-    public GoodsControllerV1(GoodsQueryService goodsQueryService,
-                             SpuSearchService spuSearchService) {
-        this.goodsQueryService = goodsQueryService;
-        this.spuSearchService = spuSearchService;
-    }
 
     /**
      * 游标分页获取在售商品列表，支持关键词搜索与分类过滤。

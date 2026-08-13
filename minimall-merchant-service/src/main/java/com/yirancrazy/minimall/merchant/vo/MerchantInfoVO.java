@@ -16,6 +16,9 @@ public class MerchantInfoVO {
     private String licenseNo;
     private Integer qualificationStatus;
     private String username;
+    private String legalPhoneMasked;
+    private String idCardNoMasked;
+    private String bankAccountMasked;
     private LocalDateTime createTime;
 
     /**
@@ -29,6 +32,9 @@ public class MerchantInfoVO {
         vo.setShopName(po.getMerchantName());
         vo.setLicenseNo(po.getLicenseNo());
         vo.setQualificationStatus(po.getAuditStatus());
+        vo.setLegalPhoneMasked(com.yirancrazy.minimall.common.util.SensitiveDataUtils.maskPhone(po.getLegalPhoneEnc()));
+        vo.setIdCardNoMasked(com.yirancrazy.minimall.common.util.SensitiveDataUtils.maskIdCard(po.getIdCardNoEnc()));
+        vo.setBankAccountMasked(com.yirancrazy.minimall.common.util.SensitiveDataUtils.maskBankCard(po.getBankAccountEnc()));
         vo.setCreateTime(po.getCreateTime());
         return vo;
     }

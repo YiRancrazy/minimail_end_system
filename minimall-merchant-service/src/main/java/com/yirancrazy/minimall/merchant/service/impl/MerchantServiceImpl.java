@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.util.CursorUtils;
+import com.yirancrazy.minimall.common.util.SensitiveDataUtils;
 import com.yirancrazy.minimall.merchant.constant.MerchantAuditStatusEnum;
 import com.yirancrazy.minimall.merchant.constant.MerchantCodeEnum;
 import com.yirancrazy.minimall.merchant.dto.MerchantPageDTO;
@@ -52,12 +53,14 @@ public class MerchantServiceImpl implements MerchantService {
             po.setUserId(merchantId);
             po.setMerchantName(dto.getMerchantName());
             po.setLicenseNo(dto.getLicenseNo());
+            applySensitiveFields(po, dto);
             po.setAuditStatus(Integer.parseInt(MerchantAuditStatusEnum.PENDING.getCode()));
             merchantManager.save(po);
         }
         else {
             po.setMerchantName(dto.getMerchantName());
             po.setLicenseNo(dto.getLicenseNo());
+            applySensitiveFields(po, dto);
             po.setAuditStatus(Integer.parseInt(MerchantAuditStatusEnum.PENDING.getCode()));
             po.setAuditReason(null);
             po.setAuditAt(null);
@@ -148,14 +151,34 @@ public class MerchantServiceImpl implements MerchantService {
         return Collections.singletonList(vo);
     }
 
+    /**
+     * 将资质提交中的敏感字段写入商家实体（typeHandler 自动加密落库）。
+     * @param po 商家实体
+     * @param dto 资质提交入参
+     */
+    private void applySensitiveFields(MerchantPO po, QualificationSubmitDTO dto) {
+        po.setLegalPersonEnc(dto.getLegalPerson());
+        po.setLegalPhoneEnc(dto.getLegalPhone());
+        po.setIdCardNoEnc(dto.getIdCardNo());
+        po.setBusinessLicenseNoEnc(dto.getBusinessLicenseNo());
+        po.setBankAccountEnc(dto.getBankAccount());
+    }
+
     private MerchantQualificationVO toVO(MerchantPO po) {
-        return new MerchantQualificationVO(
-            po.getId(),
-            // merchantId 与 userId 同义，对外暴露稳定字段名
-            po.getUserId(),
-            po.getUserId(),
-            po.getMerchantName(), po.getLicenseNo(),
-            po.getAuditStatus(), po.getAuditReason(), po.getAuditAt());
+        MerchantQualificationVO vo = new MerchantQualificationVO();
+        vo.setId(po.getId());
+        // merchantId 与 userId 同义，对外暴露稳定字段名
+        vo.setMerchantId(po.getUserId());
+        vo.setUserId(po.getUserId());
+        vo.setMerchantName(po.getMerchantName());
+        vo.setLicenseNo(po.getLicenseNo());
+        vo.setAuditStatus(po.getAuditStatus());
+        vo.setAuditReason(po.getAuditReason());
+        vo.setAuditAt(po.getAuditAt());
+        vo.setLegalPhoneMasked(SensitiveDataUtils.maskPhone(po.getLegalPhoneEnc()));
+        vo.setIdCardNoMasked(SensitiveDataUtils.maskIdCard(po.getIdCardNoEnc()));
+        vo.setBankAccountMasked(SensitiveDataUtils.maskBankCard(po.getBankAccountEnc()));
+        return vo;
     }
 
     /**

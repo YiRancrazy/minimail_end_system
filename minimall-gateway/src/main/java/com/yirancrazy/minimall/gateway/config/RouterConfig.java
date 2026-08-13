@@ -73,7 +73,10 @@ public class RouterConfig {
                 "/api/v1/notify/sse")
                 .uri(HOST + ":8209"))
             .route("platform-service", r -> r.path(
-                "/api/v1/platform/roles/**")
+                "/api/v1/platform/roles/**",
+                "/api/v1/platform/merchants/**",
+                "/api/v1/platform/users/**",
+                "/api/v1/platform/health")
                 .uri(HOST + ":8210"))
             .build();
     }

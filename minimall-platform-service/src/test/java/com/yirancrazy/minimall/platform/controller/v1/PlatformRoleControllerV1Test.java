@@ -6,106 +6,95 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
-import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.data.redis.core.ValueOperations;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.platform.dto.RolePermissionUpdateDTO;
+import com.yirancrazy.minimall.platform.service.RolePermissionService;
+import com.yirancrazy.minimall.platform.vo.PermissionVO;
 import com.yirancrazy.minimall.platform.vo.RoleVO;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: PlatformRoleControllerV1 单元测试，验证角色权限查询与修改接口返回的数据完整性。
- * @Version: 1.0
- * @DateTime: 2026/08/04
+ * @Description: PlatformRoleControllerV1 单元测试，验证角色权限查询与修改接口的薄控制器行为。
+ * @Version: 1.1
+ * @DateTime: 2026/08/13
  **/
 @ExtendWith(MockitoExtension.class)
-@MockitoSettings(strictness = Strictness.LENIENT)
 class PlatformRoleControllerV1Test {
 
-    @Mock private StringRedisTemplate redisTemplate;
-    @Mock private ValueOperations<String, String> valueOperations;
+    @Mock private RolePermissionService rolePermissionService;
 
     private PlatformRoleControllerV1 controller;
 
     @BeforeEach
     void setUp() {
-        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
-        when(valueOperations.get(anyString())).thenReturn(null);
-        controller = new PlatformRoleControllerV1(redisTemplate);
+        controller = new PlatformRoleControllerV1(rolePermissionService);
     }
 
     @Test
-    void listRoles_returns_all_three_roles() {
+    void listRoles_returns_service_result() {
+        RoleVO role = new RoleVO("PLATFORM", "平台管理员",
+            List.of(new PermissionVO("ORDER_VIEW_ALL", "查看全部订单")));
+        when(rolePermissionService.listRoles()).thenReturn(List.of(role));
+
         Result<List<RoleVO>> result = controller.listRoles();
+
         assertEquals("00000", result.getCode());
-        assertEquals(3, result.getData().size());
-    }
-
-    @Test
-    void listRoles_each_role_has_permissions() {
-        Result<List<RoleVO>> result = controller.listRoles();
-        for (RoleVO vo : result.getData()) {
-            assertNotNull(vo.getRoleCode());
-            assertNotNull(vo.getDescription());
-            assertTrue(vo.getPermissions().size() > 0,
-                "role " + vo.getRoleCode() + " should have permissions");
-        }
+        assertEquals(1, result.getData().size());
+        assertEquals("PLATFORM", result.getData().get(0).getRoleCode());
     }
 
     @Test
     void getRolePermissions_valid_code_returns_role() {
-        Result<RoleVO> result = controller.getRolePermissions("PLATFORM");
+        RoleVO role = new RoleVO("USER", "用户",
+            List.of(new PermissionVO("CART_MANAGE", "购物车管理")));
+        when(rolePermissionService.getRolePermissions("USER")).thenReturn(role);
+
+        Result<RoleVO> result = controller.getRolePermissions("USER");
+
         assertEquals("00000", result.getCode());
-        assertEquals("PLATFORM", result.getData().getRoleCode());
+        assertNotNull(result.getData());
         assertTrue(result.getData().getPermissions().size() > 0);
     }
 
     @Test
     void getRolePermissions_invalid_code_returns_null() {
+        when(rolePermissionService.getRolePermissions("UNKNOWN")).thenReturn(null);
+
         Result<RoleVO> result = controller.getRolePermissions("UNKNOWN");
+
         assertEquals("00000", result.getCode());
         assertNull(result.getData());
     }
 
     @Test
-    void getRolePermissions_user_role_has_cart_permission() {
-        Result<RoleVO> result = controller.getRolePermissions("USER");
-        assertEquals("USER", result.getData().getRoleCode());
-        boolean hasCartManage = result.getData().getPermissions().stream()
-            .anyMatch(p -> "CART_MANAGE".equals(p.getPermissionCode()));
-        assertTrue(hasCartManage);
-    }
-
-    @Test
-    void updatePermissions_success() {
+    void updatePermissions_success_delegates_to_service() {
         RolePermissionUpdateDTO dto = new RolePermissionUpdateDTO();
         dto.setPermissionCodes(List.of("GOODS_VIEW", "GOODS_MANAGE"));
 
         Result<Void> result = controller.updatePermissions("MERCHANT", dto);
 
         assertEquals("00000", result.getCode());
-        verify(valueOperations).set(anyString(), anyString());
+        verify(rolePermissionService).updatePermissions("MERCHANT", List.of("GOODS_VIEW", "GOODS_MANAGE"));
     }
 
     @Test
-    void updatePermissions_userRole_forbidden() {
+    void updatePermissions_service_exception_is_propagated() {
         RolePermissionUpdateDTO dto = new RolePermissionUpdateDTO();
         dto.setPermissionCodes(List.of("GOODS_VIEW"));
+        org.mockito.Mockito.doThrow(new BizException("12011", "ROLE_PERMISSION_NOT_MODIFIABLE", "该角色不允许修改权限"))
+            .when(rolePermissionService).updatePermissions("USER", List.of("GOODS_VIEW"));
 
         BizException ex = assertThrows(BizException.class,
             () -> controller.updatePermissions("USER", dto));
 
-        assertEquals("12010", ex.getCode());
+        assertEquals("12011", ex.getCode());
     }
 }

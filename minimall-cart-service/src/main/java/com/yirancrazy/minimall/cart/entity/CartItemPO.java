@@ -12,6 +12,8 @@ import com.yirancrazy.minimall.common.base.BasePO;
  * @DateTime: 2026/07/31
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
+@TableName("t_cart_item")
 public class CartItemPO extends BasePO {
     private Long userId;
     private Long skuId;

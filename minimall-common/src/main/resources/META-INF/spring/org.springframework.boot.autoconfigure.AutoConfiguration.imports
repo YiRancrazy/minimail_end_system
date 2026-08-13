@@ -2,3 +2,4 @@ com.yirancrazy.minimall.common.event.EventBusAutoConfiguration
 com.yirancrazy.minimall.common.config.MinioConfig
 com.yirancrazy.minimall.common.config.OpenApiConfig
 com.yirancrazy.minimall.common.exception.WebExceptionHandlerAutoConfiguration
+com.yirancrazy.minimall.common.filter.TraceIdFilterAutoConfiguration

@@ -83,6 +83,51 @@ public class MerchantServiceImplTest {
     }
 
     /**
+     * 验证资质提交时敏感字段随实体落库（typeHandler 加密前为明文透传）。
+     */
+    @Test
+    public void submit_carries_sensitive_fields() {
+        when(manager.getOne(any())).thenReturn(null);
+        QualificationSubmitDTO dto = new QualificationSubmitDTO();
+        dto.setMerchantName("测试商家");
+        dto.setLicenseNo("L123");
+        dto.setLegalPerson("张三");
+        dto.setLegalPhone("13800001111");
+        dto.setIdCardNo("110101199001011234");
+        dto.setBusinessLicenseNo("BZ123456");
+        dto.setBankAccount("6222000011112222");
+
+        service.submitQualification(1L, dto);
+
+        org.mockito.ArgumentCaptor<MerchantPO> captor = org.mockito.ArgumentCaptor.forClass(MerchantPO.class);
+        verify(manager).save(captor.capture());
+        MerchantPO po = captor.getValue();
+        assertEquals("张三", po.getLegalPersonEnc());
+        assertEquals("13800001111", po.getLegalPhoneEnc());
+        assertEquals("110101199001011234", po.getIdCardNoEnc());
+        assertEquals("BZ123456", po.getBusinessLicenseNoEnc());
+        assertEquals("6222000011112222", po.getBankAccountEnc());
+    }
+
+    /**
+     * 验证资质查询 VO 敏感字段已脱敏输出。
+     */
+    @Test
+    public void getQualification_masks_sensitive_fields() {
+        MerchantPO po = buildPO(1L, 1L, 1);
+        po.setIdCardNoEnc("110101199001011234");
+        po.setLegalPhoneEnc("13800001111");
+        po.setBankAccountEnc("6222000011112222");
+        when(manager.getOne(any())).thenReturn(po);
+
+        MerchantQualificationVO vo = service.getQualification(1L);
+
+        assertTrue(vo.getIdCardNoMasked().contains("****"));
+        assertTrue(vo.getLegalPhoneMasked().contains("****"));
+        assertTrue(vo.getBankAccountMasked().contains("****"));
+    }
+
+    /**
      * 验证查询存在资质返回 VO。
      */
     @Test

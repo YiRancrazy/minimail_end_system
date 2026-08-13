@@ -13,6 +13,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO;
+import com.yirancrazy.minimall.common.annotation.Idempotent;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.pay.dto.PayCallbackDTO;
@@ -45,6 +46,7 @@ public class UserPayControllerV1 {
      * @return 支付流水ID
      */
     @PostMapping("/create")
+    @Idempotent(key = "#dto.orderNo")
     public Result<Long> create(@Valid @RequestBody PayCreateDTO dto,
                                @RequestHeader("X-User-Id") Long userId,
                                @RequestHeader(value = "X-Merchant-Id", required = false) Long merchantId) {
@@ -85,6 +87,7 @@ public class UserPayControllerV1 {
      * @return 退款VO
      */
     @PostMapping("/refunds")
+    @Idempotent
     public Result<RefundVO> createRefund(@Valid @RequestBody RefundCreateDTO dto) {
         RefundVO vo = payService.createRefund(dto);
         return Result.success(vo);

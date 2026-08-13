@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
+import com.yirancrazy.minimall.common.annotation.Idempotent;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.pay.dto.PayPageDTO;
@@ -64,6 +65,7 @@ public class MerchantPayControllerV1 {
      * @return 提现单VO
      */
     @PostMapping("/withdraw")
+    @Idempotent
     public Result<WithdrawVO> applyWithdraw(@RequestHeader("X-Merchant-Id") Long merchantId,
                                             @Valid @RequestBody WithdrawApplyDTO dto) {
         return Result.success(payService.applyWithdraw(merchantId, dto));

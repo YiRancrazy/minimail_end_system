@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
+import com.yirancrazy.minimall.common.annotation.Idempotent;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.notify.dto.ComplaintCreateDTO;
@@ -39,6 +40,7 @@ public class ComplaintControllerV1 {
      * @return 新投诉ID
      */
     @PostMapping
+    @Idempotent
     public Result<Long> create(@RequestHeader("X-User-Id") Long complainantId,
                                @Valid @RequestBody ComplaintCreateDTO dto) {
         return Result.success(complaintService.create(complainantId, dto));

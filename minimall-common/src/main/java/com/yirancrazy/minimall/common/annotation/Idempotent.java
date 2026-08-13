@@ -18,7 +18,11 @@ import java.util.concurrent.TimeUnit;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 public @interface Idempotent {
-    String key();
+    /**
+     * 幂等键 SpEL 表达式（如 #dto.orderNo）；为空时回退取请求头 X-Idempotency-Key。
+     * @return SpEL 表达式
+     */
+    String key() default "";
 
     long expire() default 24;
 

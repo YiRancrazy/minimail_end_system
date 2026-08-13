@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
+import com.yirancrazy.minimall.common.annotation.Idempotent;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.order.dto.OrderCheckoutDTO;
@@ -57,6 +58,7 @@ public class UserOrderControllerV1 {
      */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @Idempotent
     public Result<Long> create(@RequestHeader("X-User-Id") Long userId,
                                @Valid @RequestBody OrderCreateDTO dto) {
         return Result.success(orderService.create(userId, dto.getSkuId(), dto.getQuantity()));
@@ -70,6 +72,7 @@ public class UserOrderControllerV1 {
      */
     @PostMapping("/checkout")
     @ResponseStatus(HttpStatus.CREATED)
+    @Idempotent
     public Result<Long> checkout(@RequestHeader("X-User-Id") Long userId,
                                  @Valid @RequestBody OrderCheckoutDTO dto) {
         return Result.success(orderService.checkout(userId, dto.getItems()));
@@ -82,6 +85,7 @@ public class UserOrderControllerV1 {
      * @return 支付成功返回 true，订单状态不允许支付时返回 false
      */
     @PostMapping("/{id}/pay")
+    @Idempotent
     public Result<Void> pay(@PathVariable("id") Long id) {
         orderService.pay(id);
         return Result.success(null);
@@ -136,6 +140,7 @@ public class UserOrderControllerV1 {
      * @param orderId 订单ID
      */
     @PostMapping("/{orderId}/refund")
+    @Idempotent
     public Result<Void> refund(@PathVariable Long orderId) {
         orderService.refund(orderId);
         return Result.success(null);

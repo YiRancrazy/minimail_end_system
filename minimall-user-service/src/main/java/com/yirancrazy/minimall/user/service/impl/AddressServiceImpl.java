@@ -62,12 +62,12 @@ public class AddressServiceImpl implements AddressService {
 
         AddressPO po = new AddressPO();
         po.setUserId(userId);
-        po.setReceiverName(dto.getReceiverName());
-        po.setReceiverPhone(dto.getReceiverPhone());
+        po.setReceiverName(dto.getReceiver());
+        po.setReceiverPhone(dto.getPhone());
         po.setProvince(dto.getProvince());
         po.setCity(dto.getCity());
         po.setDistrict(dto.getDistrict());
-        po.setDetailAddress(dto.getDetailAddress());
+        po.setDetailAddress(dto.getDetail());
         po.setIsDefault(count == 0 ? 1 : 0);
 
         addressManager.save(po);
@@ -88,12 +88,12 @@ public class AddressServiceImpl implements AddressService {
     public boolean update(Long userId, Long id, AddressUpdateDTO dto) {
         AddressPO existing = getOwnedAddress(userId, id);
 
-        existing.setReceiverName(dto.getReceiverName());
-        existing.setReceiverPhone(dto.getReceiverPhone());
+        existing.setReceiverName(dto.getReceiver());
+        existing.setReceiverPhone(dto.getPhone());
         existing.setProvince(dto.getProvince());
         existing.setCity(dto.getCity());
         existing.setDistrict(dto.getDistrict());
-        existing.setDetailAddress(dto.getDetailAddress());
+        existing.setDetailAddress(dto.getDetail());
 
         boolean ok = addressManager.updateById(existing);
         log.info("address updated, userId={}, addressId={}", userId, id);

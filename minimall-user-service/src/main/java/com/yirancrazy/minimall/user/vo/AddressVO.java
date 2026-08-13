@@ -15,13 +15,13 @@ public class AddressVO {
 
     private Long id;
     private Long userId;
-    private String receiverName;
-    private String receiverPhone;
+    private String receiver;
+    private String phone;
     private String province;
     private String city;
     private String district;
-    private String detailAddress;
-    private Integer isDefault;
+    private String detail;
+    private Boolean isDefault;
     private LocalDateTime createTime;
 
     /**
@@ -33,13 +33,13 @@ public class AddressVO {
         AddressVO vo = new AddressVO();
         vo.setId(po.getId());
         vo.setUserId(po.getUserId());
-        vo.setReceiverName(po.getReceiverName());
-        vo.setReceiverPhone(po.getReceiverPhone());
+        vo.setReceiver(po.getReceiverName());
+        vo.setPhone(po.getReceiverPhone());
         vo.setProvince(po.getProvince());
         vo.setCity(po.getCity());
         vo.setDistrict(po.getDistrict());
-        vo.setDetailAddress(po.getDetailAddress());
-        vo.setIsDefault(po.getIsDefault());
+        vo.setDetail(po.getDetailAddress());
+        vo.setIsDefault(po.getIsDefault() != null && po.getIsDefault() == 1);
         vo.setCreateTime(po.getCreateTime());
         return vo;
     }

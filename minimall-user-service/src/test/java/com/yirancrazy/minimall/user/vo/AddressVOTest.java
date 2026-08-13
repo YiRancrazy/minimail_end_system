@@ -37,13 +37,13 @@ public class AddressVOTest {
         assertNotNull(vo);
         assertEquals(1L, vo.getId());
         assertEquals(100L, vo.getUserId());
-        assertEquals("张三", vo.getReceiverName());
-        assertEquals("13812345678", vo.getReceiverPhone());
+        assertEquals("张三", vo.getReceiver());
+        assertEquals("13812345678", vo.getPhone());
         assertEquals("浙江省", vo.getProvince());
         assertEquals("杭州市", vo.getCity());
         assertEquals("西湖区", vo.getDistrict());
-        assertEquals("文三路1号", vo.getDetailAddress());
-        assertEquals(1, vo.getIsDefault());
+        assertEquals("文三路1号", vo.getDetail());
+        assertEquals(true, vo.getIsDefault());
         assertEquals(LocalDateTime.of(2026, 1, 1, 0, 0), vo.getCreateTime());
     }
 
@@ -69,13 +69,13 @@ public class AddressVOTest {
         assertNotNull(vo);
         assertEquals(1L, vo.getId());
         assertNull(vo.getUserId());
-        assertNull(vo.getReceiverName());
-        assertNull(vo.getReceiverPhone());
+        assertNull(vo.getReceiver());
+        assertNull(vo.getPhone());
         assertNull(vo.getProvince());
         assertNull(vo.getCity());
         assertNull(vo.getDistrict());
-        assertNull(vo.getDetailAddress());
-        assertNull(vo.getIsDefault());
+        assertNull(vo.getDetail());
+        assertEquals(false, vo.getIsDefault());
         assertNull(vo.getCreateTime());
     }
 }

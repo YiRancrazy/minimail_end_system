@@ -208,23 +208,23 @@ public class AddressServiceImplTest {
 
     private AddressCreateDTO buildCreateDTO(String name, String phone) {
         AddressCreateDTO dto = new AddressCreateDTO();
-        dto.setReceiverName(name);
-        dto.setReceiverPhone(phone);
+        dto.setReceiver(name);
+        dto.setPhone(phone);
         dto.setProvince("江苏省");
         dto.setCity("南京市");
         dto.setDistrict("鼓楼区");
-        dto.setDetailAddress("中山路100号");
+        dto.setDetail("中山路100号");
         return dto;
     }
 
     private AddressUpdateDTO buildUpdateDTO(String name, String phone) {
         AddressUpdateDTO dto = new AddressUpdateDTO();
-        dto.setReceiverName(name);
-        dto.setReceiverPhone(phone);
+        dto.setReceiver(name);
+        dto.setPhone(phone);
         dto.setProvince("江苏省");
         dto.setCity("南京市");
         dto.setDistrict("玄武区");
-        dto.setDetailAddress("珠江路200号");
+        dto.setDetail("珠江路200号");
         return dto;
     }
 

@@ -905,6 +905,63 @@ sequenceDiagram
 
 ---
 
+## 16. 文件上传接口规范（分片中转）
+
+> 前后端统一定义。文件不再由前端直传 MinIO，改为前端分片上传至后端服务，后端合并后写入 MinIO，返回 objectKey。
+
+### 16.1 接口路径
+
+USER 端前缀 `/api/v1/user/upload`，MERCHANT 端前缀 `/api/v1/merchant/upload`，两端口径与数据结构完全一致。
+
+### 16.2 上传分片（POST {prefix}/chunk）
+
+请求：`multipart/form-data`
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| file | File | 是 | 单个分片（前端按 2MB 切片） |
+| uploadId | String | 是 | 上传任务 ID（前端每次选文件生成 UUID） |
+| chunkIndex | int | 是 | 分片序号，0 起 |
+| totalChunks | int | 是 | 总分片数 |
+
+响应：`Result<ChunkResultVO>`
+
+```json
+{ "code": "00000", "message": "ok", "data": { "done": false, "received": 2, "objectKey": null } }
+```
+
+- `done=false`：仅保存分片，`objectKey=null`，`received` 为已收分片数。
+- `done=true`：所有分片已到齐，后端已合并上传 MinIO，`objectKey` 为最终文件 key。
+
+### 16.3 查询已收分片（GET {prefix}/status）
+
+请求参数：`uploadId`、`totalChunks`
+
+响应：`Result<ChunkStatusVO>`
+
+```json
+{ "code": "00000", "message": "ok", "data": { "uploadId": "t", "receivedChunks": [0, 2], "done": false } }
+```
+
+前端据 `receivedChunks` 跳过已传分片，实现断点续传。
+
+### 16.4 错误码（上传专用段 20030-20033）
+
+| code | 含义 |
+|------|------|
+| 20030 | 分片参数非法（序号/总数非法） |
+| 20031 | 分片保存失败 |
+| 20032 | 分片合并失败 |
+| 20033 | 上传任务不存在 |
+
+### 16.5 分片存储与合并
+
+- 分片落本地临时目录 `{java.io.tmpdir}/mm-chunk/{uploadId}/chunk-{i}`。
+- 收满后在服务端按序号合并为单个临时文件，再整体上传 MinIO（objectKey=uploadId），随后清理临时目录。
+- 网关放行 `/api/v1/{user,merchant}/upload/**`，无需鉴权；MinIO 上传组件仅在 `minimall.minio.endpoint` 配置存在时装配。
+
+---
+
 ## 相关文档链接
 
 - 上游：[系统架构设计文档](01-系统架构设计文档.md)、[需求规格说明书（SRS）](../1.%20需求阶段/02-需求规格说明书（SRS）.md)
@@ -918,3 +975,4 @@ sequenceDiagram
 |------|------|-------------|----------|
 | 2026-07-27 | V1.0 | yirancrazy@gmail.com | 初稿创建，合并旧 API 设计文档内容 |
 | 2026-07-28 | V1.1 | yirancrazy@gmail.com | 新增API版本策略（ADR-041）和接口幂等性方案（ADR-049） |
+| 2026-08-13 | V1.2 | yirancrazy@gmail.com | 新增第 16 章文件上传分片中转规范；移除前端直传 MinIO 的预签名方案 |

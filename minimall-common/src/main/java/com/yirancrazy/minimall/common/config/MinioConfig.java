@@ -5,6 +5,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import io.minio.MinioClient;
+import com.yirancrazy.minimall.common.service.ChunkUploadService;
 import com.yirancrazy.minimall.common.util.MinioUtil;
 
 /**
@@ -48,5 +49,14 @@ public class MinioConfig {
     @Bean
     public MinioUtil minioUtil() {
         return new MinioUtil(minioClient(), bucket);
+    }
+
+    /**
+     * Build ChunkUploadService bean for chunked upload support.
+     * @return ChunkUploadService instance
+     */
+    @Bean
+    public ChunkUploadService chunkUploadService() {
+        return new ChunkUploadService(minioUtil());
     }
 }

@@ -12,6 +12,6 @@ import lombok.Data;
 @Data
 @AllArgsConstructor
 public class IdNextDTO {
-    private String bizTag;
-    private Long id;
+    private String bizTag;  // 业务标签
+    private Long id;        // id
 }

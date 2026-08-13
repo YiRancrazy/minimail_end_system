@@ -14,6 +14,8 @@ import com.yirancrazy.minimall.id.service.IdService;
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */
+
+//todo: 没有RestController 注解
 public class IdControllerV1 {
 
     private final IdService idService;

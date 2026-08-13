@@ -11,6 +11,7 @@ logs/
 *.log
 HELP.md
 .DS_Store
+.test-output/
 
 # IDE / AI 配置（仓库外冗余）
 .claude/

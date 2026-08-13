@@ -73,3 +73,71 @@ FE user-web status=200 bytes=320
 - [ ] 前端 5173/5174/5175 都返回 HTML
 - [ ] 后端 8201-8211 都 listen
 
+## 错误跟踪记录 - 2026-08-13_01
+
+### 错误信息
+
+- **发现时间**: 2026-08-13 16:48
+- **错误类型**: ✅ 副作用错误（Flyway checksum 漂移）
+- **错误等级**: □ 致命 ✅ 一般
+- **相关修改记录**: 修复三个 P1 问题（Long 精度/购物车/地址字段）
+
+### 错误现象
+
+**错误表现**: `spring-boot:run` 启动失败，`FlywayValidateException: Migration checksum mismatch`，涉及 V32/V40/V41
+**报错信息**:
+
+```
+Caused by: org.flywaydb.core.api.exception.FlywayValidateException: Validate failed: Migrations have failed validation
+Migration checksum mismatch for migration version 32
+-> Applied to database : -1041897894
+-> Resolved locally    : -1699749612
+```
+
+**复现步骤**:
+
+1. `./mvnw -pl minimall-user-service spring-boot:run`
+2. 启动 10 秒后退出，报 checksum mismatch
+
+### 根本原因分析
+
+**直接原因**: DB 里 `flyway_schema_history.checksum` 与当前 `minimall-flyway-core` jar 内迁移文件校验和不一致
+**根本原因**: `spring-boot:run` 单模块运行时从 `.m2` 加载旧版 flyway-core jar；重新 `install` flyway-core 后本地解析值变化，而 DB 仍存旧 checksum。V40/V41 曾被设为 -1 绕过校验，无法匹配新文件
+**关联修改**:
+
+- 修改记录ID: N/A
+- 修改时间: 2026-08-13 16:55
+- 不当操作: 手工 UPDATE checksum 后未与"当前 flyway-core 解析值"对齐，导致二次漂移
+
+### 修复方案
+
+**临时修复**: 直接用 SQL 对齐 checksum（MySQL，本机 root/dazhutizi，库前缀 `*_db`）：
+
+```js
+// node + mysql2，对所有库执行
+UPDATE ${db}.flyway_schema_history SET checksum=? WHERE version=?;
+// 当前解析值：V32=-1699749612 V40=1013410157 V41=1628085743
+```
+
+**最终修复**: 迁移文件归属 flyway-core 模块，任何 V*.sql 变更必须同步 `flyway repair`（或对齐 DB checksum）；修改迁移文件后优先全量 `install flyway-core` 再启动，避免 .m2 旧 jar 造成解析值漂移
+**修复验证**: 四个服务（auth/user/cart/goods）均启动成功，端口 8201/8202/8204/8205 正常监听
+
+### 经验沉淀
+
+**避免模式**:
+
+1. `spring-boot:run` 单模块启动依赖 `.m2` 快照；改 common/api/flyway-core 后必须先 `install`，否则运行时还是旧代码
+2. 手工 UPDATE checksum 前先确认"当前 jar 的 Resolved 值"（日志有 `Applied to database` / `Resolved locally` 两行），别凭上一次报错填
+
+**最佳实践**:
+
+1. Flyway 迁移文件改动 → `./mvnw -pl minimall-flyway-core install` → 再启动业务服务
+2. 校验失败先看日志 `Applied`/`Resolved` 两值，用脚本对全部 `*_db` 一次性对齐
+3. 业务服务 jar 无主清单时（repackage 未执行），用 `spring-boot:run` 而非 `java -jar`
+
+**检查清单**:
+
+- [ ] 启动报错是 Flyway checksum 时，先查 Resolved 值再对齐 DB
+- [ ] 改过 common/flyway-core 后记得 `mvn install`
+- [ ] gateway 需连 Redis：`.env` 可能未生效，必要时显式 `$env:REDIS_HOST='localdev'`
+

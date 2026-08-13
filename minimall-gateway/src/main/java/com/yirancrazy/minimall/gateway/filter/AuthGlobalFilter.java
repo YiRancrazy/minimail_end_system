@@ -108,6 +108,7 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
             return chain.filter(exchange);
         }
 
+        // 判断是否是内部请求链接
         if (path.startsWith("/internal/")) {
             return handleInternal(exchange, chain);
         }
@@ -162,6 +163,7 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
      * @return 过滤器执行结果
      */
     private Mono<Void> handleInternal(ServerWebExchange exchange, GatewayFilterChain chain) {
+        // 获取请求中携带的 X-Internal-Token
         String token = exchange.getRequest().getHeaders().getFirst("X-Internal-Token");
         if (internalToken.isBlank() || !internalToken.equals(token)) {
             log.warn("internal endpoint access denied, path={}",

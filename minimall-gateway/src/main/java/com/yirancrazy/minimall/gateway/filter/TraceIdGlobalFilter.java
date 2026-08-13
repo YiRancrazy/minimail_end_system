@@ -17,6 +17,7 @@ import reactor.core.publisher.Mono;
  */
 public class TraceIdGlobalFilter implements GlobalFilter, Ordered {
 
+    // 全链路追踪ID（网关生成，服务间透传，用于日志归集与故障定界）
     public static final String HEADER = "X-Trace-Id";
 
     /**

@@ -683,4 +683,19 @@ public class PayServiceImplTest {
         assertEquals(0, result.size());
         verify(manager).list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class));
     }
+
+    /**
+     * 验证支付回调报文字段级加密：channelResponse 密文落库（不可明文读），解密可还原。
+     */
+    @Test
+    public void channel_response_is_encrypted_at_rest() {
+        String plain = "{\"trade_no\":\"T20260813\",\"amount\":\"9.90\",\"sign\":\"abc\"}";
+        byte[] key = "0123456789abcdef0123456789abcdef".getBytes();
+
+        String cipher = com.yirancrazy.minimall.common.security.AesEncryptor.encrypt(plain, key);
+
+        assertNotNull(cipher);
+        org.junit.jupiter.api.Assertions.assertNotEquals(plain, cipher);
+        assertEquals(plain, com.yirancrazy.minimall.common.security.AesEncryptor.decrypt(cipher, key));
+    }
 }

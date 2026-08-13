@@ -1,33 +1,47 @@
 package com.yirancrazy.minimall.common.security;
 
-import org.springframework.context.annotation.Configuration;
-import jakarta.annotation.PostConstruct;
+import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.context.annotation.Bean;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 加密自动配置类，在Spring容器启动时从VaultKeyProvider获取密钥并初始化EncryptionContext。
- * @Version: 1.0
- * @DateTime: 2026/08/04
- **/
-@Configuration
+ * @Description: 加密自动装配：提供默认 VaultKeyProvider（prod 可用自定义实现替换），并随容器启动初始化
+ *               EncryptionContext，使各服务（user/pay/merchant 等）字段级加密 typeHandler 生效。
+ * @Version: 2.0
+ * @DateTime: 2026/08/13
+ */
+@AutoConfiguration
 public class EncryptionAutoConfiguration {
 
-    private final VaultKeyProvider keyProvider;
+    @Bean
+    @ConditionalOnMissingBean(VaultKeyProvider.class)
+    public VaultKeyProvider vaultKeyProvider(
+            @Value("${minimall.security.aes-key:MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=}") String base64Key) {
+        return new LocalVaultKeyProvider(base64Key);
+    }
 
-    /**
-     * 构造函数，注入Vault密钥提供者。
-     *
-     * @param keyProvider Vault密钥提供者
-     */
-    public EncryptionAutoConfiguration(VaultKeyProvider keyProvider) {
-        this.keyProvider = keyProvider;
+    @Bean
+    public EncryptionInitializer encryptionInitializer(VaultKeyProvider keyProvider) {
+        return new EncryptionInitializer(keyProvider);
     }
 
     /**
-     * 在Bean初始化后，将密钥注入EncryptionContext静态持有者。
+     * 初始化加密上下文，使静态持有的密钥在 MyBatis typeHandler 中可用。
      */
-    @PostConstruct
-    public void initializeEncryption() {
-        EncryptionContext.initialize(keyProvider.getKey());
+    static class EncryptionInitializer implements InitializingBean {
+
+        private final VaultKeyProvider keyProvider;
+
+        EncryptionInitializer(VaultKeyProvider keyProvider) {
+            this.keyProvider = keyProvider;
+        }
+
+        @Override
+        public void afterPropertiesSet() {
+            EncryptionContext.initialize(keyProvider.getKey());
+        }
     }
 }

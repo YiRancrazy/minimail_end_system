@@ -2,6 +2,8 @@ package com.yirancrazy.minimall.merchant.vo;
 
 import java.time.LocalDateTime;
 import lombok.Data;
+import com.yirancrazy.minimall.common.util.SensitiveDataUtils;
+import com.yirancrazy.minimall.merchant.entity.MerchantPO;
 
 /**
  * @Author: yirancrazy@gmail.com
@@ -26,15 +28,15 @@ public class MerchantInfoVO {
      * @param po 商家主体持久化对象
      * @return 商家信息VO
      */
-    public static MerchantInfoVO from(com.yirancrazy.minimall.merchant.entity.MerchantPO po) {
+    public static MerchantInfoVO from(MerchantPO po) {
         MerchantInfoVO vo = new MerchantInfoVO();
         vo.setMerchantId(po.getUserId());
         vo.setShopName(po.getMerchantName());
         vo.setLicenseNo(po.getLicenseNo());
         vo.setQualificationStatus(po.getAuditStatus());
-        vo.setLegalPhoneMasked(com.yirancrazy.minimall.common.util.SensitiveDataUtils.maskPhone(po.getLegalPhoneEnc()));
-        vo.setIdCardNoMasked(com.yirancrazy.minimall.common.util.SensitiveDataUtils.maskIdCard(po.getIdCardNoEnc()));
-        vo.setBankAccountMasked(com.yirancrazy.minimall.common.util.SensitiveDataUtils.maskBankCard(po.getBankAccountEnc()));
+        vo.setLegalPhoneMasked(SensitiveDataUtils.maskPhone(po.getLegalPhoneEnc()));
+        vo.setIdCardNoMasked(SensitiveDataUtils.maskIdCard(po.getIdCardNoEnc()));
+        vo.setBankAccountMasked(SensitiveDataUtils.maskBankCard(po.getBankAccountEnc()));
         vo.setCreateTime(po.getCreateTime());
         return vo;
     }

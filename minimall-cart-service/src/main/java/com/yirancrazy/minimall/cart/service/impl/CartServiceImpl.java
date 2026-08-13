@@ -7,8 +7,6 @@ import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.api.feign.UserFeignClient;
 import com.yirancrazy.minimall.cart.constant.CartCodeEnum;
 import com.yirancrazy.minimall.cart.dto.CartItemAddDTO;
-import com.yirancrazy.minimall.cart.dto.CartItemListDTO;
-import com.yirancrazy.minimall.cart.dto.CartSelectAllDTO;
 import com.yirancrazy.minimall.cart.dto.CartUpdateDTO;
 import com.yirancrazy.minimall.cart.entity.CartItemPO;
 import com.yirancrazy.minimall.cart.manager.CartItemManager;
@@ -38,25 +36,26 @@ public class CartServiceImpl implements CartService {
     /**
      * 根据用户 ID 查询其购物车全部条目。
      *
-     * @param dto 查询条件
+     * @param userId 用户ID，来自网关X-User-Id可信头
      * @return 该用户购物车条目列表
      */
     @Override
-    public List<CartItemPO> listByUser(CartItemListDTO dto) {
+    public List<CartItemPO> listByUser(Long userId) {
         return cartItemManager.list(Wrappers.lambdaQuery(CartItemPO.class)
-            .eq(CartItemPO::getUserId, dto.getUserId()));
+            .eq(CartItemPO::getUserId, userId));
     }
 
     /**
      * 新增一条购物车条目，若未设置选中状态则默认为选中。
      *
+     * @param userId 用户ID，来自网关X-User-Id可信头
      * @param dto 购物车条目信息
      * @return 新增条目的主键 ID
      */
     @Override
-    public Long add(CartItemAddDTO dto) {
+    public Long add(Long userId, CartItemAddDTO dto) {
         CartItemPO item = new CartItemPO();
-        item.setUserId(dto.getUserId());
+        item.setUserId(userId);
         item.setSkuId(dto.getSkuId());
         item.setQuantity(dto.getQuantity());
         item.setSelected(dto.getSelected() != null ? dto.getSelected() : 1);
@@ -111,14 +110,15 @@ public class CartServiceImpl implements CartService {
     /**
      * 全选或取消全选指定用户的购物车项。
      *
-     * @param dto 全选入参
+     * @param userId 用户ID，来自网关X-User-Id可信头
+     * @param selected 选中状态，0 或 1
      * @return 更新是否成功
      */
     @Override
-    public boolean selectAll(CartSelectAllDTO dto) {
+    public boolean selectAll(Long userId, Integer selected) {
         return cartItemManager.update(Wrappers.lambdaUpdate(CartItemPO.class)
-            .eq(CartItemPO::getUserId, dto.getUserId())
-            .set(CartItemPO::getSelected, dto.getSelected()));
+            .eq(CartItemPO::getUserId, userId)
+            .set(CartItemPO::getSelected, selected));
     }
 
     /**

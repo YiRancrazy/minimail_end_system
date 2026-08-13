@@ -12,9 +12,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
-import com.yirancrazy.minimall.cart.dto.CartClearDTO;
 import com.yirancrazy.minimall.cart.dto.CartItemAddDTO;
-import com.yirancrazy.minimall.cart.dto.CartItemListDTO;
 import com.yirancrazy.minimall.cart.dto.CartSelectAllDTO;
 import com.yirancrazy.minimall.cart.dto.CartUpdateDTO;
 import com.yirancrazy.minimall.cart.service.CartService;
@@ -38,24 +36,24 @@ public class CartControllerV1 {
     }
 
     /**
-     * 按用户 ID 查询其购物车全部条目。
-     *
-     * @param dto 查询条件
+     * 按当前登录用户查询其购物车全部条目，用户ID来自网关X-User-Id可信头。
+     * @param userId 用户ID，来自网关X-User-Id头
      * @return 该用户购物车条目列表
      */
     @GetMapping
-    public Result<List<CartItemVO>> list(@Valid CartItemListDTO dto) {
-        return Result.success(cartService.listByUser(dto).stream().map(CartItemVO::from).toList());
+    public Result<List<CartItemVO>> list(@RequestHeader("X-User-Id") Long userId) {
+        return Result.success(cartService.listByUser(userId).stream().map(CartItemVO::from).toList());
     }
 
     /**
-     * 添加购物车项。
+     * 添加购物车项，用户ID来自网关X-User-Id可信头。
+     * @param userId 用户ID，来自网关X-User-Id头
      * @param dto 购物车添加DTO
      * @return 购物车项ID
      */
     @PostMapping
-    public Result<Long> add(@Valid @RequestBody CartItemAddDTO dto) {
-        return Result.success(cartService.add(dto));
+    public Result<Long> add(@RequestHeader("X-User-Id") Long userId, @Valid @RequestBody CartItemAddDTO dto) {
+        return Result.success(cartService.add(userId, dto));
     }
 
     /**
@@ -81,23 +79,25 @@ public class CartControllerV1 {
     }
 
     /**
-     * 全选或取消全选指定用户的购物车项。
+     * 全选或取消全选当前登录用户的购物车项，用户ID来自网关X-User-Id可信头。
+     * @param userId 用户ID，来自网关X-User-Id头
      * @param dto 全选入参
      * @return 更新是否成功
      */
     @PutMapping("/select-all")
-    public Result<Boolean> selectAll(@Valid @RequestBody CartSelectAllDTO dto) {
-        return Result.success(cartService.selectAll(dto));
+    public Result<Boolean> selectAll(@RequestHeader("X-User-Id") Long userId, @Valid @RequestBody CartSelectAllDTO dto) {
+        return Result.success(cartService.selectAll(
+            userId, dto.getSelected()));
     }
 
     /**
-     * 清空指定用户的购物车。
-     * @param userId 用户ID
+     * 清空当前登录用户的购物车，用户ID来自网关X-User-Id可信头。
+     * @param userId 用户ID，来自网关X-User-Id头
      * @return 清空是否成功
      */
     @DeleteMapping
-    public Result<Boolean> clear(@RequestBody CartClearDTO dto) {
-        return Result.success(cartService.clear(dto.getUserId()));
+    public Result<Boolean> clear(@RequestHeader("X-User-Id") Long userId) {
+        return Result.success(cartService.clear(userId));
     }
 
     /**

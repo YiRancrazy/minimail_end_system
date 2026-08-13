@@ -2,8 +2,6 @@ package com.yirancrazy.minimall.cart.service;
 
 import java.util.List;
 import com.yirancrazy.minimall.cart.dto.CartItemAddDTO;
-import com.yirancrazy.minimall.cart.dto.CartItemListDTO;
-import com.yirancrazy.minimall.cart.dto.CartSelectAllDTO;
 import com.yirancrazy.minimall.cart.dto.CartUpdateDTO;
 import com.yirancrazy.minimall.cart.entity.CartItemPO;
 
@@ -16,17 +14,18 @@ import com.yirancrazy.minimall.cart.entity.CartItemPO;
 public interface CartService {
     /**
      * 根据用户查询购物车列表。
-     * @param dto 购物车列表查询DTO
+     * @param userId 用户ID，来自网关X-User-Id可信头
      * @return 购物车项列表
      */
-    List<CartItemPO> listByUser(CartItemListDTO dto);
+    List<CartItemPO> listByUser(Long userId);
 
     /**
      * 添加购物车项。
+     * @param userId 用户ID，来自网关X-User-Id可信头
      * @param dto 购物车添加DTO
      * @return 购物车项ID
      */
-    Long add(CartItemAddDTO dto);
+    Long add(Long userId, CartItemAddDTO dto);
 
     /**
      * 删除购物车项。
@@ -52,10 +51,11 @@ public interface CartService {
 
     /**
      * 全选或取消全选指定用户的购物车项。
-     * @param dto 全选入参
+     * @param userId 用户ID，来自网关X-User-Id可信头
+     * @param selected 选中状态，0 或 1
      * @return 更新是否成功
      */
-    boolean selectAll(CartSelectAllDTO dto);
+    boolean selectAll(Long userId, Integer selected);
 
     /**
      * 清空指定用户的购物车。

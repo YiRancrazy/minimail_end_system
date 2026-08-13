@@ -6,15 +6,12 @@ import lombok.Data;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: CartItemAdd数据传输对象，用于CartItemAdd相关数据传输
- * @Version: 1.0
- * @DateTime: 2026/07/31
+ * @Description: 购物车添加入参，userId 由网关 X-User-Id 可信头注入，不入参
+ * @Version: 1.1
+ * @DateTime: 2026/08/13
  */
 @Data
 public class CartItemAddDTO {
-
-    @NotNull(message = "userId cannot be null")
-    private Long userId;
 
     @NotNull(message = "skuId cannot be null")
     private Long skuId;

@@ -24,7 +24,6 @@ import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.yirancrazy.minimall.api.feign.UserFeignClient;
 import com.yirancrazy.minimall.cart.dto.CartItemAddDTO;
-import com.yirancrazy.minimall.cart.dto.CartItemListDTO;
 import com.yirancrazy.minimall.cart.dto.CartSelectAllDTO;
 import com.yirancrazy.minimall.cart.dto.CartUpdateDTO;
 import com.yirancrazy.minimall.cart.entity.CartItemPO;
@@ -73,9 +72,7 @@ public class CartServiceImplTest {
         item.setUserId(7L);
         when(cartItemManager.list(any(Wrapper.class))).thenReturn(List.of(item));
 
-        CartItemListDTO dto = new CartItemListDTO();
-        dto.setUserId(7L);
-        List<CartItemPO> result = service.listByUser(dto);
+        List<CartItemPO> result = service.listByUser(7L);
 
         assertEquals(1, result.size());
         assertEquals(7L, result.get(0).getUserId());
@@ -88,9 +85,7 @@ public class CartServiceImplTest {
     public void listByUser_returns_empty_when_no_items() {
         when(cartItemManager.list(any(Wrapper.class))).thenReturn(Collections.emptyList());
 
-        CartItemListDTO dto = new CartItemListDTO();
-        dto.setUserId(999L);
-        List<CartItemPO> result = service.listByUser(dto);
+        List<CartItemPO> result = service.listByUser(999L);
 
         assertTrue(result.isEmpty());
     }
@@ -101,12 +96,11 @@ public class CartServiceImplTest {
     @Test
     public void add_defaults_selected_when_null() {
         CartItemAddDTO dto = new CartItemAddDTO();
-        dto.setUserId(7L);
         dto.setSkuId(100L);
         dto.setQuantity(2);
         dto.setSelected(null);
 
-        Long id = service.add(dto);
+        Long id = service.add(7L, dto);
         assertNotNull(id);
 
         doAnswer(inv -> {
@@ -115,7 +109,7 @@ public class CartServiceImplTest {
             return true;
         }).when(cartItemManager).save(any(CartItemPO.class));
 
-        service.add(dto);
+        service.add(7L, dto);
     }
 
     /**
@@ -124,12 +118,11 @@ public class CartServiceImplTest {
     @Test
     public void add_passes_through_selected_when_set() {
         CartItemAddDTO dto = new CartItemAddDTO();
-        dto.setUserId(7L);
         dto.setSkuId(100L);
         dto.setQuantity(2);
         dto.setSelected(0);
 
-        Long id = service.add(dto);
+        Long id = service.add(7L, dto);
         assertNotNull(id);
     }
 
@@ -278,9 +271,8 @@ public class CartServiceImplTest {
         when(cartItemManager.update(any(Wrapper.class))).thenReturn(true);
 
         CartSelectAllDTO dto = new CartSelectAllDTO();
-        dto.setUserId(7L);
         dto.setSelected(1);
-        boolean ok = service.selectAll(dto);
+        boolean ok = service.selectAll(7L, dto.getSelected());
 
         assertTrue(ok);
         verify(cartItemManager).update(any(Wrapper.class));

@@ -33,9 +33,11 @@ import com.yirancrazy.minimall.order.dto.OrderPageDTO;
 import com.yirancrazy.minimall.order.entity.OrderItemPO;
 import com.yirancrazy.minimall.order.entity.OrderLogisticsPO;
 import com.yirancrazy.minimall.order.entity.OrderPO;
+import com.yirancrazy.minimall.order.entity.OrderStatusLogPO;
 import com.yirancrazy.minimall.order.manager.OrderItemManager;
 import com.yirancrazy.minimall.order.manager.OrderLogisticsManager;
 import com.yirancrazy.minimall.order.manager.OrderManager;
+import com.yirancrazy.minimall.order.manager.OrderStatusLogManager;
 import com.yirancrazy.minimall.order.mapper.OrderMapper;
 import com.yirancrazy.minimall.order.service.impl.OrderServiceImpl;
 import com.yirancrazy.minimall.order.vo.OrderLogisticsVO;
@@ -48,6 +50,7 @@ public class OrderServiceImplTest {
     private OrderManager manager;
     private OrderItemManager orderItemManager;
     private OrderLogisticsManager logisticsManager;
+    private OrderStatusLogManager statusLogManager;
     private OrderMapper orderMapper;
     private GoodsFeignClient goodsFeignClient;
     private StockFeignClient stockFeignClient;
@@ -61,6 +64,7 @@ public class OrderServiceImplTest {
         manager = mock(OrderManager.class);
         orderItemManager = mock(OrderItemManager.class);
         logisticsManager = mock(OrderLogisticsManager.class);
+        statusLogManager = mock(OrderStatusLogManager.class);
         orderMapper = mock(OrderMapper.class);
         goodsFeignClient = mock(GoodsFeignClient.class);
         stockFeignClient = mock(StockFeignClient.class);
@@ -79,6 +83,7 @@ public class OrderServiceImplTest {
         lenient().when(orderItemManager.save(any(OrderItemPO.class))).thenReturn(true);
         lenient().when(orderItemManager.list(any(Wrapper.class))).thenReturn(java.util.Collections.emptyList());
         lenient().when(logisticsManager.save(any(OrderLogisticsPO.class))).thenReturn(true);
+        lenient().when(statusLogManager.save(any(OrderStatusLogPO.class))).thenReturn(true);
         lenient().when(goodsFeignClient.skuSnapshot(any())).thenReturn(Result.success(
             new SkuSnapshotDTO(100L, 1L, "sku-100", new BigDecimal("9.90"), 100, 10L)));
         lenient().when(stockFeignClient.reserve(any())).thenReturn(Result.success(Boolean.TRUE));
@@ -89,8 +94,9 @@ public class OrderServiceImplTest {
             inv.getArgument(1, Runnable.class).run();
             return null;
         }).when(eventBus).publishInTx(any(), any(Runnable.class), any());
-        service = new OrderServiceImpl(manager, orderItemManager, logisticsManager, orderMapper,
-            goodsFeignClient, stockFeignClient, payFeignClient, eventBus, statusMachine);
+        service = new OrderServiceImpl(manager, orderItemManager, logisticsManager, statusLogManager,
+            orderMapper, goodsFeignClient, stockFeignClient, payFeignClient, eventBus, statusMachine,
+            new com.fasterxml.jackson.databind.ObjectMapper());
     }
 
     /**
@@ -783,6 +789,71 @@ public class OrderServiceImplTest {
         when(manager.list(any(Wrapper.class))).thenReturn(java.util.Collections.emptyList());
 
         assertEquals(0, service.scanAutoConfirm());
+    }
+
+    /**
+     * 验证创建订单时生成业务单号并补齐金额与支付超时时间。
+     */
+    @Test
+    public void create_sets_order_metadata() {
+        service.create(1L, 100L, 2);
+
+        org.mockito.ArgumentCaptor<OrderPO> captor = org.mockito.ArgumentCaptor.forClass(OrderPO.class);
+        verify(manager).save(captor.capture());
+        OrderPO po = captor.getValue();
+        assertNotNull(po.getOrderNo());
+        assertEquals(0, new BigDecimal("19.80").compareTo(po.getTotalAmount()));
+        assertEquals(0, new BigDecimal("19.80").compareTo(po.getPayAmount()));
+        assertNotNull(po.getPayExpireAt());
+    }
+
+    /**
+     * 验证支付推进写入 paidAt 并落状态日志。
+     */
+    @Test
+    public void pay_sets_paid_at_and_writes_status_log() {
+        OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.PENDING.intCode());
+        when(manager.getById(99L)).thenReturn(existing);
+
+        service.pay(99L);
+
+        assertNotNull(existing.getPaidAt());
+        verify(statusLogManager).save(any(OrderStatusLogPO.class));
+    }
+
+    /**
+     * 验证取消订单写入 closedAt 与关闭原因并落状态日志。
+     */
+    @Test
+    public void cancel_sets_closed_at_and_reason() {
+        OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.PENDING.intCode());
+        when(manager.getById(99L)).thenReturn(existing);
+
+        service.cancel(99L, 1L);
+
+        assertNotNull(existing.getClosedAt());
+        assertEquals("USER_CANCEL", existing.getCloseReason());
+        verify(statusLogManager).save(any(OrderStatusLogPO.class));
+    }
+
+    /**
+     * 验证结算下单写入明细行快照与金额拆分。
+     */
+    @Test
+    public void checkout_writes_item_snapshot() {
+        List<OrderCheckoutItemDTO> items = List.of(new OrderCheckoutItemDTO(100L, 2));
+        when(goodsFeignClient.skuSnapshot(any())).thenReturn(Result.success(
+            new SkuSnapshotDTO(100L, 1L, "sku-100", new BigDecimal("9.90"), 100, 10L)));
+
+        service.checkout(1L, items);
+
+        org.mockito.ArgumentCaptor<OrderItemPO> captor = org.mockito.ArgumentCaptor.forClass(OrderItemPO.class);
+        verify(orderItemManager).save(captor.capture());
+        OrderItemPO item = captor.getValue();
+        assertNotNull(item.getSkuSnapshotJson());
+        assertNotNull(item.getSpuSnapshotJson());
+        assertEquals(10L, item.getMerchantId().longValue());
+        assertEquals(0, new BigDecimal("19.80").compareTo(item.getSubtotalAmount()));
     }
 
     private OrderPO buildOrder(Long id, Long userId, Integer status) {

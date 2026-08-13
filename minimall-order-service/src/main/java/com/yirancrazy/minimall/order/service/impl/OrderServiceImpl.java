@@ -2,11 +2,14 @@ package com.yirancrazy.minimall.order.service.impl;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.seata.spring.annotation.GlobalTransactional;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.api.dto.goods.SkuSnapshotDTO;
@@ -30,9 +33,11 @@ import com.yirancrazy.minimall.order.dto.OrderPageDTO;
 import com.yirancrazy.minimall.order.entity.OrderItemPO;
 import com.yirancrazy.minimall.order.entity.OrderLogisticsPO;
 import com.yirancrazy.minimall.order.entity.OrderPO;
+import com.yirancrazy.minimall.order.entity.OrderStatusLogPO;
 import com.yirancrazy.minimall.order.manager.OrderItemManager;
 import com.yirancrazy.minimall.order.manager.OrderLogisticsManager;
 import com.yirancrazy.minimall.order.manager.OrderManager;
+import com.yirancrazy.minimall.order.manager.OrderStatusLogManager;
 import com.yirancrazy.minimall.order.mapper.OrderMapper;
 import com.yirancrazy.minimall.order.service.OrderService;
 import com.yirancrazy.minimall.order.vo.OrderLogisticsVO;
@@ -50,35 +55,43 @@ public class OrderServiceImpl implements OrderService {
 
     private static final int PAY_EXPIRE_MINUTES = 30;
     private static final int AUTO_CONFIRM_DAYS = 15;
+    private static final int ORDER_TYPE_NORMAL = 1;
+    private static final int REFUND_STATUS_NONE = 0;
 
     private final OrderManager orderManager;
     private final OrderItemManager orderItemManager;
     private final OrderLogisticsManager orderLogisticsManager;
+    private final OrderStatusLogManager orderStatusLogManager;
     private final OrderMapper orderMapper;
     private final GoodsFeignClient goodsFeignClient;
     private final StockFeignClient stockFeignClient;
     private final PayFeignClient payFeignClient;
     private final EventBus eventBus;
     private final OrderStatusMachine statusMachine;
+    private final ObjectMapper objectMapper;
 
     public OrderServiceImpl(OrderManager orderManager,
                             OrderItemManager orderItemManager,
                             OrderLogisticsManager orderLogisticsManager,
+                            OrderStatusLogManager orderStatusLogManager,
                             OrderMapper orderMapper,
                             GoodsFeignClient goodsFeignClient,
                             StockFeignClient stockFeignClient,
                             PayFeignClient payFeignClient,
                             EventBus eventBus,
-                            OrderStatusMachine statusMachine) {
+                            OrderStatusMachine statusMachine,
+                            ObjectMapper objectMapper) {
         this.orderManager = orderManager;
         this.orderItemManager = orderItemManager;
         this.orderLogisticsManager = orderLogisticsManager;
+        this.orderStatusLogManager = orderStatusLogManager;
         this.orderMapper = orderMapper;
         this.goodsFeignClient = goodsFeignClient;
         this.stockFeignClient = stockFeignClient;
         this.payFeignClient = payFeignClient;
         this.eventBus = eventBus;
         this.statusMachine = statusMachine;
+        this.objectMapper = objectMapper;
     }
 
     /**
@@ -103,10 +116,17 @@ public class OrderServiceImpl implements OrderService {
         }
 
         OrderPO po = new OrderPO();
+        po.setOrderNo(generateOrderNo());
+        po.setOrderType(ORDER_TYPE_NORMAL);
         po.setUserId(userId);
         po.setSkuId(skuId);
         po.setQuantity(quantity);
         po.setAmount(amount);
+        po.setTotalAmount(amount);
+        po.setPayAmount(amount);
+        po.setFreightAmount(BigDecimal.ZERO);
+        po.setDiscountAmount(BigDecimal.ZERO);
+        po.setPayExpireAt(LocalDateTime.now().plusMinutes(PAY_EXPIRE_MINUTES));
         po.setStatus(OrderStatusEnum.PENDING.intCode());
         orderManager.save(po);
 
@@ -159,10 +179,18 @@ public class OrderServiceImpl implements OrderService {
 
             OrderItemPO itemPO = new OrderItemPO();
             itemPO.setSkuId(item.getSkuId());
+            itemPO.setSpuId(snapshot.getSpuId());
+            itemPO.setMerchantId(snapshot.getMerchantId());
             itemPO.setSkuName(snapshot.getSkuName());
             itemPO.setQuantity(item.getQuantity());
             itemPO.setUnitPrice(snapshot.getPrice());
             itemPO.setAmount(lineAmount);
+            itemPO.setSubtotalAmount(lineAmount);
+            itemPO.setDiscountAmount(BigDecimal.ZERO);
+            itemPO.setPayAmount(lineAmount);
+            itemPO.setRefundStatus(REFUND_STATUS_NONE);
+            itemPO.setSkuSnapshotJson(toSnapshotJson(snapshot));
+            itemPO.setSpuSnapshotJson(toSnapshotJson(java.util.Map.of("spuId", snapshot.getSpuId())));
 
             Long merchantId = snapshot.getMerchantId();
             itemsByMerchant.computeIfAbsent(merchantId, k -> new ArrayList<>()).add(itemPO);
@@ -175,9 +203,16 @@ public class OrderServiceImpl implements OrderService {
             BigDecimal groupAmount = calcAmount(merchantItems);
 
             OrderPO po = new OrderPO();
+            po.setOrderNo(generateOrderNo());
+            po.setOrderType(ORDER_TYPE_NORMAL);
             po.setUserId(userId);
             po.setMerchantId(merchantId);
             po.setAmount(groupAmount);
+            po.setTotalAmount(groupAmount);
+            po.setPayAmount(groupAmount);
+            po.setFreightAmount(BigDecimal.ZERO);
+            po.setDiscountAmount(BigDecimal.ZERO);
+            po.setPayExpireAt(LocalDateTime.now().plusMinutes(PAY_EXPIRE_MINUTES));
             po.setStatus(OrderStatusEnum.PENDING.intCode());
             po.setOrderGroupNo(orderGroupNo);
             orderManager.save(po);
@@ -213,7 +248,7 @@ public class OrderServiceImpl implements OrderService {
         OrderPaidDTO event = new OrderPaidDTO(
             orderId, po.getUserId(), po.getAmount(), LocalDateTime.now().toString());
         eventBus.publishInTx(event,
-            () -> transitStatus(orderId, OrderStatusEnum.PAID),
+            () -> transitStatus(orderId, OrderStatusEnum.PAID, "USER_PAY", null),
             e -> isOrderPaid(orderId));
         log.info("order paid, orderId={}", orderId);
     }
@@ -235,7 +270,7 @@ public class OrderServiceImpl implements OrderService {
         if (!po.getUserId().equals(userId)) {
             throw new BizException(OrderCodeEnum.ORDER_NOT_FOUND);
         }
-        transitStatus(orderId, OrderStatusEnum.CANCELED);
+        transitStatus(orderId, OrderStatusEnum.CANCELED, "USER_CANCEL", "USER_CANCEL");
         releaseStockForOrder(po);
         log.info("order cancelled, orderId={}, userId={}", orderId, userId);
     }
@@ -246,14 +281,15 @@ public class OrderServiceImpl implements OrderService {
         if (po.getMerchantId() == null || !po.getMerchantId().equals(merchantId)) {
             throw new BizException(OrderCodeEnum.ORDER_NOT_FOUND);
         }
-        transitStatus(orderId, OrderStatusEnum.SHIPPED);
+        transitStatus(orderId, OrderStatusEnum.SHIPPED, "MERCHANT_SHIP", null);
         OrderLogisticsPO node = new OrderLogisticsPO();
         node.setOrderId(orderId);
         node.setNode("已发货");
         node.setDescription(String.format("%s · %s", carrier, trackingNo));
         node.setCreatedTime(LocalDateTime.now());
         orderLogisticsManager.save(node);
-        log.info("order shipped, orderId={}, merchantId={}, carrier={}, trackingNo={}", orderId, merchantId, carrier, trackingNo);
+        log.info("order shipped, orderId={}, merchantId={}, carrier={}, trackingNo={}",
+            orderId, merchantId, carrier, trackingNo);
     }
 
     @Override
@@ -263,7 +299,8 @@ public class OrderServiceImpl implements OrderService {
             throw new BizException(OrderCodeEnum.ORDER_NOT_FOUND);
         }
         OrderStatusEnum current = statusMachine.fromCode(po.getStatus());
-        if (current != OrderStatusEnum.PAID && current != OrderStatusEnum.SHIPPED && current != OrderStatusEnum.COMPLETED) {
+        if (current != OrderStatusEnum.PAID && current != OrderStatusEnum.SHIPPED
+                && current != OrderStatusEnum.COMPLETED) {
             throw new BizException(OrderCodeEnum.ORDER_STATUS_TRANSITION_INVALID);
         }
         // 商家主动发起退款与用户申请走相同状态机：PAID/SHIPPED/COMPLETED → REFUNDING，由商家审核后进入 REFUNDED
@@ -272,7 +309,8 @@ public class OrderServiceImpl implements OrderService {
             throw new BizException(OrderCodeEnum.ORDER_STATUS_TRANSITION_INVALID);
         }
         refund(orderId);
-        log.info("merchant initiated refund, orderId={}, merchantId={}, amount={}, reason={}", orderId, merchantId, refundAmount, reason);
+        log.info("merchant initiated refund, orderId={}, merchantId={}, amount={}, reason={}",
+            orderId, merchantId, refundAmount, reason);
     }
 
     @Override
@@ -281,7 +319,7 @@ public class OrderServiceImpl implements OrderService {
         if (!po.getUserId().equals(userId)) {
             throw new BizException(OrderCodeEnum.ORDER_NOT_FOUND);
         }
-        transitStatus(orderId, OrderStatusEnum.COMPLETED);
+        transitStatus(orderId, OrderStatusEnum.COMPLETED, "USER_CONFIRM", null);
         log.info("order confirmed, orderId={}, userId={}", orderId, userId);
     }
 
@@ -345,7 +383,7 @@ public class OrderServiceImpl implements OrderService {
         if (!po.getMerchantId().equals(merchantId)) {
             throw new BizException(OrderCodeEnum.ORDER_NOT_FOUND);
         }
-        transitStatus(orderId, OrderStatusEnum.CANCELED);
+        transitStatus(orderId, OrderStatusEnum.CANCELED, "MERCHANT_CLOSE", "MERCHANT_CLOSE");
         releaseStockForOrder(po);
         log.info("order merchant-closed, orderId={}, merchantId={}", orderId, merchantId);
     }
@@ -378,7 +416,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public void platformClose(Long orderId) {
         OrderPO po = getOrder(orderId);
-        transitStatus(orderId, OrderStatusEnum.CANCELED);
+        transitStatus(orderId, OrderStatusEnum.CANCELED, "PLATFORM_CLOSE", "PLATFORM_CLOSE");
         releaseStockForOrder(po);
         log.info("order platform-closed, orderId={}", orderId);
     }
@@ -432,10 +470,82 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
-    private void transitStatus(Long orderId, OrderStatusEnum target) {
+    /**
+     * 推进订单状态并落状态日志：写入目标状态对应的时间戳，CANCELED 额外记录关闭原因。
+     * @param orderId 订单ID
+     * @param target 目标状态
+     * @param triggerSource 触发来源（状态日志）
+     * @param closeReason 关闭原因（仅 CANCELED 使用）
+     */
+    private void transitStatus(Long orderId, OrderStatusEnum target, String triggerSource, String closeReason) {
         OrderPO po = getOrder(orderId);
+        Integer fromStatus = po.getStatus();
         statusMachine.transit(po, target);
+        applyTargetTimestamps(po, target, closeReason);
         orderManager.updateById(po);
+        saveStatusLog(po, fromStatus, target, triggerSource);
+    }
+
+    /**
+     * 按目标状态写入对应业务时间戳。
+     * @param po 订单实体
+     * @param target 目标状态
+     * @param closeReason 关闭原因
+     */
+    private void applyTargetTimestamps(OrderPO po, OrderStatusEnum target, String closeReason) {
+        LocalDateTime now = LocalDateTime.now();
+        switch (target) {
+            case PAID -> po.setPaidAt(now);
+            case SHIPPED -> po.setShippedAt(now);
+            case COMPLETED -> po.setReceivedAt(now);
+            case CANCELED -> {
+                po.setClosedAt(now);
+                po.setCloseReason(closeReason);
+            }
+            case REFUNDED -> po.setClosedAt(now);
+            default -> {
+            }
+        }
+    }
+
+    /**
+     * 落订单状态机日志，供事件溯源与审计追溯。
+     * @param po 订单实体
+     * @param fromStatus 原状态码
+     * @param toStatus 目标状态
+     * @param triggerSource 触发来源
+     */
+    private void saveStatusLog(OrderPO po, Integer fromStatus, OrderStatusEnum toStatus, String triggerSource) {
+        OrderStatusLogPO log = new OrderStatusLogPO();
+        log.setOrderId(po.getId());
+        log.setFromStatus(fromStatus);
+        log.setToStatus(toStatus.intCode());
+        log.setTriggerSource(triggerSource);
+        orderStatusLogManager.save(log);
+    }
+
+    /**
+     * 生成业务单号：OD + 时间戳（毫秒级） + 3 位随机，保证同一毫秒内不冲突。
+     * @return 业务单号
+     */
+    private String generateOrderNo() {
+        return "OD" + DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS").format(LocalDateTime.now())
+            + (int) (Math.random() * 1000);
+    }
+
+    /**
+     * 序列化订单快照 JSON，失败时返回 null（不阻断下单）。
+     * @param value 待序列化对象
+     * @return JSON 字符串
+     */
+    private String toSnapshotJson(Object value) {
+        try {
+            return objectMapper.writeValueAsString(value);
+        }
+        catch (JsonProcessingException e) {
+            log.warn("serialize order snapshot failed", e);
+            return null;
+        }
     }
 
     /**
@@ -589,8 +699,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     /**
-     * 扫描超时未支付订单（PENDING 且 create_time + 30min < NOW()），逐个取消并释放库存。
-     * ponytail: 用 create_time+30min 计算而非引入 pay_expire_at 字段，YAGNI。
+     * 扫描超时未支付订单（PENDING 且 pay_expire_at 已过期；旧数据无 pay_expire_at 时回退 create_time+30min），逐个取消并释放库存。
      * @return 处理的订单数
      */
     @Override
@@ -598,11 +707,12 @@ public class OrderServiceImpl implements OrderService {
         LocalDateTime expireThreshold = LocalDateTime.now().minusMinutes(PAY_EXPIRE_MINUTES);
         List<OrderPO> expired = orderManager.list(Wrappers.lambdaQuery(OrderPO.class)
             .eq(OrderPO::getStatus, OrderStatusEnum.PENDING.intCode())
-            .lt(OrderPO::getCreateTime, expireThreshold));
+            .and(w -> w.isNull(OrderPO::getPayExpireAt).lt(OrderPO::getCreateTime, expireThreshold)
+                .or().lt(OrderPO::getPayExpireAt, expireThreshold)));
         int count = 0;
         for (OrderPO po : expired) {
             try {
-                transitStatus(po.getId(), OrderStatusEnum.CANCELED);
+                transitStatus(po.getId(), OrderStatusEnum.CANCELED, "SYSTEM_TIMEOUT", "SYSTEM_TIMEOUT");
                 releaseStockForOrder(po);
                 count++;
             }
@@ -629,7 +739,7 @@ public class OrderServiceImpl implements OrderService {
         int count = 0;
         for (OrderPO po : overdue) {
             try {
-                transitStatus(po.getId(), OrderStatusEnum.COMPLETED);
+                transitStatus(po.getId(), OrderStatusEnum.COMPLETED, "SYSTEM_AUTO_CONFIRM", null);
                 count++;
             }
             catch (Exception e) {

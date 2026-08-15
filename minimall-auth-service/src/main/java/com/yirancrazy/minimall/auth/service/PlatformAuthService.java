@@ -6,6 +6,7 @@ import com.yirancrazy.minimall.auth.dto.AdminPageDTO;
 import com.yirancrazy.minimall.auth.dto.AdminUpdateDTO;
 import com.yirancrazy.minimall.auth.dto.LoginDTO;
 import com.yirancrazy.minimall.auth.vo.AdminVO;
+import com.yirancrazy.minimall.auth.vo.UserInfoVO;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 
 /**
@@ -61,4 +62,12 @@ public interface PlatformAuthService {
      * @throws com.yirancrazy.minimall.common.exception.BizException 删除自己或管理员不存在时
      */
     void adminDelete(Long operatorId, Long targetId);
+
+    /**
+     * 获取当前平台管理员信息。
+     * @param token 访问令牌
+     * @return 用户信息VO
+     * @throws com.yirancrazy.minimall.common.exception.BizException 令牌无效时
+     */
+    UserInfoVO me(String token);
 }

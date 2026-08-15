@@ -22,11 +22,15 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
 import com.yirancrazy.minimall.api.dto.auth.TokenVO;
+import com.yirancrazy.minimall.auth.constant.AuthCodeEnum;
 import com.yirancrazy.minimall.auth.dto.AdminCreateDTO;
 import com.yirancrazy.minimall.auth.dto.AdminPageDTO;
 import com.yirancrazy.minimall.auth.dto.AdminUpdateDTO;
@@ -38,6 +42,7 @@ import com.yirancrazy.minimall.auth.manager.AuthTokenBlacklistManager;
 import com.yirancrazy.minimall.auth.manager.AuthUserManager;
 import com.yirancrazy.minimall.auth.util.JwtUtil;
 import com.yirancrazy.minimall.auth.vo.AdminVO;
+import com.yirancrazy.minimall.auth.vo.UserInfoVO;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 
@@ -296,5 +301,36 @@ class PlatformAuthServiceImplTest {
         when(authUserManager.getById(999L)).thenReturn(null);
 
         assertThrows(BizException.class, () -> service.adminDelete(1L, 999L));
+    }
+
+    /**
+     * 验证 me 从令牌声明解析当前管理员信息。
+     */
+    @Test
+    void me_validToken_returnsUserInfo() {
+        Claims claims = mock(Claims.class);
+        when(claims.getSubject()).thenReturn("9000000000000000001");
+        when(claims.get("account", String.class)).thenReturn("admin");
+        when(claims.get("role", String.class)).thenReturn("PLATFORM");
+        when(claims.get("roleId", Long.class)).thenReturn(3L);
+        when(jwtUtil.parse("access-token")).thenReturn(claims);
+
+        UserInfoVO vo = service.me("access-token");
+
+        assertEquals(9000000000000000001L, vo.getUserId());
+        assertEquals("admin", vo.getAccount());
+        assertEquals("PLATFORM", vo.getRole());
+        assertEquals(3L, vo.getRoleId());
+    }
+
+    /**
+     * 验证 me 令牌无效时抛出 TOKEN_INVALID。
+     */
+    @Test
+    void me_invalidToken_throws() {
+        when(jwtUtil.parse("bad-token")).thenThrow(new JwtException("expired"));
+
+        BizException ex = assertThrows(BizException.class, () -> service.me("bad-token"));
+        assertEquals(AuthCodeEnum.TOKEN_INVALID.getCode(), ex.getCode());
     }
 }

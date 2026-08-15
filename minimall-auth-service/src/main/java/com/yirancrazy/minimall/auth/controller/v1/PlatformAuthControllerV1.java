@@ -17,6 +17,7 @@ import com.yirancrazy.minimall.auth.dto.AdminUpdateDTO;
 import com.yirancrazy.minimall.auth.dto.LoginDTO;
 import com.yirancrazy.minimall.auth.service.PlatformAuthService;
 import com.yirancrazy.minimall.auth.vo.AdminVO;
+import com.yirancrazy.minimall.auth.vo.UserInfoVO;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.result.Result;
 
@@ -57,6 +58,18 @@ public class PlatformAuthControllerV1 {
                                @RequestHeader("X-User-Jti") String jti) {
         platformAuthService.signOut(adminAccountId, jti);
         return Result.success();
+    }
+
+    /**
+     * 获取当前平台管理员信息。
+     * @param authorization 授权头
+     * @return 用户信息VO
+     */
+    @GetMapping("/me")
+    public Result<UserInfoVO> me(@RequestHeader("Authorization") String authorization) {
+        String token = authorization.startsWith("Bearer ")
+            ? authorization.substring(7) : authorization;
+        return Result.success(platformAuthService.me(token));
     }
 
     /**

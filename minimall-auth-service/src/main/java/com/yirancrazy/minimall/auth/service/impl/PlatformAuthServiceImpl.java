@@ -9,6 +9,8 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.stereotype.Service;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.api.dto.auth.TokenVO;
 import com.yirancrazy.minimall.auth.constant.AuthCodeEnum;
@@ -25,6 +27,7 @@ import com.yirancrazy.minimall.auth.manager.AuthUserManager;
 import com.yirancrazy.minimall.auth.service.PlatformAuthService;
 import com.yirancrazy.minimall.auth.util.JwtUtil;
 import com.yirancrazy.minimall.auth.vo.AdminVO;
+import com.yirancrazy.minimall.auth.vo.UserInfoVO;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.util.CursorUtils;
@@ -198,6 +201,29 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
         }
         authUserManager.removeById(targetId);
         log.info("admin deleted, targetId={}, operatorId={}", targetId, operatorId);
+    }
+
+    /**
+     * 获取当前平台管理员信息，从令牌声明解析，不落库。
+     * @param token 访问令牌
+     * @return 用户信息VO
+     * @throws BizException 令牌无效时
+     */
+    @Override
+    public UserInfoVO me(String token) {
+        Claims claims;
+        try {
+            claims = jwtUtil.parse(token);
+        }
+        catch (JwtException ex) {
+            throw new BizException(AuthCodeEnum.TOKEN_INVALID.getCode(),
+                AuthCodeEnum.TOKEN_INVALID.getAlias(),
+                AuthCodeEnum.TOKEN_INVALID.getMessage());
+        }
+        return new UserInfoVO(Long.parseLong(claims.getSubject()),
+            claims.get("account", String.class),
+            claims.get("role", String.class),
+            claims.get("roleId", Long.class));
     }
 
     private void revokeToken(String jti, Long userId, String reason) {

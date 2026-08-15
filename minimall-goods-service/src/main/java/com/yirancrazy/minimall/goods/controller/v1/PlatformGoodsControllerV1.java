@@ -44,6 +44,26 @@ public class PlatformGoodsControllerV1 {
     }
 
     /**
+     * 查询 SPU 详情（审核页展示标题/描述用）。
+     * @param spuId SPU 主键 ID
+     * @return SPU 详情
+     */
+    @GetMapping("/spus/{spuId}")
+    public Result<SpuPO> detail(@PathVariable("spuId") Long spuId) {
+        return Result.success(spuService.getById(spuId));
+    }
+
+    /**
+     * 查询指定 SPU 的审核记录（前端按 /audit-logs 契约调用）。
+     * @param spuId SPU 主键 ID
+     * @return 审核记录列表
+     */
+    @GetMapping("/spus/{spuId}/audit-logs")
+    public Result<List<SpuAuditRecordPO>> auditLogs(@PathVariable("spuId") Long spuId) {
+        return Result.success(spuService.listAuditRecords(spuId));
+    }
+
+    /**
      * 审核通过，将 SPU 从待审核置为在售。
      * @param spuId SPU 主键 ID
      * @param auditorId 审核员账号ID（来自网关 X-User-Id）

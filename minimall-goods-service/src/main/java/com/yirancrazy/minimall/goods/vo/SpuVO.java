@@ -1,13 +1,15 @@
 package com.yirancrazy.minimall.goods.vo;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.Data;
 import com.yirancrazy.minimall.goods.entity.SpuPO;
 
 /**
  * @Author: yirancrazy@gmail.com
  * @Description: 商品SPU VO，用于Controller边界输出，隐藏内部字段
- * @Version: 1.0
+ * @Version: 1.1
  * @DateTime: 2026/08/04
  **/
 @Data
@@ -23,6 +25,8 @@ public class SpuVO {
     private Integer status;
     private LocalDateTime publishAt;
     private LocalDateTime createTime;
+    /** 关联 SKU 列表，由分页查询批量装配，单查场景为空 */
+    private List<SkuVO> skus = new ArrayList<>();
 
     /**
      * 将 SpuPO 转换为 SpuVO。

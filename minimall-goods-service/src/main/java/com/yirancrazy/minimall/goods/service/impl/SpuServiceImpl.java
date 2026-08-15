@@ -1,8 +1,12 @@
 package com.yirancrazy.minimall.goods.service.impl;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.extern.slf4j.Slf4j;
@@ -15,18 +19,22 @@ import com.yirancrazy.minimall.goods.constant.SpuStatusEnum;
 import com.yirancrazy.minimall.goods.dto.SpuCreateDTO;
 import com.yirancrazy.minimall.goods.dto.SpuPageDTO;
 import com.yirancrazy.minimall.goods.dto.SpuUpdateDTO;
+import com.yirancrazy.minimall.goods.entity.SkuPO;
 import com.yirancrazy.minimall.goods.entity.SpuAuditRecordPO;
 import com.yirancrazy.minimall.goods.entity.SpuPO;
+import com.yirancrazy.minimall.goods.manager.SkuManager;
 import com.yirancrazy.minimall.goods.manager.SpuAuditRecordManager;
 import com.yirancrazy.minimall.goods.manager.SpuManager;
 import com.yirancrazy.minimall.goods.search.SpuDocument;
 import com.yirancrazy.minimall.goods.search.SpuSearchService;
 import com.yirancrazy.minimall.goods.service.SpuService;
+import com.yirancrazy.minimall.goods.vo.SkuVO;
+import com.yirancrazy.minimall.goods.vo.SpuVO;
 
 /**
  * @Author: yirancrazy@gmail.com
  * @Description: 商品领域服务实现，实现Spu相关业务逻辑，含状态流转与审核闭环
- * @Version: 1.1
+ * @Version: 1.2
  * @DateTime: 2026/08/02
  */
 @Slf4j
@@ -36,13 +44,16 @@ public class SpuServiceImpl implements SpuService {
     private final SpuManager spuManager;
     private final SpuAuditRecordManager spuAuditRecordManager;
     private final SpuSearchService spuSearchService;
+    private final SkuManager skuManager;
 
     public SpuServiceImpl(SpuManager spuManager,
                           SpuAuditRecordManager spuAuditRecordManager,
-                          SpuSearchService spuSearchService) {
+                          SpuSearchService spuSearchService,
+                          SkuManager skuManager) {
         this.spuManager = spuManager;
         this.spuAuditRecordManager = spuAuditRecordManager;
         this.spuSearchService = spuSearchService;
+        this.skuManager = skuManager;
     }
 
     /**
@@ -81,12 +92,12 @@ public class SpuServiceImpl implements SpuService {
     }
 
     /**
-     * 游标分页查询 SPU，按 merchantId/status 等值、title like 过滤，按 ID 倒序。
+     * 游标分页查询 SPU，按 merchantId/status 等值、title like 过滤，按 ID 倒序，并批量装配 SKU。
      * @param dto 游标分页查询入参
-     * @return SPU 游标分页结果
+     * @return SPU 游标分页结果，含 skus
      */
     @Override
-    public CursorPageVO<SpuPO> page(SpuPageDTO dto) {
+    public CursorPageVO<SpuVO> page(SpuPageDTO dto) {
         Long lastId = CursorUtils.decode(dto.getCursor());
         int limit = dto.getLimit();
         List<SpuPO> records = spuManager.list(Wrappers.lambdaQuery(SpuPO.class)
@@ -97,7 +108,28 @@ public class SpuServiceImpl implements SpuService {
             .lt(lastId != null, SpuPO::getId, lastId)
             .orderByDesc(SpuPO::getId)
             .last("LIMIT " + (limit + 1)));
-        return CursorPageVO.of(records, limit, SpuPO::getId);
+        Map<Long, List<SkuPO>> skuMap = batchSkus(records.stream()
+            .map(SpuPO::getId).collect(Collectors.toList()));
+        return CursorPageVO.of(records, limit, SpuPO::getId).map(po -> {
+            SpuVO vo = SpuVO.from(po);
+            vo.setSkus(skuMap.getOrDefault(po.getId(), Collections.emptyList()).stream()
+                .map(SkuVO::from).collect(Collectors.toList()));
+            return vo;
+        });
+    }
+
+    /**
+     * 批量查询多个 SPU 下的 SKU，一次 IN 查询替代逐 SPU 的 N 次请求。
+     * @param spuIds SPU 主键集合，允许为空
+     * @return spuId -> SKU 列表
+     */
+    private Map<Long, List<SkuPO>> batchSkus(List<Long> spuIds) {
+        List<Long> ids = spuIds.stream().filter(Objects::nonNull).collect(Collectors.toList());
+        if (ids.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        return skuManager.list(Wrappers.lambdaQuery(SkuPO.class).in(SkuPO::getSpuId, ids)).stream()
+            .collect(Collectors.groupingBy(SkuPO::getSpuId));
     }
 
     /**
@@ -293,14 +325,20 @@ public class SpuServiceImpl implements SpuService {
     }
 
     private void syncToEs(SpuPO po) {
-        SpuDocument doc = new SpuDocument();
-        doc.setSpuId(po.getId());
-        doc.setTitle(po.getTitle());
-        doc.setCategoryId(po.getCategoryId());
-        doc.setMerchantId(po.getMerchantId());
-        doc.setSaleStatus(po.getStatus());
-        doc.setMainImage(po.getMainImageUrl());
-        doc.setCreateTime(po.getCreateTime());
-        spuSearchService.sync(doc);
+        // 搜索引擎是只读镜像，同步失败不阻断主链路写入（ES 恢复后由后续写操作补齐）
+        try {
+            SpuDocument doc = new SpuDocument();
+            doc.setSpuId(po.getId());
+            doc.setTitle(po.getTitle());
+            doc.setCategoryId(po.getCategoryId());
+            doc.setMerchantId(po.getMerchantId());
+            doc.setSaleStatus(po.getStatus());
+            doc.setMainImage(po.getMainImageUrl());
+            doc.setCreateTime(po.getCreateTime());
+            spuSearchService.sync(doc);
+        }
+        catch (Exception e) {
+            log.error("sync spu to ES failed, spuId={}", po.getId(), e);
+        }
     }
 }

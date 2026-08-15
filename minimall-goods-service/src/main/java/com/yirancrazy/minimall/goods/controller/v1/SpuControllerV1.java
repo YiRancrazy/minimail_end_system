@@ -66,7 +66,7 @@ public class SpuControllerV1 {
     public Result<CursorPageVO<SpuVO>> page(@RequestHeader("X-Merchant-Id") Long merchantId,
                                             @Valid SpuPageDTO dto) {
         dto.setMerchantId(merchantId);
-        return Result.success(spuService.page(dto).map(SpuVO::from));
+        return Result.success(spuService.page(dto));
     }
 
     /**

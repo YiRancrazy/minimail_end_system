@@ -22,12 +22,15 @@ import com.yirancrazy.minimall.goods.constant.SpuStatusEnum;
 import com.yirancrazy.minimall.goods.dto.SpuCreateDTO;
 import com.yirancrazy.minimall.goods.dto.SpuPageDTO;
 import com.yirancrazy.minimall.goods.dto.SpuUpdateDTO;
+import com.yirancrazy.minimall.goods.entity.SkuPO;
 import com.yirancrazy.minimall.goods.entity.SpuAuditRecordPO;
 import com.yirancrazy.minimall.goods.entity.SpuPO;
+import com.yirancrazy.minimall.goods.manager.SkuManager;
 import com.yirancrazy.minimall.goods.manager.SpuAuditRecordManager;
 import com.yirancrazy.minimall.goods.manager.SpuManager;
 import com.yirancrazy.minimall.goods.search.SpuSearchService;
 import com.yirancrazy.minimall.goods.service.impl.SpuServiceImpl;
+import com.yirancrazy.minimall.goods.vo.SpuVO;
 
 /**
  * SpuServiceImpl 单元测试，覆盖查询、创建、分页、更新、删除、上下架与审核闭环的正常、失败、边界路径。
@@ -37,6 +40,7 @@ public class SpuServiceImplTest {
     private SpuManager spuManager;
     private SpuAuditRecordManager spuAuditRecordManager;
     private SpuSearchService spuSearchService;
+    private SkuManager skuManager;
     private SpuServiceImpl service;
 
     @BeforeEach
@@ -44,6 +48,7 @@ public class SpuServiceImplTest {
         spuManager = mock(SpuManager.class);
         spuAuditRecordManager = mock(SpuAuditRecordManager.class);
         spuSearchService = mock(SpuSearchService.class);
+        skuManager = mock(SkuManager.class);
         lenient().doAnswer(inv -> {
             SpuPO p = inv.getArgument(0);
             if (p.getId() == null) {
@@ -54,7 +59,7 @@ public class SpuServiceImplTest {
         lenient().when(spuManager.updateById(any(SpuPO.class))).thenReturn(true);
         lenient().when(spuManager.removeById(100L)).thenReturn(true);
         lenient().when(spuAuditRecordManager.save(any(SpuAuditRecordPO.class))).thenReturn(true);
-        service = new SpuServiceImpl(spuManager, spuAuditRecordManager, spuSearchService);
+        service = new SpuServiceImpl(spuManager, spuAuditRecordManager, spuSearchService, skuManager);
     }
 
     /**
@@ -105,20 +110,26 @@ public class SpuServiceImplTest {
     }
 
     /**
-     * 验证 page 返回游标分页结果。
+     * 验证 page 返回游标分页结果并装配 SKU。
      */
     @Test
     public void page_returns_results() {
+        SpuPO po = new SpuPO();
+        po.setId(1L);
+        po.setTitle("t");
         List<SpuPO> mockRecords = new ArrayList<>();
-        mockRecords.add(new SpuPO());
+        mockRecords.add(po);
         when(spuManager.list(any(Wrapper.class))).thenReturn(mockRecords);
+        when(skuManager.list(any(Wrapper.class))).thenReturn(List.of());
 
         SpuPageDTO dto = new SpuPageDTO();
         dto.setLimit(20);
         dto.setMerchantId(10L);
-        CursorPageVO<SpuPO> result = service.page(dto);
+        CursorPageVO<SpuVO> result = service.page(dto);
 
         assertEquals(1, result.getRecords().size());
+        assertEquals("t", result.getRecords().get(0).getTitle());
+        assertTrue(result.getRecords().get(0).getSkus().isEmpty());
     }
 
     /**

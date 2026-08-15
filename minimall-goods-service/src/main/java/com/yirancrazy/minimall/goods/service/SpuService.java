@@ -7,6 +7,7 @@ import com.yirancrazy.minimall.goods.dto.SpuPageDTO;
 import com.yirancrazy.minimall.goods.dto.SpuUpdateDTO;
 import com.yirancrazy.minimall.goods.entity.SpuAuditRecordPO;
 import com.yirancrazy.minimall.goods.entity.SpuPO;
+import com.yirancrazy.minimall.goods.vo.SpuVO;
 
 /**
  * @Author: yirancrazy@gmail.com
@@ -32,11 +33,11 @@ public interface SpuService {
     Long create(Long merchantId, SpuCreateDTO dto);
 
     /**
-     * 游标分页查询SPU，支持按商家、状态、标题过滤。
+     * 游标分页查询SPU，支持按商家、状态、标题过滤，并批量装配各 SPU 的 SKU 列表。
      * @param dto 游标分页查询入参
-     * @return SPU 游标分页结果
+     * @return SPU 游标分页结果，含 skus
      */
-    CursorPageVO<SpuPO> page(SpuPageDTO dto);
+    CursorPageVO<SpuVO> page(SpuPageDTO dto);
 
     /**
      * 根据ID更新SPU信息，字段为空表示不更新。

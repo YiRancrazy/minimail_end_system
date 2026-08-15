@@ -19,8 +19,11 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
 import com.yirancrazy.minimall.api.dto.auth.TokenVO;
 import com.yirancrazy.minimall.auth.constant.AuthCodeEnum;
 import com.yirancrazy.minimall.auth.dto.ChangePasswordDTO;
@@ -32,6 +35,7 @@ import com.yirancrazy.minimall.auth.manager.AuthRoleManager;
 import com.yirancrazy.minimall.auth.manager.AuthTokenBlacklistManager;
 import com.yirancrazy.minimall.auth.manager.AuthUserManager;
 import com.yirancrazy.minimall.auth.util.JwtUtil;
+import com.yirancrazy.minimall.auth.vo.UserInfoVO;
 import com.yirancrazy.minimall.common.exception.BizException;
 
 /**
@@ -208,5 +212,30 @@ class MerchantAuthServiceImplTest {
         BizException ex = assertThrows(BizException.class,
             () -> service.register(new RegisterDTO("shopowner", "pass123")));
         assertEquals(AuthCodeEnum.MERCHANT_EXISTS.getCode(), ex.getCode());
+    }
+
+    @Test
+    void me_validToken_returnsUserInfo() {
+        Claims claims = mock(Claims.class);
+        when(claims.getSubject()).thenReturn("100");
+        when(claims.get("account", String.class)).thenReturn("shopowner");
+        when(claims.get("role", String.class)).thenReturn("MERCHANT");
+        when(claims.get("roleId", Long.class)).thenReturn(2L);
+        when(jwtUtil.parse("access-token")).thenReturn(claims);
+
+        UserInfoVO vo = service.me("access-token");
+
+        assertEquals(100L, vo.getUserId());
+        assertEquals("shopowner", vo.getAccount());
+        assertEquals("MERCHANT", vo.getRole());
+        assertEquals(2L, vo.getRoleId());
+    }
+
+    @Test
+    void me_invalidToken_throws() {
+        when(jwtUtil.parse("bad-token")).thenThrow(new JwtException("expired"));
+
+        BizException ex = assertThrows(BizException.class, () -> service.me("bad-token"));
+        assertEquals(AuthCodeEnum.TOKEN_INVALID.getCode(), ex.getCode());
     }
 }

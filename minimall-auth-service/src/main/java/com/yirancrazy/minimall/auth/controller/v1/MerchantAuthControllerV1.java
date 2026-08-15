@@ -1,5 +1,6 @@
 package com.yirancrazy.minimall.auth.controller.v1;
 
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -11,6 +12,7 @@ import com.yirancrazy.minimall.auth.dto.ChangePasswordDTO;
 import com.yirancrazy.minimall.auth.dto.LoginDTO;
 import com.yirancrazy.minimall.auth.dto.RegisterDTO;
 import com.yirancrazy.minimall.auth.service.MerchantAuthService;
+import com.yirancrazy.minimall.auth.vo.UserInfoVO;
 import com.yirancrazy.minimall.common.result.Result;
 
 /**
@@ -73,5 +75,17 @@ public class MerchantAuthControllerV1 {
                                        @Valid @RequestBody ChangePasswordDTO dto) {
         merchantAuthService.changePassword(merchantAccountId, dto);
         return Result.success();
+    }
+
+    /**
+     * 获取当前商家信息。
+     * @param authorization 授权头
+     * @return 用户信息VO
+     */
+    @GetMapping("/me")
+    public Result<UserInfoVO> me(@RequestHeader("Authorization") String authorization) {
+        String token = authorization.startsWith("Bearer ")
+            ? authorization.substring(7) : authorization;
+        return Result.success(merchantAuthService.me(token));
     }
 }

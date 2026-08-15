@@ -8,6 +8,8 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.stereotype.Service;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.api.dto.auth.TokenVO;
 import com.yirancrazy.minimall.auth.constant.AuthCodeEnum;
@@ -22,6 +24,7 @@ import com.yirancrazy.minimall.auth.manager.AuthTokenBlacklistManager;
 import com.yirancrazy.minimall.auth.manager.AuthUserManager;
 import com.yirancrazy.minimall.auth.service.MerchantAuthService;
 import com.yirancrazy.minimall.auth.util.JwtUtil;
+import com.yirancrazy.minimall.auth.vo.UserInfoVO;
 import com.yirancrazy.minimall.common.exception.BizException;
 
 /**
@@ -150,6 +153,28 @@ public class MerchantAuthServiceImpl implements MerchantAuthService {
         applyNewPassword(po, dto.getNewPassword());
         invalidateRefreshTokens(merchantAccountId);
         log.info("merchant password changed, accountId={}", merchantAccountId);
+    }
+
+    /**
+     * 获取当前商家信息，直接从令牌声明解析，不落库。
+     * @param token 访问令牌
+     * @return 用户信息VO
+     */
+    @Override
+    public UserInfoVO me(String token) {
+        Claims c;
+        try {
+            c = jwtUtil.parse(token);
+        }
+        catch (JwtException ex) {
+            throw new BizException(AuthCodeEnum.TOKEN_INVALID.getCode(),
+                AuthCodeEnum.TOKEN_INVALID.getAlias(),
+                AuthCodeEnum.TOKEN_INVALID.getMessage());
+        }
+        return new UserInfoVO(Long.parseLong(c.getSubject()),
+            c.get("account", String.class),
+            c.get("role", String.class),
+            c.get("roleId", Long.class));
     }
 
     private void applyNewPassword(AuthUserPO po, String newPassword) {

@@ -4,6 +4,7 @@ import com.yirancrazy.minimall.api.dto.auth.TokenVO;
 import com.yirancrazy.minimall.auth.dto.ChangePasswordDTO;
 import com.yirancrazy.minimall.auth.dto.LoginDTO;
 import com.yirancrazy.minimall.auth.dto.RegisterDTO;
+import com.yirancrazy.minimall.auth.vo.UserInfoVO;
 
 /**
  * @Author: yirancrazy@gmail.com
@@ -41,4 +42,11 @@ public interface MerchantAuthService {
      * @param dto 修改密码DTO
      */
     void changePassword(Long merchantAccountId, ChangePasswordDTO dto);
+
+    /**
+     * 获取当前商家信息。
+     * @param token 访问令牌
+     * @return 用户信息VO
+     */
+    UserInfoVO me(String token);
 }

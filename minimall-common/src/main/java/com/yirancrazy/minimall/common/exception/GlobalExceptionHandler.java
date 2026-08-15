@@ -2,6 +2,7 @@ package com.yirancrazy.minimall.common.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.BindException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingRequestHeaderException;
@@ -37,6 +38,18 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Result<Void>> validation(Exception e) {
         log.warn("validation failed: {}", e.getMessage());
         return ResponseEntity.status(HttpStatus.OK).body(Result.fail(CommonCode.PARAM_INVALID, "请求参数校验失败"));
+    }
+
+    /**
+     * 处理 JSON 反序列化失败（字段类型不匹配、非法枚举值等），避免落入 unknown 返回模糊的"系统繁忙"。
+     *
+     * @param e 请求体不可读异常
+     * @return HTTP 200 包装的失败响应，错误码为 {@link CommonCode#PARAM_INVALID}
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<Result<Void>> unreadable(HttpMessageNotReadableException e) {
+        log.warn("request body not readable: {}", e.getMessage());
+        return ResponseEntity.status(HttpStatus.OK).body(Result.fail(CommonCode.PARAM_INVALID, "请求体格式错误"));
     }
 
     /**

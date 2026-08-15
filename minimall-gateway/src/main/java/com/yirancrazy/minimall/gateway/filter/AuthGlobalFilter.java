@@ -42,6 +42,7 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
         "/api/v1/user/auth/password/reset/request",
         "/api/v1/user/auth/password/reset/confirm",
         "/api/v1/user/pay/callback/alipay",
+        "/api/v1/pay/success",
         "/api/v1/merchant/auth/login",
         "/api/v1/merchant/auth/register",
         "/api/v1/platform/auth/login",

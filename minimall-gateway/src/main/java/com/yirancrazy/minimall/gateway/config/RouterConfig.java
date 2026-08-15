@@ -59,7 +59,8 @@ public class RouterConfig {
             .route("pay-service", r -> r.path(
                 "/api/v1/user/pay/**",
                 "/api/v1/merchant/pay/**",
-                "/api/v1/platform/pay/**")
+                "/api/v1/platform/pay/**",
+                "/api/v1/pay/success")
                 .uri(HOST + ":8207"))
             .route("stock-service", r -> r.path(
                 "/api/v1/merchant/stock/**",

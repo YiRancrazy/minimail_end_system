@@ -4,6 +4,7 @@ import org.springframework.cloud.openfeign.FallbackFactory;
 import org.springframework.stereotype.Component;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.api.dto.goods.SkuSnapshotDTO;
+import com.yirancrazy.minimall.api.dto.goods.SpuSnapshotDTO;
 import com.yirancrazy.minimall.api.feign.GoodsFeignClient;
 import com.yirancrazy.minimall.common.result.Result;
 
@@ -22,6 +23,11 @@ public class GoodsFeignFallbackFactory implements FallbackFactory<GoodsFeignClie
         return new GoodsFeignClient() {
             @Override
             public Result<SkuSnapshotDTO> skuSnapshot(Long id) {
+                return Result.success(null);
+            }
+
+            @Override
+            public Result<SpuSnapshotDTO> spuSnapshot(Long id) {
                 return Result.success(null);
             }
         };

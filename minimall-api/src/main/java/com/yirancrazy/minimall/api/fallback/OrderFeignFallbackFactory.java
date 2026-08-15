@@ -25,8 +25,20 @@ public class OrderFeignFallbackFactory implements FallbackFactory<OrderFeignClie
             }
 
             @Override
+            public Result<Long> merchantId(String ref) {
+                log.warn("order merchant resolve fallback, ref={} skipped", ref);
+                return Result.success(null);
+            }
+
+            @Override
             public Result<Void> pay(Long id) {
                 log.warn("order pay fallback, orderId={} skipped", id);
+                return Result.success(null);
+            }
+
+            @Override
+            public Result<Void> payByOrderNo(String orderNo) {
+                log.warn("order pay-by-order-no fallback, orderNo={} skipped", orderNo);
                 return Result.success(null);
             }
 

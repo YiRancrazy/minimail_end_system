@@ -7,6 +7,7 @@ import jakarta.validation.constraints.Positive;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import com.yirancrazy.minimall.pay.constant.PayChannelEnum;
 
 
 /**
@@ -27,5 +28,5 @@ public class PayCreateDTO {
     @Positive(message = "支付金额必须大于0")
     private BigDecimal amount;
 
-    private Integer channel;
+    private PayChannelEnum channel;
 }

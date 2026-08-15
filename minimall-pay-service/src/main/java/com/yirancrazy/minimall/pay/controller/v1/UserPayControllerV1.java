@@ -18,6 +18,7 @@ import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.pay.dto.PayCallbackDTO;
 import com.yirancrazy.minimall.pay.dto.PayCreateDTO;
+import com.yirancrazy.minimall.pay.gateway.PayGateway;
 import com.yirancrazy.minimall.pay.service.PayService;
 import com.yirancrazy.minimall.pay.vo.PayTransactionVO;
 import com.yirancrazy.minimall.pay.vo.PaymentParamsVO;
@@ -35,28 +36,31 @@ import com.yirancrazy.minimall.pay.vo.RefundVO;
 public class UserPayControllerV1 {
 
     private final PayService payService;
+    private final PayGateway payGateway;
 
-    public UserPayControllerV1(PayService payService) {
+    public UserPayControllerV1(PayService payService, PayGateway payGateway) {
         this.payService = payService;
+        this.payGateway = payGateway;
     }
 
     /**
      * 创建支付流水，channel 为空时默认 ALIPAY。
+     * 同订单待支付/已成功流水由 service 层复用（防重复扣款），失败/关闭流水允许重新创建，故不加 @Idempotent。
      * @param dto 支付流水创建DTO
      * @return 支付流水ID
      */
     @PostMapping("/create")
-    @Idempotent(key = "#dto.orderNo")
     public Result<Long> create(@Valid @RequestBody PayCreateDTO dto,
                                @RequestHeader("X-User-Id") Long userId,
                                @RequestHeader(value = "X-Merchant-Id", required = false) Long merchantId) {
+        Integer channelCode = dto.getChannel() == null ? null : Integer.parseInt(dto.getChannel().getCode());
         Long paymentId = payService.createPayment(
-            dto.getOrderNo(), userId, merchantId, dto.getAmount(), dto.getChannel());
+            dto.getOrderNo(), userId, merchantId, dto.getAmount(), channelCode);
         return Result.success(paymentId);
     }
 
     /**
-     * 处理支付宝回调。
+     * 处理支付宝异步回调，先验签再推进业务状态，验签失败返回 fail 由支付宝重试。
      * @param request HTTP请求
      * @return 回调结果
      */
@@ -64,19 +68,26 @@ public class UserPayControllerV1 {
     public String callback(HttpServletRequest request) {
         Map<String, String> params = new HashMap<>();
         request.getParameterMap().forEach((key, values) -> params.put(key, values[0]));
+        log.info("alipay callback received, paymentNo={}, tradeStatus={}, paramsSize={}",
+            params.get("out_trade_no"), params.get("trade_status"), params.size());
 
         try {
-            String tradeNo = params.get("trade_no");
+            String tradeNo = payGateway.verifyCallback(params);
             String paymentNo = params.get("out_trade_no");
             String tradeStatus = params.get("trade_status");
             boolean success = "TRADE_SUCCESS".equals(tradeStatus) || "TRADE_FINISHED".equals(tradeStatus);
 
             PayCallbackDTO dto = new PayCallbackDTO(paymentNo, tradeNo, success, params.toString());
             payService.handleCallback(dto);
+            log.info("alipay callback handled, paymentNo={}, tradeNo={}, success={}", paymentNo, tradeNo, success);
             return "success";
         }
         catch (BizException e) {
             log.error("callback failed: {}", e.getMessage());
+            return "fail";
+        }
+        catch (Exception e) {
+            log.error("callback verify failed", e);
             return "fail";
         }
     }

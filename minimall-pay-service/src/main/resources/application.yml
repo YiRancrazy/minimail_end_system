@@ -33,9 +33,14 @@ minimall:
     app-id: ${ALIPAY_APP_ID:}
     private-key: ${ALIPAY_PRIVATE_KEY:}
     alipay-public-key: ${ALIPAY_PUBLIC_KEY:}
-    gateway-url: https://openapi.alipay.com/gateway.do
-    notify-url: ${ALIPAY_NOTIFY_URL:https://mall.example.com/api/v1/pay/callback/alipay}
+    gateway-url: ${ALIPAY_GATEWAY_URL:https://openapi.alipay.com/gateway.do}
+    # 沙箱需配置公网可达的 HTTPS 回调地址（如 ngrok 隧道转发到本机网关 8080 端口），域名为占位符时沙箱回调无法送达
+    notify-url: ${ALIPAY_NOTIFY_URL:https://mall.example.com/api/v1/user/pay/callback/alipay}
     return-url: ${ALIPAY_RETURN_URL:https://mall.example.com/pay/result}
   schedule:
     enabled: false
     scan-callback-ms: 30000
+logging:
+  level:
+    root: INFO
+    com.yirancrazy.minimall.pay: trace

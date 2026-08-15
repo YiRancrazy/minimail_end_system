@@ -7,7 +7,10 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -17,8 +20,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO;
+import com.yirancrazy.minimall.common.exception.GlobalExceptionHandler;
+import com.yirancrazy.minimall.pay.constant.PayChannelEnum;
 import com.yirancrazy.minimall.pay.dto.PayCreateDTO;
 import com.yirancrazy.minimall.pay.entity.PayTransactionPO;
+import com.yirancrazy.minimall.pay.gateway.PayGateway;
 import com.yirancrazy.minimall.pay.service.PayService;
 import com.yirancrazy.minimall.pay.vo.PaymentParamsVO;
 import com.yirancrazy.minimall.pay.vo.RefundVO;
@@ -33,12 +39,16 @@ class UserPayControllerV1Test {
 
     private MockMvc mockMvc;
     private PayService service;
+    private PayGateway gateway;
     private final ObjectMapper mapper = new ObjectMapper();
 
     @BeforeEach
     void setUp() {
         service = mock(PayService.class);
-        mockMvc = MockMvcBuilders.standaloneSetup(new UserPayControllerV1(service)).build();
+        gateway = mock(PayGateway.class);
+        mockMvc = MockMvcBuilders.standaloneSetup(new UserPayControllerV1(service, gateway))
+            .setControllerAdvice(new GlobalExceptionHandler())
+            .build();
     }
 
     /**
@@ -47,7 +57,7 @@ class UserPayControllerV1Test {
     @Test
     void create_returns_payment_id() throws Exception {
         when(service.createPayment(any(), any(), any(), any(), any())).thenReturn(100L);
-        PayCreateDTO dto = new PayCreateDTO("NO20260805001", new BigDecimal("10.00"), 1);
+        PayCreateDTO dto = new PayCreateDTO("NO20260805001", new BigDecimal("10.00"), PayChannelEnum.ALIPAY);
         mockMvc.perform(post("/api/v1/user/pay/create")
                 .header("X-User-Id", "1")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -59,10 +69,40 @@ class UserPayControllerV1Test {
     }
 
     /**
-     * 验证 POST /api/v1/user/pay/callback/alipay 处理 TRADE_SUCCESS 回调返回 success。
+     * 验证 channel 支持字符串枚举名（ALIPAY）反序列化，并转换为数字 code 传给 service。
+     */
+    @Test
+    void create_accepts_channel_alias_string() throws Exception {
+        when(service.createPayment(any(), any(), any(), any(), any())).thenReturn(100L);
+        mockMvc.perform(post("/api/v1/user/pay/create")
+                .header("X-User-Id", "1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"orderNo\":\"NO1\",\"amount\":10,\"channel\":\"ALIPAY\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.code").value("00000"));
+        verify(service).createPayment(eq("NO1"), eq(1L), isNull(), any(), eq(1));
+    }
+
+    /**
+     * 验证非法 channel 反序列化失败时返回友好参数错误而非系统繁忙。
+     */
+    @Test
+    void create_rejects_unknown_channel() throws Exception {
+        mockMvc.perform(post("/api/v1/user/pay/create")
+                .header("X-User-Id", "1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"orderNo\":\"NO1\",\"amount\":10,\"channel\":\"FOO\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.code").value("20001"))
+            .andExpect(jsonPath("$.message").value("请求体格式错误"));
+    }
+
+    /**
+     * 验证 POST /api/v1/user/pay/callback/alipay 验签通过后处理 TRADE_SUCCESS 回调返回 success。
      */
     @Test
     void callback_returns_success() throws Exception {
+        when(gateway.verifyCallback(any())).thenReturn("T123");
         mockMvc.perform(post("/api/v1/user/pay/callback/alipay")
                 .param("trade_no", "T123")
                 .param("out_trade_no", "P456")
@@ -70,6 +110,22 @@ class UserPayControllerV1Test {
             .andExpect(status().isOk())
             .andExpect(content().string("success"));
         verify(service).handleCallback(any());
+    }
+
+    /**
+     * 验证回调验签失败时返回 fail 且不推进业务状态。
+     */
+    @Test
+    void callback_signature_failure_returns_fail() throws Exception {
+        when(gateway.verifyCallback(any()))
+            .thenThrow(new RuntimeException("signature verification failed"));
+        mockMvc.perform(post("/api/v1/user/pay/callback/alipay")
+                .param("trade_no", "T123")
+                .param("out_trade_no", "P456")
+                .param("trade_status", "TRADE_SUCCESS"))
+            .andExpect(status().isOk())
+            .andExpect(content().string("fail"));
+        verify(service, never()).handleCallback(any());
     }
 
     /**

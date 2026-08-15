@@ -2,12 +2,14 @@ package com.yirancrazy.minimall.pay.service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -28,6 +30,7 @@ import com.yirancrazy.minimall.pay.dto.WithdrawApplyDTO;
 import com.yirancrazy.minimall.pay.entity.MerchantWithdrawPO;
 import com.yirancrazy.minimall.pay.entity.PayTransactionPO;
 import com.yirancrazy.minimall.pay.gateway.AlipayGateway;
+import com.yirancrazy.minimall.pay.gateway.PayGateway;
 import com.yirancrazy.minimall.pay.manager.MerchantWithdrawManager;
 import com.yirancrazy.minimall.pay.manager.PayManager;
 import com.yirancrazy.minimall.pay.mapper.PayRefundMapper;
@@ -48,7 +51,7 @@ import com.yirancrazy.minimall.pay.vo.WithdrawVO;
 public class PayServiceImplTest {
 
     private PayManager manager;
-    private AlipayGateway alipayGateway;
+    private PayGateway payGateway;
     private PayRefundMapper payRefundMapper;
     private PayTransactionMapper payTransactionMapper;
     private OrderFeignClient orderFeignClient;
@@ -58,14 +61,16 @@ public class PayServiceImplTest {
     @BeforeEach
     void setUp() {
         manager = mock(PayManager.class);
-        alipayGateway = mock(AlipayGateway.class);
+        payGateway = mock(PayGateway.class);
         payRefundMapper = mock(PayRefundMapper.class);
         payTransactionMapper = mock(PayTransactionMapper.class);
         orderFeignClient = mock(OrderFeignClient.class);
+        lenient().when(orderFeignClient.merchantId(anyString()))
+            .thenReturn(com.yirancrazy.minimall.common.result.Result.success(null));
         merchantWithdrawManager = mock(MerchantWithdrawManager.class);
         lenient().when(manager.updateById(any(PayTransactionPO.class))).thenReturn(true);
-        lenient().when(alipayGateway.createPayment(anyString(), any(BigDecimal.class), anyString(), anyString()))
-            .thenReturn("http://pay.url");
+        lenient().when(payGateway.createPayment(anyString(), any(BigDecimal.class), anyString(), anyString()))
+            .thenReturn("https://qr.alipay.com/xxx");
         doAnswer(inv -> {
             PayTransactionPO p = inv.getArgument(0);
             if (p.getId() == null) {
@@ -81,12 +86,12 @@ public class PayServiceImplTest {
             }
             return true;
         }).when(merchantWithdrawManager).save(any(MerchantWithdrawPO.class));
-        service = new PayServiceImpl(manager, alipayGateway, payRefundMapper, payTransactionMapper,
+        service = new PayServiceImpl(manager, payGateway, payRefundMapper, payTransactionMapper,
             orderFeignClient, merchantWithdrawManager);
     }
 
     /**
-     * 验证 createPayment 方法会持久化一条状态为 PENDING 且金额正确的支付单记录。
+     * 验证 createPayment 方法会持久化一条状态为 PENDING 且金额正确的支付单记录，且不触发外部网关调用。
      */
     @Test
     public void createPayment_persists_pending_record() {
@@ -96,6 +101,82 @@ public class PayServiceImplTest {
         verify(manager).save(cap.capture());
         assertEquals(1, cap.getValue().getStatus());
         assertEquals(0, new BigDecimal("99.99").compareTo(cap.getValue().getAmount()));
+        verify(payGateway, never()).createPayment(anyString(), any(BigDecimal.class), anyString(), anyString());
+    }
+
+    /**
+     * 验证同一订单已有未过期待支付流水时直接复用，不重复创建与调起渠道。
+     */
+    @Test
+    public void createPayment_reuses_pending_transaction() {
+        PayTransactionPO existing = new PayTransactionPO();
+        existing.setId(99L);
+        existing.setOrderNo("ORDER100");
+        existing.setStatus(1); // PENDING
+        existing.setExpireAt(LocalDateTime.now().plusMinutes(10));
+        when(manager.getOne(any())).thenReturn(existing);
+
+        Long id = service.createPayment("ORDER100", 1L, 1L, new BigDecimal("99.99"), null);
+
+        assertEquals(99L, id.longValue());
+        verify(manager, never()).save(any(PayTransactionPO.class));
+        verify(payGateway, never()).createPayment(anyString(), any(BigDecimal.class), anyString(), anyString());
+    }
+
+    /**
+     * 验证同一订单已有过期待支付流水时不静默复用，而是新建流水重新发起支付（修复支付卡死）。
+     */
+    @Test
+    public void createPayment_creates_new_when_pending_expired() {
+        PayTransactionPO existing = new PayTransactionPO();
+        existing.setId(99L);
+        existing.setOrderNo("ORDER100");
+        existing.setStatus(1); // PENDING
+        existing.setExpireAt(LocalDateTime.now().minusMinutes(1));
+        when(manager.getOne(any())).thenReturn(existing);
+
+        Long id = service.createPayment("ORDER100", 1L, 1L, new BigDecimal("99.99"), null);
+
+        assertNotNull(id);
+        assertNotEquals(99L, id.longValue());
+        verify(manager).save(any(PayTransactionPO.class));
+        verify(payGateway, never()).createPayment(anyString(), any(BigDecimal.class), anyString(), anyString());
+    }
+
+    /**
+     * 验证同一订单已有成功流水时不重复创建，直接返回原流水ID。
+     */
+    @Test
+    public void createPayment_reuses_success_transaction() {
+        PayTransactionPO existing = new PayTransactionPO();
+        existing.setId(88L);
+        existing.setOrderNo("ORDER100");
+        existing.setStatus(2); // SUCCESS
+        when(manager.getOne(any())).thenReturn(existing);
+
+        Long id = service.createPayment("ORDER100", 1L, 1L, new BigDecimal("99.99"), null);
+
+        assertEquals(88L, id.longValue());
+        verify(manager, never()).save(any(PayTransactionPO.class));
+    }
+
+    /**
+     * 验证上次支付失败时允许重新创建新流水，支持重新支付。
+     */
+    @Test
+    public void createPayment_creates_new_after_failed() {
+        PayTransactionPO existing = new PayTransactionPO();
+        existing.setId(77L);
+        existing.setOrderNo("ORDER100");
+        existing.setStatus(3); // FAILED
+        when(manager.getOne(any())).thenReturn(existing);
+
+        Long id = service.createPayment("ORDER100", 1L, 1L, new BigDecimal("99.99"), null);
+
+        assertNotNull(id);
+        assertNotEquals(77L, id.longValue());
+        verify(manager).save(any(PayTransactionPO.class));
+        verify(payGateway, never()).createPayment(anyString(), any(BigDecimal.class), anyString(), anyString());
     }
 
     /**
@@ -122,6 +203,23 @@ public class PayServiceImplTest {
         service.handleCallback(dto);
         assertEquals(2, rec.getStatus());
         verify(orderFeignClient).pay(100L);
+    }
+
+    /**
+     * 验证 handleCallback 在订单标识为业务单号（C 端直付）时按单号推进订单，修复回调推进订单崩溃。
+     */
+    @Test
+    public void handleCallback_advances_order_by_order_no() {
+        PayTransactionPO rec = new PayTransactionPO();
+        rec.setId(1L);
+        rec.setStatus(1);
+        rec.setOrderNo("OD20260814001");
+        when(manager.getOne(any())).thenReturn(rec);
+
+        PayCallbackDTO dto = new PayCallbackDTO("PAY123", "TRADE123", true, "response");
+        service.handleCallback(dto);
+        assertEquals(2, rec.getStatus());
+        verify(orderFeignClient).payByOrderNo("OD20260814001");
     }
 
     /**
@@ -175,7 +273,7 @@ public class PayServiceImplTest {
     }
 
     /**
-     * 验证 getPaymentParams 在支付单存在时返回参数VO。
+     * 验证 getPaymentParams 在支付单存在时返回参数VO，并重新生成支付宝当面付二维码内容 qrCode。
      */
     @Test
     public void getPaymentParams_returns_vo_when_exists() {
@@ -185,6 +283,7 @@ public class PayServiceImplTest {
         rec.setAmount(new BigDecimal("99.99"));
         rec.setCurrency("CNY");
         rec.setChannel(1);
+        rec.setExpireAt(LocalDateTime.now().plusMinutes(15));
         when(manager.getOne(any())).thenReturn(rec);
 
         PaymentParamsVO vo = service.getPaymentParams("PAY123");
@@ -192,6 +291,24 @@ public class PayServiceImplTest {
         assertEquals("ORDER100", vo.getOrderNo());
         assertEquals(0, new BigDecimal("99.99").compareTo(vo.getAmount()));
         assertEquals("Order ORDER100", vo.getSubject());
+        assertEquals("https://qr.alipay.com/xxx", vo.getQrCode());
+    }
+
+    /**
+     * 验证 getPaymentParams 在支付宝网关不可达时抛异常，由全局异常处理返回明确错误而非静默卡死。
+     */
+    @Test
+    public void getPaymentParams_gateway_failure_throws() {
+        PayTransactionPO rec = new PayTransactionPO();
+        rec.setPaymentNo("PAY123");
+        rec.setOrderNo("ORDER100");
+        rec.setAmount(new BigDecimal("99.99"));
+        rec.setExpireAt(LocalDateTime.now().plusMinutes(15));
+        when(manager.getOne(any())).thenReturn(rec);
+        when(payGateway.createPayment(anyString(), any(BigDecimal.class), anyString(), anyString()))
+            .thenThrow(new RuntimeException("alipay down"));
+
+        assertThrows(RuntimeException.class, () -> service.getPaymentParams("PAY123"));
     }
 
     /**
@@ -467,7 +584,7 @@ public class PayServiceImplTest {
         payTx.setAmount(new BigDecimal("100.00"));
         payTx.setOrderNo("100");
         when(manager.getById(1L)).thenReturn(payTx);
-        when(alipayGateway.refund(anyString(), anyString(), any(BigDecimal.class), anyString()))
+        when(payGateway.refund(anyString(), anyString(), any(BigDecimal.class), anyString()))
             .thenReturn("REFUND_TRADE_123");
 
         com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO dto =
@@ -493,7 +610,7 @@ public class PayServiceImplTest {
         payTx.setAmount(new BigDecimal("100.00"));
         payTx.setOrderNo("100");
         when(manager.getById(1L)).thenReturn(payTx);
-        when(alipayGateway.refund(anyString(), anyString(), any(BigDecimal.class), anyString()))
+        when(payGateway.refund(anyString(), anyString(), any(BigDecimal.class), anyString()))
             .thenThrow(new RuntimeException("gateway down"));
 
         com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO dto =
@@ -572,6 +689,34 @@ public class PayServiceImplTest {
             .thenReturn(java.util.Collections.emptyList());
 
         assertEquals(0, service.scanPaidButOrderPending());
+    }
+
+    /**
+     * 验证 createPayment 在商户上下文缺失时归属默认商户 0L，避免 t_pay_transaction.merchant_id 非空约束报错。
+     */
+    @Test
+    public void createPayment_null_merchant_defaults_to_zero() {
+        Long id = service.createPayment("ORDER300", 3L, null, new BigDecimal("10.00"), null);
+        assertNotNull(id);
+        ArgumentCaptor<PayTransactionPO> cap = ArgumentCaptor.forClass(PayTransactionPO.class);
+        verify(manager).save(cap.capture());
+        assertEquals(0L, cap.getValue().getMerchantId());
+    }
+
+    /**
+     * 验证 createPayment 商户缺失时按订单归属解析商户，order-service 返回真实商户则落库真实值。
+     */
+    @Test
+    public void createPayment_resolves_merchant_from_order() {
+        when(orderFeignClient.merchantId("ORDER400"))
+            .thenReturn(com.yirancrazy.minimall.common.result.Result.success(42L));
+
+        Long id = service.createPayment("ORDER400", 4L, null, new BigDecimal("10.00"), null);
+
+        assertNotNull(id);
+        ArgumentCaptor<PayTransactionPO> cap = ArgumentCaptor.forClass(PayTransactionPO.class);
+        verify(manager).save(cap.capture());
+        assertEquals(42L, cap.getValue().getMerchantId());
     }
 
     /**

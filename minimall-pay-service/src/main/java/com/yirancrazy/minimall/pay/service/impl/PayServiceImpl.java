@@ -12,6 +12,7 @@ import com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO;
 import com.yirancrazy.minimall.api.feign.OrderFeignClient;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
+import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.common.util.CsvExporter;
 import com.yirancrazy.minimall.common.util.CursorUtils;
 import com.yirancrazy.minimall.pay.constant.PayChannelEnum;
@@ -26,7 +27,7 @@ import com.yirancrazy.minimall.pay.dto.WithdrawApplyDTO;
 import com.yirancrazy.minimall.pay.entity.MerchantWithdrawPO;
 import com.yirancrazy.minimall.pay.entity.PayRefundPO;
 import com.yirancrazy.minimall.pay.entity.PayTransactionPO;
-import com.yirancrazy.minimall.pay.gateway.AlipayGateway;
+import com.yirancrazy.minimall.pay.gateway.PayGateway;
 import com.yirancrazy.minimall.pay.manager.MerchantWithdrawManager;
 import com.yirancrazy.minimall.pay.manager.PayManager;
 import com.yirancrazy.minimall.pay.mapper.PayRefundMapper;
@@ -56,18 +57,18 @@ public class PayServiceImpl implements PayService {
     private static final int ORDER_PENDING_CODE = 1;
 
     private final PayManager payManager;
-    private final AlipayGateway alipayGateway;
+    private final PayGateway payGateway;
     private final PayRefundMapper payRefundMapper;
     private final PayTransactionMapper payTransactionMapper;
     private final OrderFeignClient orderFeignClient;
     private final MerchantWithdrawManager merchantWithdrawManager;
 
-    public PayServiceImpl(PayManager payManager, AlipayGateway alipayGateway,
+    public PayServiceImpl(PayManager payManager, PayGateway payGateway,
                           PayRefundMapper payRefundMapper, PayTransactionMapper payTransactionMapper,
                           OrderFeignClient orderFeignClient,
                           MerchantWithdrawManager merchantWithdrawManager) {
         this.payManager = payManager;
-        this.alipayGateway = alipayGateway;
+        this.payGateway = payGateway;
         this.payRefundMapper = payRefundMapper;
         this.payTransactionMapper = payTransactionMapper;
         this.orderFeignClient = orderFeignClient;
@@ -76,23 +77,57 @@ public class PayServiceImpl implements PayService {
 
     /**
      * 创建支付流水，channel 为空时默认 ALIPAY，不支持渠道抛出 PAY_CHANNEL_UNSUPPORTED。
+     * 同一订单已有待支付/已成功流水时直接复用（防重复扣款），上次支付失败/关闭时新建流水以支持重新支付。
      * @param orderNo 订单号
      * @param userId 用户ID
-     * @param merchantId 商户ID
+     * @param merchantId 商户ID，null 时归属默认商户 0L
      * @param amount 支付金额
      * @param channel 支付渠道 code，null 默认 ALIPAY
      * @return 支付流水ID
      */
     @Override
     public Long createPayment(String orderNo, Long userId, Long merchantId, BigDecimal amount, Integer channel) {
-        int alipayCode = Integer.parseInt(PayChannelEnum.ALIPAY.getCode());
-        int channelCode = channel == null ? alipayCode : channel;
+        int alipayCode = Integer.parseInt(PayChannelEnum.ALIPAY.getCode());  // 获取支付宝渠道编码（当前仅支持支付宝）
+        int channelCode = channel == null ? alipayCode : channel;            // 渠道为空时默认使用支付宝
+
+        // 仅允许支付宝渠道，其他渠道直接抛出不支持异常
         if (channelCode != alipayCode) {
             throw new BizException(PayCodeEnum.PAY_CHANNEL_UNSUPPORTED);
         }
+
+        // 商户上下文缺失（C 端支付无 X-Merchant-Id）时按订单归属解析，解析失败归属默认商户 0L
+        if (merchantId == null) {
+            merchantId = resolveMerchantId(orderNo);
+        }
+        merchantId = merchantId == null ? 0L : merchantId;
+
+        // 根据订单号查询已有支付交易记录，用于幂等判断
+        PayTransactionPO existing = latestByOrderNo(orderNo);
+
+        // 幂等复用：成功单始终复用；待支付单仅未过期时复用，过期 PENDING 视为失效走新建，
+        // 避免残留待支付单被后续请求静默复用导致支付流程无响应也无日志
+        if (existing != null) {
+            int status = existing.getStatus();
+            boolean pendingAlive = status == Integer.parseInt(PayStatusEnum.PENDING.getCode())
+                && existing.getExpireAt() != null && existing.getExpireAt().isAfter(LocalDateTime.now());
+            if (status == Integer.parseInt(PayStatusEnum.SUCCESS.getCode()) || pendingAlive) {
+                log.info("payment reused, paymentNo={}, orderNo={}, status={}",
+                    existing.getPaymentNo(), orderNo, status);
+                return existing.getId();
+            }
+            if (status == Integer.parseInt(PayStatusEnum.PENDING.getCode())) {
+                log.warn("payment expired pending, creating new one, paymentNo={}, orderNo={}, expireAt={}",
+                    existing.getPaymentNo(), orderNo, existing.getExpireAt());
+            }
+        }
+
+        // 生成支付流水号
         String paymentNo = generatePaymentNo();
+
+        // 支付过期时间设置为当前时间15分钟后
         LocalDateTime expireAt = LocalDateTime.now().plusMinutes(15);
 
+        // 组装新的支付交易记录
         PayTransactionPO po = new PayTransactionPO();
         po.setPaymentNo(paymentNo);
         po.setOrderNo(orderNo);
@@ -104,10 +139,11 @@ public class PayServiceImpl implements PayService {
         po.setChannel(channelCode);
         po.setExpireAt(expireAt);
         po.setIdempotencyKey(UUID.randomUUID().toString());
+
+        // 保存支付交易记录到数据库
         payManager.save(po);
 
-        String expireTime = expireAt.format(EXPIRE_FORMATTER);
-        alipayGateway.createPayment(paymentNo, amount, "Order " + orderNo, expireTime);
+        // 收银台表单由 getPaymentParams 重新生成，此处不做同步外部调用，避免支付宝不可达时阻塞下单请求
         log.info("payment created, paymentNo={}, orderNo={}, channel={}", paymentNo, orderNo, channelCode);
         return po.getId();
     }
@@ -132,8 +168,14 @@ public class PayServiceImpl implements PayService {
         payManager.updateById(po);
 
         // ponytail: 同步 Feign 触发 order.pay，失败走 fallback 仅记日志；事务消息升级路径见 RocketMqEventBus。
+        // 订单标识可能为订单ID（内部下单路径）或业务单号（C 端直付路径），按数字与否分流推进订单
         if (dto.isSuccess() && po.getOrderNo() != null) {
-            orderFeignClient.pay(Long.valueOf(po.getOrderNo()));
+            if (po.getOrderNo().matches("\\d+")) {
+                orderFeignClient.pay(Long.valueOf(po.getOrderNo()));
+            }
+            else {
+                orderFeignClient.payByOrderNo(po.getOrderNo());
+            }
         }
         log.info("payment callback handled, paymentNo={}, success={}", dto.getPaymentNo(), dto.isSuccess());
     }
@@ -178,7 +220,7 @@ public class PayServiceImpl implements PayService {
 
         Long orderId = Long.valueOf(payTx.getOrderNo());
         try {
-            String refundTradeNo = alipayGateway.refund(paymentNo, refundNo, dto.getAmount(), dto.getReason());
+            String refundTradeNo = payGateway.refund(paymentNo, refundNo, dto.getAmount(), dto.getReason());
             refund.setStatus(Integer.parseInt(RefundStatusEnum.SUCCESS.getCode()));
             refund.setRefundTradeNo(refundTradeNo);
             refund.setNotifiedAt(LocalDateTime.now());
@@ -207,14 +249,13 @@ public class PayServiceImpl implements PayService {
     }
 
     /**
-     * 按订单号查询支付流水，不存在时抛出 PAY_NOT_FOUND。
+     * 按订单号查询支付流水（取最近一条，兼容同一订单多次支付流水），不存在时抛出 PAY_NOT_FOUND。
      * @param orderNo 订单号
      * @return 支付流水实体
      */
     @Override
     public PayTransactionPO getByOrderNo(String orderNo) {
-        PayTransactionPO po = payManager.getOne(
-            Wrappers.lambdaQuery(PayTransactionPO.class).eq(PayTransactionPO::getOrderNo, orderNo));
+        PayTransactionPO po = latestByOrderNo(orderNo);
         if (po == null) {
             throw new BizException(PayCodeEnum.PAY_NOT_FOUND);
         }
@@ -222,7 +263,36 @@ public class PayServiceImpl implements PayService {
     }
 
     /**
+     * 查询指定订单号最近一条支付流水，无则返回 null。
+     * @param orderNo 订单号
+     * @return 支付流水实体或 null
+     */
+    private PayTransactionPO latestByOrderNo(String orderNo) {
+        return payManager.getOne(Wrappers.lambdaQuery(PayTransactionPO.class)
+            .eq(PayTransactionPO::getOrderNo, orderNo)
+            .orderByDesc(PayTransactionPO::getId)
+            .last("LIMIT 1"));
+    }
+
+    /**
+     * 按订单标识解析订单归属商户，order-service 不可达或订单不存在时返回 null。
+     * @param orderNo 订单标识（订单ID或业务单号）
+     * @return 商户ID或 null
+     */
+    private Long resolveMerchantId(String orderNo) {
+        try {
+            Result<Long> resp = orderFeignClient.merchantId(orderNo);
+            return resp == null ? null : resp.getData();
+        }
+        catch (Exception e) {
+            log.warn("resolve order merchant failed, orderNo={}, fallback to default merchant", orderNo);
+            return null;
+        }
+    }
+
+    /**
      * 按支付单号查询支付参数，供前端调起渠道 SDK，不存在时抛出 PAY_NOT_FOUND。
+     * precreate 幂等，重新生成当面付二维码内容返回给前端；支付宝不可达时抛异常并由全局异常处理返回错误。
      * @param paymentNo 支付单号
      * @return 支付参数VO
      */
@@ -233,9 +303,12 @@ public class PayServiceImpl implements PayService {
         if (po == null) {
             throw new BizException(PayCodeEnum.PAY_NOT_FOUND);
         }
+        String qrCode = payGateway.createPayment(
+            po.getPaymentNo(), po.getAmount(), "Order " + po.getOrderNo(),
+            po.getExpireAt().format(EXPIRE_FORMATTER));
         return new PaymentParamsVO(
             po.getPaymentNo(), po.getOrderNo(), po.getAmount(), po.getCurrency(),
-            po.getChannel(), "Order " + po.getOrderNo(), po.getExpireAt());
+            po.getChannel(), "Order " + po.getOrderNo(), po.getExpireAt(), qrCode);
     }
 
     /**

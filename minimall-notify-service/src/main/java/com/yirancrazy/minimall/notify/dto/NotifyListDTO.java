@@ -1,6 +1,5 @@
 package com.yirancrazy.minimall.notify.dto;
 
-import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import com.yirancrazy.minimall.common.dto.CursorPageDTO;
@@ -15,7 +14,7 @@ import com.yirancrazy.minimall.common.dto.CursorPageDTO;
 @EqualsAndHashCode(callSuper = true)
 public class NotifyListDTO extends CursorPageDTO {
 
-    @NotNull(message = "userId cannot be null")
+    /** 接收方 ID，由 Controller 从可信 Header（X-Merchant-Id）注入，前端不传 */
     private Long userId;
 
     /** 接收方类型，见 RecipientTypeEnum */

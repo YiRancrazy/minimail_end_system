@@ -122,7 +122,7 @@ public class StockServiceImpl implements StockService {
     }
 
     /**
-     * 设置库存预警阈值。
+     * 设置库存预警阈值。库存记录不存在时自动创建（初始可用 0）。
      * @param skuId 商品SKU ID
      * @param threshold 预警阈值，必须 >= 0
      * @throws BizException 当阈值非法时
@@ -133,14 +133,14 @@ public class StockServiceImpl implements StockService {
         if (threshold == null || threshold < 0) {
             throw new BizException(StockCodeEnum.THRESHOLD_INVALID);
         }
-        StockPO po = getStock(skuId);
+        StockPO po = getOrCreateStock(skuId);
         po.setAlertThreshold(threshold);
         stockManager.updateById(po);
         log.info("threshold set, skuId={}, threshold={}", skuId, threshold);
     }
 
     /**
-     * 手动调整库存数量。
+     * 手动调整库存数量。库存记录不存在时自动创建（初始可用 0），保证商家首次入库可用。
      * @param skuId 商品SKU ID
      * @param quantity 调整数量，正数增加、负数扣减，不能为0
      * @param reason 调整原因
@@ -152,7 +152,7 @@ public class StockServiceImpl implements StockService {
         if (quantity == null || quantity == 0) {
             throw new BizException(StockCodeEnum.ADJUST_QUANTITY_ZERO);
         }
-        StockPO po = getStock(skuId);
+        StockPO po = getOrCreateStock(skuId);
         po.setAvailable(po.getAvailable() + quantity);
         stockManager.updateById(po);
 
@@ -438,6 +438,26 @@ public class StockServiceImpl implements StockService {
         if (po == null) {
             throw new BizException(StockCodeEnum.STOCK_NOT_FOUND);
         }
+        return po;
+    }
+
+    /**
+     * 查询库存记录；不存在则创建初始记录（可用 0）。仅用于商家调整/设阈值这类
+     * 允许"首次建立库存"的入口；订单预占等场景仍用 getStock 强制要求记录存在。
+     * ponytail: 简单 select-then-insert，商家手动操作低频，并发冲突概率可忽略；
+     * 若后续出现并发建记录冲突，再引入 skuId 唯一索引 + 冲突重查。
+     */
+    private StockPO getOrCreateStock(Long skuId) {
+        StockPO po = stockManager.getOne(
+            Wrappers.lambdaQuery(StockPO.class).eq(StockPO::getSkuId, skuId));
+        if (po != null) {
+            return po;
+        }
+        po = new StockPO();
+        po.setSkuId(skuId);
+        po.setAvailable(0L);
+        po.setReserved(0L);
+        stockManager.save(po);
         return po;
     }
 

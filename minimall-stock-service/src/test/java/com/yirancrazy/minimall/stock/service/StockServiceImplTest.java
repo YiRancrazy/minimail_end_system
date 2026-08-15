@@ -555,6 +555,52 @@ public class StockServiceImplTest {
     }
 
     /**
+     * 验证 adjustStock 在库存记录不存在时自动创建初始记录（可用 0）再累加调整量。
+     */
+    @Test
+    public void adjustStock_noRecord_createsThenIncrements() {
+        final StockPO[] created = new StockPO[1];
+        when(manager.getOne(any())).thenReturn(null);
+        when(manager.save(any(StockPO.class))).thenAnswer(invocation -> {
+            StockPO po = invocation.getArgument(0);
+            po.setId(2L);
+            created[0] = po;
+            return true;
+        });
+
+        service.adjustStock(200L, 5L, "initial");
+
+        assertNotNull(created[0]);
+        assertEquals(200L, created[0].getSkuId());
+        assertEquals(5L, created[0].getAvailable());
+        verify(manager).save(created[0]);
+        verify(manager).updateById(created[0]);
+        verify(journalManager).save(any(StockJournalPO.class));
+    }
+
+    /**
+     * 验证 setThreshold 在库存记录不存在时自动创建初始记录。
+     */
+    @Test
+    public void setThreshold_noRecord_creates() {
+        final StockPO[] created = new StockPO[1];
+        when(manager.getOne(any())).thenReturn(null);
+        when(manager.save(any(StockPO.class))).thenAnswer(invocation -> {
+            StockPO po = invocation.getArgument(0);
+            po.setId(3L);
+            created[0] = po;
+            return true;
+        });
+
+        service.setThreshold(300L, 20L);
+
+        assertNotNull(created[0]);
+        assertEquals(300L, created[0].getSkuId());
+        assertEquals(20L, created[0].getAlertThreshold());
+        verify(manager).updateById(created[0]);
+    }
+
+    /**
      * 验证 setThreshold 正常设置预警阈值。
      */
     @Test

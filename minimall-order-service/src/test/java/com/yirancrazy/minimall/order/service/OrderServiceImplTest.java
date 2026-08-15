@@ -8,6 +8,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
@@ -168,6 +169,29 @@ public class OrderServiceImplTest {
         when(manager.getById(99L)).thenReturn(existing);
 
         assertThrows(BizException.class, () -> service.pay(99L));
+    }
+
+    /**
+     * 验证 payByOrderNo 按业务单号推进订单为已支付。
+     */
+    @Test
+    public void payByOrderNo_transitions_to_paid() {
+        OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.PENDING.intCode());
+        when(manager.getOne(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class))).thenReturn(existing);
+        when(manager.getById(99L)).thenReturn(existing);
+
+        service.payByOrderNo("OD20260814001");
+        assertEquals(OrderStatusEnum.PAID.intCode(), existing.getStatus());
+        verify(manager).updateById(existing);
+    }
+
+    /**
+     * 验证 payByOrderNo 订单不存在时抛出异常。
+     */
+    @Test
+    public void payByOrderNo_missing_throws() {
+        when(manager.getOne(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class))).thenReturn(null);
+        assertThrows(BizException.class, () -> service.payByOrderNo("NOPE"));
     }
 
     /**
@@ -350,6 +374,41 @@ public class OrderServiceImplTest {
     }
 
     /**
+     * 验证 resolveMerchantId 按纯数字订单ID解析归属商户。
+     */
+    @Test
+    public void resolveMerchantId_by_id_returns_merchant() {
+        OrderPO existing = buildOrder(99L, 1L, 42L, OrderStatusEnum.PENDING.intCode());
+        when(manager.getById(99L)).thenReturn(existing);
+
+        assertEquals(42L, service.resolveMerchantId("99").longValue());
+    }
+
+    /**
+     * 验证 resolveMerchantId 按业务单号解析归属商户（ID未命中时走 order_no 查询）。
+     */
+    @Test
+    public void resolveMerchantId_by_order_no_returns_merchant() {
+        OrderPO existing = buildOrder(99L, 1L, 42L, OrderStatusEnum.PENDING.intCode());
+        when(manager.getById(any())).thenReturn(null);
+        when(manager.getOne(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class))).thenReturn(existing);
+
+        assertEquals(42L, service.resolveMerchantId("ORD-123").longValue());
+    }
+
+    /**
+     * 验证 resolveMerchantId 订单不存在或入参为空时返回 null。
+     */
+    @Test
+    public void resolveMerchantId_missing_returns_null() {
+        when(manager.getById(any())).thenReturn(null);
+        when(manager.getOne(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class))).thenReturn(null);
+
+        assertNull(service.resolveMerchantId("NOPE"));
+        assertNull(service.resolveMerchantId(null));
+    }
+
+    /**
      * 验证商家关闭待支付订单成功，状态推进为 CANCELED 并释放库存。
      */
     @Test
@@ -450,6 +509,41 @@ public class OrderServiceImplTest {
         when(manager.count(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class))).thenReturn(5L);
         long count = service.pendingCount(10L);
         assertEquals(5L, count);
+    }
+
+    /**
+     * 验证 countStatusByUser 按状态聚合返回各状态订单数量。
+     */
+    @Test
+    public void countStatusByUser_aggregates_by_status() {
+        when(orderMapper.countByStatus(7L)).thenReturn(java.util.List.of(
+            java.util.Map.of("status", 1, "cnt", 1L),
+            java.util.Map.of("status", 2, "cnt", 2L),
+            java.util.Map.of("status", 3, "cnt", 1L),
+            java.util.Map.of("status", 4, "cnt", 1L),
+            java.util.Map.of("status", 5, "cnt", 3L)));
+
+        com.yirancrazy.minimall.order.vo.OrderStatusCountsVO vo = service.countStatusByUser(7L);
+
+        assertEquals(1L, vo.getPendingCount());
+        assertEquals(2L, vo.getPaidCount());
+        assertEquals(1L, vo.getShippedCount());
+        assertEquals(1L, vo.getCompletedCount());
+    }
+
+    /**
+     * 验证 countStatusByUser 无订单时各状态数量为 0。
+     */
+    @Test
+    public void countStatusByUser_returns_zero_when_empty() {
+        when(orderMapper.countByStatus(7L)).thenReturn(java.util.Collections.emptyList());
+
+        com.yirancrazy.minimall.order.vo.OrderStatusCountsVO vo = service.countStatusByUser(7L);
+
+        assertEquals(0L, vo.getPendingCount());
+        assertEquals(0L, vo.getPaidCount());
+        assertEquals(0L, vo.getShippedCount());
+        assertEquals(0L, vo.getCompletedCount());
     }
 
     /**

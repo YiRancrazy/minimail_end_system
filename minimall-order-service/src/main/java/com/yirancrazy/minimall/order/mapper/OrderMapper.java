@@ -1,6 +1,8 @@
 package com.yirancrazy.minimall.order.mapper;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
@@ -41,4 +43,13 @@ public interface OrderMapper extends BaseMapper<OrderPO> {
     OrderStatisticsVO statistics(@Param("merchantId") Long merchantId,
                                  @Param("startTime") LocalDateTime startTime,
                                  @Param("endTime") LocalDateTime endTime);
+
+    /**
+     * 按状态统计指定用户订单数，返回 status→cnt 行。
+     * @param userId 用户ID
+     * @return status 与订单数量映射行列表
+     */
+    @Select("SELECT status, COUNT(*) AS cnt FROM t_order "
+        + "WHERE user_id = #{userId} AND is_deleted = 0 GROUP BY status")
+    List<Map<String, Object>> countByStatus(@Param("userId") Long userId);
 }

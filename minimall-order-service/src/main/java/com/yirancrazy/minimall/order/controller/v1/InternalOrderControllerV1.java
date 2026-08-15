@@ -37,6 +37,17 @@ public class InternalOrderControllerV1 {
     }
 
     /**
+     * 按订单标识（订单ID或业务单号）解析订单归属商户ID，供支付服务归属收款商户。
+     *
+     * @param ref 订单标识
+     * @return 商户ID；订单不存在时返回 null
+     */
+    @GetMapping("/merchant/{ref}")
+    public Result<Long> merchantId(@PathVariable String ref) {
+        return Result.success(orderService.resolveMerchantId(ref));
+    }
+
+    /**
      * 推进指定订单为已支付状态，并广播 OrderPaidDTO 事件。
      *
      * @param id 订单标识
@@ -45,6 +56,18 @@ public class InternalOrderControllerV1 {
     @PostMapping("/pay/{id}")
     public Result<Void> pay(@PathVariable Long id) {
         orderService.pay(id);
+        return Result.success(null);
+    }
+
+    /**
+     * 按业务单号推进订单为已支付状态，供支付回调（C 端携带业务单号）使用。
+     *
+     * @param orderNo 业务单号
+     * @return 空响应体
+     */
+    @PostMapping("/pay-by-order-no/{orderNo}")
+    public Result<Void> payByOrderNo(@PathVariable String orderNo) {
+        orderService.payByOrderNo(orderNo);
         return Result.success(null);
     }
 

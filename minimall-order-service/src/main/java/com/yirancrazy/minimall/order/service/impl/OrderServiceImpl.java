@@ -42,6 +42,7 @@ import com.yirancrazy.minimall.order.mapper.OrderMapper;
 import com.yirancrazy.minimall.order.service.OrderService;
 import com.yirancrazy.minimall.order.vo.OrderLogisticsVO;
 import com.yirancrazy.minimall.order.vo.OrderStatisticsVO;
+import com.yirancrazy.minimall.order.vo.OrderStatusCountsVO;
 
 /**
  * @Author: yirancrazy@gmail.com
@@ -254,6 +255,21 @@ public class OrderServiceImpl implements OrderService {
     }
 
     /**
+     * 按业务单号推进订单为已支付，C 端支付回调携带业务单号而非订单ID，不存在时抛出 ORDER_NOT_FOUND。
+     * @param orderNo 业务单号
+     */
+    @Override
+    public void payByOrderNo(String orderNo) {
+        OrderPO po = orderManager.getOne(Wrappers.lambdaQuery(OrderPO.class)
+            .eq(OrderPO::getOrderNo, orderNo)
+            .last("LIMIT 1"));
+        if (po == null) {
+            throw new BizException(OrderCodeEnum.ORDER_NOT_FOUND);
+        }
+        pay(po.getId());
+    }
+
+    /**
      * Check whether the order has reached PAID status, used as the
      * transaction-message callback checker.
      * @param orderId the order id to probe
@@ -360,6 +376,34 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public Integer getStatus(Long orderId) {
         return getOrder(orderId).getStatus();
+    }
+
+    /**
+     * 按订单标识解析归属商户：纯数字按订单ID查，其余按业务单号查，不存在返回 null。
+     * 支付服务在 C 端无商户上下文的场景用此接口归属收款商户。
+     * @param ref 订单标识
+     * @return 商户ID，订单不存在时返回 null
+     */
+    @Override
+    public Long resolveMerchantId(String ref) {
+        if (ref == null || ref.isBlank()) {
+            return null;
+        }
+        OrderPO po = null;
+        if (ref.matches("\\d+")) {
+            try {
+                po = orderManager.getById(Long.valueOf(ref));
+            }
+            catch (NumberFormatException e) {
+                po = null;
+            }
+        }
+        if (po == null) {
+            po = orderManager.getOne(Wrappers.lambdaQuery(OrderPO.class)
+                .eq(OrderPO::getOrderNo, ref)
+                .last("LIMIT 1"));
+        }
+        return po == null ? null : po.getMerchantId();
     }
 
     /**
@@ -570,11 +614,12 @@ public class OrderServiceImpl implements OrderService {
     public CursorPageVO<OrderPO> page(OrderPageDTO dto) {
         Long lastId = CursorUtils.decode(dto.getCursor());
         int limit = dto.getLimit();
+        Integer statusCode = resolveStatusCode(dto.getStatus());
         List<OrderPO> records = orderManager.list(Wrappers.lambdaQuery(OrderPO.class)
             .lt(lastId != null, OrderPO::getId, lastId)
             .eq(dto.getUserId() != null, OrderPO::getUserId, dto.getUserId())
             .eq(dto.getMerchantId() != null, OrderPO::getMerchantId, dto.getMerchantId())
-            .eq(dto.getStatus() != null, OrderPO::getStatus, dto.getStatus())
+            .eq(statusCode != null, OrderPO::getStatus, statusCode)
             .ge(dto.getStartTime() != null, OrderPO::getCreateTime, dto.getStartTime())
             .le(dto.getEndTime() != null, OrderPO::getCreateTime, dto.getEndTime())
             .orderByDesc(OrderPO::getId)
@@ -590,10 +635,11 @@ public class OrderServiceImpl implements OrderService {
      */
     @Override
     public List<OrderPO> exportList(Long merchantId, OrderPageDTO dto) {
+        Integer statusCode = resolveStatusCode(dto.getStatus());
         return orderManager.list(Wrappers.lambdaQuery(OrderPO.class)
             .eq(OrderPO::getMerchantId, merchantId)
             .eq(dto.getUserId() != null, OrderPO::getUserId, dto.getUserId())
-            .eq(dto.getStatus() != null, OrderPO::getStatus, dto.getStatus())
+            .eq(statusCode != null, OrderPO::getStatus, statusCode)
             .ge(dto.getStartTime() != null, OrderPO::getCreateTime, dto.getStartTime())
             .le(dto.getEndTime() != null, OrderPO::getCreateTime, dto.getEndTime())
             .orderByDesc(OrderPO::getCreateTime)
@@ -607,14 +653,32 @@ public class OrderServiceImpl implements OrderService {
      */
     @Override
     public List<OrderPO> platformExportList(OrderPageDTO dto) {
+        Integer statusCode = resolveStatusCode(dto.getStatus());
         return orderManager.list(Wrappers.lambdaQuery(OrderPO.class)
             .eq(dto.getUserId() != null, OrderPO::getUserId, dto.getUserId())
             .eq(dto.getMerchantId() != null, OrderPO::getMerchantId, dto.getMerchantId())
-            .eq(dto.getStatus() != null, OrderPO::getStatus, dto.getStatus())
+            .eq(statusCode != null, OrderPO::getStatus, statusCode)
             .ge(dto.getStartTime() != null, OrderPO::getCreateTime, dto.getStartTime())
             .le(dto.getEndTime() != null, OrderPO::getCreateTime, dto.getEndTime())
             .orderByDesc(OrderPO::getCreateTime)
             .last("LIMIT " + CsvExporter.maxExportRows()));
+    }
+
+    /**
+     * 将订单状态枚举别名（如 PENDING）解析为持久化状态码；非法或空值返回 null 表示不过滤。
+     * @param status 状态枚举别名
+     * @return 持久化状态码或 null
+     */
+    private Integer resolveStatusCode(String status) {
+        if (status == null || status.isBlank()) {
+            return null;
+        }
+        for (OrderStatusEnum e : OrderStatusEnum.values()) {
+            if (e.getAlias().equalsIgnoreCase(status)) {
+                return e.intCode();
+            }
+        }
+        return null;
     }
 
     /**
@@ -625,6 +689,34 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public OrderStatisticsVO statistics(OrderPageDTO dto) {
         return orderMapper.statistics(dto.getMerchantId(), dto.getStartTime(), dto.getEndTime());
+    }
+
+    /**
+     * 统计指定用户各状态订单数量：委托 OrderMapper 单条 GROUP BY 查询。
+     * @param userId 用户ID
+     * @return 各状态订单数量VO
+     */
+    @Override
+    public OrderStatusCountsVO countStatusByUser(Long userId) {
+        List<java.util.Map<String, Object>> rows = orderMapper.countByStatus(userId);
+        OrderStatusCountsVO vo = new OrderStatusCountsVO();
+        for (java.util.Map<String, Object> row : rows) {
+            Number status = (Number) row.get("status");
+            Number cnt = (Number) row.get("cnt");
+            if (status == null || cnt == null) {
+                continue;
+            }
+            long count = cnt.longValue();
+            switch (status.intValue()) {
+                case 1 -> vo.setPendingCount(count);
+                case 2 -> vo.setPaidCount(count);
+                case 3 -> vo.setShippedCount(count);
+                case 4 -> vo.setCompletedCount(count);
+                default -> {
+                }
+            }
+        }
+        return vo;
     }
 
     /**

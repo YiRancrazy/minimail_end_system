@@ -20,24 +20,28 @@ class OrderVOTest {
     void from_mapsAllFields() {
         OrderPO po = new OrderPO();
         po.setId(1001L);
+        po.setOrderNo("OD202608041030");
         po.setUserId(2001L);
         po.setMerchantId(3001L);
         po.setSkuId(4001L);
         po.setQuantity(2);
         po.setAmount(new BigDecimal("99.50"));
         po.setStatus(1);
+        po.setReceiverSnapshotJson("{\"receiver\":\"张三\"}");
         po.setCreateTime(LocalDateTime.of(2026, 8, 4, 10, 30, 0));
 
         OrderVO vo = OrderVO.from(po);
 
         assertNotNull(vo);
         assertEquals(1001L, vo.getId());
+        assertEquals("OD202608041030", vo.getOrderNo());
         assertEquals(2001L, vo.getUserId());
         assertEquals(3001L, vo.getMerchantId());
         assertEquals(4001L, vo.getSkuId());
         assertEquals(2, vo.getQuantity());
-        assertEquals(0, new BigDecimal("99.50").compareTo(vo.getAmount()));
-        assertEquals(1, vo.getStatus());
+        assertEquals("99.50", vo.getAmount());
+        assertEquals("PENDING", vo.getStatus());
+        assertEquals("{\"receiver\":\"张三\"}", vo.getAddressSnapshot());
         assertEquals(LocalDateTime.of(2026, 8, 4, 10, 30, 0), vo.getCreateTime());
     }
 
@@ -61,8 +65,8 @@ class OrderVOTest {
         assertEquals(2002L, vo.getUserId());
         assertEquals(4002L, vo.getSkuId());
         assertEquals(1, vo.getQuantity());
-        assertEquals(0, new BigDecimal("10.00").compareTo(vo.getAmount()));
-        assertEquals(0, vo.getStatus());
+        assertEquals("10.00", vo.getAmount());
+        assertEquals("0", vo.getStatus());
         assertEquals(LocalDateTime.of(2026, 8, 4, 11, 0, 0), vo.getCreateTime());
     }
 }

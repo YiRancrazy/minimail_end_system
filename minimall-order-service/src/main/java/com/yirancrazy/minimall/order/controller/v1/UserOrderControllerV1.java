@@ -21,6 +21,7 @@ import com.yirancrazy.minimall.order.dto.OrderPageDTO;
 import com.yirancrazy.minimall.order.entity.OrderPO;
 import com.yirancrazy.minimall.order.service.OrderService;
 import com.yirancrazy.minimall.order.vo.OrderLogisticsVO;
+import com.yirancrazy.minimall.order.vo.OrderStatusCountsVO;
 import com.yirancrazy.minimall.order.vo.OrderVO;
 
 /**
@@ -47,6 +48,16 @@ public class UserOrderControllerV1 {
     @GetMapping
     public Result<CursorPageVO<OrderVO>> page(@Valid OrderPageDTO dto) {
         return Result.success(orderService.page(dto).map(OrderVO::from));
+    }
+
+    /**
+     * 统计当前用户各状态订单数量，供"我的"页面订单快捷入口角标展示。
+     * @param userId 用户ID，来自网关 X-User-Id 头
+     * @return 各状态订单数量VO
+     */
+    @GetMapping("/status-counts")
+    public Result<OrderStatusCountsVO> statusCounts(@RequestHeader("X-User-Id") Long userId) {
+        return Result.success(orderService.countStatusByUser(userId));
     }
 
     /**

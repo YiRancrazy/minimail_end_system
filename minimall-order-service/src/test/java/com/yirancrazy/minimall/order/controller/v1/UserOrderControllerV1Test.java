@@ -55,6 +55,29 @@ class UserOrderControllerV1Test {
     }
 
     /**
+     * 验证 GET /api/v1/user/orders/status-counts 带 X-User-Id 头返回各状态订单数量。
+     */
+    @Test
+    void statusCounts_returns_counts() throws Exception {
+        com.yirancrazy.minimall.order.vo.OrderStatusCountsVO vo =
+            new com.yirancrazy.minimall.order.vo.OrderStatusCountsVO();
+        vo.setPendingCount(2);
+        vo.setPaidCount(1);
+        vo.setShippedCount(3);
+        vo.setCompletedCount(4);
+        when(service.countStatusByUser(7L)).thenReturn(vo);
+
+        mockMvc.perform(get("/api/v1/user/orders/status-counts").header("X-User-Id", 7L))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.code").value("00000"))
+            .andExpect(jsonPath("$.data.pendingCount").value(2))
+            .andExpect(jsonPath("$.data.paidCount").value(1))
+            .andExpect(jsonPath("$.data.shippedCount").value(3))
+            .andExpect(jsonPath("$.data.completedCount").value(4));
+        verify(service).countStatusByUser(7L);
+    }
+
+    /**
      * 验证 POST /api/v1/user/orders/checkout 调用 service 并返回 201。
      */
     @Test

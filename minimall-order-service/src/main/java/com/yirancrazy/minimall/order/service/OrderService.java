@@ -7,6 +7,7 @@ import com.yirancrazy.minimall.order.dto.OrderPageDTO;
 import com.yirancrazy.minimall.order.entity.OrderPO;
 import com.yirancrazy.minimall.order.vo.OrderLogisticsVO;
 import com.yirancrazy.minimall.order.vo.OrderStatisticsVO;
+import com.yirancrazy.minimall.order.vo.OrderStatusCountsVO;
 
 /**
  * @Author: yirancrazy@gmail.com
@@ -26,6 +27,12 @@ public interface OrderService {
     Long checkout(Long userId, List<OrderCheckoutItemDTO> items);
 
     void pay(Long orderId);
+
+    /**
+     * 按业务单号推进订单为已支付，供支付回调使用（C 端支付回调携带业务单号而非订单ID）。
+     * @param orderNo 业务单号
+     */
+    void payByOrderNo(String orderNo);
 
     void cancel(Long orderId, Long userId);
 
@@ -48,6 +55,13 @@ public interface OrderService {
     void handleRefundCallback(Long orderId, boolean success);
 
     Integer getStatus(Long orderId);
+
+    /**
+     * 按订单标识（订单ID或业务单号）解析订单归属商户ID，供支付服务归属收款商户。
+     * @param ref 订单标识
+     * @return 商户ID；订单不存在时返回 null
+     */
+    Long resolveMerchantId(String ref);
 
     /**
      * 查询订单详情，不存在时抛出 ORDER_NOT_FOUND。
@@ -133,6 +147,13 @@ public interface OrderService {
      * @return 订单统计VO
      */
     OrderStatisticsVO statistics(OrderPageDTO dto);
+
+    /**
+     * 统计指定用户各状态订单数量（待支付/待发货/待收货/已完成），供用户端"我的"页角标展示。
+     * @param userId 用户ID
+     * @return 各状态订单数量VO
+     */
+    OrderStatusCountsVO countStatusByUser(Long userId);
 
     /**
      * 扫描超时未支付订单，逐个推进 PENDING→CANCELED 并释放库存。由定时任务调度。

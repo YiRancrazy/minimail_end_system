@@ -1,6 +1,5 @@
 package com.yirancrazy.minimall.order.vo;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import lombok.Data;
 import com.yirancrazy.minimall.order.entity.OrderPO;
@@ -15,12 +14,16 @@ import com.yirancrazy.minimall.order.entity.OrderPO;
 public class OrderVO {
 
     private Long id;
+    private String orderNo;
     private Long userId;
     private Long merchantId;
     private Long skuId;
     private Integer quantity;
-    private BigDecimal amount;
-    private Integer status;
+    /** 订单金额（元），字符串避免前端浮点精度问题 */
+    private String amount;
+    /** 订单状态枚举别名（如 PENDING），未知状态码原样返回 */
+    private String status;
+    private String addressSnapshot;
     private LocalDateTime createTime;
 
     /**
@@ -31,13 +34,30 @@ public class OrderVO {
     public static OrderVO from(OrderPO po) {
         OrderVO vo = new OrderVO();
         vo.setId(po.getId());
+        vo.setOrderNo(po.getOrderNo());
         vo.setUserId(po.getUserId());
         vo.setMerchantId(po.getMerchantId());
         vo.setSkuId(po.getSkuId());
         vo.setQuantity(po.getQuantity());
-        vo.setAmount(po.getAmount());
-        vo.setStatus(po.getStatus());
+        vo.setAmount(po.getAmount() == null ? null : po.getAmount().toPlainString());
+        vo.setStatus(statusAlias(po.getStatus()));
+        vo.setAddressSnapshot(po.getReceiverSnapshotJson());
         vo.setCreateTime(po.getCreateTime());
         return vo;
+    }
+
+    /**
+     * 将持久化状态码映射为枚举别名，未知码原样返回数字字符串避免丢失状态。
+     * @param code 持久化状态码
+     * @return 状态枚举别名
+     */
+    private static String statusAlias(Integer code) {
+        for (com.yirancrazy.minimall.order.constant.OrderStatusEnum e
+                : com.yirancrazy.minimall.order.constant.OrderStatusEnum.values()) {
+            if (e.getCode().equals(String.valueOf(code))) {
+                return e.getAlias();
+            }
+        }
+        return String.valueOf(code);
     }
 }

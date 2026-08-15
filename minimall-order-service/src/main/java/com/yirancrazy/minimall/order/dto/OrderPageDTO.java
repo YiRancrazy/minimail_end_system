@@ -17,7 +17,8 @@ public class OrderPageDTO extends CursorPageDTO {
 
     private Long userId;
     private Long merchantId;
-    private Integer status;
+    /** 订单状态过滤，使用枚举别名（如 PENDING），由服务层转状态码 */
+    private String status;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
 }

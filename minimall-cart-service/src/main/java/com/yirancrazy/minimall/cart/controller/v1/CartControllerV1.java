@@ -42,7 +42,7 @@ public class CartControllerV1 {
      */
     @GetMapping
     public Result<List<CartItemVO>> list(@RequestHeader("X-User-Id") Long userId) {
-        return Result.success(cartService.listByUser(userId).stream().map(CartItemVO::from).toList());
+        return Result.success(cartService.listByUser(userId));
     }
 
     /**
@@ -85,9 +85,10 @@ public class CartControllerV1 {
      * @return 更新是否成功
      */
     @PutMapping("/select-all")
-    public Result<Boolean> selectAll(@RequestHeader("X-User-Id") Long userId, @Valid @RequestBody CartSelectAllDTO dto) {
+    public Result<Boolean> selectAll(@RequestHeader("X-User-Id") Long userId,
+                                     @Valid @RequestBody CartSelectAllDTO dto) {
         return Result.success(cartService.selectAll(
-            userId, dto.getSelected()));
+            userId, dto.getIsSelected() ? 1 : 0));
     }
 
     /**

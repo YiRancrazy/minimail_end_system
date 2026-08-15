@@ -81,7 +81,7 @@ class CartControllerV1Test {
         when(cartService.update(anyLong(), any(CartUpdateDTO.class))).thenReturn(true);
         CartUpdateDTO dto = new CartUpdateDTO();
         dto.setQuantity(3);
-        dto.setIsSelected(1);
+        dto.setIsSelected(true);
         mockMvc.perform(patch("/api/v1/user/cart/99")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(mapper.writeValueAsString(dto)))

@@ -4,6 +4,9 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.extern.slf4j.Slf4j;
+import com.yirancrazy.minimall.api.dto.goods.SkuSnapshotDTO;
+import com.yirancrazy.minimall.api.dto.goods.SpuSnapshotDTO;
+import com.yirancrazy.minimall.api.feign.GoodsFeignClient;
 import com.yirancrazy.minimall.api.feign.UserFeignClient;
 import com.yirancrazy.minimall.cart.constant.CartCodeEnum;
 import com.yirancrazy.minimall.cart.dto.CartItemAddDTO;
@@ -11,6 +14,7 @@ import com.yirancrazy.minimall.cart.dto.CartUpdateDTO;
 import com.yirancrazy.minimall.cart.entity.CartItemPO;
 import com.yirancrazy.minimall.cart.manager.CartItemManager;
 import com.yirancrazy.minimall.cart.service.CartService;
+import com.yirancrazy.minimall.cart.vo.CartItemVO;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CommonCode;
 import com.yirancrazy.minimall.common.result.Result;
@@ -18,7 +22,7 @@ import com.yirancrazy.minimall.common.result.Result;
 /**
  * @Author: yirancrazy@gmail.com
  * @Description: 购物车领域服务实现，实现Cart相关业务逻辑
- * @Version: 1.2
+ * @Version: 1.3
  * @DateTime: 2026/08/03
  */
 @Slf4j
@@ -27,22 +31,33 @@ public class CartServiceImpl implements CartService {
 
     private final CartItemManager cartItemManager;
     private final UserFeignClient userFeignClient;
+    private final GoodsFeignClient goodsFeignClient;
 
-    public CartServiceImpl(CartItemManager cartItemManager, UserFeignClient userFeignClient) {
+    public CartServiceImpl(CartItemManager cartItemManager, UserFeignClient userFeignClient,
+                           GoodsFeignClient goodsFeignClient) {
         this.cartItemManager = cartItemManager;
         this.userFeignClient = userFeignClient;
+        this.goodsFeignClient = goodsFeignClient;
     }
 
     /**
-     * 根据用户 ID 查询其购物车全部条目。
+     * 根据用户 ID 查询其购物车全部条目，并叠加 SKU/SPU 快照用于前端渲染。
      *
      * @param userId 用户ID，来自网关X-User-Id可信头
      * @return 该用户购物车条目列表
      */
     @Override
-    public List<CartItemPO> listByUser(Long userId) {
-        return cartItemManager.list(Wrappers.lambdaQuery(CartItemPO.class)
+    public List<CartItemVO> listByUser(Long userId) {
+        List<CartItemPO> items = cartItemManager.list(Wrappers.lambdaQuery(CartItemPO.class)
             .eq(CartItemPO::getUserId, userId));
+        // ponytail: 逐条拉取快照，购物车规模小可接受；量大再改批量快照接口
+        return items.stream().map(item -> {
+            SkuSnapshotDTO sku = goodsFeignClient.skuSnapshot(item.getSkuId()).getData();
+            SpuSnapshotDTO spu = sku == null || sku.getSpuId() == null
+                ? null
+                : goodsFeignClient.spuSnapshot(sku.getSpuId()).getData();
+            return CartItemVO.from(item, sku, spu);
+        }).toList();
     }
 
     /**
@@ -102,7 +117,7 @@ public class CartServiceImpl implements CartService {
             existing.setQuantity(dto.getQuantity());
         }
         if (dto.getIsSelected() != null) {
-            existing.setSelected(dto.getIsSelected());
+            existing.setSelected(dto.getIsSelected() ? 1 : 0);
         }
         return cartItemManager.updateById(existing);
     }

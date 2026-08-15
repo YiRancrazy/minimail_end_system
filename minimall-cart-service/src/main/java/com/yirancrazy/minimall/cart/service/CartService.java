@@ -3,7 +3,7 @@ package com.yirancrazy.minimall.cart.service;
 import java.util.List;
 import com.yirancrazy.minimall.cart.dto.CartItemAddDTO;
 import com.yirancrazy.minimall.cart.dto.CartUpdateDTO;
-import com.yirancrazy.minimall.cart.entity.CartItemPO;
+import com.yirancrazy.minimall.cart.vo.CartItemVO;
 
 /**
  * @Author: yirancrazy@gmail.com
@@ -13,11 +13,11 @@ import com.yirancrazy.minimall.cart.entity.CartItemPO;
  */
 public interface CartService {
     /**
-     * 根据用户查询购物车列表。
+     * 根据用户查询购物车列表，含商品快照展示字段。
      * @param userId 用户ID，来自网关X-User-Id可信头
      * @return 购物车项列表
      */
-    List<CartItemPO> listByUser(Long userId);
+    List<CartItemVO> listByUser(Long userId);
 
     /**
      * 添加购物车项。

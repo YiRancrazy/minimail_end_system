@@ -1,61 +1,89 @@
 package com.yirancrazy.minimall.cart.vo;
 
-import java.time.LocalDateTime;
+import java.math.BigDecimal;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import com.yirancrazy.minimall.api.dto.goods.SkuSnapshotDTO;
+import com.yirancrazy.minimall.api.dto.goods.SpuSnapshotDTO;
 import com.yirancrazy.minimall.cart.entity.CartItemPO;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: CartItemVO 单元测试，覆盖 from 转换方法的字段映射与空值场景。
- * @Version: 1.0
- * @DateTime: 2026/08/04
+ * @Description: CartItemVO 单元测试，覆盖 from 转换方法的字段映射、勾选状态转换与快照空值场景。
+ * @Version: 1.1
+ * @DateTime: 2026/08/13
  **/
 public class CartItemVOTest {
 
     /**
-     * 验证 from 方法正确映射 CartItemPO 的所有字段。
+     * 验证 from 方法正确叠加 SKU 与 SPU 快照字段。
      */
     @Test
-    public void from_mapsAllFields() {
+    public void from_mergesSkuAndSpu() {
         CartItemPO po = new CartItemPO();
         po.setId(1L);
-        po.setUserId(7L);
         po.setSkuId(100L);
         po.setQuantity(2);
         po.setSelected(1);
-        LocalDateTime now = LocalDateTime.of(2026, 8, 4, 10, 0, 0);
-        po.setCreateTime(now);
+        SkuSnapshotDTO sku = new SkuSnapshotDTO(100L, 10L, "S 白色", new BigDecimal("9.90"), 99, 7L);
+        SpuSnapshotDTO spu = new SpuSnapshotDTO(10L, "商品标题", "http://img/a.jpg");
 
-        CartItemVO vo = CartItemVO.from(po);
+        CartItemVO vo = CartItemVO.from(po, sku, spu);
 
         assertNotNull(vo);
         assertEquals(1L, vo.getId());
-        assertEquals(7L, vo.getUserId());
         assertEquals(100L, vo.getSkuId());
+        assertEquals(10L, vo.getSpuId());
+        assertEquals("商品标题", vo.getTitle());
+        assertEquals("S 白色", vo.getSkuSpec());
+        assertEquals(new BigDecimal("9.90"), vo.getPrice());
         assertEquals(2, vo.getQuantity());
-        assertEquals(1, vo.getSelected());
-        assertEquals(now, vo.getCreateTime());
+        assertTrue(vo.getIsSelected());
+        assertEquals(99, vo.getStock());
+        assertEquals("http://img/a.jpg", vo.getMainImage());
     }
 
     /**
-     * 验证 from 方法在 PO 字段为 null 时保留 null 值。
+     * 验证 selected 为 0 时 isSelected 转换为 false。
+     */
+    @Test
+    public void from_selectedZero_mapsToFalse() {
+        CartItemPO po = new CartItemPO();
+        po.setId(1L);
+        po.setSkuId(100L);
+        po.setQuantity(1);
+        po.setSelected(0);
+
+        CartItemVO vo = CartItemVO.from(po, null, null);
+
+        assertNotNull(vo);
+        assertFalse(vo.getIsSelected());
+        assertNull(vo.getTitle());
+        assertNull(vo.getPrice());
+        assertNull(vo.getStock());
+    }
+
+    /**
+     * 验证 from 方法在 PO 字段为 null 时保留 null 值且勾选态为 false。
      */
     @Test
     public void from_nullFields() {
         CartItemPO po = new CartItemPO();
         po.setId(1L);
 
-        CartItemVO vo = CartItemVO.from(po);
+        CartItemVO vo = CartItemVO.from(po, null, null);
 
         assertNotNull(vo);
         assertEquals(1L, vo.getId());
-        assertNull(vo.getUserId());
         assertNull(vo.getSkuId());
         assertNull(vo.getQuantity());
-        assertNull(vo.getSelected());
-        assertNull(vo.getCreateTime());
+        assertFalse(vo.getIsSelected());
+        assertNull(vo.getSpuId());
+        assertNull(vo.getTitle());
+        assertNull(vo.getPrice());
     }
 }

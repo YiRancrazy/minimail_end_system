@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -22,6 +23,9 @@ import static org.mockito.Mockito.when;
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
+import com.yirancrazy.minimall.api.dto.goods.SkuSnapshotDTO;
+import com.yirancrazy.minimall.api.dto.goods.SpuSnapshotDTO;
+import com.yirancrazy.minimall.api.feign.GoodsFeignClient;
 import com.yirancrazy.minimall.api.feign.UserFeignClient;
 import com.yirancrazy.minimall.cart.dto.CartItemAddDTO;
 import com.yirancrazy.minimall.cart.dto.CartSelectAllDTO;
@@ -29,6 +33,7 @@ import com.yirancrazy.minimall.cart.dto.CartUpdateDTO;
 import com.yirancrazy.minimall.cart.entity.CartItemPO;
 import com.yirancrazy.minimall.cart.manager.CartItemManager;
 import com.yirancrazy.minimall.cart.service.impl.CartServiceImpl;
+import com.yirancrazy.minimall.cart.vo.CartItemVO;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CommonCode;
 import com.yirancrazy.minimall.common.result.Result;
@@ -47,12 +52,14 @@ public class CartServiceImplTest {
 
     private CartItemManager cartItemManager;
     private UserFeignClient userFeignClient;
+    private GoodsFeignClient goodsFeignClient;
     private CartServiceImpl service;
 
     @BeforeEach
     void setUp() {
         cartItemManager = mock(CartItemManager.class);
         userFeignClient = mock(UserFeignClient.class);
+        goodsFeignClient = mock(GoodsFeignClient.class);
         lenient().doAnswer(inv -> {
             CartItemPO p = inv.getArgument(0);
             if (p.getId() == null) {
@@ -60,34 +67,67 @@ public class CartServiceImplTest {
             }
             return true;
         }).when(cartItemManager).save(any(CartItemPO.class));
-        service = new CartServiceImpl(cartItemManager, userFeignClient);
+        service = new CartServiceImpl(cartItemManager, userFeignClient, goodsFeignClient);
     }
 
     /**
-     * 验证 listByUser 返回指定用户的购物车条目。
+     * 验证 listByUser 返回指定用户的购物车条目并叠加商品快照。
      */
     @Test
     public void listByUser_returns_items() {
         CartItemPO item = new CartItemPO();
+        item.setId(1L);
         item.setUserId(7L);
+        item.setSkuId(100L);
+        item.setQuantity(2);
+        item.setSelected(1);
         when(cartItemManager.list(any(Wrapper.class))).thenReturn(List.of(item));
+        when(goodsFeignClient.skuSnapshot(100L)).thenReturn(
+            Result.success(new SkuSnapshotDTO(100L, 10L, "S 白色", new java.math.BigDecimal("9.90"), 99, 7L)));
+        when(goodsFeignClient.spuSnapshot(10L)).thenReturn(
+            Result.success(new SpuSnapshotDTO(10L, "商品标题", "http://img/a.jpg")));
 
-        List<CartItemPO> result = service.listByUser(7L);
+        List<CartItemVO> result = service.listByUser(7L);
 
         assertEquals(1, result.size());
-        assertEquals(7L, result.get(0).getUserId());
+        CartItemVO vo = result.get(0);
+        assertEquals(100L, vo.getSkuId());
+        assertEquals("商品标题", vo.getTitle());
+        assertEquals("S 白色", vo.getSkuSpec());
     }
 
     /**
-     * 验证用户购物车为空时返回空列表。
+     * 验证用户购物车为空时返回空列表且不调用商品服务。
      */
     @Test
     public void listByUser_returns_empty_when_no_items() {
         when(cartItemManager.list(any(Wrapper.class))).thenReturn(Collections.emptyList());
 
-        List<CartItemPO> result = service.listByUser(999L);
+        List<CartItemVO> result = service.listByUser(999L);
 
         assertTrue(result.isEmpty());
+        verify(goodsFeignClient, never()).skuSnapshot(any());
+    }
+
+    /**
+     * 验证商品服务降级返回空快照时购物车条目仍返回基础字段。
+     */
+    @Test
+    public void listByUser_handles_null_snapshot() {
+        CartItemPO item = new CartItemPO();
+        item.setId(1L);
+        item.setUserId(7L);
+        item.setSkuId(100L);
+        item.setQuantity(2);
+        item.setSelected(1);
+        when(cartItemManager.list(any(Wrapper.class))).thenReturn(List.of(item));
+        when(goodsFeignClient.skuSnapshot(100L)).thenReturn(Result.success(null));
+
+        List<CartItemVO> result = service.listByUser(7L);
+
+        assertEquals(1, result.size());
+        assertNull(result.get(0).getPrice());
+        assertNull(result.get(0).getTitle());
     }
 
     /**
@@ -213,7 +253,7 @@ public class CartServiceImplTest {
         when(cartItemManager.updateById(any(CartItemPO.class))).thenReturn(true);
 
         CartUpdateDTO dto = new CartUpdateDTO();
-        dto.setIsSelected(1);
+        dto.setIsSelected(true);
         boolean ok = service.update(1L, dto);
 
         assertTrue(ok);
@@ -235,7 +275,7 @@ public class CartServiceImplTest {
 
         CartUpdateDTO dto = new CartUpdateDTO();
         dto.setQuantity(5);
-        dto.setIsSelected(1);
+        dto.setIsSelected(true);
         boolean ok = service.update(1L, dto);
 
         assertTrue(ok);
@@ -271,8 +311,8 @@ public class CartServiceImplTest {
         when(cartItemManager.update(any(Wrapper.class))).thenReturn(true);
 
         CartSelectAllDTO dto = new CartSelectAllDTO();
-        dto.setSelected(1);
-        boolean ok = service.selectAll(7L, dto.getSelected());
+        dto.setIsSelected(true);
+        boolean ok = service.selectAll(7L, dto.getIsSelected() ? 1 : 0);
 
         assertTrue(ok);
         verify(cartItemManager).update(any(Wrapper.class));

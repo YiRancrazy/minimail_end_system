@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
 import com.yirancrazy.minimall.cart.dto.CartItemAddDTO;
+import com.yirancrazy.minimall.cart.dto.CartMoveToFavoriteDTO;
 import com.yirancrazy.minimall.cart.dto.CartSelectAllDTO;
 import com.yirancrazy.minimall.cart.dto.CartUpdateDTO;
 import com.yirancrazy.minimall.cart.service.CartService;
@@ -105,14 +106,15 @@ public class CartControllerV1 {
     }
 
     /**
-     * 将指定购物车商品移入收藏夹。
+     * 将指定购物车条目移入收藏夹：按条目 ID 收藏并删除，收藏与删除在同一事务内。
      * @param userId 用户ID，来自网关X-User-Id头
-     * @param skuId 商品SKU ID
+     * @param dto 待移入收藏夹的购物车条目 ID 列表
      * @return 无业务数据的成功响应
      */
-    @PostMapping("/{skuId}/move-to-favorite")
-    public Result<Void> moveToFavorite(@RequestHeader("X-User-Id") Long userId, @PathVariable("skuId") Long skuId) {
-        cartService.moveToFavorite(userId, skuId);
+    @PostMapping("/move-to-favorite")
+    public Result<Void> moveToFavorite(@RequestHeader("X-User-Id") Long userId,
+                                       @Valid @RequestBody CartMoveToFavoriteDTO dto) {
+        cartService.moveToFavorite(userId, dto.getItemIds());
         return Result.success(null);
     }
 }

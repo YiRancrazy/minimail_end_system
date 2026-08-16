@@ -1,5 +1,6 @@
 package com.yirancrazy.minimall.cart.controller.v1;
 
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
@@ -151,13 +152,29 @@ class CartControllerV1Test {
     }
 
     /**
-     * 验证 POST /{skuId}/move-to-favorite 带 X-User-Id 头调用 service 完成购物车项移入收藏夹。
+     * 验证 POST /move-to-favorite 带 X-User-Id 头与条目 ID 列表调用 service 完成购物车项移入收藏夹。
      */
     @Test
     void move_to_favorite_invokes_service() throws Exception {
-        mockMvc.perform(post("/api/v1/user/cart/99/move-to-favorite").header("X-User-Id", 1L))
+        mockMvc.perform(post("/api/v1/user/cart/move-to-favorite")
+                .header("X-User-Id", 1L)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"itemIds\":[99,100]}"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.code").value("00000"));
-        verify(cartService).moveToFavorite(1L, 99L);
+        verify(cartService).moveToFavorite(1L, List.of(99L, 100L));
+    }
+
+    /**
+     * 验证 POST /move-to-favorite 在 itemIds 为空时被 @Valid 拦截返回 400。
+     */
+    @Test
+    void move_to_favorite_rejects_empty_item_ids() throws Exception {
+        mockMvc.perform(post("/api/v1/user/cart/move-to-favorite")
+                .header("X-User-Id", 1L)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"itemIds\":[]}"))
+            .andExpect(status().isBadRequest());
+        verify(cartService, never()).moveToFavorite(any(), any());
     }
 }

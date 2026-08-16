@@ -69,9 +69,9 @@ public interface CartService {
     boolean clear(Long userId);
 
     /**
-     * 将指定用户的某个购物车商品移入收藏夹：先调用收藏服务收藏，成功后删除该购物车项。
-     * @param userId 用户ID
-     * @param skuId 商品SKU ID
+     * 将指定购物车条目移入收藏夹：收藏与删除在同一事务内，删除失败整体回滚；按条目 ID 精确删除。
+     * @param userId 用户ID，来自网关X-User-Id可信头
+     * @param itemIds 待移入收藏夹的购物车条目 ID 列表，不可为空且必须全部归属于该用户
      */
-    void moveToFavorite(Long userId, Long skuId);
+    void moveToFavorite(Long userId, List<Long> itemIds);
 }

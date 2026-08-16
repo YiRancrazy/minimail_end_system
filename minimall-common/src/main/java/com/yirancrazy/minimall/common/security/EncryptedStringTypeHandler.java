@@ -7,6 +7,8 @@ import java.sql.SQLException;
 import org.apache.ibatis.type.BaseTypeHandler;
 import org.apache.ibatis.type.JdbcType;
 import org.apache.ibatis.type.MappedTypes;
+import com.yirancrazy.minimall.common.exception.BizException;
+import com.yirancrazy.minimall.common.result.CommonCode;
 
 /**
  * @Author: yirancrazy@gmail.com
@@ -43,6 +45,7 @@ public class EncryptedStringTypeHandler extends BaseTypeHandler<String> {
         return decryptSafely(value);
     }
 
+    // 解密失败必须显式失败，禁止静默返回密文（密文会被当明文使用/展示，掩盖加密列截断或密钥变更问题）
     private String decryptSafely(String value) {
         if (value == null || value.isEmpty()) {
             return value;
@@ -52,7 +55,7 @@ public class EncryptedStringTypeHandler extends BaseTypeHandler<String> {
             return AesEncryptor.decrypt(value, key);
         }
         catch (Exception e) {
-            return value;
+            throw new BizException(CommonCode.SYS_ERROR, "DECRYPT_FAIL", "敏感字段解密失败");
         }
     }
 }

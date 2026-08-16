@@ -70,6 +70,21 @@ class ChunkUploadServiceTest {
     }
 
     @Test
+    void saveChunk_malicious_uploadId_rejected() {
+        // 路径穿越/非法字符/过短 uploadId 一律在参数校验阶段拒绝，不得落盘或触碰 MinIO
+        assertThrows(BizException.class,
+            () -> service.saveChunk("../../etc/passwd", 0, 1, "image/png", "a.png", chunk("x")));
+        assertThrows(BizException.class,
+            () -> service.saveChunk("a\\b", 0, 1, "image/png", "a.png", chunk("x")));
+        assertThrows(BizException.class,
+            () -> service.saveChunk("..", 0, 1, "image/png", "a.png", chunk("x")));
+        assertThrows(BizException.class,
+            () -> service.saveChunk("abc", 0, 1, "image/png", "a.png", chunk("x")));
+        verify(minioUtil, never()).upload(any(InputStream.class), any(long.class), any(String.class));
+        verify(minioUtil, never()).upload(any(Path.class), any(String.class), any(String.class));
+    }
+
+    @Test
     void saveChunk_single_chunk_done_uploads() {
         // 单分片任务收满后走合并上传路径，命中 Path 重载；后缀大写归一为小写
         when(minioUtil.upload(any(Path.class), eq(uploadId + ".png"), eq("image/png")))

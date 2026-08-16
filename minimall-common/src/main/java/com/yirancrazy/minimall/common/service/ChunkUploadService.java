@@ -98,14 +98,21 @@ public class ChunkUploadService {
     }
 
     private void validateParams(String uploadId, int chunkIndex, int totalChunks) {
-        if (uploadId == null || uploadId.isBlank()
-            || totalChunks < 1 || chunkIndex < 0 || chunkIndex >= totalChunks) {
+        // uploadId 限定为字母数字与短横线，杜绝路径分隔符/相对路径穿越字符，同时要求 8~64 位
+        if (totalChunks < 1 || chunkIndex < 0 || chunkIndex >= totalChunks
+            || uploadId == null || !uploadId.matches("[a-zA-Z0-9-]{8,64}")) {
             throw new BizException(UploadCodeEnum.CHUNK_PARAM_INVALID);
         }
     }
 
     private Path taskDir(String uploadId) {
-        return Paths.get(ROOT, uploadId);
+        Path base = Paths.get(ROOT).normalize();
+        Path dir = base.resolve(uploadId).normalize();
+        // 双保险：即使字符集校验被绕过，normalize 后越出 ROOT 的路径也直接拒绝
+        if (!dir.startsWith(base) || dir.getNameCount() != base.getNameCount() + 1) {
+            throw new BizException(UploadCodeEnum.CHUNK_PARAM_INVALID);
+        }
+        return dir;
     }
 
     /**

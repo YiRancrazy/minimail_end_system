@@ -11,6 +11,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
+import com.yirancrazy.minimall.common.constant.RoleEnum;
+import com.yirancrazy.minimall.common.exception.BizException;
+import com.yirancrazy.minimall.common.result.CommonCode;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.merchant.dto.QualificationSubmitDTO;
 import com.yirancrazy.minimall.merchant.service.MerchantService;
@@ -58,15 +61,19 @@ public class MerchantControllerV1 {
     }
 
     /**
-     * 平台审核商家资质，仅允许待审核状态审核。
+     * 平台审核商家资质，仅允许待审核状态审核；非 PLATFORM 角色一律拒绝。
      * @param id 商家主体ID
      * @param approved 是否通过
      * @param reason 驳回原因
+     * @param role 网关注入的角色码（X-User-Role 头）
+     * @throws BizException 非 PLATFORM 角色访问时抛出 FORBIDDEN
      */
     @PostMapping("/{id}/audit")
     public Result<Void> audit(@PathVariable Long id,
                               @RequestParam boolean approved,
-                              @RequestParam(required = false) String reason) {
+                              @RequestParam(required = false) String reason,
+                              @RequestHeader("X-User-Role") String role) {
+        requirePlatform(role);
         merchantService.audit(id, approved, reason);
         return Result.success(null);
     }
@@ -89,5 +96,16 @@ public class MerchantControllerV1 {
     @GetMapping("/audit-log")
     public Result<List<MerchantAuditLogVO>> listAuditLog(@RequestHeader("X-Merchant-Id") Long merchantId) {
         return Result.success(merchantService.listAuditLog(merchantId));
+    }
+
+    /**
+     * 校验当前角色为平台管理员；网关按 JWT role claim 注入 X-User-Role 头，客户端伪造头会被网关移除。
+     * @param role 网关注入的角色码
+     * @throws BizException 非 PLATFORM 角色访问时抛出 FORBIDDEN(20003)
+     */
+    private void requirePlatform(String role) {
+        if (!RoleEnum.PLATFORM.getCode().equals(role)) {
+            throw new BizException(CommonCode.FORBIDDEN, "FORBIDDEN", "无权限访问");
+        }
     }
 }

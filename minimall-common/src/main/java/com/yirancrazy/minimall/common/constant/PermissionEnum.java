@@ -39,6 +39,7 @@ public enum PermissionEnum {
     PAY_MANAGE("PAY_MANAGE", "管理支付"),
     REFUND_AUDIT("REFUND_AUDIT", "退款审核"),
     ROLE_VIEW("ROLE_VIEW", "查看角色权限"),
+    ROLE_MANAGE("ROLE_MANAGE", "管理角色权限"),
     NOTIFY_BROADCAST("NOTIFY_BROADCAST", "广播消息"),
     PLATFORM_FINANCE("PLATFORM_FINANCE", "财务对账");
 

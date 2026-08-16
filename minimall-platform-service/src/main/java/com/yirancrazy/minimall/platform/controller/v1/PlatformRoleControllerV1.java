@@ -52,12 +52,13 @@ public class PlatformRoleControllerV1 {
 
     /**
      * 修改指定角色的权限列表，不允许修改 USER 角色权限。
+     * 写操作与只读查询权限分离：修改需 ROLE_MANAGE，查询仅需 ROLE_VIEW。
      * @param roleCode 角色编码
      * @param dto 权限分配请求体
      * @return 无业务数据的成功响应
      */
     @PostMapping("/{roleCode}/permissions")
-    @RequirePermission(PermissionEnum.ROLE_VIEW)
+    @RequirePermission(PermissionEnum.ROLE_MANAGE)
     public Result<Void> updatePermissions(@PathVariable String roleCode,
                                           @Valid @RequestBody RolePermissionUpdateDTO dto) {
         rolePermissionService.updatePermissions(roleCode, dto.getPermissionCodes());

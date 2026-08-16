@@ -56,6 +56,7 @@ public final class RolePermissionMapping {
             PermissionEnum.PAY_MANAGE,
             PermissionEnum.REFUND_AUDIT,
             PermissionEnum.ROLE_VIEW,
+            PermissionEnum.ROLE_MANAGE,
             PermissionEnum.NOTIFY_BROADCAST,
             PermissionEnum.NOTIFY_VIEW,
             PermissionEnum.PLATFORM_FINANCE

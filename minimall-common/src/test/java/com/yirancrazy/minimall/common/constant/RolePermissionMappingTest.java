@@ -48,6 +48,7 @@ class RolePermissionMappingTest {
         assertTrue(perms.contains(PermissionEnum.ORDER_DELETE));
         assertTrue(perms.contains(PermissionEnum.REFUND_AUDIT));
         assertTrue(perms.contains(PermissionEnum.ROLE_VIEW));
+        assertTrue(perms.contains(PermissionEnum.ROLE_MANAGE));
         assertTrue(perms.contains(PermissionEnum.NOTIFY_BROADCAST));
         assertTrue(perms.contains(PermissionEnum.PLATFORM_FINANCE));
     }

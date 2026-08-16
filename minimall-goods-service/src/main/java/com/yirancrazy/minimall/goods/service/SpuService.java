@@ -111,4 +111,10 @@ public interface SpuService {
      * @return 审核记录列表
      */
     List<SpuAuditRecordPO> listAuditRecords(Long spuId);
+
+    /**
+     * 重新同步 SPU 文档到 ES 索引（含 SKU 价格区间聚合），供 SKU 新增/改价/删除后刷新父 SPU 搜索数据。
+     * @param spuId SPU 主键 ID
+     */
+    void refreshEsDocument(Long spuId);
 }

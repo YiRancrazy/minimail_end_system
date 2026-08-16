@@ -24,4 +24,10 @@ public interface SpuSearchService {
      * @param document SPU 文档
      */
     void sync(SpuDocument document);
+
+    /**
+     * 按 SPU 主键删除 ES 索引中的文档，与 SPU 删除保持镜像一致。
+     * @param id SPU 主键 ID
+     */
+    void deleteById(Long id);
 }

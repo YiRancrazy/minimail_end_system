@@ -25,6 +25,7 @@ import com.yirancrazy.minimall.goods.entity.SkuPO;
 import com.yirancrazy.minimall.goods.entity.SpuPO;
 import com.yirancrazy.minimall.goods.manager.SkuManager;
 import com.yirancrazy.minimall.goods.manager.SpuManager;
+import com.yirancrazy.minimall.goods.service.SpuService;
 import com.yirancrazy.minimall.goods.service.impl.SkuServiceImpl;
 
 /**
@@ -34,12 +35,14 @@ public class SkuServiceImplTest {
 
     private SkuManager skuManager;
     private SpuManager spuManager;
+    private SpuService spuService;
     private SkuServiceImpl service;
 
     @BeforeEach
     void setUp() {
         skuManager = mock(SkuManager.class);
         spuManager = mock(SpuManager.class);
+        spuService = mock(SpuService.class);
         lenient().doAnswer(inv -> {
             SkuPO p = inv.getArgument(0);
             if (p.getId() == null) {
@@ -49,7 +52,7 @@ public class SkuServiceImplTest {
         }).when(skuManager).save(any(SkuPO.class));
         lenient().when(skuManager.updateById(any(SkuPO.class))).thenReturn(true);
         lenient().when(skuManager.removeById(100L)).thenReturn(true);
-        service = new SkuServiceImpl(skuManager, spuManager);
+        service = new SkuServiceImpl(skuManager, spuManager, spuService);
     }
 
     /**
@@ -111,6 +114,22 @@ public class SkuServiceImplTest {
         }).when(skuManager).save(any(SkuPO.class));
 
         service.create(10L, dto);
+    }
+
+    /**
+     * 验证 create 成功后刷新父 SPU 的 ES 文档，价格区间随新 SKU 变化。
+     */
+    @Test
+    public void create_refreshes_parent_spu_es_document() {
+        SkuCreateDTO dto = new SkuCreateDTO();
+        dto.setSpuId(1L);
+        dto.setSkuName("new-sku");
+        dto.setPrice(new BigDecimal("9.90"));
+        when(spuManager.getById(1L)).thenReturn(ownedSpu());
+
+        service.create(10L, dto);
+
+        verify(spuService).refreshEsDocument(1L);
     }
 
     /**
@@ -205,6 +224,7 @@ public class SkuServiceImplTest {
     public void update_returns_true_on_success() {
         SkuPO existing = new SkuPO();
         existing.setId(100L);
+        existing.setSpuId(10L);
         existing.setMerchantId(10L);
         existing.setSkuName("old-name");
         when(skuManager.getById(100L)).thenReturn(existing);
@@ -220,6 +240,7 @@ public class SkuServiceImplTest {
         assertEquals(new BigDecimal("29.90"), existing.getPrice());
         assertEquals(100, existing.getStock());
         verify(skuManager).updateById(any(SkuPO.class));
+        verify(spuService).refreshEsDocument(10L);
     }
 
     /**
@@ -251,11 +272,13 @@ public class SkuServiceImplTest {
     public void delete_returns_true_on_success() {
         SkuPO existing = new SkuPO();
         existing.setId(100L);
+        existing.setSpuId(10L);
         existing.setMerchantId(10L);
         when(skuManager.getById(100L)).thenReturn(existing);
 
         boolean ok = service.delete(100L, 10L);
         assertTrue(ok);
         verify(skuManager).removeById(100L);
+        verify(spuService).refreshEsDocument(10L);
     }
 }

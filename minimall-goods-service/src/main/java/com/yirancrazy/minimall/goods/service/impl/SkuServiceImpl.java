@@ -17,6 +17,7 @@ import com.yirancrazy.minimall.goods.entity.SpuPO;
 import com.yirancrazy.minimall.goods.manager.SkuManager;
 import com.yirancrazy.minimall.goods.manager.SpuManager;
 import com.yirancrazy.minimall.goods.service.SkuService;
+import com.yirancrazy.minimall.goods.service.SpuService;
 
 /**
  * @Author: yirancrazy@gmail.com
@@ -29,10 +30,12 @@ public class SkuServiceImpl implements SkuService {
 
     private final SkuManager skuManager;
     private final SpuManager spuManager;
+    private final SpuService spuService;
 
-    public SkuServiceImpl(SkuManager skuManager, SpuManager spuManager) {
+    public SkuServiceImpl(SkuManager skuManager, SpuManager spuManager, SpuService spuService) {
         this.skuManager = skuManager;
         this.spuManager = spuManager;
+        this.spuService = spuService;
     }
 
     /**
@@ -95,6 +98,8 @@ public class SkuServiceImpl implements SkuService {
         sku.setPrice(dto.getPrice() != null ? dto.getPrice() : BigDecimal.ZERO);
         sku.setStock(dto.getStock() != null ? dto.getStock() : 0);
         skuManager.save(sku);
+        // 新 SKU 可能改变父 SPU 价格区间，刷新 ES 镜像（失败不阻断主链路）
+        spuService.refreshEsDocument(dto.getSpuId());
         return sku.getId();
     }
 
@@ -140,7 +145,12 @@ public class SkuServiceImpl implements SkuService {
         if (dto.getStock() != null) {
             existing.setStock(dto.getStock());
         }
-        return skuManager.updateById(existing);
+        boolean ok = skuManager.updateById(existing);
+        if (ok) {
+            // 改价会影响父 SPU 价格区间，刷新 ES 镜像（失败不阻断主链路）
+            spuService.refreshEsDocument(existing.getSpuId());
+        }
+        return ok;
     }
 
     /**
@@ -157,6 +167,12 @@ public class SkuServiceImpl implements SkuService {
             throw new BizException(SkuCodeEnum.SKU_NOT_FOUND);
         }
         checkOwner(existing, merchantId);
-        return skuManager.removeById(id);
+        Long spuId = existing.getSpuId();
+        boolean ok = skuManager.removeById(id);
+        if (ok) {
+            // 删除 SKU 可能改变父 SPU 价格区间，刷新 ES 镜像（失败不阻断主链路）
+            spuService.refreshEsDocument(spuId);
+        }
+        return ok;
     }
 }

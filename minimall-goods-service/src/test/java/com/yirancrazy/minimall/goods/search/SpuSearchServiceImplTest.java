@@ -135,4 +135,14 @@ public class SpuSearchServiceImplTest {
 
         verify(elasticsearchOperations).save(doc);
     }
+
+    /**
+     * 验证 deleteById 委托给 elasticsearchOperations.delete，id 转为字符串后删除指定类型文档。
+     */
+    @Test
+    public void deleteById_deletes_document() {
+        service.deleteById(1L);
+
+        verify(elasticsearchOperations).delete("1", SpuDocument.class);
+    }
 }

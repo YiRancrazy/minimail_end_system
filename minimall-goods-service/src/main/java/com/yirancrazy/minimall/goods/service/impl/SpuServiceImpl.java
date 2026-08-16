@@ -3,6 +3,7 @@ package com.yirancrazy.minimall.goods.service.impl;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.LongSummaryStatistics;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
@@ -190,7 +191,7 @@ public class SpuServiceImpl implements SpuService {
     }
 
     /**
-     * 按主键删除 SPU，不存在或非本人商品时抛出 SPU_NOT_FOUND。
+     * 按主键删除 SPU，不存在或非本人商品时抛出 SPU_NOT_FOUND；删除成功后同步清理 ES 镜像文档。
      * @param id SPU 主键 ID
      * @param merchantId 商家ID，来自可信Header
      * @return 删除是否成功
@@ -202,8 +203,18 @@ public class SpuServiceImpl implements SpuService {
             throw new BizException(SpuCodeEnum.SPU_NOT_FOUND);
         }
         checkOwner(existing, merchantId);
+        boolean ok = spuManager.removeById(id);
+        if (ok) {
+            // 搜索引擎是只读镜像，删除失败不阻断主链路删除（残留文档由索引重建清理）
+            try {
+                spuSearchService.deleteById(id);
+            }
+            catch (Exception e) {
+                log.error("delete spu from ES failed, spuId={}", id, e);
+            }
+        }
         log.info("spu deleted, spuId={}", id);
-        return spuManager.removeById(id);
+        return ok;
     }
 
     /**
@@ -356,6 +367,21 @@ public class SpuServiceImpl implements SpuService {
         spuAuditRecordManager.save(record);
     }
 
+    /**
+     * 重新同步 SPU 文档到 ES：SKU 新增/改价/删除后父 SPU 价格区间可能变化，需刷新镜像。
+     * @param spuId SPU 主键 ID
+     */
+    @Override
+    public void refreshEsDocument(Long spuId) {
+        SpuPO spu = spuManager.getById(spuId);
+        if (spu == null) {
+            // SPU 已删除时 ES 文档由 delete 流程清理，SKU 侧刷新直接忽略
+            log.warn("spu not found when refreshing ES document, spuId={}", spuId);
+            return;
+        }
+        syncToEs(spu);
+    }
+
     private void syncToEs(SpuPO po) {
         // 搜索引擎是只读镜像，同步失败不阻断主链路写入（ES 恢复后由后续写操作补齐）
         try {
@@ -367,6 +393,15 @@ public class SpuServiceImpl implements SpuService {
             doc.setSaleStatus(po.getStatus());
             doc.setMainImage(po.getMainImageUrl());
             doc.setCreateTime(po.getCreateTime());
+            // 价格区间聚合该 SPU 全部 SKU 的 min/max（元→分），供 ES 价格过滤使用，null 价格跳过
+            LongSummaryStatistics stats = skuManager.list(
+                Wrappers.lambdaQuery(SkuPO.class).eq(SkuPO::getSpuId, po.getId())).stream()
+                .map(SkuPO::getPrice)
+                .filter(Objects::nonNull)
+                .mapToLong(p -> p.movePointRight(2).longValueExact())
+                .summaryStatistics();
+            doc.setMinPrice(stats.getCount() == 0 ? null : stats.getMin());
+            doc.setMaxPrice(stats.getCount() == 0 ? null : stats.getMax());
             spuSearchService.sync(doc);
         }
         catch (Exception e) {

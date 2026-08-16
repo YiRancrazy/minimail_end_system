@@ -99,6 +99,16 @@ public class SpuSearchServiceImpl implements SpuSearchService {
         log.info("spu synced to ES, spuId={}", document.getSpuId());
     }
 
+    /**
+     * 按 SPU 主键删除 ES 索引中的文档。
+     * @param id SPU 主键 ID
+     */
+    @Override
+    public void deleteById(Long id) {
+        elasticsearchOperations.delete(String.valueOf(id), SpuDocument.class);
+        log.info("spu deleted from ES, spuId={}", id);
+    }
+
     private RangeQuery.Builder configurePriceRange(RangeQuery.Builder rq, Long minPrice, Long maxPrice) {
         rq.field("minPrice");
         if (minPrice != null) {

@@ -1,9 +1,11 @@
 package com.yirancrazy.minimall.goods.service;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -28,6 +30,7 @@ import com.yirancrazy.minimall.goods.entity.SpuPO;
 import com.yirancrazy.minimall.goods.manager.SkuManager;
 import com.yirancrazy.minimall.goods.manager.SpuAuditRecordManager;
 import com.yirancrazy.minimall.goods.manager.SpuManager;
+import com.yirancrazy.minimall.goods.search.SpuDocument;
 import com.yirancrazy.minimall.goods.search.SpuSearchService;
 import com.yirancrazy.minimall.goods.service.impl.SpuServiceImpl;
 import com.yirancrazy.minimall.goods.vo.SpuVO;
@@ -58,6 +61,7 @@ public class SpuServiceImplTest {
         }).when(spuManager).save(any(SpuPO.class));
         lenient().when(spuManager.updateById(any(SpuPO.class))).thenReturn(true);
         lenient().when(spuManager.removeById(100L)).thenReturn(true);
+        lenient().when(skuManager.list(any(Wrapper.class))).thenReturn(List.of());
         lenient().when(spuAuditRecordManager.save(any(SpuAuditRecordPO.class))).thenReturn(true);
         service = new SpuServiceImpl(spuManager, spuAuditRecordManager, spuSearchService, skuManager);
     }
@@ -242,6 +246,51 @@ public class SpuServiceImplTest {
         boolean ok = service.delete(100L, 10L);
         assertTrue(ok);
         verify(spuManager).removeById(100L);
+    }
+
+    /**
+     * 验证 delete 成功后同步删除 ES 镜像文档，避免搜索结果残留已删除商品。
+     */
+    @Test
+    public void delete_removes_es_document() {
+        SpuPO existing = new SpuPO();
+        existing.setId(100L);
+        existing.setMerchantId(10L);
+        when(spuManager.getById(100L)).thenReturn(existing);
+
+        boolean ok = service.delete(100L, 10L);
+        assertTrue(ok);
+        verify(spuSearchService).deleteById(100L);
+    }
+
+    /**
+     * 验证 syncToEs 聚合 SPU 全部 SKU 的 min/max 价格写入 ES 文档，null 价格被过滤，元转分。
+     */
+    @Test
+    public void sync_to_es_fills_price_range_from_skus() {
+        SpuPO existing = new SpuPO();
+        existing.setId(100L);
+        existing.setMerchantId(10L);
+        existing.setTitle("priced-spu");
+        when(spuManager.getById(100L)).thenReturn(existing);
+
+        SkuPO low = new SkuPO();
+        low.setPrice(new BigDecimal("9.90"));
+        SkuPO high = new SkuPO();
+        high.setPrice(new BigDecimal("19.90"));
+        SkuPO noPrice = new SkuPO();
+        noPrice.setPrice(null);
+        when(skuManager.list(any(Wrapper.class))).thenReturn(List.of(low, high, noPrice));
+
+        SpuUpdateDTO dto = new SpuUpdateDTO();
+        dto.setTitle("updated");
+        service.update(100L, 10L, dto);
+
+        ArgumentCaptor<SpuDocument> captor = ArgumentCaptor.forClass(SpuDocument.class);
+        verify(spuSearchService).sync(captor.capture());
+        SpuDocument doc = captor.getValue();
+        assertEquals(990L, doc.getMinPrice());
+        assertEquals(1990L, doc.getMaxPrice());
     }
 
     /**

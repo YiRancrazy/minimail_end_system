@@ -20,7 +20,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.yirancrazy.minimall.api.dto.goods.SkuSnapshotDTO;
+import com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO;
 import com.yirancrazy.minimall.api.feign.GoodsFeignClient;
+import com.yirancrazy.minimall.api.feign.IdFeignClient;
 import com.yirancrazy.minimall.api.feign.PayFeignClient;
 import com.yirancrazy.minimall.api.feign.StockFeignClient;
 import com.yirancrazy.minimall.common.event.EventBus;
@@ -56,6 +58,7 @@ public class OrderServiceImplTest {
     private GoodsFeignClient goodsFeignClient;
     private StockFeignClient stockFeignClient;
     private PayFeignClient payFeignClient;
+    private IdFeignClient idFeignClient;
     private EventBus eventBus;
     private OrderStatusMachine statusMachine;
     private OrderServiceImpl service;
@@ -70,6 +73,7 @@ public class OrderServiceImplTest {
         goodsFeignClient = mock(GoodsFeignClient.class);
         stockFeignClient = mock(StockFeignClient.class);
         payFeignClient = mock(PayFeignClient.class);
+        idFeignClient = mock(IdFeignClient.class);
         eventBus = mock(EventBus.class);
         statusMachine = new OrderStatusMachine();
         lenient().when(manager.updateById(any(OrderPO.class))).thenReturn(true);
@@ -91,13 +95,14 @@ public class OrderServiceImplTest {
         lenient().when(stockFeignClient.release(any())).thenReturn(Result.success(Boolean.TRUE));
         lenient().when(payFeignClient.create(any())).thenReturn(Result.success(2001L));
         lenient().when(payFeignClient.refund(any())).thenReturn(Result.success(Boolean.TRUE));
+        lenient().when(idFeignClient.nextId(any())).thenReturn(Result.success(10001L));
         lenient().doAnswer(inv -> {
             inv.getArgument(1, Runnable.class).run();
             return null;
         }).when(eventBus).publishInTx(any(), any(Runnable.class), any());
         service = new OrderServiceImpl(manager, orderItemManager, logisticsManager, statusLogManager,
-            orderMapper, goodsFeignClient, stockFeignClient, payFeignClient, eventBus, statusMachine,
-            new com.fasterxml.jackson.databind.ObjectMapper());
+            orderMapper, goodsFeignClient, stockFeignClient, payFeignClient, idFeignClient,
+            eventBus, statusMachine, new com.fasterxml.jackson.databind.ObjectMapper());
     }
 
     /**
@@ -589,7 +594,9 @@ public class OrderServiceImplTest {
             java.util.Map.of("status", 2, "cnt", 2L),
             java.util.Map.of("status", 3, "cnt", 1L),
             java.util.Map.of("status", 4, "cnt", 1L),
-            java.util.Map.of("status", 5, "cnt", 3L)));
+            java.util.Map.of("status", 5, "cnt", 3L),
+            java.util.Map.of("status", 6, "cnt", 2L),
+            java.util.Map.of("status", 7, "cnt", 1L)));
 
         com.yirancrazy.minimall.order.vo.OrderStatusCountsVO vo = service.countStatusByUser(7L);
 
@@ -597,6 +604,9 @@ public class OrderServiceImplTest {
         assertEquals(2L, vo.getPaidCount());
         assertEquals(1L, vo.getShippedCount());
         assertEquals(1L, vo.getCompletedCount());
+        assertEquals(3L, vo.getCanceledCount());
+        assertEquals(2L, vo.getRefundingCount());
+        assertEquals(1L, vo.getRefundedCount());
     }
 
     /**
@@ -612,6 +622,9 @@ public class OrderServiceImplTest {
         assertEquals(0L, vo.getPaidCount());
         assertEquals(0L, vo.getShippedCount());
         assertEquals(0L, vo.getCompletedCount());
+        assertEquals(0L, vo.getCanceledCount());
+        assertEquals(0L, vo.getRefundingCount());
+        assertEquals(0L, vo.getRefundedCount());
     }
 
     /**
@@ -683,6 +696,67 @@ public class OrderServiceImplTest {
         when(manager.getById(99L)).thenReturn(existing);
 
         assertThrows(BizException.class, () -> service.reviewRefund(99L, true, 10L));
+    }
+
+    /**
+     * 验证商家对已支付订单发起部分退款：金额校验通过后落库且状态推进 REFUNDING。
+     */
+    @Test
+    public void merchantInitiateRefund_partial_amount_persisted() {
+        OrderPO existing = buildOrder(99L, 1L, 10L, OrderStatusEnum.PAID.intCode());
+        existing.setPayAmount(new BigDecimal("19.80"));
+        existing.setAmount(new BigDecimal("19.80"));
+        when(manager.getById(99L)).thenReturn(existing);
+
+        service.merchantInitiateRefund(99L, 10L, "5.00", "部分退货");
+
+        assertEquals(OrderStatusEnum.REFUNDING.intCode(), existing.getStatus());
+        assertEquals(0, new BigDecimal("5.00").compareTo(existing.getRefundAmount()));
+    }
+
+    /**
+     * 验证商家对已完成订单发起退款被拒绝（状态机无 COMPLETED→REFUNDING 迁移）。
+     */
+    @Test
+    public void merchantInitiateRefund_completed_throws() {
+        OrderPO existing = buildOrder(99L, 1L, 10L, OrderStatusEnum.COMPLETED.intCode());
+        when(manager.getById(99L)).thenReturn(existing);
+
+        assertThrows(BizException.class,
+            () -> service.merchantInitiateRefund(99L, 10L, "19.80", "售后退款"));
+    }
+
+    /**
+     * 验证退款金额超过支付金额时抛出 REFUND_AMOUNT_INVALID。
+     */
+    @Test
+    public void merchantInitiateRefund_amount_exceeds_pay_throws() {
+        OrderPO existing = buildOrder(99L, 1L, 10L, OrderStatusEnum.PAID.intCode());
+        existing.setPayAmount(new BigDecimal("19.80"));
+        when(manager.getById(99L)).thenReturn(existing);
+
+        assertThrows(BizException.class,
+            () -> service.merchantInitiateRefund(99L, 10L, "20.00", "超额退款"));
+    }
+
+    /**
+     * 验证审核通过时按申请的部分退款金额调用支付网关。
+     */
+    @Test
+    public void reviewRefund_approved_uses_partial_refund_amount() {
+        OrderPO existing = buildOrder(99L, 1L, 10L, OrderStatusEnum.REFUNDING.intCode());
+        existing.setPayId(2001L);
+        existing.setAmount(new BigDecimal("19.80"));
+        existing.setRefundAmount(new BigDecimal("5.00"));
+        when(manager.getById(99L)).thenReturn(existing);
+
+        service.reviewRefund(99L, true, 10L);
+
+        org.mockito.ArgumentCaptor<RefundCreateDTO> captor =
+            org.mockito.ArgumentCaptor.forClass(RefundCreateDTO.class);
+        verify(payFeignClient).refund(captor.capture());
+        assertEquals(2001L, captor.getValue().getPayId().longValue());
+        assertEquals(0, new BigDecimal("5.00").compareTo(captor.getValue().getAmount()));
     }
 
     /**

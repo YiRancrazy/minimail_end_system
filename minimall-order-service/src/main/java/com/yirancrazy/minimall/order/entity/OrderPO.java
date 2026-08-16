@@ -39,6 +39,8 @@ public class OrderPO extends BasePO {
     private String idempotencyKey;
     private Integer status;
     private Integer refundFromStatus;
+    /** 本次申请退款金额，部分退款场景使用；null 表示全单退款 */
+    private BigDecimal refundAmount;
     private LocalDateTime shippedAt;
     private String orderGroupNo;
 }

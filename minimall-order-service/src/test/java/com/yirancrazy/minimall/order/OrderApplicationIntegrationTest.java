@@ -7,6 +7,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.ActiveProfiles;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import com.yirancrazy.minimall.api.feign.GoodsFeignClient;
+import com.yirancrazy.minimall.api.feign.IdFeignClient;
 import com.yirancrazy.minimall.api.feign.PayFeignClient;
 import com.yirancrazy.minimall.api.feign.StockFeignClient;
 import com.yirancrazy.minimall.order.service.OrderService;
@@ -29,6 +30,9 @@ class OrderApplicationIntegrationTest {
 
     @MockBean
     private PayFeignClient payFeignClient;
+
+    @MockBean
+    private IdFeignClient idFeignClient;
 
     @Autowired
     private OrderService orderService;

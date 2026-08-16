@@ -2,7 +2,6 @@ package com.yirancrazy.minimall.order.service.impl;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -18,11 +17,13 @@ import com.yirancrazy.minimall.api.dto.pay.PayCreateDTO;
 import com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO;
 import com.yirancrazy.minimall.api.dto.stock.StockReserveDTO;
 import com.yirancrazy.minimall.api.feign.GoodsFeignClient;
+import com.yirancrazy.minimall.api.feign.IdFeignClient;
 import com.yirancrazy.minimall.api.feign.PayFeignClient;
 import com.yirancrazy.minimall.api.feign.StockFeignClient;
 import com.yirancrazy.minimall.common.event.EventBus;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
+import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.common.util.CsvExporter;
 import com.yirancrazy.minimall.common.util.CursorUtils;
 import com.yirancrazy.minimall.order.constant.OrderCodeEnum;
@@ -67,6 +68,7 @@ public class OrderServiceImpl implements OrderService {
     private final GoodsFeignClient goodsFeignClient;
     private final StockFeignClient stockFeignClient;
     private final PayFeignClient payFeignClient;
+    private final IdFeignClient idFeignClient;
     private final EventBus eventBus;
     private final OrderStatusMachine statusMachine;
     private final ObjectMapper objectMapper;
@@ -79,6 +81,7 @@ public class OrderServiceImpl implements OrderService {
                             GoodsFeignClient goodsFeignClient,
                             StockFeignClient stockFeignClient,
                             PayFeignClient payFeignClient,
+                            IdFeignClient idFeignClient,
                             EventBus eventBus,
                             OrderStatusMachine statusMachine,
                             ObjectMapper objectMapper) {
@@ -90,6 +93,7 @@ public class OrderServiceImpl implements OrderService {
         this.goodsFeignClient = goodsFeignClient;
         this.stockFeignClient = stockFeignClient;
         this.payFeignClient = payFeignClient;
+        this.idFeignClient = idFeignClient;
         this.eventBus = eventBus;
         this.statusMachine = statusMachine;
         this.objectMapper = objectMapper;
@@ -334,6 +338,14 @@ public class OrderServiceImpl implements OrderService {
             orderId, merchantId, carrier, trackingNo);
     }
 
+    /**
+     * 商家主动发起退款：仅 PAID/SHIPPED 允许发起（状态机无 COMPLETED→REFUNDING 迁移，
+     * 售后退款需先补状态机规则再放开）；refundAmount 支持部分退款并随申请落库，审核通过时按实退金额透传支付服务。
+     * @param orderId 订单ID
+     * @param merchantId 商家ID
+     * @param refundAmount 退款金额（元），必须 > 0 且不超过支付金额
+     * @param reason 退款原因
+     */
     @Override
     public void merchantInitiateRefund(Long orderId, Long merchantId, String refundAmount, String reason) {
         OrderPO po = getOrder(orderId);
@@ -341,15 +353,11 @@ public class OrderServiceImpl implements OrderService {
             throw new BizException(OrderCodeEnum.ORDER_NOT_FOUND);
         }
         OrderStatusEnum current = statusMachine.fromCode(po.getStatus());
-        if (current != OrderStatusEnum.PAID && current != OrderStatusEnum.SHIPPED
-                && current != OrderStatusEnum.COMPLETED) {
+        if (current != OrderStatusEnum.PAID && current != OrderStatusEnum.SHIPPED) {
             throw new BizException(OrderCodeEnum.ORDER_STATUS_TRANSITION_INVALID);
         }
-        // 商家主动发起退款与用户申请走相同状态机：PAID/SHIPPED/COMPLETED → REFUNDING，由商家审核后进入 REFUNDED
-        if (current == OrderStatusEnum.COMPLETED) {
-            // 已完成的订单需要回退到 SHIPPED 状态机入口走相同路径
-            throw new BizException(OrderCodeEnum.ORDER_STATUS_TRANSITION_INVALID);
-        }
+        po.setRefundAmount(validateRefundAmount(refundAmount, po));
+        orderManager.updateById(po);
         refund(orderId, po.getUserId());
         log.info("merchant initiated refund, orderId={}, merchantId={}, amount={}, reason={}",
             orderId, merchantId, refundAmount, reason);
@@ -484,7 +492,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public void merchantClose(Long orderId, Long merchantId) {
         OrderPO po = getOrder(orderId);
-        if (!po.getMerchantId().equals(merchantId)) {
+        if (po.getMerchantId() == null || !po.getMerchantId().equals(merchantId)) {
             throw new BizException(OrderCodeEnum.ORDER_NOT_FOUND);
         }
         transitStatus(orderId, OrderStatusEnum.CANCELED, "MERCHANT_CLOSE", "MERCHANT_CLOSE");
@@ -653,12 +661,55 @@ public class OrderServiceImpl implements OrderService {
     }
 
     /**
-     * 生成业务单号：OD + 时间戳（毫秒级） + 3 位随机，保证同一毫秒内不冲突。
+     * 生成业务单号：优先取 Id 服务全局唯一 ID（避免并发碰撞唯一索引），Id 服务不可用时
+     * 回退时间戳+3 位随机并告警，保证单号不落 null 且不阻断下单。
      * @return 业务单号
      */
     private String generateOrderNo() {
-        return "OD" + DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS").format(LocalDateTime.now())
-            + (int) (Math.random() * 1000);
+        Long id = nextOrderId();
+        if (id != null) {
+            return "OD" + id;
+        }
+        log.warn("id-service unavailable, fallback to timestamp-based order no");
+        return "OD" + System.currentTimeMillis() + (int) (Math.random() * 1000);
+    }
+
+    /**
+     * 调用 Id 服务下发全局唯一 ID，服务异常或返回失败时返回 null。
+     * @return 全局唯一 ID，不可用时返回 null
+     */
+    private Long nextOrderId() {
+        try {
+            Result<Long> result = idFeignClient.nextId("ORDER");
+            if (result != null && "00000".equals(result.getCode()) && result.getData() != null) {
+                return result.getData();
+            }
+        }
+        catch (Exception e) {
+            log.warn("id-service nextId failed", e);
+        }
+        return null;
+    }
+
+    /**
+     * 校验并规范化退款金额：非空、大于 0 且不超过支付金额，非法时抛出 REFUND_AMOUNT_INVALID。
+     * @param refundAmount 退款金额字符串
+     * @param po 订单实体
+     * @return 规范化后的退款金额
+     */
+    private BigDecimal validateRefundAmount(String refundAmount, OrderPO po) {
+        BigDecimal refundAmt;
+        try {
+            refundAmt = new BigDecimal(refundAmount);
+        }
+        catch (NumberFormatException | NullPointerException e) {
+            throw new BizException(OrderCodeEnum.REFUND_AMOUNT_INVALID);
+        }
+        BigDecimal payAmount = po.getPayAmount() != null ? po.getPayAmount() : po.getAmount();
+        if (payAmount == null || refundAmt.compareTo(BigDecimal.ZERO) <= 0 || refundAmt.compareTo(payAmount) > 0) {
+            throw new BizException(OrderCodeEnum.REFUND_AMOUNT_INVALID);
+        }
+        return refundAmt;
     }
 
     /**
@@ -796,8 +847,9 @@ public class OrderServiceImpl implements OrderService {
                 case 2 -> vo.setPaidCount(count);
                 case 3 -> vo.setShippedCount(count);
                 case 4 -> vo.setCompletedCount(count);
-                default -> {
-                }
+                case 5 -> vo.setCanceledCount(count);
+                case 6 -> vo.setRefundingCount(count);
+                case 7 -> vo.setRefundedCount(count);
             }
         }
         return vo;
@@ -825,8 +877,9 @@ public class OrderServiceImpl implements OrderService {
             return;
         }
         // 审核通过才调支付网关真实退款，避免"先退钱后审核"；状态迁移由支付回调 handleRefundCallback 驱动
+        BigDecimal refundAmt = po.getRefundAmount() != null ? po.getRefundAmount() : po.getAmount();
         Boolean refunded = payFeignClient.refund(
-            new RefundCreateDTO(po.getPayId(), po.getAmount(), null)).getData();
+            new RefundCreateDTO(po.getPayId(), refundAmt, null)).getData();
         if (refunded == null || !refunded) {
             log.warn("pay refund failed, orderId={}", orderId);
         }

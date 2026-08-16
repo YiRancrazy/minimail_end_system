@@ -18,4 +18,10 @@ public class OrderStatusCountsVO {
     private long shippedCount;
     /** 已完成订单数 */
     private long completedCount;
+    /** 已取消订单数 */
+    private long canceledCount;
+    /** 退款中订单数 */
+    private long refundingCount;
+    /** 已退款订单数 */
+    private long refundedCount;
 }

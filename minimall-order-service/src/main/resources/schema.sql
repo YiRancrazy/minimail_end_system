@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS t_order (
   idempotency_key CHAR(36),
   status TINYINT NOT NULL DEFAULT 1,
   refund_from_status TINYINT,
+  refund_amount DECIMAL(12,2),
   create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
   update_time DATETIME DEFAULT CURRENT_TIMESTAMP,
   is_deleted TINYINT DEFAULT 0,

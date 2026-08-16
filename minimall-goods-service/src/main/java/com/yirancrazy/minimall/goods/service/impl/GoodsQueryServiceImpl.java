@@ -71,7 +71,7 @@ public class GoodsQueryServiceImpl implements GoodsQueryService {
     /**
      * 批量查询多个 SPU 的最低售价，一次 IN 查询替代逐 SPU 的 N 次详情请求。
      * @param spuIds SPU 主键集合，允许为空
-     * @return spuId -> 最低售价（元）；无 SKU 的 SPU 不在结果中
+     * @return spuId -> 最低售价（元）；无 SKU 或全空价 SKU 的 SPU 不在结果中（调用方按 null 兜底）
      */
     private Map<Long, BigDecimal> batchMinPrice(List<Long> spuIds) {
         if (spuIds == null || spuIds.isEmpty()) {
@@ -79,7 +79,9 @@ public class GoodsQueryServiceImpl implements GoodsQueryService {
         }
         List<SkuPO> skus = skuManager.list(
             Wrappers.lambdaQuery(SkuPO.class).in(SkuPO::getSpuId, spuIds));
+        // 空价 SKU 不参与比价，避免 naturalOrder 对 null 抛 NPE（价格列理论非空，防御脏数据）
         return skus.stream()
+            .filter(sku -> sku.getPrice() != null)
             .collect(Collectors.groupingBy(SkuPO::getSpuId,
                 Collectors.mapping(SkuPO::getPrice,
                     Collectors.minBy(Comparator.naturalOrder()))))

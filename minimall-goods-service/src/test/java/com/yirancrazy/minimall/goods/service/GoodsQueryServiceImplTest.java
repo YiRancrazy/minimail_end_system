@@ -125,6 +125,44 @@ public class GoodsQueryServiceImplTest {
     }
 
     /**
+     * 验证 pageOnSale 批量聚合最低价时跳过空价 SKU：混有空价的 SPU 取非空最小值，
+     * 全空价 SKU 的 SPU 最低价为 null，且不抛 NPE。
+     */
+    @Test
+    public void pageOnSale_skips_null_price_when_aggregating() {
+        SpuPO po1 = new SpuPO();
+        po1.setId(1L);
+        po1.setSpuNo("SPU1");
+        po1.setTitle("商品一");
+        po1.setMerchantId(10L);
+        SpuPO po2 = new SpuPO();
+        po2.setId(2L);
+        po2.setSpuNo("SPU2");
+        po2.setTitle("商品二");
+        po2.setMerchantId(10L);
+        when(spuManager.list(any(Wrapper.class))).thenReturn(List.of(po1, po2));
+
+        SkuPO s1 = new SkuPO();
+        s1.setSpuId(1L);
+        s1.setPrice(new BigDecimal("199.00"));
+        SkuPO s2 = new SkuPO();
+        s2.setSpuId(1L);
+        s2.setPrice(null);
+        SkuPO s3 = new SkuPO();
+        s3.setSpuId(2L);
+        s3.setPrice(null);
+        when(skuManager.list(any(Wrapper.class))).thenReturn(List.of(s1, s2, s3));
+
+        GoodsPageDTO dto = new GoodsPageDTO();
+
+        var result = service.pageOnSale(dto);
+
+        assertEquals(2, result.getRecords().size());
+        assertEquals(new BigDecimal("199.00"), result.getRecords().get(0).getMinPrice());
+        assertNull(result.getRecords().get(1).getMinPrice());
+    }
+
+    /**
      * 验证 getDetail 在 SPU 在售时聚合返回详情与 SKU 列表。
      */
     @Test

@@ -212,6 +212,68 @@ public class SpuServiceImplTest {
     }
 
     /**
+     * 验证在售商品编辑后状态置回待审核，且 ES 镜像 saleStatus 同步为非在售、退出前台搜索结果。
+     */
+    @Test
+    public void update_on_sale_returns_to_pending_audit() {
+        SpuPO existing = new SpuPO();
+        existing.setId(100L);
+        existing.setMerchantId(10L);
+        existing.setTitle("old");
+        existing.setStatus(SpuStatusEnum.ON_SALE.statusValue());
+        when(spuManager.getById(100L)).thenReturn(existing);
+
+        SpuUpdateDTO dto = new SpuUpdateDTO();
+        dto.setTitle("new");
+        boolean ok = service.update(100L, 10L, dto);
+
+        assertTrue(ok);
+        assertEquals(SpuStatusEnum.PENDING_AUDIT.statusValue(), existing.getStatus());
+        ArgumentCaptor<SpuDocument> captor = ArgumentCaptor.forClass(SpuDocument.class);
+        verify(spuSearchService).sync(captor.capture());
+        assertEquals(SpuStatusEnum.PENDING_AUDIT.statusValue(),
+            captor.getValue().getSaleStatus());
+    }
+
+    /**
+     * 验证已驳回商品编辑后状态置回待审核，可重新送审。
+     */
+    @Test
+    public void update_rejected_returns_to_pending_audit() {
+        SpuPO existing = new SpuPO();
+        existing.setId(100L);
+        existing.setMerchantId(10L);
+        existing.setStatus(SpuStatusEnum.REJECTED.statusValue());
+        when(spuManager.getById(100L)).thenReturn(existing);
+
+        SpuUpdateDTO dto = new SpuUpdateDTO();
+        dto.setTitle("revised");
+        boolean ok = service.update(100L, 10L, dto);
+
+        assertTrue(ok);
+        assertEquals(SpuStatusEnum.PENDING_AUDIT.statusValue(), existing.getStatus());
+    }
+
+    /**
+     * 验证草稿商品编辑后保持草稿状态，不进入审核流。
+     */
+    @Test
+    public void update_draft_keeps_draft() {
+        SpuPO existing = new SpuPO();
+        existing.setId(100L);
+        existing.setMerchantId(10L);
+        existing.setStatus(SpuStatusEnum.DRAFT.statusValue());
+        when(spuManager.getById(100L)).thenReturn(existing);
+
+        SpuUpdateDTO dto = new SpuUpdateDTO();
+        dto.setTitle("still-draft");
+        boolean ok = service.update(100L, 10L, dto);
+
+        assertTrue(ok);
+        assertEquals(SpuStatusEnum.DRAFT.statusValue(), existing.getStatus());
+    }
+
+    /**
      * 验证 delete 在 SPU 不存在时抛出 BizException。
      */
     @Test

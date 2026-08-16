@@ -159,6 +159,11 @@ public class SpuServiceImpl implements SpuService {
 
     /**
      * 按主键更新 SPU，字段为空表示不更新对应列，不存在或非本人商品时抛出 SPU_NOT_FOUND。
+     * 已发布（ON_SALE/OFF_SHELF）或已驳回（REJECTED）商品编辑后必须重新送审：因
+     * SpuUpdateDTO 全部可编辑字段（类目/标题/副标题/主图）均影响前台展示、无法精确圈定
+     * 审核无关字段，故采用稳妥规则——非 DRAFT 状态 update 一律置回 PENDING_AUDIT；
+     * 原在售商品经 syncToEs 覆盖 ES 镜像 saleStatus，即刻退出前台搜索结果，待平台再次
+     * 审核通过后才恢复上架。
      * @param id SPU 主键 ID
      * @param merchantId 商家ID，来自可信Header
      * @param dto 待更新的 SPU 信息
@@ -182,6 +187,11 @@ public class SpuServiceImpl implements SpuService {
         }
         if (dto.getMainImageUrl() != null) {
             existing.setMainImageUrl(dto.getMainImageUrl());
+        }
+        // 编辑展示字段必须重新审核：置回待审使原在售商品经 syncToEs 从前台搜索下架
+        if (existing.getStatus() == null
+            || existing.getStatus() != SpuStatusEnum.DRAFT.statusValue()) {
+            existing.setStatus(SpuStatusEnum.PENDING_AUDIT.statusValue());
         }
         boolean ok = spuManager.updateById(existing);
         if (ok) {

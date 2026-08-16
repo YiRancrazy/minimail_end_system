@@ -18,7 +18,7 @@ import com.yirancrazy.minimall.order.vo.OrderStatisticsVO;
 public interface OrderMapper extends BaseMapper<OrderPO> {
 
     /**
-     * 聚合统计订单：总数、总金额（已支付后状态）、退款金额（已退款）、各状态计数。
+     * 聚合统计订单：总数、总金额（净额口径：剔除退款中/已退款）、退款金额（退款中+已退款）、各状态计数。
      * @param merchantId 商家ID，null 表示全平台
      * @param startTime 起始时间
      * @param endTime 截止时间
@@ -26,8 +26,8 @@ public interface OrderMapper extends BaseMapper<OrderPO> {
      */
     @Select("<script>"
         + "SELECT COUNT(*) AS totalOrderCount, "
-        + "COALESCE(SUM(CASE WHEN status IN (2,3,4,6,7) THEN amount END), 0) AS totalAmount, "
-        + "COALESCE(SUM(CASE WHEN status = 7 THEN amount END), 0) AS refundAmount, "
+        + "COALESCE(SUM(CASE WHEN status IN (2,3,4) THEN amount END), 0) AS totalAmount, "
+        + "COALESCE(SUM(CASE WHEN status IN (6,7) THEN amount END), 0) AS refundAmount, "
         + "COALESCE(SUM(CASE WHEN status = 1 THEN 1 END), 0) AS pendingCount, "
         + "COALESCE(SUM(CASE WHEN status = 2 THEN 1 END), 0) AS paidCount, "
         + "COALESCE(SUM(CASE WHEN status = 3 THEN 1 END), 0) AS shippedCount, "

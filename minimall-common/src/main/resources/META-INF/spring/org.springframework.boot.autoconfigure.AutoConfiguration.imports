@@ -4,6 +4,9 @@ com.yirancrazy.minimall.common.config.JacksonConfig
 com.yirancrazy.minimall.common.config.MinioConfig
 com.yirancrazy.minimall.common.config.OpenApiConfig
 com.yirancrazy.minimall.common.config.IdempotentAutoConfiguration
+com.yirancrazy.minimall.common.config.LoggingAutoConfiguration
+com.yirancrazy.minimall.common.config.PermissionAutoConfiguration
+com.yirancrazy.minimall.common.config.TraceIdPropagationAutoConfiguration
 com.yirancrazy.minimall.common.exception.WebExceptionHandlerAutoConfiguration
 com.yirancrazy.minimall.common.filter.TraceIdFilterAutoConfiguration
 com.yirancrazy.minimall.common.security.EncryptionAutoConfiguration

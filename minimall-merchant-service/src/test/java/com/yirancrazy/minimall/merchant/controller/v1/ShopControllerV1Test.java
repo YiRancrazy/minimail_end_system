@@ -53,7 +53,7 @@ class ShopControllerV1Test {
         po.setMerchantId(1L);
         po.setShopName("薄荷商城");
         po.setLicenseNo("ABC123456789012");
-        po.setStatus("ACTIVE");
+        po.setStatus(com.yirancrazy.minimall.merchant.constant.ShopStatusEnum.ACTIVE.intCode());
         when(shopService.getById(1L, 99L)).thenReturn(po);
         mockMvc.perform(get("/api/v1/merchant/shops/99")
                 .header(X_MERCHANT_ID, "1"))

@@ -125,6 +125,8 @@ public class ShopServiceImplTest {
         ArgumentCaptor<ShopPO> captor = ArgumentCaptor.forClass(ShopPO.class);
         verify(shopManager).save(captor.capture());
         assertEquals(1L, captor.getValue().getMerchantId());
+        assertEquals(com.yirancrazy.minimall.merchant.constant.ShopStatusEnum.ACTIVE.intCode(),
+            captor.getValue().getStatus());
     }
 
     /**
@@ -152,6 +154,7 @@ public class ShopServiceImplTest {
         when(shopManager.updateById(any(ShopPO.class))).thenReturn(false);
         ShopUpdateDTO dto = new ShopUpdateDTO();
         dto.setShopName("x");
+        dto.setStatus("ACTIVE");
 
         boolean ok = service.update(1L, 10L, dto);
         assertFalse(ok);

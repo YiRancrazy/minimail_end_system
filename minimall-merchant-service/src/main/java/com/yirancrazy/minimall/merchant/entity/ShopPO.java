@@ -20,5 +20,6 @@ public class ShopPO extends BasePO {
     private Long merchantId;
     private String shopName;
     private String licenseNo;
-    private String status;
+    // 状态: 1-营业中, 2-已停业, 3-已冻结（对应 ShopStatusEnum int code）
+    private Integer status;
 }

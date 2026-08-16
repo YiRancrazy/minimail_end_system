@@ -8,8 +8,8 @@ import lombok.Data;
 /**
  * @Author: yirancrazy@gmail.com
  * @Description: ShopUpdate数据传输对象，用于ShopUpdate相关数据传输
- * @Version: 1.0
- * @DateTime: 2026/07/31
+ * @Version: 1.1
+ * @DateTime: 2026/08/16
  */
 @Data
 public class ShopUpdateDTO {
@@ -22,7 +22,7 @@ public class ShopUpdateDTO {
     @Pattern(regexp = "^[A-Z0-9]{15,20}$", message = "licenseNo format is invalid")
     private String licenseNo;
 
+    // 状态入参沿用 alias 字符串（ACTIVE/INACTIVE/SUSPENDED），服务层转 ShopStatusEnum int code 落库
     @NotBlank(message = "status cannot be blank")
-    @Pattern(regexp = "^(ACTIVE|INACTIVE|SUSPENDED)$", message = "status must be ACTIVE, INACTIVE or SUSPENDED")
     private String status;
 }

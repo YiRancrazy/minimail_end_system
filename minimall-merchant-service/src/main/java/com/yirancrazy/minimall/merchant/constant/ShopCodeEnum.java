@@ -14,7 +14,8 @@ import com.yirancrazy.minimall.common.base.BaseEnum;
 
 @AllArgsConstructor
 public enum ShopCodeEnum implements BaseEnum {
-    SHOP_NOT_FOUND("15001", "SHOP_NOT_FOUND", "店铺不存在");
+    SHOP_NOT_FOUND("15001", "SHOP_NOT_FOUND", "店铺不存在"),
+    SHOP_STATUS_INVALID("15004", "SHOP_STATUS_INVALID", "店铺状态非法");
 
     private final String code;
     private final String alias;

@@ -3,6 +3,7 @@ package com.yirancrazy.minimall.merchant.service.impl;
 import org.springframework.stereotype.Service;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.merchant.constant.ShopCodeEnum;
+import com.yirancrazy.minimall.merchant.constant.ShopStatusEnum;
 import com.yirancrazy.minimall.merchant.dto.ShopCreateDTO;
 import com.yirancrazy.minimall.merchant.dto.ShopUpdateDTO;
 import com.yirancrazy.minimall.merchant.entity.ShopPO;
@@ -12,8 +13,8 @@ import com.yirancrazy.minimall.merchant.service.ShopService;
 /**
  * @Author: yirancrazy@gmail.com
  * @Description: 商户领域服务实现，实现Shop相关业务逻辑
- * @Version: 1.0
- * @DateTime: 2026/07/31
+ * @Version: 1.1
+ * @DateTime: 2026/08/16
  */
 @Service
 public class ShopServiceImpl implements ShopService {
@@ -75,7 +76,7 @@ public class ShopServiceImpl implements ShopService {
         shop.setMerchantId(merchantId);
         shop.setShopName(dto.getShopName());
         shop.setLicenseNo(dto.getLicenseNo());
-        shop.setStatus(dto.getStatus());
+        shop.setStatus(resolveStatus(dto.getStatus()));
         shopManager.save(shop);
         return shop.getId();
     }
@@ -95,7 +96,7 @@ public class ShopServiceImpl implements ShopService {
         shop.setId(id);
         shop.setShopName(dto.getShopName());
         shop.setLicenseNo(dto.getLicenseNo());
-        shop.setStatus(dto.getStatus());
+        shop.setStatus(resolveStatus(dto.getStatus()));
         return shopManager.updateById(shop);
     }
 
@@ -110,5 +111,18 @@ public class ShopServiceImpl implements ShopService {
     public boolean delete(Long merchantId, Long id) {
         getById(merchantId, id);
         return shopManager.removeById(id);
+    }
+
+    /**
+     * 将入参状态字符串转换为 ShopStatusEnum int code，未知状态抛参数错误。
+     * @param status DTO 传入的状态字符串（ACTIVE/INACTIVE/SUSPENDED）
+     * @return 持久化状态码
+     */
+    private int resolveStatus(String status) {
+        ShopStatusEnum statusEnum = ShopStatusEnum.fromAlias(status);
+        if (statusEnum == null) {
+            throw new BizException(ShopCodeEnum.SHOP_STATUS_INVALID);
+        }
+        return statusEnum.intCode();
     }
 }

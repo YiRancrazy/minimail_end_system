@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import com.yirancrazy.minimall.api.dto.merchant.ShopSnapshotDTO;
 import com.yirancrazy.minimall.common.result.Result;
+import com.yirancrazy.minimall.merchant.constant.ShopStatusEnum;
 import com.yirancrazy.minimall.merchant.entity.ShopPO;
 import com.yirancrazy.minimall.merchant.service.ShopService;
 
@@ -33,6 +34,8 @@ public class InternalShopControllerV1 {
     public Result<ShopSnapshotDTO> snapshot(@PathVariable Long id) {
         // 内部服务间调用无商家上下文，传 null 跳过归属校验
         ShopPO s = shopService.getById(null, id);
-        return Result.success(new ShopSnapshotDTO(s.getId(), s.getShopName(), s.getStatus()));
+        ShopStatusEnum status = ShopStatusEnum.fromCode(s.getStatus());
+        return Result.success(new ShopSnapshotDTO(s.getId(), s.getShopName(),
+            status == null ? null : status.getAlias()));
     }
 }

@@ -60,4 +60,31 @@ class MerchantControllerV1Test {
             .andExpect(jsonPath("$.code").value("20003"));
         verify(merchantService, never()).audit(anyLong(), anyBoolean(), any());
     }
+
+    /**
+     * 验证 PLATFORM 角色驳回但不填原因时返回 PARAM_INVALID(20001) 且不进入 service。
+     */
+    @Test
+    void audit_reject_missing_reason_returns_param_invalid() throws Exception {
+        mockMvc.perform(post("/api/v1/merchant/merchants/99/audit")
+                .param("approved", "false")
+                .header("X-User-Role", "PLATFORM"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.code").value("20001"));
+        verify(merchantService, never()).audit(anyLong(), anyBoolean(), any());
+    }
+
+    /**
+     * 验证 PLATFORM 角色驳回且填写原因时进入 service。
+     */
+    @Test
+    void audit_reject_with_reason_succeeds() throws Exception {
+        mockMvc.perform(post("/api/v1/merchant/merchants/99/audit")
+                .param("approved", "false")
+                .param("reason", "资质材料不全")
+                .header("X-User-Role", "PLATFORM"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.code").value("00000"));
+        verify(merchantService).audit(99L, false, "资质材料不全");
+    }
 }

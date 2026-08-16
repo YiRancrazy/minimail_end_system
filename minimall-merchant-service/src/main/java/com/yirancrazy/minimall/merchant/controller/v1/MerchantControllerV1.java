@@ -61,12 +61,12 @@ public class MerchantControllerV1 {
     }
 
     /**
-     * 平台审核商家资质，仅允许待审核状态审核；非 PLATFORM 角色一律拒绝。
+     * 平台审核商家资质，仅允许待审核状态审核；非 PLATFORM 角色一律拒绝；驳回时必须填写原因。
      * @param id 商家主体ID
      * @param approved 是否通过
-     * @param reason 驳回原因
+     * @param reason 驳回原因，approved=false 时必填
      * @param role 网关注入的角色码（X-User-Role 头）
-     * @throws BizException 非 PLATFORM 角色访问时抛出 FORBIDDEN
+     * @throws BizException 非 PLATFORM 角色访问时抛出 FORBIDDEN；驳回缺原因时抛出 PARAM_INVALID
      */
     @PostMapping("/{id}/audit")
     public Result<Void> audit(@PathVariable Long id,
@@ -74,6 +74,9 @@ public class MerchantControllerV1 {
                               @RequestParam(required = false) String reason,
                               @RequestHeader("X-User-Role") String role) {
         requirePlatform(role);
+        if (!approved && (reason == null || reason.isBlank())) {
+            throw new BizException(CommonCode.PARAM_INVALID, "PARAM_INVALID", "驳回时原因不能为空");
+        }
         merchantService.audit(id, approved, reason);
         return Result.success(null);
     }

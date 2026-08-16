@@ -22,7 +22,7 @@ public interface OrderFeignClient {
     /**
      * 按订单标识（订单ID或业务单号）解析订单归属商户ID，供支付服务归属收款商户。
      * @param ref 订单标识
-     * @return 商户ID；订单不存在或服务不可达时返回 null
+     * @return 商户ID；订单不存在返回 null，服务不可达时 fallback 返回 SYS_ERROR 失败结果（data 为 null）
      */
     @GetMapping("/internal/order/merchant/{ref}")
     Result<Long> merchantId(@PathVariable("ref") String ref);

@@ -4,6 +4,7 @@ import org.springframework.cloud.openfeign.FallbackFactory;
 import org.springframework.stereotype.Component;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.api.feign.IdFeignClient;
+import com.yirancrazy.minimall.common.result.CommonCode;
 import com.yirancrazy.minimall.common.result.Result;
 
 /**
@@ -17,11 +18,12 @@ import com.yirancrazy.minimall.common.result.Result;
 public class IdFeignFallbackFactory implements FallbackFactory<IdFeignClient> {
     @Override
     public IdFeignClient create(Throwable cause) {
-        log.warn("id-service unreachable, using sentinel id=-1: {}", cause.getMessage());
+        log.warn("id-service unreachable: {}", cause.getMessage());
         return new IdFeignClient() {
             @Override
             public Result<Long> nextId(String bizTag) {
-                return Result.success(-1L);
+                // 不可用即返回系统错误，避免调用方把 -1 当合法 ID 落库
+                return Result.fail(CommonCode.SYS_ERROR, "ID服务不可用");
             }
         };
     }

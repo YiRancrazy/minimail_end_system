@@ -14,7 +14,7 @@ public interface IdFeignClient {
     /**
      * 根据业务标签获取下一个全局唯一 ID。
      * @param bizTag 业务标签
-     * @return 全局唯一 ID；服务不可用时由 fallback 返回 -1
+     * @return 全局唯一 ID；服务不可用时 fallback 返回 SYS_ERROR 失败结果（data 为 null）
      */
     @GetMapping("/internal/id/next")
     Result<Long> nextId(@RequestParam("bizTag") String bizTag);

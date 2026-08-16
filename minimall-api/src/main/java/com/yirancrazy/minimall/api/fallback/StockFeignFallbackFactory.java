@@ -5,6 +5,7 @@ import org.springframework.stereotype.Component;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.api.dto.stock.StockReserveDTO;
 import com.yirancrazy.minimall.api.feign.StockFeignClient;
+import com.yirancrazy.minimall.common.result.CommonCode;
 import com.yirancrazy.minimall.common.result.Result;
 
 /**
@@ -22,12 +23,12 @@ public class StockFeignFallbackFactory implements FallbackFactory<StockFeignClie
         return new StockFeignClient() {
             @Override
             public Result<Boolean> reserve(StockReserveDTO dto) {
-                return Result.success(false);
+                return Result.fail(CommonCode.SYS_ERROR, "库存服务不可用");
             }
 
             @Override
             public Result<Boolean> release(StockReserveDTO dto) {
-                return Result.success(false);
+                return Result.fail(CommonCode.SYS_ERROR, "库存服务不可用");
             }
         };
     }

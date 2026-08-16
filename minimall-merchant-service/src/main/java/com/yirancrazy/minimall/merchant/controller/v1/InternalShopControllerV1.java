@@ -12,10 +12,12 @@ import com.yirancrazy.minimall.merchant.service.ShopService;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 商户内部控制器，提供Shop相关内部接口
+ * @Description: 商户内部控制器，提供Shop相关内部接口，供 MerchantFeignClient 跨服务调用。
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */
+@RestController
+@RequestMapping("/internal/merchant/shop")
 public class InternalShopControllerV1 {
 
     private final ShopService shopService;

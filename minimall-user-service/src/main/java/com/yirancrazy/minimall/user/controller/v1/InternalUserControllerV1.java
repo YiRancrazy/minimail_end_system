@@ -11,10 +11,12 @@ import com.yirancrazy.minimall.user.service.UserService;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 用户内部控制器，提供User相关内部接口
+ * @Description: 用户内部控制器，提供User相关内部接口，供 UserFeignClient 跨服务调用。
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */
+@RestController
+@RequestMapping("/internal/user")
 public class InternalUserControllerV1 {
 
     private final UserService userService;

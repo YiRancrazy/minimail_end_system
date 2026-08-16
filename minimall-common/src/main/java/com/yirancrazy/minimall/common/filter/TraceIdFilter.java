@@ -25,11 +25,7 @@ public class TraceIdFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
-        String traceId = request.getHeader(HEADER);
-        if (traceId == null || traceId.isBlank()) {
-            // 直连服务（未经过网关）时自行生成，保证日志与响应均有 traceId
-            traceId = UUID.randomUUID().toString().replace("-", "");
-        }
+        String traceId = sanitize(request.getHeader(HEADER));
         response.setHeader(HEADER, traceId);
         MDC.put(Result.TRACE_ID_KEY, traceId);
         try {
@@ -38,5 +34,19 @@ public class TraceIdFilter extends OncePerRequestFilter {
         finally {
             MDC.remove(Result.TRACE_ID_KEY);
         }
+    }
+
+    /**
+     * 规整客户端传入的 traceId：剔除 CR/LF 控制字符（防日志伪造），超过 64 字符时截断；为空时生成 UUID。
+     * @param raw 请求头原始值，可为 null
+     * @return 规整后的 traceId
+     */
+    static String sanitize(String raw) {
+        if (raw == null || raw.isBlank()) {
+            // 直连服务（未经过网关）时自行生成，保证日志与响应均有 traceId
+            return UUID.randomUUID().toString().replace("-", "");
+        }
+        String cleaned = raw.replace("\r", "").replace("\n", "");
+        return cleaned.length() > 64 ? cleaned.substring(0, 64) : cleaned;
     }
 }

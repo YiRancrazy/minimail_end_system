@@ -29,13 +29,23 @@ public class TraceIdGlobalFilter implements GlobalFilter, Ordered {
      */
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
-        String tid = exchange.getRequest().getHeaders().getFirst(HEADER);
-        if (tid == null || tid.isBlank()) {
-            tid = UUID.randomUUID().toString().replace("-", "");
-        }
+        String tid = sanitize(exchange.getRequest().getHeaders().getFirst(HEADER));
         ServerHttpRequest mutated = exchange.getRequest().mutate()
             .header(HEADER, tid).build();
         return chain.filter(exchange.mutate().request(mutated).build());
+    }
+
+    /**
+     * 规整客户端传入的 traceId：剔除 CR/LF 控制字符（防日志伪造），超过 64 字符时截断；为空时生成 UUID。
+     * @param raw 请求头原始值，可为 null
+     * @return 规整后的 traceId
+     */
+    static String sanitize(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return UUID.randomUUID().toString().replace("-", "");
+        }
+        String cleaned = raw.replace("\r", "").replace("\n", "");
+        return cleaned.length() > 64 ? cleaned.substring(0, 64) : cleaned;
     }
 
     /**

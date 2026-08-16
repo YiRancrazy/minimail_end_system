@@ -14,7 +14,8 @@ import com.yirancrazy.minimall.common.result.Result;
 
 /**
  * @Author: YiRanCrazy@gmail.com
- * @Description: Service 与 Controller 层方法日志切面，记录方法调用入参、返回结果、耗时、异常信息与 traceId。
+ * @Description: Service 与 Controller 层方法日志切面，记录方法调用耗时、异常信息与 traceId。
+ *               不记录入参与返回结果：登录/注册/改密 DTO 含密码明文、返回值含手机号等敏感字段，禁止落日志。
  * @Version: 1.0
  * @DateTime: 2026/8/16 8:15
  **/
@@ -36,13 +37,12 @@ public class LoggingAspect {
     @Around("servicePointcut()")
     public Object logAround(ProceedingJoinPoint joinPoint) throws Throwable {
         String methodName = joinPoint.getSignature().toShortString();
-        Object[] args = joinPoint.getArgs();
         long start = System.currentTimeMillis();
-        log.info("【开始】方法: {}, 参数: {}", methodName, args);
+        log.info("【开始】方法: {}", methodName);
         try {
             Object result = joinPoint.proceed();
             long duration = System.currentTimeMillis() - start;
-            log.info("【结束】方法: {}, 返回值: {}, 耗时: {}ms", methodName, result, duration);
+            log.info("【结束】方法: {}, 耗时: {}ms", methodName, duration);
             return result;
         }
         catch (Throwable e) {
@@ -55,7 +55,6 @@ public class LoggingAspect {
     public Object logAroundController(ProceedingJoinPoint joinPoint) throws Throwable {
         String className = joinPoint.getSignature().getDeclaringTypeName();
         String methodName = joinPoint.getSignature().getName();
-        Object[] args = joinPoint.getArgs();
 
         // 获取请求属性
         ServletRequestAttributes attrs =
@@ -76,14 +75,14 @@ public class LoggingAspect {
         
         // 记录方法调用信息
         long start = System.currentTimeMillis();
-        log.info("【开始】 traceId: {}，方法: {}.{}, 参数: {}, HTTP方法: {}, URI: {}",
-                traceId, className, methodName, args, httpMethod, uri);
+        log.info("【开始】 traceId: {}，方法: {}.{}, HTTP方法: {}, URI: {}",
+                traceId, className, methodName, httpMethod, uri);
 
         try {
             Object result = joinPoint.proceed();
             long duration = System.currentTimeMillis() - start;
-            log.info("【结束】 traceId: {}，方法: {}.{}, 返回值: {}, 耗时: {}ms",
-                    traceId, className, methodName, result, duration);
+            log.info("【结束】 traceId: {}，方法: {}.{}, 耗时: {}ms",
+                    traceId, className, methodName, duration);
             return result;
         }
         catch (Throwable e) {

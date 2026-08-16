@@ -291,8 +291,8 @@ public class PayServiceImpl implements PayService {
     }
 
     /**
-     * 按支付单号查询支付参数，供前端调起渠道 SDK，不存在时抛出 PAY_NOT_FOUND。
-     * precreate 幂等，重新生成当面付二维码内容返回给前端；支付宝不可达时抛异常并由全局异常处理返回错误。
+     * 按支付单号查询支付参数，供前端调起渠道收银台，不存在时抛出 PAY_NOT_FOUND。
+     * page.pay 每次调用重新生成跳转表单返回给前端；支付宝网关异常时抛出并由全局异常处理返回错误。
      * @param paymentNo 支付单号
      * @return 支付参数VO
      */
@@ -303,12 +303,12 @@ public class PayServiceImpl implements PayService {
         if (po == null) {
             throw new BizException(PayCodeEnum.PAY_NOT_FOUND);
         }
-        String qrCode = payGateway.createPayment(
+        String payForm = payGateway.createPagePayment(
             po.getPaymentNo(), po.getAmount(), "Order " + po.getOrderNo(),
             po.getExpireAt().format(EXPIRE_FORMATTER));
         return new PaymentParamsVO(
             po.getPaymentNo(), po.getOrderNo(), po.getAmount(), po.getCurrency(),
-            po.getChannel(), "Order " + po.getOrderNo(), po.getExpireAt(), qrCode);
+            po.getChannel(), "Order " + po.getOrderNo(), po.getExpireAt(), payForm);
     }
 
     /**

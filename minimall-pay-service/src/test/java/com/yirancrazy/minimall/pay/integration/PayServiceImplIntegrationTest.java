@@ -76,8 +76,8 @@ class PayServiceImplIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        lenient().when(alipayGateway.createPayment(anyString(), any(), anyString(), anyString()))
-            .thenReturn("http://pay.url/test");
+        lenient().when(alipayGateway.createPagePayment(anyString(), any(), anyString(), anyString()))
+            .thenReturn("<form action=\"http://pay.url/test\"></form>");
         lenient().when(alipayGateway.refund(anyString(), anyString(), any(), anyString()))
             .thenReturn("REFUND_TRADE_TEST");
     }

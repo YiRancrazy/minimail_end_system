@@ -24,6 +24,6 @@ public class PaymentParamsVO {
     private Integer channel;
     private String subject;
     private LocalDateTime expireAt;
-    /** 支付宝当面付二维码内容（qr_code），前端生成二维码图片供用户扫码支付 */
-    private String qrCode;
+    /** 支付宝电脑网站支付表单 HTML（page.pay），前端写入当前页后自动跳转支付宝收银台 */
+    private String payForm;
 }

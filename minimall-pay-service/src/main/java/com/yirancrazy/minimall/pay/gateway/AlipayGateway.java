@@ -7,10 +7,9 @@ import com.alibaba.fastjson.JSONObject;
 import com.alipay.api.AlipayApiException;
 import com.alipay.api.AlipayClient;
 import com.alipay.api.internal.util.AlipaySignature;
-import com.alipay.api.request.AlipayTradePrecreateRequest;
+import com.alipay.api.request.AlipayTradePagePayRequest;
 import com.alipay.api.request.AlipayTradeQueryRequest;
 import com.alipay.api.request.AlipayTradeRefundRequest;
-import com.alipay.api.response.AlipayTradePrecreateResponse;
 import com.alipay.api.response.AlipayTradeQueryResponse;
 import com.alipay.api.response.AlipayTradeRefundResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -36,22 +35,25 @@ public class AlipayGateway implements PayGateway {
     }
 
     /**
-     * 创建支付订单（当面付预下单）。
-     * @param paymentNo 支付订单号
-     * @param amount 支付金额
-     * @param subject 支付主题
-     * @param expireTime 支付超时时间
-     * @return 二维码内容（qr_code），前端据此生成二维码供用户扫码支付
+     * 创建电脑网站支付单（alipay.trade.page.pay）。
+     * @param paymentNo 支付单号，作为 out_trade_no
+     * @param amount 支付金额，单位元，必须大于 0
+     * @param subject 订单标题
+     * @param expireTime 绝对过期时间，格式 yyyy-MM-dd HH:mm:ss
+     * @return 自动提交的收银台表单 HTML，前端写入页面后浏览器跳转支付宝收银台
+     * @throws RuntimeException 支付宝网关不可达或参数非法时抛出
      */
     @Override
-    public String createPayment(String paymentNo, BigDecimal amount, String subject, String expireTime) {
+    public String createPagePayment(String paymentNo, BigDecimal amount, String subject, String expireTime) {
 
         if (paymentNo == null || paymentNo.isBlank() || amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Invalid payment parameters");
         }
 
-        AlipayTradePrecreateRequest request = new AlipayTradePrecreateRequest();
-        request.setNotifyUrl(config.getNotifyUrl());    // 设置支付结果通知的地址
+        AlipayTradePagePayRequest request = new AlipayTradePagePayRequest();
+        // 异步通知走 notify_url，支付完成后浏览器同步跳转 return_url，两者均由配置注入
+        request.setNotifyUrl(config.getNotifyUrl());
+        request.setReturnUrl(config.getReturnUrl());
 
         // 设置支付订单信息
         JSONObject bizContent = new JSONObject();
@@ -59,21 +61,17 @@ public class AlipayGateway implements PayGateway {
         bizContent.put("total_amount", amount.toPlainString());
         bizContent.put("subject", subject);
         bizContent.put("time_expire", expireTime);
+        // page.pay 必填产品码：电脑网站支付
+        bizContent.put("product_code", "FAST_INSTANT_TRADE_PAY");
         request.setBizContent(bizContent.toJSONString());
 
         try {
-            // precreate 返回 qr_code 二维码内容，前端生成二维码图片，用户用支付宝扫码完成支付
-            AlipayTradePrecreateResponse response = alipayClient.execute(request);
-            if (!response.isSuccess()) {
-                log.error("alipay precreate failed, paymentNo={}, code={}, subMsg={}",
-                    paymentNo, response.getCode(), response.getSubMsg());
-                throw new RuntimeException("Alipay precreate failed: " + response.getSubMsg());
-            }
-            return response.getQrCode();
+            // pageExecute 本地组装参数并签名，返回带自动提交脚本的表单 HTML，无需服务端请求支付宝
+            return alipayClient.pageExecute(request).getBody();
         }
         catch (AlipayApiException e) {
-            log.error("create payment failed, paymentNo={}", paymentNo, e);
-            throw new RuntimeException("Alipay create payment failed", e);
+            log.error("create page payment failed, paymentNo={}", paymentNo, e);
+            throw new RuntimeException("Alipay create page payment failed", e);
         }
     }
 

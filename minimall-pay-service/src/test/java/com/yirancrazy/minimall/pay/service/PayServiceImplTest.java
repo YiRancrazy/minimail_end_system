@@ -69,8 +69,8 @@ public class PayServiceImplTest {
             .thenReturn(com.yirancrazy.minimall.common.result.Result.success(null));
         merchantWithdrawManager = mock(MerchantWithdrawManager.class);
         lenient().when(manager.updateById(any(PayTransactionPO.class))).thenReturn(true);
-        lenient().when(payGateway.createPayment(anyString(), any(BigDecimal.class), anyString(), anyString()))
-            .thenReturn("https://qr.alipay.com/xxx");
+        lenient().when(payGateway.createPagePayment(anyString(), any(BigDecimal.class), anyString(), anyString()))
+            .thenReturn("<form action=\"https://openapi-sandbox.dl.alipaydev.com/gateway.do\">mock</form>");
         doAnswer(inv -> {
             PayTransactionPO p = inv.getArgument(0);
             if (p.getId() == null) {
@@ -101,7 +101,7 @@ public class PayServiceImplTest {
         verify(manager).save(cap.capture());
         assertEquals(1, cap.getValue().getStatus());
         assertEquals(0, new BigDecimal("99.99").compareTo(cap.getValue().getAmount()));
-        verify(payGateway, never()).createPayment(anyString(), any(BigDecimal.class), anyString(), anyString());
+        verify(payGateway, never()).createPagePayment(anyString(), any(BigDecimal.class), anyString(), anyString());
     }
 
     /**
@@ -120,7 +120,7 @@ public class PayServiceImplTest {
 
         assertEquals(99L, id.longValue());
         verify(manager, never()).save(any(PayTransactionPO.class));
-        verify(payGateway, never()).createPayment(anyString(), any(BigDecimal.class), anyString(), anyString());
+        verify(payGateway, never()).createPagePayment(anyString(), any(BigDecimal.class), anyString(), anyString());
     }
 
     /**
@@ -140,7 +140,7 @@ public class PayServiceImplTest {
         assertNotNull(id);
         assertNotEquals(99L, id.longValue());
         verify(manager).save(any(PayTransactionPO.class));
-        verify(payGateway, never()).createPayment(anyString(), any(BigDecimal.class), anyString(), anyString());
+        verify(payGateway, never()).createPagePayment(anyString(), any(BigDecimal.class), anyString(), anyString());
     }
 
     /**
@@ -176,7 +176,7 @@ public class PayServiceImplTest {
         assertNotNull(id);
         assertNotEquals(77L, id.longValue());
         verify(manager).save(any(PayTransactionPO.class));
-        verify(payGateway, never()).createPayment(anyString(), any(BigDecimal.class), anyString(), anyString());
+        verify(payGateway, never()).createPagePayment(anyString(), any(BigDecimal.class), anyString(), anyString());
     }
 
     /**
@@ -273,7 +273,7 @@ public class PayServiceImplTest {
     }
 
     /**
-     * 验证 getPaymentParams 在支付单存在时返回参数VO，并重新生成支付宝当面付二维码内容 qrCode。
+     * 验证 getPaymentParams 在支付单存在时返回参数VO，并重新生成支付宝 page.pay 跳转表单 payForm。
      */
     @Test
     public void getPaymentParams_returns_vo_when_exists() {
@@ -291,7 +291,8 @@ public class PayServiceImplTest {
         assertEquals("ORDER100", vo.getOrderNo());
         assertEquals(0, new BigDecimal("99.99").compareTo(vo.getAmount()));
         assertEquals("Order ORDER100", vo.getSubject());
-        assertEquals("https://qr.alipay.com/xxx", vo.getQrCode());
+        assertEquals("<form action=\"https://openapi-sandbox.dl.alipaydev.com/gateway.do\">mock</form>",
+            vo.getPayForm());
     }
 
     /**
@@ -305,7 +306,7 @@ public class PayServiceImplTest {
         rec.setAmount(new BigDecimal("99.99"));
         rec.setExpireAt(LocalDateTime.now().plusMinutes(15));
         when(manager.getOne(any())).thenReturn(rec);
-        when(payGateway.createPayment(anyString(), any(BigDecimal.class), anyString(), anyString()))
+        when(payGateway.createPagePayment(anyString(), any(BigDecimal.class), anyString(), anyString()))
             .thenThrow(new RuntimeException("alipay down"));
 
         assertThrows(RuntimeException.class, () -> service.getPaymentParams("PAY123"));

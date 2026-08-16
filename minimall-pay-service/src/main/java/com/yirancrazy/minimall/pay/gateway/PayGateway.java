@@ -13,9 +13,15 @@ import java.util.Map;
 public interface PayGateway {
 
     /**
-     * Create payment order and return QR code content (qr_code) for the front-end to render
+     * 创建电脑网站支付单（alipay.trade.page.pay）。
+     * @param paymentNo 支付单号，作为 out_trade_no
+     * @param amount 支付金额，单位元，必须大于 0
+     * @param subject 订单标题
+     * @param expireTime 绝对过期时间，格式 yyyy-MM-dd HH:mm:ss
+     * @return 自动提交的收银台表单 HTML，前端写入页面后浏览器跳转支付宝收银台
+     * @throws RuntimeException 支付宝网关不可达或参数非法时抛出
      */
-    String createPayment(String paymentNo, BigDecimal amount, String subject, String expireTime);
+    String createPagePayment(String paymentNo, BigDecimal amount, String subject, String expireTime);
 
     /**
      * Verify callback signature and return trade_no

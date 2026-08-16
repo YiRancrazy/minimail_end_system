@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import jakarta.servlet.http.HttpServletResponse;
@@ -37,7 +38,7 @@ public final class CsvExporter {
     public static void write(HttpServletResponse response, String filename,
                              String[] headers, List<String[]> rows) throws IOException {
         response.setContentType(CONTENT_TYPE);
-        response.setHeader("Content-Disposition", "attachment; filename=\"" + filename + "\"");
+        response.setHeader("Content-Disposition", buildContentDisposition(filename));
         OutputStream os = response.getOutputStream();
         os.write(UTF8_BOM);
         try (Writer writer = new OutputStreamWriter(os, StandardCharsets.UTF_8)) {
@@ -55,6 +56,18 @@ public final class CsvExporter {
      */
     public static int maxExportRows() {
         return MAX_EXPORT_ROWS;
+    }
+
+    /**
+     * 构造 Content-Disposition 头：按 RFC 5987 对文件名做 UTF-8 百分号编码，
+     * 并剔除 CR/LF/引号，防止文件名注入响应头。
+     * @param filename 原始文件名
+     * @return Content-Disposition 头值
+     */
+    private static String buildContentDisposition(String filename) {
+        String safe = filename.replace("\r", "").replace("\n", "").replace("\"", "");
+        String encoded = URLEncoder.encode(safe, StandardCharsets.UTF_8).replace("+", "%20");
+        return "attachment; filename*=UTF-8''" + encoded;
     }
 
     private static void writeRow(Writer writer, String[] fields) throws IOException {

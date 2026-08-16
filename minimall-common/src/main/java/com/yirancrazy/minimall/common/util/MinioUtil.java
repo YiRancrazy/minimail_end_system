@@ -78,8 +78,9 @@ public class MinioUtil {
      * @throws BizException 当上传失败时
      */
     public String upload(Path file, String objectKey, String contentType) {
-        try {
-            return upload(Files.newInputStream(file), objectKey, Files.size(file), contentType);
+        // try-with-resources 确保文件流在上传结束（含异常路径）后被关闭，避免句柄泄漏
+        try (InputStream in = Files.newInputStream(file)) {
+            return upload(in, objectKey, Files.size(file), contentType);
         }
         catch (Exception e) {
             throw new BizException(CommonCode.SYS_ERROR,

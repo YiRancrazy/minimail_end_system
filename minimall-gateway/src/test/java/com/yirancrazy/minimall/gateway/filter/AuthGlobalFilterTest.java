@@ -121,6 +121,23 @@ class AuthGlobalFilterTest {
     }
 
     @Test
+    void forged_identity_headers_are_cleared_and_replaced() {
+        String token = buildToken("123", "USER", "jti-forged");
+        when(redisTemplate.hasKey(anyString())).thenReturn(Mono.just(false));
+
+        // 客户端预置伪造身份头，网关必须清除后注入令牌解析值，防止水平越权
+        ServerWebExchange ex = MockServerWebExchange.from(
+            MockServerHttpRequest.get("/api/v1/user/users/123")
+                .header("Authorization", "Bearer " + token)
+                .header("X-User-Id", "999999")
+                .header("X-User-Role", "PLATFORM"));
+        StepVerifier.create(filter.filter(ex, e -> Mono.empty()))
+            .verifyComplete();
+        assertEquals("123", ex.getRequest().getHeaders().getFirst("X-User-Id"));
+        assertEquals("USER", ex.getRequest().getHeaders().getFirst("X-User-Role"));
+    }
+
+    @Test
     void internal_endpoint_without_token_returns_403() {
         ServerWebExchange ex = MockServerWebExchange.from(
             MockServerHttpRequest.get("/internal/order/123"));

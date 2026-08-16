@@ -289,6 +289,23 @@ public class StockServiceImplTest {
     }
 
     /**
+     * F13 遗留：商家视角导出其他商家 SKU 流水时抛出 STOCK_NOT_FOUND，防止越权导出。
+     */
+    @Test
+    public void exportJournal_merchant_mismatch_throws() {
+        StockPO s = new StockPO();
+        s.setId(1L);
+        s.setSkuId(100L);
+        s.setMerchantId(1L);
+        s.setAvailable(10L);
+        s.setReserved(0L);
+        when(manager.getOne(any())).thenReturn(s);
+
+        assertThrows(BizException.class, () -> service.exportJournal(100L, 2L));
+        verify(journalManager, never()).list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class));
+    }
+
+    /**
      * 验证调拨成功时扣减源库存、增加目标库存、记录调拨流水与调拨记录。
      */
     @Test

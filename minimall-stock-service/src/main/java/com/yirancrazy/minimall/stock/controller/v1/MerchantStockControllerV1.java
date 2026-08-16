@@ -99,14 +99,16 @@ public class MerchantStockControllerV1 {
 
     /**
      * 导出指定SKU的库存流水CSV，最多10000行。
+     * @param merchantId 商家ID（来自网关 X-Merchant-Id）
      * @param skuId SKU标识
      * @param response HTTP响应
      * @throws IOException 写入失败时抛出
      */
     @GetMapping("/{skuId}/journal/export")
-    public void exportJournal(@PathVariable Long skuId,
+    public void exportJournal(@RequestHeader("X-Merchant-Id") Long merchantId,
+                              @PathVariable Long skuId,
                               HttpServletResponse response) throws IOException {
-        List<StockJournalPO> list = stockService.exportJournal(skuId);
+        List<StockJournalPO> list = stockService.exportJournal(skuId, merchantId);
         CsvExporter.write(response, "stock-journal.csv", JOURNAL_HEADERS, toJournalRows(list));
     }
 

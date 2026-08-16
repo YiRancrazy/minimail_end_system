@@ -114,4 +114,31 @@ class MerchantStockControllerV1Test {
             .andExpect(jsonPath("$.code").value("00000"))
             .andExpect(jsonPath("$.data").isArray());
     }
+
+    /**
+     * 验证 GET /api/v1/merchant/stock/{skuId}/journal/export 透传 X-Merchant-Id，
+     * 调用带归属校验的导出方法，防止越权导出其他商家流水。
+     */
+    @Test
+    void exportJournal_passes_merchant_id() throws Exception {
+        StockJournalPO po = new StockJournalPO();
+        po.setId(1L);
+        po.setSkuId(99L);
+        po.setQuantity(10L);
+        po.setType(1);
+        when(stockService.exportJournal(99L, MERCHANT_ID)).thenReturn(List.of(po));
+        mockMvc.perform(get("/api/v1/merchant/stock/99/journal/export")
+                .header("X-Merchant-Id", MERCHANT_ID))
+            .andExpect(status().isOk());
+        verify(stockService).exportJournal(99L, MERCHANT_ID);
+    }
+
+    /**
+     * 验证导出接口缺失 X-Merchant-Id 头时被拒绝（400）。
+     */
+    @Test
+    void exportJournal_rejects_missing_merchant_header() throws Exception {
+        mockMvc.perform(get("/api/v1/merchant/stock/99/journal/export"))
+            .andExpect(status().isBadRequest());
+    }
 }

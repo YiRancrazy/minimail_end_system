@@ -330,6 +330,23 @@ public class StockServiceImpl implements StockService {
     }
 
     /**
+     * 商家视角导出库存流水，先校验库存归属当前商家，防止越权导出其他商家流水。
+     * @param skuId SKU标识
+     * @param merchantId 商家ID（来自网关 X-Merchant-Id）
+     * @return 库存流水列表，按ID降序，最多 10000 行
+     * @throws BizException 库存不存在或归属不匹配时
+     */
+    @Override
+    public List<StockJournalPO> exportJournal(Long skuId, Long merchantId) {
+        checkMerchantOwnership(getStock(skuId), merchantId);
+        return journalManager.list(
+            Wrappers.lambdaQuery(StockJournalPO.class)
+                .eq(StockJournalPO::getSkuId, skuId)
+                .orderByDesc(StockJournalPO::getId)
+                .last("LIMIT " + EXPORT_MAX_ROWS));
+    }
+
+    /**
      * 跨商家库存调拨：扣减源SKU库存、增加目标SKU库存、记录调拨流水与调拨记录。
      * @param dto 调拨入参，含源/目标SKU、数量、原因、操作人
      * @throws BizException 源/目标SKU相同、源库存不足或目标不存在时

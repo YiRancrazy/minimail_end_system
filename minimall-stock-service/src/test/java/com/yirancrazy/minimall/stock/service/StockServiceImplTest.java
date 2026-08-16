@@ -196,6 +196,39 @@ public class StockServiceImplTest {
     }
 
     /**
+     * 商家视角查询：库存归属与当前商家一致时返回可用数量。
+     */
+    @Test
+    public void query_merchant_owned_returns_available() {
+        StockPO s = new StockPO();
+        s.setId(1L);
+        s.setSkuId(100L);
+        s.setMerchantId(1L);
+        s.setAvailable(10L);
+        s.setReserved(0L);
+        when(manager.getOne(any())).thenReturn(s);
+
+        long available = service.query(100L, 1L);
+        assertEquals(10L, available);
+    }
+
+    /**
+     * F13: 商家视角查询其他商家 SKU 库存时抛出 STOCK_NOT_FOUND，防止越权读取。
+     */
+    @Test
+    public void query_merchant_mismatch_throws() {
+        StockPO s = new StockPO();
+        s.setId(1L);
+        s.setSkuId(100L);
+        s.setMerchantId(1L);
+        s.setAvailable(10L);
+        s.setReserved(0L);
+        when(manager.getOne(any())).thenReturn(s);
+
+        assertThrows(BizException.class, () -> service.query(100L, 2L));
+    }
+
+    /**
      * 验证 page 委托给 manager.list 并返回游标分页结果。
      */
     @Test
@@ -665,6 +698,61 @@ public class StockServiceImplTest {
     }
 
     /**
+     * F13: 商家视角调整其他商家 SKU 库存时抛出 STOCK_NOT_FOUND，防止越权改库存。
+     */
+    @Test
+    public void adjustStock_merchant_mismatch_throws() {
+        StockPO s = new StockPO();
+        s.setId(1L);
+        s.setSkuId(100L);
+        s.setMerchantId(1L);
+        s.setAvailable(10L);
+        s.setReserved(0L);
+        when(manager.getOne(any())).thenReturn(s);
+
+        assertThrows(BizException.class, () -> service.adjustStock(100L, 5L, "replenish", 2L));
+        verify(manager, never()).updateById(any(StockPO.class));
+    }
+
+    /**
+     * F13: 商家视角调整库存遇无归属（merchant_id 为空）存量记录时抛出 STOCK_NOT_FOUND，不允许认领。
+     */
+    @Test
+    public void adjustStock_merchant_null_ownership_throws() {
+        StockPO s = new StockPO();
+        s.setId(1L);
+        s.setSkuId(100L);
+        s.setAvailable(10L);
+        s.setReserved(0L);
+        when(manager.getOne(any())).thenReturn(s);
+
+        assertThrows(BizException.class, () -> service.adjustStock(100L, 5L, "replenish", 1L));
+        verify(manager, never()).updateById(any(StockPO.class));
+    }
+
+    /**
+     * F13: 商家视角调整库存，记录不存在时以该商家归属创建并写入 merchantId。
+     */
+    @Test
+    public void adjustStock_merchant_noRecord_creates_with_merchantId() {
+        final StockPO[] created = new StockPO[1];
+        when(manager.getOne(any())).thenReturn(null);
+        when(manager.save(any(StockPO.class))).thenAnswer(invocation -> {
+            StockPO po = invocation.getArgument(0);
+            po.setId(2L);
+            created[0] = po;
+            return true;
+        });
+
+        service.adjustStock(200L, 5L, "initial", 7L);
+
+        assertNotNull(created[0]);
+        assertEquals(7L, created[0].getMerchantId());
+        assertEquals(5L, created[0].getAvailable());
+        verify(manager).save(created[0]);
+    }
+
+    /**
      * 验证 setThreshold 在库存记录不存在时自动创建初始记录。
      */
     @Test
@@ -720,6 +808,22 @@ public class StockServiceImplTest {
     }
 
     /**
+     * F13: 商家视角设置阈值遇归属不匹配时抛出 STOCK_NOT_FOUND，防止越权改其他商家阈值。
+     */
+    @Test
+    public void setThreshold_merchant_mismatch_throws() {
+        StockPO s = new StockPO();
+        s.setId(1L);
+        s.setSkuId(100L);
+        s.setMerchantId(1L);
+        s.setAvailable(10L);
+        when(manager.getOne(any())).thenReturn(s);
+
+        assertThrows(BizException.class, () -> service.setThreshold(100L, 5L, 2L));
+        verify(manager, never()).updateById(any(StockPO.class));
+    }
+
+    /**
      * 验证 queryJournal 委托给 journalManager.list 并返回结果。
      */
     @Test
@@ -749,6 +853,22 @@ public class StockServiceImplTest {
         ArgumentCaptor<Wrapper> captor = ArgumentCaptor.forClass(Wrapper.class);
         verify(journalManager).list(captor.capture());
         assertTrue(captor.getValue().getCustomSqlSegment().contains("LIMIT 200"));
+    }
+
+    /**
+     * F13: 商家视角查询流水遇归属不匹配时抛出 STOCK_NOT_FOUND，防止越权读取流水。
+     */
+    @Test
+    public void queryJournal_merchant_mismatch_throws() {
+        StockPO s = new StockPO();
+        s.setId(1L);
+        s.setSkuId(100L);
+        s.setMerchantId(1L);
+        s.setAvailable(10L);
+        when(manager.getOne(any())).thenReturn(s);
+
+        assertThrows(BizException.class, () -> service.queryJournal(100L, 2L));
+        verify(journalManager, never()).list(any(Wrapper.class));
     }
 
     /**

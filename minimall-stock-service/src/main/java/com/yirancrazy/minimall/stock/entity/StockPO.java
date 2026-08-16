@@ -16,6 +16,11 @@ import com.yirancrazy.minimall.common.base.BasePO;
 @TableName("t_stock")
 public class StockPO extends BasePO {
     private Long skuId;
+
+    /**
+     * 库存归属商家ID，商家端越权校验依据；null 表示历史无归属记录（不参与商家端操作）
+     */
+    private Long merchantId;
     private Long available;
     private Long reserved;
     private Long alertThreshold;

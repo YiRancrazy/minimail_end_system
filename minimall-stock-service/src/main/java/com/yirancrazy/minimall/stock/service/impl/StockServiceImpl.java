@@ -127,6 +127,24 @@ public class StockServiceImpl implements StockService {
     }
 
     /**
+     * 商家视角查询可用库存，先校验库存归属当前商家，防止越权读取其他商家 SKU。
+     * @param skuId SKU 标识
+     * @param merchantId 商家ID（来自网关 X-Merchant-Id）
+     * @return 该 SKU 的可用库存数量
+     * @throws BizException 库存归属与商家不匹配时
+     */
+    @Override
+    public long query(Long skuId, Long merchantId) {
+        StockPO s = stockManager.getOne(
+            Wrappers.lambdaQuery(StockPO.class).eq(StockPO::getSkuId, skuId));
+        if (s == null) {
+            return 0L;
+        }
+        checkMerchantOwnership(s, merchantId);
+        return s.getAvailable();
+    }
+
+    /**
      * 设置库存预警阈值。库存记录不存在时自动创建（初始可用 0）。
      * @param skuId 商品SKU ID
      * @param threshold 预警阈值，必须 >= 0
@@ -142,6 +160,26 @@ public class StockServiceImpl implements StockService {
         po.setAlertThreshold(threshold);
         stockManager.updateById(po);
         log.info("threshold set, skuId={}, threshold={}", skuId, threshold);
+    }
+
+    /**
+     * 商家视角设置预警阈值，校验库存归属；记录不存在时以该商家归属创建。
+     * @param skuId 商品SKU ID
+     * @param threshold 预警阈值，必须 >= 0
+     * @param merchantId 商家ID（来自网关 X-Merchant-Id）
+     * @throws BizException 当阈值非法或库存归属不匹配时
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void setThreshold(Long skuId, Long threshold, Long merchantId) {
+        if (threshold == null || threshold < 0) {
+            throw new BizException(StockCodeEnum.THRESHOLD_INVALID);
+        }
+        StockPO po = getOrCreateMerchantStock(skuId, merchantId);
+        po.setAlertThreshold(threshold);
+        stockManager.updateById(po);
+        log.info("threshold set, skuId={}, merchantId={}, threshold={}",
+            skuId, merchantId, threshold);
     }
 
     /**
@@ -174,12 +212,59 @@ public class StockServiceImpl implements StockService {
     }
 
     /**
+     * 商家视角手动调整库存，校验库存归属；记录不存在时以该商家归属创建（首次入库）。
+     * @param skuId 商品SKU ID
+     * @param quantity 调整数量，正数增加、负数扣减，不能为0
+     * @param reason 调整原因
+     * @param merchantId 商家ID（来自网关 X-Merchant-Id）
+     * @throws BizException 当调整数量为0、负向调整超库存或库存归属不匹配时
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void adjustStock(Long skuId, Long quantity, String reason, Long merchantId) {
+        if (quantity == null || quantity == 0) {
+            throw new BizException(StockCodeEnum.ADJUST_QUANTITY_ZERO);
+        }
+        StockPO po = getOrCreateMerchantStock(skuId, merchantId);
+        // 负向调整下限校验：可用库存不得被调成负数
+        if (po.getAvailable() + quantity < 0) {
+            throw new BizException(StockCodeEnum.STOCK_INSUFFICIENT);
+        }
+        po.setAvailable(po.getAvailable() + quantity);
+        if (!stockManager.updateById(po)) {
+            throw new BizException(StockCodeEnum.STOCK_NOT_FOUND);
+        }
+
+        recordJournal(skuId, quantity, StockJournalTypeEnum.ADJUST, reason, null);
+        checkAlert(po);
+        log.info("stock adjusted, skuId={}, merchantId={}, quantity={}",
+            skuId, merchantId, quantity);
+    }
+
+    /**
      * 查询指定SKU的库存流水记录，最多返回 200 条。
      * @param skuId 商品SKU ID
      * @return 库存流水列表，按ID降序
      */
     @Override
     public List<StockJournalPO> queryJournal(Long skuId) {
+        return journalManager.list(
+            Wrappers.lambdaQuery(StockJournalPO.class)
+                .eq(StockJournalPO::getSkuId, skuId)
+                .orderByDesc(StockJournalPO::getId)
+                .last("LIMIT " + QUERY_MAX_ROWS));
+    }
+
+    /**
+     * 商家视角查询库存流水，先校验库存归属当前商家，防止越权读取其他商家流水。
+     * @param skuId 商品SKU ID
+     * @param merchantId 商家ID（来自网关 X-Merchant-Id）
+     * @return 库存流水列表，按ID降序
+     * @throws BizException 当库存不存在或归属不匹配时
+     */
+    @Override
+    public List<StockJournalPO> queryJournal(Long skuId, Long merchantId) {
+        checkMerchantOwnership(getStock(skuId), merchantId);
         return journalManager.list(
             Wrappers.lambdaQuery(StockJournalPO.class)
                 .eq(StockJournalPO::getSkuId, skuId)
@@ -484,6 +569,36 @@ public class StockServiceImpl implements StockService {
         po.setReserved(0L);
         stockManager.save(po);
         return po;
+    }
+
+    /**
+     * 商家视角获取库存记录：存在时校验归属，不存在时以该商家归属创建初始记录。
+     * 存量 merchant_id 为空的历史记录视为无归属，不允许商家认领（由运营脚本回填）。
+     */
+    private StockPO getOrCreateMerchantStock(Long skuId, Long merchantId) {
+        StockPO po = stockManager.getOne(
+            Wrappers.lambdaQuery(StockPO.class).eq(StockPO::getSkuId, skuId));
+        if (po != null) {
+            checkMerchantOwnership(po, merchantId);
+            return po;
+        }
+        po = new StockPO();
+        po.setSkuId(skuId);
+        po.setMerchantId(merchantId);
+        po.setAvailable(0L);
+        po.setReserved(0L);
+        stockManager.save(po);
+        return po;
+    }
+
+    /**
+     * 校验库存归属：无归属（存量数据未回填）或归属商家与当前商家不一致时，
+     * 统一按 SKU 不存在抛错，避免向越权商家泄露 SKU 存在性与归属信息。
+     */
+    private void checkMerchantOwnership(StockPO po, Long merchantId) {
+        if (po.getMerchantId() == null || !po.getMerchantId().equals(merchantId)) {
+            throw new BizException(StockCodeEnum.STOCK_NOT_FOUND);
+        }
     }
 
     private void recordJournal(Long skuId, Long quantity, StockJournalTypeEnum type,

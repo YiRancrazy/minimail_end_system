@@ -45,12 +45,30 @@ public interface StockService {
     long query(Long skuId);
 
     /**
+     * 商家视角查询可用库存，校验该 SKU 库存归属当前商家；无归属记录视为不存在。
+     * @param skuId 商品SKU ID
+     * @param merchantId 商家ID（来自网关 X-Merchant-Id）
+     * @return 可用库存数量
+     * @throws com.yirancrazy.minimall.common.exception.BizException 库存归属与商家不匹配时
+     */
+    long query(Long skuId, Long merchantId);
+
+    /**
      * 设置库存预警阈值。
      * @param skuId 商品SKU ID
      * @param threshold 预警阈值，必须 >= 0
      * @throws com.yirancrazy.minimall.common.exception.BizException 当阈值非法时
      */
     void setThreshold(Long skuId, Long threshold);
+
+    /**
+     * 商家视角设置库存预警阈值，校验库存归属；记录不存在时以该商家归属创建。
+     * @param skuId 商品SKU ID
+     * @param threshold 预警阈值，必须 >= 0
+     * @param merchantId 商家ID（来自网关 X-Merchant-Id）
+     * @throws com.yirancrazy.minimall.common.exception.BizException 阈值非法或库存归属不匹配时
+     */
+    void setThreshold(Long skuId, Long threshold, Long merchantId);
 
     /**
      * 手动调整库存数量。
@@ -62,11 +80,30 @@ public interface StockService {
     void adjustStock(Long skuId, Long quantity, String reason);
 
     /**
+     * 商家视角手动调整库存数量，校验库存归属；记录不存在时以该商家归属创建。
+     * @param skuId 商品SKU ID
+     * @param quantity 调整数量，正数增加、负数扣减，不能为0
+     * @param reason 调整原因
+     * @param merchantId 商家ID（来自网关 X-Merchant-Id）
+     * @throws com.yirancrazy.minimall.common.exception.BizException 调整数量非法或库存归属不匹配时
+     */
+    void adjustStock(Long skuId, Long quantity, String reason, Long merchantId);
+
+    /**
      * 查询指定SKU的库存流水记录。
      * @param skuId 商品SKU ID
      * @return 库存流水列表，按ID降序
      */
     List<StockJournalPO> queryJournal(Long skuId);
+
+    /**
+     * 商家视角查询指定SKU的库存流水记录，校验库存归属后返回。
+     * @param skuId 商品SKU ID
+     * @param merchantId 商家ID（来自网关 X-Merchant-Id）
+     * @return 库存流水列表，按ID降序
+     * @throws com.yirancrazy.minimall.common.exception.BizException 库存不存在或归属不匹配时
+     */
+    List<StockJournalPO> queryJournal(Long skuId, Long merchantId);
 
     /**
      * 平台分页查询全平台库存，可选按 SKU 过滤或仅查预警库存。

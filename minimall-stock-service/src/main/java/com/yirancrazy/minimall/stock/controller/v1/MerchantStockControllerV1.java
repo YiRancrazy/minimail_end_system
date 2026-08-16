@@ -6,6 +6,7 @@ import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -37,55 +38,63 @@ public class MerchantStockControllerV1 {
     }
 
     /**
-     * 按 SKU 标识查询当前可用库存数量，库存记录不存在时返回 0。
+     * 按 SKU 标识查询当前可用库存数量，库存记录不存在或非本商家归属时返回错误。
      *
+     * @param merchantId 商家ID（来自网关 X-Merchant-Id）
      * @param skuId SKU 标识
      * @return 统一响应体，数据为该 SKU 的可用库存数量
      */
     @GetMapping("/{skuId}")
-    public Result<Long> get(@PathVariable("skuId") Long skuId) {
-        return Result.success(stockService.query(skuId));
+    public Result<Long> get(@RequestHeader("X-Merchant-Id") Long merchantId,
+                            @PathVariable("skuId") Long skuId) {
+        return Result.success(stockService.query(skuId, merchantId));
     }
 
     /**
      * 设置库存预警阈值。
      *
+     * @param merchantId 商家ID（来自网关 X-Merchant-Id）
      * @param skuId     SKU 标识
      * @param threshold 预警阈值，必须 >= 0
      * @return 统一响应体
      */
     @PostMapping("/{skuId}/threshold")
-    public Result<Void> setThreshold(@PathVariable Long skuId,
+    public Result<Void> setThreshold(@RequestHeader("X-Merchant-Id") Long merchantId,
+                                     @PathVariable Long skuId,
                                      @RequestParam Long threshold) {
-        stockService.setThreshold(skuId, threshold);
+        stockService.setThreshold(skuId, threshold, merchantId);
         return Result.success(null);
     }
 
     /**
      * 手动调整库存数量。
      *
+     * @param merchantId 商家ID（来自网关 X-Merchant-Id）
      * @param skuId    SKU 标识
      * @param quantity 调整数量，正数增加、负数扣减，不能为0
      * @param reason   调整原因
      * @return 统一响应体
      */
     @PostMapping("/{skuId}/adjust")
-    public Result<Void> adjustStock(@PathVariable Long skuId,
+    public Result<Void> adjustStock(@RequestHeader("X-Merchant-Id") Long merchantId,
+                                    @PathVariable Long skuId,
                                     @RequestParam Long quantity,
                                     @RequestParam(required = false) String reason) {
-        stockService.adjustStock(skuId, quantity, reason);
+        stockService.adjustStock(skuId, quantity, reason, merchantId);
         return Result.success(null);
     }
 
     /**
      * 查询指定SKU的库存流水记录。
      *
+     * @param merchantId 商家ID（来自网关 X-Merchant-Id）
      * @param skuId SKU 标识
      * @return 统一响应体，数据为库存流水列表
      */
     @GetMapping("/{skuId}/journal")
-    public Result<List<StockJournalPO>> queryJournal(@PathVariable Long skuId) {
-        return Result.success(stockService.queryJournal(skuId));
+    public Result<List<StockJournalPO>> queryJournal(
+        @RequestHeader("X-Merchant-Id") Long merchantId, @PathVariable Long skuId) {
+        return Result.success(stockService.queryJournal(skuId, merchantId));
     }
 
     /**

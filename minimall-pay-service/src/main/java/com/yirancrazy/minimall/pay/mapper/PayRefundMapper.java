@@ -26,4 +26,16 @@ public interface PayRefundMapper extends BaseMapper<PayRefundPO> {
     @Select("SELECT COALESCE(SUM(amount), 0) FROM t_pay_refund "
         + "WHERE payment_no = #{paymentNo} AND status IN (0, 1) AND is_deleted = 0")
     BigDecimal sumCommittedAmount(@Param("paymentNo") String paymentNo);
+
+    /**
+     * 统计商家退款扣减合计：该商家支付流水关联的退款中（PENDING）与退款成功（SUCCESS）金额求和，
+     * 用于可提现余额计算；退款失败/关闭不计入，防止退款未实际退回时错误扣减可提现余额。
+     * @param merchantId 商家ID
+     * @return 退款扣减合计；无记录返回 0
+     */
+    @Select("SELECT COALESCE(SUM(r.amount), 0) FROM t_pay_refund r "
+        + "INNER JOIN t_pay_transaction t ON t.payment_no = r.payment_no "
+        + "WHERE t.merchant_id = #{merchantId} AND r.status IN (0, 1) "
+        + "AND r.is_deleted = 0 AND t.is_deleted = 0")
+    BigDecimal sumDeductAmount(@Param("merchantId") Long merchantId);
 }

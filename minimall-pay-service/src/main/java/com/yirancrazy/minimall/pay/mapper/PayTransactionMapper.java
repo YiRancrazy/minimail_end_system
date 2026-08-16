@@ -1,5 +1,6 @@
 package com.yirancrazy.minimall.pay.mapper;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -52,6 +53,16 @@ public interface PayTransactionMapper extends BaseMapper<PayTransactionPO> {
     int updateStatusIf(@Param("paymentNo") String paymentNo,
                        @Param("fromStatus") int fromStatus,
                        @Param("toStatus") int toStatus);
+
+    /**
+     * 统计商家已收款项合计：支付成功（SUCCESS）、退款中（REFUNDING）、已全额退款（REFUNDED）流水金额求和。
+     * REFUNDED 计入合计以与退款扣减相抵，避免全额退款场景双重扣减；FROZEN/失败/关闭等异常资金不开放提现，不计入。
+     * @param merchantId 商家ID
+     * @return 已收款项合计；无记录返回 0
+     */
+    @Select("SELECT COALESCE(SUM(amount), 0) FROM t_pay_transaction "
+        + "WHERE merchant_id = #{merchantId} AND status IN (2, 5, 6) AND is_deleted = 0")
+    BigDecimal sumSettledAmount(@Param("merchantId") Long merchantId);
 
     /**
      * 对账单聚合查询，按状态分组统计交易笔数与金额。

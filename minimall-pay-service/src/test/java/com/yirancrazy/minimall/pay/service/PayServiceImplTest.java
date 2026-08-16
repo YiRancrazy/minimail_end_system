@@ -14,8 +14,11 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
@@ -23,9 +26,11 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import com.yirancrazy.minimall.api.feign.IdFeignClient;
 import com.yirancrazy.minimall.api.feign.OrderFeignClient;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
+import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.pay.dto.PayCallbackDTO;
 import com.yirancrazy.minimall.pay.dto.PayPageDTO;
 import com.yirancrazy.minimall.pay.dto.PayStatementDTO;
@@ -37,6 +42,7 @@ import com.yirancrazy.minimall.pay.gateway.AlipayGateway;
 import com.yirancrazy.minimall.pay.gateway.PayGateway;
 import com.yirancrazy.minimall.pay.manager.MerchantWithdrawManager;
 import com.yirancrazy.minimall.pay.manager.PayManager;
+import com.yirancrazy.minimall.pay.mapper.MerchantWithdrawMapper;
 import com.yirancrazy.minimall.pay.mapper.PayRefundMapper;
 import com.yirancrazy.minimall.pay.mapper.PayTransactionMapper;
 import com.yirancrazy.minimall.pay.service.impl.PayServiceImpl;
@@ -61,6 +67,8 @@ public class PayServiceImplTest {
     private PayTransactionMapper payTransactionMapper;
     private OrderFeignClient orderFeignClient;
     private MerchantWithdrawManager merchantWithdrawManager;
+    private MerchantWithdrawMapper merchantWithdrawMapper;
+    private IdFeignClient idFeignClient;
     private PayServiceImpl service;
 
     @BeforeEach
@@ -71,7 +79,7 @@ public class PayServiceImplTest {
         payTransactionMapper = mock(PayTransactionMapper.class);
         orderFeignClient = mock(OrderFeignClient.class);
         lenient().when(orderFeignClient.merchantId(anyString()))
-            .thenReturn(com.yirancrazy.minimall.common.result.Result.success(null));
+            .thenReturn(Result.success(null));
         merchantWithdrawManager = mock(MerchantWithdrawManager.class);
         lenient().when(manager.updateById(any(PayTransactionPO.class))).thenReturn(true);
         lenient().when(payGateway.createPagePayment(anyString(), any(BigDecimal.class), anyString(), anyString()))
@@ -91,8 +99,17 @@ public class PayServiceImplTest {
             }
             return true;
         }).when(merchantWithdrawManager).save(any(MerchantWithdrawPO.class));
+        merchantWithdrawMapper = mock(MerchantWithdrawMapper.class);
+        idFeignClient = mock(IdFeignClient.class);
+        // 默认 Id 服务可用；默认可提现余额充足（100000），无关用例不受余额校验影响
+        lenient().when(idFeignClient.nextId(anyString())).thenReturn(Result.success(10001L));
+        lenient().when(payTransactionMapper.sumSettledAmount(anyLong())).thenReturn(new BigDecimal("100000.00"));
+        lenient().when(payRefundMapper.sumDeductAmount(anyLong())).thenReturn(new BigDecimal("0.00"));
+        lenient().when(merchantWithdrawMapper.sumInFlightAmount(anyLong())).thenReturn(new BigDecimal("0.00"));
+        lenient().when(merchantWithdrawMapper.updateStatusIf(anyLong(), anyInt(), anyInt(), any(), any()))
+            .thenReturn(1);
         service = new PayServiceImpl(manager, payGateway, payRefundMapper, payTransactionMapper,
-            orderFeignClient, merchantWithdrawManager);
+            orderFeignClient, merchantWithdrawManager, merchantWithdrawMapper, idFeignClient);
     }
 
     /**
@@ -463,6 +480,22 @@ public class PayServiceImplTest {
     }
 
     /**
+     * 验证 applyWithdraw 在可提现余额（已收款项 − 退款扣减 − 在途提现）不足时抛出 WITHDRAW_BALANCE_INSUFFICIENT 且不落单。
+     */
+    @Test
+    public void applyWithdraw_insufficient_balance_throws() {
+        when(payTransactionMapper.sumSettledAmount(10L)).thenReturn(new BigDecimal("100.00"));
+        when(payRefundMapper.sumDeductAmount(10L)).thenReturn(new BigDecimal("0.00"));
+        when(merchantWithdrawMapper.sumInFlightAmount(10L)).thenReturn(new BigDecimal("0.00"));
+
+        WithdrawApplyDTO dto = new WithdrawApplyDTO(new BigDecimal("500.00"), "超额提现");
+        BizException ex = assertThrows(BizException.class, () -> service.applyWithdraw(10L, dto));
+
+        assertEquals("40010", ex.getCode());
+        verify(merchantWithdrawManager, never()).save(any(MerchantWithdrawPO.class));
+    }
+
+    /**
      * 验证 pageWithdraw 委托给 merchantWithdrawManager.list 并强制绑定 merchantId。
      */
     @Test
@@ -493,34 +526,49 @@ public class PayServiceImplTest {
     }
 
     /**
-     * 验证 reviewWithdraw 在审核通过时将提现单状态置为 PAID。
+     * 验证 reviewWithdraw 审核通过时条件更新（WHERE status=PENDING）置为 APPROVED 而非 PAID，PAID 留给打款回调驱动。
      */
     @Test
-    public void reviewWithdraw_approves_marks_paid() {
+    public void reviewWithdraw_approve_sets_approved() {
         MerchantWithdrawPO rec = new MerchantWithdrawPO();
         rec.setId(1L);
         rec.setStatus(1);
         when(merchantWithdrawManager.getById(any())).thenReturn(rec);
 
         service.reviewWithdraw(1L, true, null);
-        assertEquals(4, rec.getStatus());
-        verify(merchantWithdrawManager).updateById(rec);
+
+        verify(merchantWithdrawMapper).updateStatusIf(eq(1L), eq(1), eq(2), isNull(), any(LocalDateTime.class));
     }
 
     /**
-     * 验证 reviewWithdraw 在审核驳回时将提现单状态置为 REJECTED 并记录原因。
+     * 验证 reviewWithdraw 审核驳回时条件更新置为 REJECTED 并记录原因。
      */
     @Test
-    public void reviewWithdraw_rejects_marks_rejected() {
+    public void reviewWithdraw_reject_sets_rejected() {
         MerchantWithdrawPO rec = new MerchantWithdrawPO();
         rec.setId(1L);
         rec.setStatus(1);
         when(merchantWithdrawManager.getById(any())).thenReturn(rec);
 
         service.reviewWithdraw(1L, false, "材料不全");
-        assertEquals(3, rec.getStatus());
-        assertEquals("材料不全", rec.getReason());
-        verify(merchantWithdrawManager).updateById(rec);
+
+        verify(merchantWithdrawMapper).updateStatusIf(eq(1L), eq(1), eq(3), eq("材料不全"), any(LocalDateTime.class));
+    }
+
+    /**
+     * 验证 reviewWithdraw 条件更新影响 0 行（已 REJECTED/PAID 终态单被重复审核）时抛 WITHDRAW_STATUS_INVALID。
+     */
+    @Test
+    public void reviewWithdraw_rejects_when_not_pending() {
+        MerchantWithdrawPO rec = new MerchantWithdrawPO();
+        rec.setId(1L);
+        rec.setStatus(3); // 已驳回的终态单
+        when(merchantWithdrawManager.getById(any())).thenReturn(rec);
+        when(merchantWithdrawMapper.updateStatusIf(anyLong(), anyInt(), anyInt(), any(), any())).thenReturn(0);
+
+        BizException ex = assertThrows(BizException.class, () -> service.reviewWithdraw(1L, true, null));
+
+        assertEquals("40009", ex.getCode());
     }
 
     /**

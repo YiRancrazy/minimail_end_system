@@ -15,9 +15,11 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
+import com.yirancrazy.minimall.api.feign.IdFeignClient;
 import com.yirancrazy.minimall.api.feign.OrderFeignClient;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
+import com.yirancrazy.minimall.pay.dto.PayCallbackDTO;
 import com.yirancrazy.minimall.pay.dto.PayPageDTO;
 import com.yirancrazy.minimall.pay.dto.WithdrawApplyDTO;
 import com.yirancrazy.minimall.pay.entity.MerchantWithdrawPO;
@@ -44,6 +46,9 @@ class PayServiceImplIntegrationTest {
 
     @MockBean
     private OrderFeignClient orderFeignClient;
+
+    @MockBean
+    private IdFeignClient idFeignClient;
 
     /**
      * 测试上下文：注册 MetaObjectHandler 解决 BasePO.isDeleted 自动填充。
@@ -110,6 +115,12 @@ class PayServiceImplIntegrationTest {
      */
     @Test
     void applyWithdraw_then_pageWithdraw_returns_record() {
+        // 先造一笔已收款项（createPayment + 成功回调），否则可提现余额校验（0 < 1000）会拒绝申请
+        Long payId = payService.createPayment("ORD-INT-WD-1", 100L, 7L, new BigDecimal("2000.00"), null);
+        assertNotNull(payId);
+        PayTransactionPO payPo = payService.getByOrderNo("ORD-INT-WD-1");
+        payService.handleCallback(new PayCallbackDTO(payPo.getPaymentNo(), "TRADE-INT-1", true, "resp"));
+
         WithdrawApplyDTO dto = new WithdrawApplyDTO(new BigDecimal("1000.00"), "INTEG");
         WithdrawVO vo = payService.applyWithdraw(7L, dto);
         assertNotNull(vo.getWithdrawNo());

@@ -10,10 +10,13 @@ import org.apache.rocketmq.client.producer.TransactionMQProducer;
 import org.apache.rocketmq.client.producer.TransactionSendResult;
 import org.apache.rocketmq.common.message.Message;
 import org.apache.rocketmq.common.message.MessageExt;
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
+import com.yirancrazy.minimall.common.filter.TraceIdFilter;
+import com.yirancrazy.minimall.common.result.Result;
 
 /**
  * @Author: yirancrazy@gmail.com
@@ -175,12 +178,24 @@ public class RocketMqEventBus implements EventBus {
         tagTypes.put(tag, event.getClass());
         try {
             Message msg = new Message(topic, tag, MqEventJsonCodec.encode(event));
+            attachTraceId(msg);
             TransactionSendResult r = producer.sendMessageInTransaction(msg, localTx);
             log.debug("rocketmq txn send ok for {}: state={}", event.getClass().getSimpleName(),
                 r.getLocalTransactionState());
         }
         catch (Exception e) {
             log.warn("rocketmq txn send failed for {}: {}", event.getClass().getSimpleName(), e.getMessage());
+        }
+    }
+
+    /**
+     * 将当前链路 traceId 写入消息属性，供消费端沿用同一链路 ID；MDC 无值时不设置。
+     * @param msg 待发送的消息
+     */
+    static void attachTraceId(Message msg) {
+        String traceId = MDC.get(Result.TRACE_ID_KEY);
+        if (traceId != null && !traceId.isBlank()) {
+            msg.putUserProperty(TraceIdFilter.HEADER, traceId);
         }
     }
 }

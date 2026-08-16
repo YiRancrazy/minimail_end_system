@@ -1,13 +1,17 @@
 package com.yirancrazy.minimall.common.event;
 
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import org.apache.rocketmq.client.consumer.DefaultMQPushConsumer;
 import org.apache.rocketmq.client.consumer.listener.ConsumeConcurrentlyStatus;
 import org.apache.rocketmq.client.consumer.listener.MessageListenerConcurrently;
 import org.apache.rocketmq.client.exception.MQClientException;
+import org.slf4j.MDC;
 import lombok.extern.slf4j.Slf4j;
+import com.yirancrazy.minimall.common.filter.TraceIdFilter;
+import com.yirancrazy.minimall.common.result.Result;
 
 /**
  * @Author: yirancrazy@gmail.com
@@ -92,31 +96,41 @@ public class RocketMqEventConsumer {
             this.consumer.subscribe(topic, "*");
             this.consumer.registerMessageListener((MessageListenerConcurrently) (msgs, ctx) -> {
                 for (var msg : msgs) {
-                    String tag = msg.getTags();
-                    Class<?> matched = null;
-                    for (var e : handlers.entrySet()) {
-                        if (MqEventJsonCodec.tagFor(e.getKey()).equals(tag)) {
-                            matched = e.getKey();
-                            break;
+                    // 从消息属性还原生产者线程的 traceId 写入 MDC，处理结束清理，使消费日志归属同一链路
+                    String traceId = msg.getUserProperty(TraceIdFilter.HEADER);
+                    MDC.put(Result.TRACE_ID_KEY, traceId == null || traceId.isBlank()
+                        ? UUID.randomUUID().toString().replace("-", "")
+                        : traceId);
+                    try {
+                        String tag = msg.getTags();
+                        Class<?> matched = null;
+                        for (var e : handlers.entrySet()) {
+                            if (MqEventJsonCodec.tagFor(e.getKey()).equals(tag)) {
+                                matched = e.getKey();
+                                break;
+                            }
+                        }
+                        if (matched == null) {
+                            continue;
+                        }
+                        Object payload;
+                        try {
+                            payload = MqEventJsonCodec.decode(msg.getBody(), matched);
+                        }
+                        catch (Exception ex) {
+                            log.warn("rocketmq consumer decode failed for tag={}: {}", tag, ex.getMessage());
+                            continue;
+                        }
+                        try {
+                            handlers.get(matched).accept(payload);
+                        }
+                        catch (Exception ex) {
+                            log.warn("rocketmq handler failed for tag={}: {}", tag, ex.getMessage());
+                            return ConsumeConcurrentlyStatus.RECONSUME_LATER;
                         }
                     }
-                    if (matched == null) {
-                        continue;
-                    }
-                    Object payload;
-                    try {
-                        payload = MqEventJsonCodec.decode(msg.getBody(), matched);
-                    }
-                    catch (Exception ex) {
-                        log.warn("rocketmq consumer decode failed for tag={}: {}", tag, ex.getMessage());
-                        continue;
-                    }
-                    try {
-                        handlers.get(matched).accept(payload);
-                    }
-                    catch (Exception ex) {
-                        log.warn("rocketmq handler failed for tag={}: {}", tag, ex.getMessage());
-                        return ConsumeConcurrentlyStatus.RECONSUME_LATER;
+                    finally {
+                        MDC.remove(Result.TRACE_ID_KEY);
                     }
                 }
                 return ConsumeConcurrentlyStatus.CONSUME_SUCCESS;

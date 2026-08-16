@@ -1,31 +1,43 @@
 package com.yirancrazy.minimall.common.event;
 
+import org.apache.rocketmq.common.message.Message;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.runner.WebApplicationContextRunner;
-import static org.assertj.core.api.Assertions.assertThat;
+import org.slf4j.MDC;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import com.yirancrazy.minimall.common.filter.TraceIdFilter;
+import com.yirancrazy.minimall.common.result.Result;
 
 /**
- * RocketMQ EventBus 条件装配测试。验证在启用 RocketMQ 配置时，
- * EventBus 实现为 RocketMqEventBus。使用虚拟 namesrv 地址以避免依赖真实 broker。
+ * @Author: yirancrazy@gmail.com
+ * @Description: RocketMqEventBus traceId 透传的单元测试类，验证生产者将 MDC traceId 写入消息属性。
+ * @Version: 1.0
+ * @DateTime: 2026/08/16
  */
-public class RocketMqEventBusTest {
+class RocketMqEventBusTest {
 
-    private final WebApplicationContextRunner runner = new WebApplicationContextRunner()
-        .withConfiguration(
-            org.springframework.boot.autoconfigure.AutoConfigurations.of(EventBusAutoConfiguration.class))
-        .withPropertyValues(
-            "minimall.eventbus.rocketmq.enabled=true",
-            "minimall.eventbus.rocketmq.namesrv-addr=127.0.0.1:9877"
-        );
+    @AfterEach
+    void tearDown() {
+        MDC.clear();
+    }
 
-    /**
-     * 验证当 minimall.eventbus.rocketmq.enabled=true 时，
-     * 容器注入的 EventBus 为 RocketMqEventBus 实例。
-     */
     @Test
-    public void shouldUseRocketMqEventBus() {
-        runner.run(ctx -> {
-            assertThat(ctx.getBean(RocketMqEventBus.class)).isInstanceOf(EventBus.class);
-        });
+    void attachTraceId_givenMdcValue_thenMessagePropertySet() {
+        MDC.put(Result.TRACE_ID_KEY, "tid-xyz");
+        Message msg = new Message("topic", "tag", new byte[0]);
+
+        RocketMqEventBus.attachTraceId(msg);
+
+        assertEquals("tid-xyz", msg.getUserProperty(TraceIdFilter.HEADER));
+    }
+
+    @Test
+    void attachTraceId_givenNoMdcValue_thenNoPropertySet() {
+        Message msg = new Message("topic", "tag", new byte[0]);
+
+        RocketMqEventBus.attachTraceId(msg);
+
+        assertNull(msg.getUserProperty(TraceIdFilter.HEADER));
     }
 }

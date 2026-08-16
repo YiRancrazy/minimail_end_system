@@ -10,6 +10,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.expression.EvaluationContext;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
+import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 import lombok.extern.slf4j.Slf4j;
@@ -27,6 +28,7 @@ import com.yirancrazy.minimall.common.result.CommonCode;
  */
 @Slf4j
 @Aspect
+@Component
 public class IdempotentAspect {
 
     private static final String IDEMPOTENT_KEY_PREFIX = "idempotent:";

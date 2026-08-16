@@ -1,10 +1,13 @@
 package com.yirancrazy.minimall.api.feign;
 
+import java.util.List;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import com.yirancrazy.minimall.api.dto.order.OrderExportItemDTO;
+import com.yirancrazy.minimall.api.dto.order.OrderStatisticsDTO;
 import com.yirancrazy.minimall.api.fallback.OrderFeignFallbackFactory;
 import com.yirancrazy.minimall.common.result.Result;
 
@@ -48,4 +51,22 @@ public interface OrderFeignClient {
      */
     @PostMapping("/internal/order/refund-callback/{id}")
     Result<Void> refundCallback(@PathVariable("id") Long id, @RequestParam("success") boolean success);
+
+    /**
+     * 全平台订单统计（订单总数/总金额/退款金额/各状态计数），供平台经营报表使用。
+     * @return 订单统计；服务不可用时由 fallback 返回空统计
+     */
+    @GetMapping("/internal/order/statistics")
+    Result<OrderStatisticsDTO> statistics();
+
+    /**
+     * 全平台订单导出列表，按创建时间倒序，服务端限制最大导出行数。
+     * @param startDate 起始日期（yyyy-MM-dd），null 表示不限制
+     * @param endDate 结束日期（yyyy-MM-dd），null 表示不限制
+     * @return 订单导出项列表；服务不可用时由 fallback 返回空列表
+     */
+    @GetMapping("/internal/order/export-list")
+    Result<List<OrderExportItemDTO>> exportList(
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate);
 }

@@ -7,6 +7,7 @@ import com.yirancrazy.minimall.api.dto.common.InternalPageQuery;
 import com.yirancrazy.minimall.api.dto.merchant.MerchantManageVO;
 import com.yirancrazy.minimall.api.dto.merchant.ShopSnapshotDTO;
 import com.yirancrazy.minimall.api.feign.MerchantFeignClient;
+import com.yirancrazy.minimall.common.result.CommonCode;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.result.Result;
 
@@ -37,6 +38,12 @@ public class MerchantFeignFallbackFactory implements FallbackFactory<MerchantFei
             @Override
             public Result<MerchantManageVO> detail(Long merchantId) {
                 return Result.success(null);
+            }
+
+            @Override
+            public Result<Void> audit(Long merchantId, boolean approved, String reason) {
+                log.warn("merchant audit fallback, merchantId={}, approved={} skipped", merchantId, approved);
+                return Result.fail(CommonCode.SYS_ERROR, "商家服务不可用");
             }
         };
     }

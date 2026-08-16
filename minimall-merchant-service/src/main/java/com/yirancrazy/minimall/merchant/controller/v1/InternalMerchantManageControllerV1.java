@@ -2,10 +2,14 @@ package com.yirancrazy.minimall.merchant.controller.v1;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import com.yirancrazy.minimall.api.dto.common.InternalPageQuery;
 import com.yirancrazy.minimall.api.dto.merchant.MerchantManageVO;
+import com.yirancrazy.minimall.common.exception.BizException;
+import com.yirancrazy.minimall.common.result.CommonCode;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.merchant.dto.MerchantPageDTO;
@@ -54,6 +58,25 @@ public class InternalMerchantManageControllerV1 {
     @GetMapping("/{merchantId}")
     public Result<MerchantManageVO> detail(@PathVariable("merchantId") Long merchantId) {
         return Result.success(toVO(merchantService.detail(merchantId)));
+    }
+
+    /**
+     * 平台审核商家资质，仅允许 PENDING 状态审核；驳回时 reason 必填。
+     * Internal: 仅内网调用，禁止 Gateway 暴露。
+     * @param merchantId 商家主体ID
+     * @param approved 是否通过
+     * @param reason 驳回原因，approved=false 时必填
+     * @return 空成功响应
+     */
+    @PostMapping("/{merchantId}/audit")
+    public Result<Void> audit(@PathVariable("merchantId") Long merchantId,
+                              @RequestParam boolean approved,
+                              @RequestParam(required = false) String reason) {
+        if (!approved && (reason == null || reason.isBlank())) {
+            throw new BizException(CommonCode.PARAM_INVALID, "PARAM_INVALID", "驳回时原因不能为空");
+        }
+        merchantService.audit(merchantId, approved, reason);
+        return Result.success(null);
     }
 
     /**

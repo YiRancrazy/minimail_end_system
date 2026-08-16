@@ -1,13 +1,22 @@
 package com.yirancrazy.minimall.order.controller.v1;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import com.yirancrazy.minimall.api.dto.order.OrderExportItemDTO;
+import com.yirancrazy.minimall.api.dto.order.OrderStatisticsDTO;
 import com.yirancrazy.minimall.common.result.Result;
+import com.yirancrazy.minimall.order.dto.OrderPageDTO;
+import com.yirancrazy.minimall.order.entity.OrderPO;
 import com.yirancrazy.minimall.order.service.OrderService;
+import com.yirancrazy.minimall.order.vo.OrderStatisticsVO;
 
 /**
  * @Author: yirancrazy@gmail.com
@@ -82,5 +91,71 @@ public class InternalOrderControllerV1 {
     public Result<Void> refundCallback(@PathVariable Long id, @RequestParam boolean success) {
         orderService.handleRefundCallback(id, success);
         return Result.success(null);
+    }
+
+    /**
+     * 全平台订单统计聚合，供平台经营报表跨服务调用。
+     * Internal: 仅内网调用，禁止 Gateway 暴露。
+     * @return 订单统计DTO
+     */
+    @GetMapping("/statistics")
+    public Result<OrderStatisticsDTO> statistics() {
+        return Result.success(toStatisticsDto(orderService.statistics(new OrderPageDTO())));
+    }
+
+    /**
+     * 全平台订单导出列表，按创建时间倒序，服务端限制最大导出行数。
+     * Internal: 仅内网调用，禁止 Gateway 暴露。
+     * @param startDate 起始日期（yyyy-MM-dd），null 表示不限制
+     * @param endDate 结束日期（yyyy-MM-dd），null 表示不限制
+     * @return 订单导出项列表
+     */
+    @GetMapping("/export-list")
+    public Result<List<OrderExportItemDTO>> exportList(
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate) {
+        OrderPageDTO dto = new OrderPageDTO();
+        dto.setStartTime(parseStartDate(startDate));
+        dto.setEndTime(parseEndDate(endDate));
+        return Result.success(orderService.platformExportList(dto).stream().map(this::toExportItem).toList());
+    }
+
+    /**
+     * 起始日期 → 当日零点。
+     * @param date 日期字符串（yyyy-MM-dd），空返回 null
+     * @return 当日零点时间
+     */
+    private LocalDateTime parseStartDate(String date) {
+        return date == null || date.isBlank() ? null : LocalDate.parse(date).atStartOfDay();
+    }
+
+    /**
+     * 结束日期 → 当日最后一毫秒。
+     * @param date 日期字符串（yyyy-MM-dd），空返回 null
+     * @return 当日末刻时间
+     */
+    private LocalDateTime parseEndDate(String date) {
+        return date == null || date.isBlank() ? null : LocalDate.parse(date).atTime(LocalTime.MAX);
+    }
+
+    /**
+     * 统计VO → 跨服务DTO。
+     * @param vo 订单统计VO
+     * @return 订单统计DTO
+     */
+    private OrderStatisticsDTO toStatisticsDto(OrderStatisticsVO vo) {
+        return new OrderStatisticsDTO(vo.getTotalOrderCount(), vo.getTotalAmount(), vo.getRefundAmount(),
+            vo.getPendingCount(), vo.getPaidCount(), vo.getShippedCount(), vo.getReceivedCount(),
+            vo.getCancelledCount(), vo.getRefundingCount(), vo.getRefundedCount());
+    }
+
+    /**
+     * 订单PO → 导出项DTO。
+     * @param po 订单持久化对象
+     * @return 订单导出项DTO
+     */
+    private OrderExportItemDTO toExportItem(OrderPO po) {
+        return new OrderExportItemDTO(po.getId(), po.getUserId(), po.getMerchantId(), po.getSkuId(),
+            po.getQuantity(), po.getAmount(), po.getStatus(), po.getCreateTime());
     }
 }

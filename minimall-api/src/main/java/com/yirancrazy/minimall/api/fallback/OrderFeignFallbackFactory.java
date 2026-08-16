@@ -1,8 +1,11 @@
 package com.yirancrazy.minimall.api.fallback;
 
+import java.util.List;
 import org.springframework.cloud.openfeign.FallbackFactory;
 import org.springframework.stereotype.Component;
 import lombok.extern.slf4j.Slf4j;
+import com.yirancrazy.minimall.api.dto.order.OrderExportItemDTO;
+import com.yirancrazy.minimall.api.dto.order.OrderStatisticsDTO;
 import com.yirancrazy.minimall.api.feign.OrderFeignClient;
 import com.yirancrazy.minimall.common.result.CommonCode;
 import com.yirancrazy.minimall.common.result.Result;
@@ -47,6 +50,18 @@ public class OrderFeignFallbackFactory implements FallbackFactory<OrderFeignClie
             public Result<Void> refundCallback(Long id, boolean success) {
                 log.warn("order refund-callback fallback, orderId={}, success={} skipped", id, success);
                 return Result.fail(CommonCode.SYS_ERROR, "订单服务不可用");
+            }
+
+            @Override
+            public Result<OrderStatisticsDTO> statistics() {
+                log.warn("order statistics fallback, return empty statistics");
+                return Result.success(new OrderStatisticsDTO());
+            }
+
+            @Override
+            public Result<List<OrderExportItemDTO>> exportList(String startDate, String endDate) {
+                log.warn("order export-list fallback, startDate={}, endDate={} skipped", startDate, endDate);
+                return Result.success(List.of());
             }
         };
     }

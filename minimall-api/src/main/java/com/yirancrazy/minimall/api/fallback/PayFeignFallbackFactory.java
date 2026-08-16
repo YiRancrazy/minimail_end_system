@@ -1,9 +1,11 @@
 package com.yirancrazy.minimall.api.fallback;
 
+import java.util.List;
 import org.springframework.cloud.openfeign.FallbackFactory;
 import org.springframework.stereotype.Component;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.api.dto.pay.PayCreateDTO;
+import com.yirancrazy.minimall.api.dto.pay.PayExportItemDTO;
 import com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO;
 import com.yirancrazy.minimall.api.feign.PayFeignClient;
 import com.yirancrazy.minimall.common.result.Result;
@@ -29,6 +31,12 @@ public class PayFeignFallbackFactory implements FallbackFactory<PayFeignClient> 
             @Override
             public Result<Boolean> refund(RefundCreateDTO dto) {
                 return Result.success(false);
+            }
+
+            @Override
+            public Result<List<PayExportItemDTO>> exportTransactions(String startDate, String endDate) {
+                log.warn("pay export-transactions fallback, startDate={}, endDate={} skipped", startDate, endDate);
+                return Result.success(List.of());
             }
         };
     }

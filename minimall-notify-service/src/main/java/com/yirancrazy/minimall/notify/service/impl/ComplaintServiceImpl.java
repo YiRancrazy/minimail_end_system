@@ -88,7 +88,8 @@ public class ComplaintServiceImpl implements ComplaintService {
     }
 
     /**
-     * 平台处理投诉，校验状态流转：PENDING→PROCESSING，PROCESSING→RESOLVED/REJECTED。
+     * 平台处理投诉，校验状态流转：PENDING→PROCESSING，PROCESSING→RESOLVED/REJECTED；
+     * 采用条件更新（WHERE status=当前状态）保证并发下 check-then-act 原子性，影响 0 行视为状态已被并发修改。
      * @param id 投诉ID
      * @param handlerId 处理人ID
      * @param dto 处理入参
@@ -104,10 +105,16 @@ public class ComplaintServiceImpl implements ComplaintService {
         if (!isValidTransition(po.getStatus(), dto.getStatus())) {
             throw new BizException(NotifyCodeEnum.COMPLAINT_STATUS_INVALID);
         }
-        po.setStatus(dto.getStatus());
-        po.setHandlerId(handlerId);
-        po.setHandlerResult(dto.getResult());
-        complaintManager.updateById(po);
+        boolean updated = complaintManager.update(Wrappers.lambdaUpdate(ComplaintPO.class)
+            .eq(ComplaintPO::getId, id)
+            .eq(ComplaintPO::getStatus, po.getStatus())
+            .set(ComplaintPO::getStatus, dto.getStatus())
+            .set(ComplaintPO::getHandlerId, handlerId)
+            .set(ComplaintPO::getHandlerResult, dto.getResult()));
+        if (!updated) {
+            // 条件更新 0 行：并发下状态已被其他请求推进，按状态流转非法处理
+            throw new BizException(NotifyCodeEnum.COMPLAINT_STATUS_INVALID);
+        }
         log.info("complaint handled, id={}, handlerId={}, newStatus={}", id, handlerId, dto.getStatus());
     }
 

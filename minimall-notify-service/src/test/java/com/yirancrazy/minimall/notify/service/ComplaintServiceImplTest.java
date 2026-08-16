@@ -16,6 +16,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
+import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
@@ -133,7 +134,7 @@ public class ComplaintServiceImplTest {
     }
 
     /**
-     * 验证 handle 正常处理投诉：PENDING → PROCESSING。
+     * 验证 handle 正常处理投诉：PENDING → PROCESSING，采用条件更新推进状态。
      */
     @Test
     public void handle_pending_to_processing() {
@@ -141,6 +142,7 @@ public class ComplaintServiceImplTest {
         po.setId(1L);
         po.setStatus(ComplaintStatusEnum.PENDING.intCode());
         when(complaintManager.getById(1L)).thenReturn(po);
+        when(complaintManager.update(any(Wrapper.class))).thenReturn(true);
 
         ComplaintHandleDTO dto = new ComplaintHandleDTO();
         dto.setStatus(ComplaintStatusEnum.PROCESSING.intCode());
@@ -148,9 +150,8 @@ public class ComplaintServiceImplTest {
 
         service.handle(1L, 10L, dto);
 
-        assertEquals(ComplaintStatusEnum.PROCESSING.intCode(), po.getStatus());
-        assertEquals(10L, po.getHandlerId());
-        verify(complaintManager).updateById(po);
+        verify(complaintManager).update(any(Wrapper.class));
+        verify(complaintManager, never()).updateById(any(ComplaintPO.class));
     }
 
     /**
@@ -162,6 +163,7 @@ public class ComplaintServiceImplTest {
         po.setId(1L);
         po.setStatus(ComplaintStatusEnum.PROCESSING.intCode());
         when(complaintManager.getById(1L)).thenReturn(po);
+        when(complaintManager.update(any(Wrapper.class))).thenReturn(true);
 
         ComplaintHandleDTO dto = new ComplaintHandleDTO();
         dto.setStatus(ComplaintStatusEnum.RESOLVED.intCode());
@@ -169,8 +171,7 @@ public class ComplaintServiceImplTest {
 
         service.handle(1L, 10L, dto);
 
-        assertEquals(ComplaintStatusEnum.RESOLVED.intCode(), po.getStatus());
-        verify(complaintManager).updateById(po);
+        verify(complaintManager).update(any(Wrapper.class));
     }
 
     /**
@@ -182,6 +183,7 @@ public class ComplaintServiceImplTest {
         po.setId(1L);
         po.setStatus(ComplaintStatusEnum.PROCESSING.intCode());
         when(complaintManager.getById(1L)).thenReturn(po);
+        when(complaintManager.update(any(Wrapper.class))).thenReturn(true);
 
         ComplaintHandleDTO dto = new ComplaintHandleDTO();
         dto.setStatus(ComplaintStatusEnum.REJECTED.intCode());
@@ -189,8 +191,25 @@ public class ComplaintServiceImplTest {
 
         service.handle(1L, 10L, dto);
 
-        assertEquals(ComplaintStatusEnum.REJECTED.intCode(), po.getStatus());
-        verify(complaintManager).updateById(po);
+        verify(complaintManager).update(any(Wrapper.class));
+    }
+
+    /**
+     * 验证 handle 条件更新影响 0 行（并发下状态已被推进）时抛 COMPLAINT_STATUS_INVALID。
+     */
+    @Test
+    public void handle_throws_when_conditional_update_affects_zero_rows() {
+        ComplaintPO po = new ComplaintPO();
+        po.setId(1L);
+        po.setStatus(ComplaintStatusEnum.PENDING.intCode());
+        when(complaintManager.getById(1L)).thenReturn(po);
+        when(complaintManager.update(any(Wrapper.class))).thenReturn(false);
+
+        ComplaintHandleDTO dto = new ComplaintHandleDTO();
+        dto.setStatus(ComplaintStatusEnum.PROCESSING.intCode());
+        dto.setResult("处理中");
+
+        assertThrows(BizException.class, () -> service.handle(1L, 10L, dto));
     }
 
     /**
@@ -208,7 +227,7 @@ public class ComplaintServiceImplTest {
         dto.setResult("非法操作");
 
         assertThrows(BizException.class, () -> service.handle(1L, 10L, dto));
-        verify(complaintManager, never()).updateById(any(ComplaintPO.class));
+        verify(complaintManager, never()).update(any(Wrapper.class));
     }
 
     /**

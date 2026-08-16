@@ -1,5 +1,6 @@
 package com.yirancrazy.minimall.notify.service.impl;
 
+import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -84,7 +85,8 @@ public class NotifyServiceImpl implements NotifyService {
     }
 
     /**
-     * 分页查询站内信，支持按接收方/消息类型/已读状态过滤，按ID降序返回。
+     * 分页查询站内信，支持按接收方/消息类型/已读状态过滤，按ID降序返回；
+     * 用户侧查询同时并入 userId=0 + recipientType=ALL 的公告/全端广播占位记录，否则公告永远不可见。
      * @param dto 分页查询入参
      * @return 站内信分页结果
      */
@@ -92,12 +94,20 @@ public class NotifyServiceImpl implements NotifyService {
     public CursorPageVO<NotifyMessagePO> page(NotifyListDTO dto) {
         Long lastId = CursorUtils.decode(dto.getCursor());
         int limit = dto.getLimit();
-        LambdaQueryWrapper<NotifyMessagePO> wrapper = Wrappers.lambdaQuery(NotifyMessagePO.class)
-            .eq(NotifyMessagePO::getUserId, dto.getUserId());
-        wrapper.lt(lastId != null, NotifyMessagePO::getId, lastId);
+        LambdaQueryWrapper<NotifyMessagePO> wrapper = Wrappers.lambdaQuery(NotifyMessagePO.class);
         if (dto.getRecipientType() != null) {
-            wrapper.eq(NotifyMessagePO::getRecipientType, dto.getRecipientType());
+            // recipientType 过滤并入 or 分支：Controller 固定传 USER/MERCHANT/PLATFORM，若独立 AND 会把公告(ALL)挡掉
+            wrapper.and(w -> w.eq(NotifyMessagePO::getUserId, dto.getUserId())
+                .eq(NotifyMessagePO::getRecipientType, dto.getRecipientType())
+                .or(q -> q.eq(NotifyMessagePO::getUserId, 0L)
+                    .eq(NotifyMessagePO::getRecipientType, RecipientTypeEnum.ALL.intCode())));
         }
+        else {
+            wrapper.and(w -> w.eq(NotifyMessagePO::getUserId, dto.getUserId())
+                .or(q -> q.eq(NotifyMessagePO::getUserId, 0L)
+                    .eq(NotifyMessagePO::getRecipientType, RecipientTypeEnum.ALL.intCode())));
+        }
+        wrapper.lt(lastId != null, NotifyMessagePO::getId, lastId);
         if (dto.getMessageType() != null) {
             wrapper.eq(NotifyMessagePO::getMessageType, dto.getMessageType());
         }
@@ -253,6 +263,7 @@ public class NotifyServiceImpl implements NotifyService {
             notifyManager.save(m);
         }
         else {
+            List<NotifyMessagePO> messages = new ArrayList<>(dto.getUserIds().size());
             for (Long uid : dto.getUserIds()) {
                 NotifyMessagePO m = new NotifyMessagePO();
                 m.setUserId(uid);
@@ -261,7 +272,10 @@ public class NotifyServiceImpl implements NotifyService {
                 m.setTitle(dto.getTitle());
                 m.setContent(dto.getContent());
                 m.setReadFlag(0);
-                notifyManager.save(m);
+                messages.add(m);
+            }
+            notifyManager.saveBatch(messages);
+            for (Long uid : dto.getUserIds()) {
                 sseHub.send(uid, dto.getTitle());
             }
         }

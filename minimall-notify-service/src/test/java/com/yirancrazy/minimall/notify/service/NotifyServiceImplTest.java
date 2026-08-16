@@ -3,9 +3,11 @@ package com.yirancrazy.minimall.notify.service;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -19,6 +21,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
@@ -129,6 +132,50 @@ public class NotifyServiceImplTest {
         CursorPageVO<NotifyMessagePO> result = service.page(dto);
         assertNotNull(result);
         verify(notifyManager).list(any(Wrapper.class));
+    }
+
+    /**
+     * 验证 page 查询并入 userId=0 + recipientType=ALL 的公告/广播占位记录，否则公告对用户不可见。
+     */
+    @Test
+    public void page_includes_announcement_placeholder() {
+        NotifyListDTO dto = new NotifyListDTO();
+        dto.setLimit(10);
+        dto.setUserId(7L);
+        dto.setRecipientType(RecipientTypeEnum.USER.intCode());
+        when(notifyManager.list(any(Wrapper.class))).thenReturn(Collections.emptyList());
+
+        service.page(dto);
+
+        ArgumentCaptor<LambdaQueryWrapper<NotifyMessagePO>> cap =
+            ArgumentCaptor.forClass(LambdaQueryWrapper.class);
+        verify(notifyManager).list(cap.capture());
+        LambdaQueryWrapper<NotifyMessagePO> wrapper = cap.getValue();
+        // 嵌套 or 分支的参数在 SQL 生成（getCustomSqlSegment）时才写入 paramNameValuePairs，需先触发
+        wrapper.getCustomSqlSegment();
+        Map<String, Object> params = wrapper.getParamNameValuePairs();
+        assertTrue(params.containsValue(0L));
+        assertTrue(params.containsValue(RecipientTypeEnum.ALL.intCode()));
+    }
+
+    /**
+     * 验证 broadcast 全端广播（无 targetId）落库 userId=0 占位记录，供用户 page 查询命中。
+     */
+    @Test
+    public void broadcast_all_placeholder_persists() {
+        NotifyBroadcastDTO dto = new NotifyBroadcastDTO();
+        dto.setRecipientType(RecipientTypeEnum.ALL.intCode());
+        dto.setMessageType(NotifyMessageTypeEnum.ANNOUNCEMENT.intCode());
+        dto.setTitle("全站公告");
+        dto.setContent("内容");
+
+        service.broadcast(dto);
+
+        ArgumentCaptor<NotifyMessagePO> cap = ArgumentCaptor.forClass(NotifyMessagePO.class);
+        verify(notifyManager).save(cap.capture());
+        assertEquals(0L, cap.getValue().getUserId());
+        assertEquals(RecipientTypeEnum.ALL.intCode(), cap.getValue().getRecipientType());
+        verify(sseHub, never()).send(any(), any());
     }
 
     /**
@@ -301,10 +348,10 @@ public class NotifyServiceImplTest {
     }
 
     /**
-     * 验证营销推送指定用户列表时逐条落库并 SSE 推送。
+     * 验证营销推送指定用户列表时批量落库并 SSE 推送。
      */
     @Test
-    public void marketingPush_with_userIds_saves_and_sse() {
+    public void marketingPush_with_userIds_batch_saves_and_sse() {
         NotifyMarketingPushDTO dto = new NotifyMarketingPushDTO();
         dto.setTitle("促销");
         dto.setContent("满减活动");
@@ -312,7 +359,12 @@ public class NotifyServiceImplTest {
 
         service.marketingPush(dto);
 
-        verify(notifyManager, org.mockito.Mockito.times(2)).save(any(NotifyMessagePO.class));
+        ArgumentCaptor<List<NotifyMessagePO>> cap = ArgumentCaptor.forClass(List.class);
+        verify(notifyManager).saveBatch(cap.capture());
+        assertEquals(2, cap.getValue().size());
+        assertEquals(1L, cap.getValue().get(0).getUserId());
+        assertEquals(2L, cap.getValue().get(1).getUserId());
+        verify(notifyManager, never()).save(any(NotifyMessagePO.class));
         verify(sseHub).send(1L, "促销");
         verify(sseHub).send(2L, "促销");
     }

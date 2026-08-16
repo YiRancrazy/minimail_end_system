@@ -40,7 +40,13 @@ public interface OrderService {
 
     void confirm(Long orderId, Long userId);
 
-    void refund(Long orderId);
+    /**
+     * 用户申请退款：校验订单归属后仅置 REFUNDING 并记录原状态，不发起真实支付退款；
+     * 真实退款由商家审核通过后调用支付网关触发，状态由支付回调驱动。
+     * @param orderId 订单ID
+     * @param userId 用户ID（归属校验，来自可信 Header）
+     */
+    void refund(Long orderId, Long userId);
 
     /**
      * 商家主动发起退款，仅允许 PAID/SHIPPED/COMPLETED 三种状态的订单。
@@ -52,6 +58,12 @@ public interface OrderService {
      */
     void merchantInitiateRefund(Long orderId, Long merchantId, String refundAmount, String reason);
 
+    /**
+     * 接收支付服务退款结果回调：仅 REFUNDING 状态可受理（否则抛状态流转异常，天然幂等）；
+     * success 推进 REFUNDED，失败回退到 refundFromStatus。
+     * @param orderId 订单ID
+     * @param success 退款是否成功
+     */
     void handleRefundCallback(Long orderId, boolean success);
 
     Integer getStatus(Long orderId);
@@ -105,7 +117,8 @@ public interface OrderService {
     CursorPageVO<OrderPO> page(OrderPageDTO dto);
 
     /**
-     * 商家审核退款，仅允许 REFUNDING 状态订单；approved=false 回退到 refundFromStatus，true 仅记录审核通过。
+     * 商家审核退款，仅允许 REFUNDING 状态订单；approved=true 发起真实支付退款（状态由回调驱动到 REFUNDED），
+     * false 回退到 refundFromStatus。
      * @param orderId 订单ID
      * @param approved 是否同意退款
      * @param merchantId 商家ID，来自可信 Header

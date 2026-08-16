@@ -147,13 +147,15 @@ public class UserOrderControllerV1 {
     }
 
     /**
-     * 申请退款。
+     * 申请退款：仅将订单置为退款中并记录原状态，真实退款由商家审核通过后触发。
      * @param orderId 订单ID
+     * @param userId 当前用户ID，来自网关 X-User-Id 头
      */
     @PostMapping("/{orderId}/refund")
     @Idempotent
-    public Result<Void> refund(@PathVariable Long orderId) {
-        orderService.refund(orderId);
+    public Result<Void> refund(@PathVariable Long orderId,
+                               @RequestHeader("X-User-Id") Long userId) {
+        orderService.refund(orderId, userId);
         return Result.success(null);
     }
 

@@ -271,9 +271,32 @@ public class OrderServiceImplTest {
         OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.PAID.intCode());
         when(manager.getById(99L)).thenReturn(existing);
 
-        service.refund(99L);
+        service.refund(99L, 1L);
         assertEquals(OrderStatusEnum.REFUNDING.intCode(), existing.getStatus());
         assertEquals(OrderStatusEnum.PAID.intCode(), existing.getRefundFromStatus());
+    }
+
+    /**
+     * 验证申请退款阶段不调用支付网关（真实退款由商家审核通过后触发）。
+     */
+    @Test
+    public void refund_does_not_call_pay_gateway() {
+        OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.PAID.intCode());
+        when(manager.getById(99L)).thenReturn(existing);
+
+        service.refund(99L, 1L);
+        verify(payFeignClient, never()).refund(any());
+    }
+
+    /**
+     * 验证非本人订单申请退款时抛出 ORDER_NOT_FOUND。
+     */
+    @Test
+    public void refund_verifies_order_ownership() {
+        OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.PAID.intCode());
+        when(manager.getById(99L)).thenReturn(existing);
+
+        assertThrows(BizException.class, () -> service.refund(99L, 999L));
     }
 
     /**
@@ -313,6 +336,18 @@ public class OrderServiceImplTest {
 
         service.handleRefundCallback(99L, false);
         assertEquals(OrderStatusEnum.PAID.intCode(), existing.getStatus());
+    }
+
+    /**
+     * 验证非 REFUNDING 状态的订单收到退款回调时抛出状态流转异常（拒绝迟到回调，天然幂等）。
+     */
+    @Test
+    public void handleRefundCallback_rejects_state_other_than_refunding() {
+        OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.PAID.intCode());
+        when(manager.getById(99L)).thenReturn(existing);
+
+        assertThrows(BizException.class, () -> service.handleRefundCallback(99L, true));
+        assertThrows(BizException.class, () -> service.handleRefundCallback(99L, false));
     }
 
     /**
@@ -567,17 +602,18 @@ public class OrderServiceImplTest {
     }
 
     /**
-     * 验证商家同意退款时状态保持 REFUNDING 且不调用 updateById。
+     * 验证商家同意退款时发起真实支付退款，状态保持 REFUNDING 等待回调驱动。
      */
     @Test
-    public void reviewRefund_approved_keeps_refunding() {
+    public void reviewRefund_approved_triggers_pay() {
         OrderPO existing = buildOrder(99L, 1L, 10L, OrderStatusEnum.REFUNDING.intCode());
         existing.setRefundFromStatus(OrderStatusEnum.PAID.intCode());
+        existing.setPayId(2001L);
         when(manager.getById(99L)).thenReturn(existing);
 
         service.reviewRefund(99L, true, 10L);
         assertEquals(OrderStatusEnum.REFUNDING.intCode(), existing.getStatus());
-        verify(manager, never()).updateById(any(OrderPO.class));
+        verify(payFeignClient).refund(any());
     }
 
     /**
@@ -811,6 +847,20 @@ public class OrderServiceImplTest {
 
         assertEquals(OrderStatusEnum.CANCELED.intCode(), existing.getStatus());
         verify(stockFeignClient, times(2)).release(any());
+    }
+
+    /**
+     * 验证状态迁移更新影响 0 行时抛出状态流转异常，且不执行释放库存/状态日志副作用（并发防抖）。
+     */
+    @Test
+    public void transitStatus_throws_when_update_returns_zero_rows() {
+        OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.PENDING.intCode());
+        when(manager.getById(99L)).thenReturn(existing);
+        when(manager.updateById(any(OrderPO.class))).thenReturn(false);
+
+        assertThrows(BizException.class, () -> service.cancel(99L, 1L));
+        verify(stockFeignClient, never()).release(any());
+        verify(statusLogManager, never()).save(any(OrderStatusLogPO.class));
     }
 
     /**

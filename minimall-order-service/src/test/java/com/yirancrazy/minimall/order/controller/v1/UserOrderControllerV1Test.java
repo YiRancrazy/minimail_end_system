@@ -157,4 +157,15 @@ class UserOrderControllerV1Test {
             .andExpect(status().isOk());
         verify(service).cancel(99L, 1L);
     }
+
+    /**
+     * 验证 POST /api/v1/user/orders/{id}/refund 带 X-User-Id 调用 service。
+     */
+    @Test
+    void refund_with_header_invokes_service() throws Exception {
+        mockMvc.perform(post("/api/v1/user/orders/99/refund").header("X-User-Id", 1L))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.code").value("00000"));
+        verify(service).refund(99L, 1L);
+    }
 }

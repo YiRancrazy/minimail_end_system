@@ -324,7 +324,7 @@ public class OrderServiceImpl implements OrderService {
             // 已完成的订单需要回退到 SHIPPED 状态机入口走相同路径
             throw new BizException(OrderCodeEnum.ORDER_STATUS_TRANSITION_INVALID);
         }
-        refund(orderId);
+        refund(orderId, po.getUserId());
         log.info("merchant initiated refund, orderId={}, merchantId={}, amount={}, reason={}",
             orderId, merchantId, refundAmount, reason);
     }
@@ -340,37 +340,36 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public void refund(Long orderId) {
+    public void refund(Long orderId, Long userId) {
         OrderPO po = getOrder(orderId);
+        if (!po.getUserId().equals(userId)) {
+            throw new BizException(OrderCodeEnum.ORDER_NOT_FOUND);
+        }
         OrderStatusEnum current = statusMachine.fromCode(po.getStatus());
         if (!statusMachine.canTransitTo(current, OrderStatusEnum.REFUNDING)) {
             throw new BizException(OrderCodeEnum.ORDER_STATUS_TRANSITION_INVALID);
         }
+        // 申请退款仅登记退款意向（记录原状态并置 REFUNDING），真实退款由商家审核通过后调用支付网关触发
         po.setRefundFromStatus(po.getStatus());
-        po.setStatus(OrderStatusEnum.REFUNDING.intCode());
-        orderManager.updateById(po);
-
-        Boolean refunded = payFeignClient.refund(
-            new RefundCreateDTO(po.getPayId(), po.getAmount(), null)).getData();
-        if (refunded == null || !refunded) {
-            log.warn("pay refund failed, orderId={}", orderId);
-        }
+        transition(po, OrderStatusEnum.REFUNDING, "USER_APPLY_REFUND", null);
         log.info("order refunding, orderId={}", orderId);
     }
 
     @Override
     public void handleRefundCallback(Long orderId, boolean success) {
         OrderPO po = getOrder(orderId);
+        if (po.getStatus() != OrderStatusEnum.REFUNDING.intCode()) {
+            // 商家已驳回或先行回调已推进状态：拒绝迟到回调，天然幂等
+            throw new BizException(OrderCodeEnum.ORDER_STATUS_TRANSITION_INVALID);
+        }
         if (success) {
-            po.setStatus(OrderStatusEnum.REFUNDED.intCode());
+            transitStatus(orderId, OrderStatusEnum.REFUNDED, "PAY_REFUND_CALLBACK", null);
             log.info("order refunded, orderId={}", orderId);
         }
         else {
-            Integer fromStatus = po.getRefundFromStatus();
-            po.setStatus(fromStatus != null ? fromStatus : OrderStatusEnum.PAID.intCode());
+            transitStatus(orderId, revertTarget(po), "PAY_REFUND_CALLBACK_FAIL", null);
             log.info("order refund failed, reverted, orderId={}", orderId);
         }
-        orderManager.updateById(po);
     }
 
     @Override
@@ -522,12 +521,36 @@ public class OrderServiceImpl implements OrderService {
      * @param closeReason 关闭原因（仅 CANCELED 使用）
      */
     private void transitStatus(Long orderId, OrderStatusEnum target, String triggerSource, String closeReason) {
-        OrderPO po = getOrder(orderId);
+        transition(getOrder(orderId), target, triggerSource, closeReason);
+    }
+
+    /**
+     * 推进订单状态：状态机校验→写目标时间戳→更新影响 0 行即抛状态流转异常（并发防抖），
+     * 全部成功后才落状态日志，保证副作用只发生在状态真正迁移之后。
+     * @param po 待推进的订单实体（已校验归属）
+     * @param target 目标状态
+     * @param triggerSource 触发来源（状态日志）
+     * @param closeReason 关闭原因（仅 CANCELED 使用）
+     */
+    private void transition(OrderPO po, OrderStatusEnum target, String triggerSource, String closeReason) {
         Integer fromStatus = po.getStatus();
         statusMachine.transit(po, target);
         applyTargetTimestamps(po, target, closeReason);
-        orderManager.updateById(po);
+        if (!orderManager.updateById(po)) {
+            // 并发下后写者更新 0 行：目标状态已被先行事务推进，拒绝继续执行副作用
+            throw new BizException(OrderCodeEnum.ORDER_STATUS_TRANSITION_INVALID);
+        }
         saveStatusLog(po, fromStatus, target, triggerSource);
+    }
+
+    /**
+     * 解析退款回退目标状态：优先使用申请退款时记录的 refundFromStatus，缺失时兜底 PAID。
+     * @param po 退款中订单实体
+     * @return 回退目标状态
+     */
+    private OrderStatusEnum revertTarget(OrderPO po) {
+        Integer fromStatus = po.getRefundFromStatus();
+        return fromStatus != null ? statusMachine.fromCode(fromStatus) : OrderStatusEnum.PAID;
     }
 
     /**
@@ -720,7 +743,8 @@ public class OrderServiceImpl implements OrderService {
     }
 
     /**
-     * 商家审核退款，校验订单归属与 REFUNDING 状态；approved=false 回退到 refundFromStatus，true 仅记录审核通过。
+     * 商家审核退款，校验订单归属与 REFUNDING 状态；approved=true 才发起真实退款（状态由支付回调驱动到 REFUNDED），
+     * false 回退到 refundFromStatus。
      * @param orderId 订单ID
      * @param approved 是否同意退款
      * @param merchantId 商家ID
@@ -728,24 +752,28 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public void reviewRefund(Long orderId, boolean approved, Long merchantId) {
         OrderPO po = getOrder(orderId);
-        if (!po.getMerchantId().equals(merchantId)) {
+        if (po.getMerchantId() == null || !po.getMerchantId().equals(merchantId)) {
             throw new BizException(OrderCodeEnum.ORDER_NOT_FOUND);
         }
         if (po.getStatus() != OrderStatusEnum.REFUNDING.intCode()) {
             throw new BizException(OrderCodeEnum.ORDER_NOT_REFUNDING);
         }
         if (!approved) {
-            Integer fromStatus = po.getRefundFromStatus();
-            po.setStatus(fromStatus != null ? fromStatus : OrderStatusEnum.PAID.intCode());
-            orderManager.updateById(po);
+            transition(po, revertTarget(po), "MERCHANT_REJECT_REFUND", null);
             log.info("refund rejected by merchant, orderId={}, merchantId={}", orderId, merchantId);
             return;
+        }
+        // 审核通过才调支付网关真实退款，避免"先退钱后审核"；状态迁移由支付回调 handleRefundCallback 驱动
+        Boolean refunded = payFeignClient.refund(
+            new RefundCreateDTO(po.getPayId(), po.getAmount(), null)).getData();
+        if (refunded == null || !refunded) {
+            log.warn("pay refund failed, orderId={}", orderId);
         }
         log.info("refund approved by merchant, orderId={}, merchantId={}", orderId, merchantId);
     }
 
     /**
-     * 平台退款仲裁，校验 REFUNDING 状态；approved=true 强制推进 REFUNDED，false 回退到 refundFromStatus。
+     * 平台退款仲裁，校验 REFUNDING 状态；approved=true 推进 REFUNDED，false 回退到 refundFromStatus。
      * @param orderId 订单ID
      * @param approved 仲裁是否支持退款
      */
@@ -756,14 +784,11 @@ public class OrderServiceImpl implements OrderService {
             throw new BizException(OrderCodeEnum.ORDER_NOT_REFUNDING);
         }
         if (approved) {
-            po.setStatus(OrderStatusEnum.REFUNDED.intCode());
-            orderManager.updateById(po);
+            transitStatus(orderId, OrderStatusEnum.REFUNDED, "PLATFORM_ARBITRATE", null);
             log.info("refund arbitrated approved, orderId={}", orderId);
             return;
         }
-        Integer fromStatus = po.getRefundFromStatus();
-        po.setStatus(fromStatus != null ? fromStatus : OrderStatusEnum.PAID.intCode());
-        orderManager.updateById(po);
+        transitStatus(orderId, revertTarget(po), "PLATFORM_ARBITRATE_REJECT", null);
         log.info("refund arbitrated rejected, orderId={}", orderId);
     }
 

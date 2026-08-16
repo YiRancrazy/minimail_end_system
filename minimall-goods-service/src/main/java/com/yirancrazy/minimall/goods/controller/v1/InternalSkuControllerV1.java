@@ -5,7 +5,10 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import com.yirancrazy.minimall.api.dto.goods.SkuSnapshotDTO;
+import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.Result;
+import com.yirancrazy.minimall.goods.constant.SpuCodeEnum;
+import com.yirancrazy.minimall.goods.constant.SpuStatusEnum;
 import com.yirancrazy.minimall.goods.entity.SkuPO;
 import com.yirancrazy.minimall.goods.entity.SpuPO;
 import com.yirancrazy.minimall.goods.service.SkuService;
@@ -31,15 +34,19 @@ public class InternalSkuControllerV1 {
 
     /**
      * 查询 SKU 快照信息，供其他服务在跨链路调用时获取精简字段，含归属商家 ID。
+     * 仅当所属 SPU 处于在售状态时返回，防止未过审/下架商品绕过用户端校验进入下单链路。
      * @param id SKU 主键 ID
      * @return SKU 快照 DTO，含名称、价格、库存、商家ID等核心字段
+     * @throws BizException 当 SKU/SPU 不存在或所属 SPU 非在售状态时
      */
     @GetMapping("/{id}")
     public Result<SkuSnapshotDTO> snapshot(@PathVariable Long id) {
         SkuPO s = skuService.getById(id);
-        SpuPO spu = s.getSpuId() == null ? null : spuService.getById(s.getSpuId());
-        Long merchantId = spu == null ? null : spu.getMerchantId();
+        SpuPO spu = spuService.getById(s.getSpuId());
+        if (spu.getStatus() == null || spu.getStatus() != SpuStatusEnum.ON_SALE.statusValue()) {
+            throw new BizException(SpuCodeEnum.SPU_NOT_ON_SALE);
+        }
         return Result.success(new SkuSnapshotDTO(s.getId(), s.getSpuId(), s.getSkuName(),
-            s.getPrice(), s.getStock(), merchantId));
+            s.getPrice(), s.getStock(), spu.getMerchantId()));
     }
 }

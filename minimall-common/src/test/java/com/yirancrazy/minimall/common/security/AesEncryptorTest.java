@@ -70,4 +70,10 @@ class AesEncryptorTest {
         String decrypted = AesEncryptor.decrypt(encrypted, KEY);
         assertEquals(plaintext, decrypted);
     }
+
+    @Test
+    void decrypt_shortCiphertext_throwsIllegalArgumentException() {
+        // 密文长度不足 IV(12) + 认证标签(16) 时应抛明确参数异常而非 NegativeArraySizeException
+        assertThrows(IllegalArgumentException.class, () -> AesEncryptor.decrypt("c2hvcnQ=", KEY));
+    }
 }

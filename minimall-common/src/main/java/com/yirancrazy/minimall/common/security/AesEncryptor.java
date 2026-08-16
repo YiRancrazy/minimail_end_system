@@ -66,6 +66,10 @@ public final class AesEncryptor {
         }
         try {
             byte[] combined = Base64.getDecoder().decode(ciphertext);
+            if (combined.length <= IV_LENGTH) {
+                // 密文至少应包含 IV 与认证标签，长度不足视为调用方输入非法而非系统错误
+                throw new IllegalArgumentException("密文长度非法");
+            }
             byte[] iv = new byte[IV_LENGTH];
             byte[] ct = new byte[combined.length - IV_LENGTH];
             System.arraycopy(combined, 0, iv, 0, IV_LENGTH);
@@ -76,6 +80,10 @@ public final class AesEncryptor {
             cipher.init(Cipher.DECRYPT_MODE, keySpec, paramSpec);
             byte[] plaintext = cipher.doFinal(ct);
             return new String(plaintext, StandardCharsets.UTF_8);
+        }
+        catch (IllegalArgumentException e) {
+            // 输入非法（Base64 解码失败或密文过短）直接透传，不做系统错误包装
+            throw e;
         }
         catch (Exception e) {
             throw new IllegalStateException("AES decryption failed", e);

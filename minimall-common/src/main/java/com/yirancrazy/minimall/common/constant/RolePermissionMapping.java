@@ -6,6 +6,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.springframework.data.redis.core.StringRedisTemplate;
 
 /**
  * @Author: yirancrazy@gmail.com
@@ -14,6 +15,11 @@ import java.util.Set;
  * @DateTime: 2026/08/03
  **/
 public final class RolePermissionMapping {
+
+    /**
+     * Redis 角色权限覆盖集 key 前缀，完整 key 为 {prefix}{roleCode}，写入与读取共用。
+     */
+    public static final String KEY_PREFIX = "platform:role-permissions:";
 
     private RolePermissionMapping() {
     }
@@ -88,26 +94,35 @@ public final class RolePermissionMapping {
      * @return 权限集合
      */
     public static Set<PermissionEnum> getEffectivePermissions(
-            RoleEnum role, org.springframework.data.redis.core.StringRedisTemplate redisTemplate) {
+            RoleEnum role, StringRedisTemplate redisTemplate) {
         if (role == null) {
             return Collections.emptySet();
         }
         if (redisTemplate != null) {
-            String json = redisTemplate.opsForValue().get("platform:role-permissions:" + role.getCode());
+            String json = redisTemplate.opsForValue().get(KEY_PREFIX + role.getCode());
             if (json != null && !json.isEmpty()) {
-                Set<PermissionEnum> perms = new HashSet<>();
-                for (String code : json.replaceAll("[\\[\\]\"]", "").split(",")) {
-                    try {
-                        perms.add(PermissionEnum.valueOf(code.trim()));
-                    }
-                    catch (IllegalArgumentException ignored) {
-                        // skip invalid codes
-                    }
-                }
-                return Collections.unmodifiableSet(perms);
+                return Collections.unmodifiableSet(parsePermissions(json));
             }
         }
         return permissionsOf(role);
+    }
+
+    /**
+     * 解析 Redis 中存储的权限码 JSON 数组字符串为权限枚举集合，非法权限码自动跳过。
+     * @param json 权限码数组字符串，如 ["GOODS_VIEW","GOODS_MANAGE"]
+     * @return 权限枚举集合
+     */
+    public static Set<PermissionEnum> parsePermissions(String json) {
+        Set<PermissionEnum> perms = new HashSet<>();
+        for (String code : json.replaceAll("[\\[\\]\"]", "").split(",")) {
+            try {
+                perms.add(PermissionEnum.valueOf(code.trim()));
+            }
+            catch (IllegalArgumentException ignored) {
+                // 忽略脏权限码，避免单条脏数据导致整个覆盖集失效
+            }
+        }
+        return perms;
     }
 
     /**
@@ -118,8 +133,7 @@ public final class RolePermissionMapping {
      * @throws IllegalArgumentException 尝试修改 USER 角色时
      */
     public static void updatePermissions(
-            RoleEnum role, List<String> permissionCodes,
-            org.springframework.data.redis.core.StringRedisTemplate redisTemplate) {
+            RoleEnum role, List<String> permissionCodes, StringRedisTemplate redisTemplate) {
         if (role == RoleEnum.USER) {
             throw new IllegalArgumentException("USER role permissions are not modifiable");
         }
@@ -136,6 +150,6 @@ public final class RolePermissionMapping {
         String json = "[" + permissionCodes.stream()
             .map(c -> "\"" + c + "\"")
             .reduce((a, b) -> a + "," + b).orElse("") + "]";
-        redisTemplate.opsForValue().set("platform:role-permissions:" + role.getCode(), json);
+        redisTemplate.opsForValue().set(KEY_PREFIX + role.getCode(), json);
     }
 }

@@ -1,8 +1,10 @@
 package com.yirancrazy.minimall.common.aspect;
 
+import java.util.Set;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -28,6 +30,16 @@ public class PermissionAspect {
 
     private static final String HEADER_USER_ROLE = "X-User-Role";
 
+    private final StringRedisTemplate redisTemplate;
+
+    /**
+     * 权限切面构造器。
+     * @param redisTemplate Redis 模板；为空时鉴权仅依赖静态映射表
+     */
+    public PermissionAspect(StringRedisTemplate redisTemplate) {
+        this.redisTemplate = redisTemplate;
+    }
+
     /**
      * 拦截标注 @RequirePermission 的方法，校验当前请求角色是否具备所需权限。
      * @param pjp 连接点
@@ -45,13 +57,10 @@ public class PermissionAspect {
         }
 
         PermissionEnum[] required = requirePermission.value();
-        boolean authorized;
-        if (requirePermission.requireAll()) {
-            authorized = hasAllPermissions(role, required);
-        }
-        else {
-            authorized = hasAnyPermission(role, required);
-        }
+        Set<PermissionEnum> effective = resolveEffectivePermissions(role);
+        boolean authorized = requirePermission.requireAll()
+            ? hasAllPermissions(effective, required)
+            : hasAnyPermission(effective, required);
 
         if (!authorized) {
             log.warn("permission denied: role={}, required={}", roleCode, required);
@@ -69,18 +78,45 @@ public class PermissionAspect {
         return request.getHeader(HEADER_USER_ROLE);
     }
 
-    private boolean hasAnyPermission(RoleEnum role, PermissionEnum[] required) {
+    /**
+     * 解析角色生效权限集：与角色权限管理页展示一致，Redis 覆盖集优先，
+     * 无覆盖或 Redis 不可用时回退静态映射表。
+     * @param role 角色
+     * @return 生效权限集
+     */
+    private Set<PermissionEnum> resolveEffectivePermissions(RoleEnum role) {
+        if (redisTemplate == null) {
+            return RolePermissionMapping.permissionsOf(role);
+        }
+        String json;
+        try {
+            json = redisTemplate.opsForValue().get(RolePermissionMapping.KEY_PREFIX + role.getCode());
+        }
+        catch (Exception e) {
+            // Redis 故障不应阻断鉴权，回退静态表保证可用性
+            log.warn("redis unavailable, fallback to static mapping. role={}, err={}",
+                role.getCode(), e.getMessage());
+            return RolePermissionMapping.permissionsOf(role);
+        }
+        if (json == null || json.isEmpty()) {
+            log.warn("no permission override in redis for role={}, fallback to static mapping", role.getCode());
+            return RolePermissionMapping.permissionsOf(role);
+        }
+        return RolePermissionMapping.parsePermissions(json);
+    }
+
+    private boolean hasAnyPermission(Set<PermissionEnum> effective, PermissionEnum[] required) {
         for (PermissionEnum p : required) {
-            if (RolePermissionMapping.hasPermission(role, p)) {
+            if (effective.contains(p)) {
                 return true;
             }
         }
         return false;
     }
 
-    private boolean hasAllPermissions(RoleEnum role, PermissionEnum[] required) {
+    private boolean hasAllPermissions(Set<PermissionEnum> effective, PermissionEnum[] required) {
         for (PermissionEnum p : required) {
-            if (!RolePermissionMapping.hasPermission(role, p)) {
+            if (!effective.contains(p)) {
                 return false;
             }
         }

@@ -2,9 +2,13 @@ package com.yirancrazy.minimall.common.constant;
 
 import java.util.Set;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * RolePermissionMapping 单元测试，验证角色-权限映射的完整性与正确性。
@@ -83,5 +87,32 @@ class RolePermissionMappingTest {
         catch (UnsupportedOperationException e) {
             assertTrue(true);
         }
+    }
+
+    @Test
+    void getEffectivePermissions_uses_redis_override_when_present() {
+        StringRedisTemplate redis = mock(StringRedisTemplate.class);
+        ValueOperations<String, String> ops = mock(ValueOperations.class);
+        when(redis.opsForValue()).thenReturn(ops);
+        when(ops.get(RolePermissionMapping.KEY_PREFIX + "MERCHANT"))
+            .thenReturn("[\"GOODS_VIEW\",\"GOODS_MANAGE\"]");
+
+        Set<PermissionEnum> perms = RolePermissionMapping.getEffectivePermissions(RoleEnum.MERCHANT, redis);
+
+        assertEquals(2, perms.size());
+        assertTrue(perms.contains(PermissionEnum.GOODS_VIEW));
+        assertFalse(perms.contains(PermissionEnum.STOCK_MANAGE));
+    }
+
+    @Test
+    void getEffectivePermissions_falls_back_to_static_when_redis_empty() {
+        StringRedisTemplate redis = mock(StringRedisTemplate.class);
+        ValueOperations<String, String> ops = mock(ValueOperations.class);
+        when(redis.opsForValue()).thenReturn(ops);
+        when(ops.get(RolePermissionMapping.KEY_PREFIX + "PLATFORM")).thenReturn(null);
+
+        Set<PermissionEnum> perms = RolePermissionMapping.getEffectivePermissions(RoleEnum.PLATFORM, redis);
+
+        assertTrue(perms.contains(PermissionEnum.ROLE_VIEW));
     }
 }

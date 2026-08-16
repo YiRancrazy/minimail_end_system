@@ -5,6 +5,8 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -15,6 +17,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import com.yirancrazy.minimall.common.annotation.RequirePermission;
 import com.yirancrazy.minimall.common.constant.PermissionEnum;
+import com.yirancrazy.minimall.common.constant.RolePermissionMapping;
 import com.yirancrazy.minimall.common.exception.BizException;
 
 /**
@@ -28,7 +31,8 @@ class PermissionAspectTest {
 
     @BeforeEach
     void setUp() throws Throwable {
-        aspect = new PermissionAspect();
+        // 默认无 Redis，鉴权回退静态映射表
+        aspect = new PermissionAspect(null);
         pjp = mock(ProceedingJoinPoint.class);
         proceedCount = 0;
         when(pjp.proceed()).thenAnswer(inv -> {
@@ -134,5 +138,51 @@ class PermissionAspectTest {
         setRoleHeader("MERCHANT");
         RequirePermission rp = annotation(new PermissionEnum[]{PermissionEnum.ORDER_CREATE}, false);
         assertThrows(BizException.class, () -> aspect.checkPermission(pjp, rp));
+    }
+
+    @Test
+    void redis_override_grants_permission_absent_in_static_table() {
+        StringRedisTemplate redis = mockRedisValue(RolePermissionMapping.KEY_PREFIX + "MERCHANT",
+            "[\"ROLE_VIEW\"]");
+        aspect = new PermissionAspect(redis);
+
+        setRoleHeader("MERCHANT");
+        RequirePermission rp = annotation(new PermissionEnum[]{PermissionEnum.ROLE_VIEW}, false);
+
+        assertDoesNotThrow(() -> aspect.checkPermission(pjp, rp));
+        assertEquals(1, proceedCount);
+    }
+
+    @Test
+    void redis_override_revokes_static_permission() {
+        StringRedisTemplate redis = mockRedisValue(RolePermissionMapping.KEY_PREFIX + "PLATFORM",
+            "[\"GOODS_VIEW\"]");
+        aspect = new PermissionAspect(redis);
+
+        setRoleHeader("PLATFORM");
+        RequirePermission rp = annotation(new PermissionEnum[]{PermissionEnum.ROLE_VIEW}, false);
+
+        assertThrows(BizException.class, () -> aspect.checkPermission(pjp, rp));
+        assertEquals(0, proceedCount);
+    }
+
+    @Test
+    void redis_no_override_falls_back_to_static_table() {
+        StringRedisTemplate redis = mockRedisValue(RolePermissionMapping.KEY_PREFIX + "PLATFORM", null);
+        aspect = new PermissionAspect(redis);
+
+        setRoleHeader("PLATFORM");
+        RequirePermission rp = annotation(new PermissionEnum[]{PermissionEnum.ROLE_VIEW}, false);
+
+        assertDoesNotThrow(() -> aspect.checkPermission(pjp, rp));
+        assertEquals(1, proceedCount);
+    }
+
+    private StringRedisTemplate mockRedisValue(String key, String value) {
+        StringRedisTemplate redis = mock(StringRedisTemplate.class);
+        ValueOperations<String, String> ops = mock(ValueOperations.class);
+        when(redis.opsForValue()).thenReturn(ops);
+        when(ops.get(key)).thenReturn(value);
+        return redis;
     }
 }

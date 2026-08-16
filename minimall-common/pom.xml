@@ -37,10 +37,10 @@
       <artifactId>rocketmq-client</artifactId>
       <version>5.3.0</version>
     </dependency>
+    <!-- 运行时鉴权（PermissionAspect）需直读 Redis 角色权限覆盖集，故必须随 common 传递到各业务服务 -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-data-redis</artifactId>
-      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>io.minio</groupId>

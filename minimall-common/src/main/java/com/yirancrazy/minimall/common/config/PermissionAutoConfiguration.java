@@ -1,7 +1,9 @@
 package com.yirancrazy.minimall.common.config;
 
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.context.annotation.Bean;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import com.yirancrazy.minimall.common.aspect.PermissionAspect;
 
 /**
@@ -15,7 +17,7 @@ import com.yirancrazy.minimall.common.aspect.PermissionAspect;
 public class PermissionAutoConfiguration {
 
     @Bean
-    public PermissionAspect permissionAspect() {
-        return new PermissionAspect();
+    public PermissionAspect permissionAspect(ObjectProvider<StringRedisTemplate> redisProvider) {
+        return new PermissionAspect(redisProvider.getIfAvailable());
     }
 }

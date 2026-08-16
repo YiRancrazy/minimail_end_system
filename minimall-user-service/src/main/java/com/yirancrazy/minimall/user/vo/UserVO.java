@@ -42,7 +42,7 @@ public class UserVO {
     }
 
     /**
-     * 邮箱脱敏：保留前2个字符和@后缀，中间用*替换。
+     * 邮箱脱敏：保留@前缀前至少1个字符，其余前缀用*替换后保留@域名后缀。
      * @param email 原始邮箱
      * @return 脱敏后的邮箱
      */
@@ -51,9 +51,10 @@ public class UserVO {
             return email;
         }
         int atIndex = email.indexOf('@');
-        if (atIndex <= 2) {
+        if (atIndex <= 0) {
             return email;
         }
-        return email.substring(0, 2) + "***" + email.substring(atIndex);
+        int keep = Math.min(2, atIndex);
+        return email.substring(0, keep) + "***" + email.substring(atIndex);
     }
 }

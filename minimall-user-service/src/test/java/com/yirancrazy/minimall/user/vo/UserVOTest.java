@@ -114,7 +114,7 @@ public class UserVOTest {
     }
 
     /**
-     * 验证 from 在邮箱 @ 前缀不超过2个字符时原样返回。
+     * 验证 from 对短前缀邮箱（2字符）仍执行脱敏，不原样泄漏。
      */
     @Test
     public void from_shortEmail() {
@@ -124,6 +124,20 @@ public class UserVOTest {
 
         UserVO vo = UserVO.from(po);
 
-        assertEquals("ab@c.com", vo.getEmail());
+        assertEquals("ab***@c.com", vo.getEmail());
+    }
+
+    /**
+     * 验证 from 对单字符前缀邮箱至少保留首字符并遮蔽其余部分。
+     */
+    @Test
+    public void from_singleCharPrefixEmail_still_masked() {
+        UserPO po = new UserPO();
+        po.setId(1L);
+        po.setEmail("a@x.com");
+
+        UserVO vo = UserVO.from(po);
+
+        assertEquals("a***@x.com", vo.getEmail());
     }
 }

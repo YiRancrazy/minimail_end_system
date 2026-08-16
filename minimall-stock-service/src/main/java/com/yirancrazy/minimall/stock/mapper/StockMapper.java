@@ -1,5 +1,7 @@
 package com.yirancrazy.minimall.stock.mapper;
 
+import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Update;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.yirancrazy.minimall.stock.entity.StockPO;
 import com.yirancrazy.minimall.stock.vo.StockStatisticsVO;
@@ -23,4 +25,37 @@ public interface StockMapper extends BaseMapper<StockPO> {
         + "AND available <= alert_threshold THEN 1 END), 0) AS alertSkuCount "
         + "FROM t_stock")
     StockStatisticsVO statistics();
+
+    /**
+     * 原子预占：扣减可用并等额增加预占，仅当可用数量充足时命中。
+     * 条件内嵌保证并发下不会超卖（MySQL 行锁 + 检查式 UPDATE）。
+     * @param skuId SKU标识
+     * @param qty 预占数量
+     * @return 影响行数，0 表示库存不足或记录不存在
+     */
+    @Update("UPDATE t_stock SET available = available - #{qty}, "
+        + "reserved = reserved + #{qty}, update_time = NOW() "
+        + "WHERE sku_id = #{skuId} AND available >= #{qty}")
+    int deductAvailable(@Param("skuId") Long skuId, @Param("qty") long qty);
+
+    /**
+     * 原子释放：扣减预占并等额回补可用，仅当预占数量充足时命中。
+     * @param skuId SKU标识
+     * @param qty 释放数量
+     * @return 影响行数，0 表示预占不足或记录不存在
+     */
+    @Update("UPDATE t_stock SET available = available + #{qty}, "
+        + "reserved = reserved - #{qty}, update_time = NOW() "
+        + "WHERE sku_id = #{skuId} AND reserved >= #{qty}")
+    int restoreReserved(@Param("skuId") Long skuId, @Param("qty") long qty);
+
+    /**
+     * 原子增加可用库存（调拨入目标），仅更新已存在的记录。
+     * @param skuId SKU标识
+     * @param qty 增加数量
+     * @return 影响行数，0 表示记录不存在
+     */
+    @Update("UPDATE t_stock SET available = available + #{qty}, "
+        + "update_time = NOW() WHERE sku_id = #{skuId}")
+    int increaseAvailable(@Param("skuId") Long skuId, @Param("qty") long qty);
 }

@@ -9,6 +9,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.common.exception.BizException;
+import com.yirancrazy.minimall.common.result.CommonCode;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.util.CursorUtils;
 import com.yirancrazy.minimall.stock.constant.StockCodeEnum;
@@ -61,23 +62,27 @@ public class StockServiceImpl implements StockService {
     }
 
     /**
-     * 预占指定 SKU 的库存：扣减可用数量并等额增加预占数量。库存记录不存在时抛出
-     * STOCK_NOT_FOUND，可用数量不足时抛出 STOCK_INSUFFICIENT。
+     * 预占指定 SKU 的库存：原子扣减可用数量并等额增加预占数量。库存记录不存在时抛出
+     * STOCK_NOT_FOUND，可用数量不足或并发下扣减未命中时抛出 STOCK_INSUFFICIENT。
      *
      * @param skuId    SKU 标识
-     * @param quantity 预占数量
+     * @param quantity 预占数量，必须 > 0
      * @return 库存记录更新成功返回 true
+     * @throws BizException 当 quantity 非法、库存不存在或库存不足时
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean reserve(Long skuId, Integer quantity) {
+        if (quantity == null || quantity <= 0) {
+            throw new BizException(CommonCode.PARAM_INVALID, "预占数量必须大于0");
+        }
         StockPO s = getStock(skuId);
-        if (s.getAvailable() < quantity.longValue()) {
+        // 原子扣减：条件内嵌可用量校验，避免读-判-写的超卖窗口
+        if (stockMapper.deductAvailable(skuId, quantity.longValue()) <= 0) {
             throw new BizException(StockCodeEnum.STOCK_INSUFFICIENT);
         }
         s.setAvailable(s.getAvailable() - quantity.longValue());
         s.setReserved(s.getReserved() + quantity.longValue());
-        stockManager.updateById(s);
 
         recordJournal(skuId, -quantity.longValue(), StockJournalTypeEnum.RESERVE, null, null);
         checkAlert(s);
@@ -85,24 +90,23 @@ public class StockServiceImpl implements StockService {
     }
 
     /**
-     * 释放指定 SKU 的预占库存：扣减预占数量并等额回补可用数量。库存记录不存在或
-     * 预占数量不足以释放时直接返回 false，不抛出异常，保证回滚链路幂等安全。
+     * 释放指定 SKU 的预占库存：原子扣减预占数量并等额回补可用数量。库存记录不存在、
+     * 预占数量不足以释放或数量非法时直接返回 false，不抛出异常，保证回滚链路幂等安全。
      *
      * @param skuId    SKU 标识
-     * @param quantity 释放数量
+     * @param quantity 释放数量，必须 > 0
      * @return 库存记录更新成功返回 true，否则返回 false
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean release(Long skuId, Integer quantity) {
-        StockPO s = stockManager.getOne(
-            Wrappers.lambdaQuery(StockPO.class).eq(StockPO::getSkuId, skuId));
-        if (s == null || s.getReserved() < quantity.longValue()) {
+        if (quantity == null || quantity <= 0) {
             return false;
         }
-        s.setReserved(s.getReserved() - quantity.longValue());
-        s.setAvailable(s.getAvailable() + quantity.longValue());
-        stockManager.updateById(s);
+        // 原子释放：未命中（记录不存在或预占不足）按失败处理
+        if (stockMapper.restoreReserved(skuId, quantity.longValue()) <= 0) {
+            return false;
+        }
 
         recordJournal(skuId, quantity.longValue(), StockJournalTypeEnum.RELEASE, null, null);
         return true;
@@ -154,7 +158,9 @@ public class StockServiceImpl implements StockService {
         }
         StockPO po = getOrCreateStock(skuId);
         po.setAvailable(po.getAvailable() + quantity);
-        stockManager.updateById(po);
+        if (!stockManager.updateById(po)) {
+            throw new BizException(StockCodeEnum.STOCK_NOT_FOUND);
+        }
 
         recordJournal(skuId, quantity, StockJournalTypeEnum.ADJUST, reason, null);
         checkAlert(po);
@@ -243,18 +249,20 @@ public class StockServiceImpl implements StockService {
             throw new BizException(StockCodeEnum.STOCK_TRANSFER_SAME_SKU);
         }
         StockPO from = getStock(dto.getFromSkuId());
-        if (from.getAvailable() < dto.getQuantity()) {
-            throw new BizException(StockCodeEnum.STOCK_TRANSFER_INSUFFICIENT);
-        }
         StockPO to = stockManager.getOne(
             Wrappers.lambdaQuery(StockPO.class).eq(StockPO::getSkuId, dto.getToSkuId()));
         if (to == null) {
             throw new BizException(StockCodeEnum.STOCK_TRANSFER_TARGET_NOT_FOUND);
         }
+        // 源扣减与目标增加均走原子 SQL，任一未命中即回滚，避免并发下源库存被重复调拨
+        if (stockMapper.deductAvailable(dto.getFromSkuId(), dto.getQuantity()) <= 0) {
+            throw new BizException(StockCodeEnum.STOCK_TRANSFER_INSUFFICIENT);
+        }
+        if (stockMapper.increaseAvailable(dto.getToSkuId(), dto.getQuantity()) <= 0) {
+            throw new BizException(StockCodeEnum.STOCK_TRANSFER_TARGET_NOT_FOUND);
+        }
         from.setAvailable(from.getAvailable() - dto.getQuantity());
         to.setAvailable(to.getAvailable() + dto.getQuantity());
-        stockManager.updateById(from);
-        stockManager.updateById(to);
 
         recordJournal(dto.getFromSkuId(), -dto.getQuantity(),
             StockJournalTypeEnum.TRANSFER_OUT, dto.getReason(), null);
@@ -366,7 +374,9 @@ public class StockServiceImpl implements StockService {
             task.setRemark(dto.getRemark());
         }
         task.setStatus(StockCountTaskStatusEnum.COMPLETED.intCode());
-        countTaskManager.updateById(task);
+        if (!countTaskManager.updateById(task)) {
+            throw new BizException(StockCodeEnum.STOCK_COUNT_TASK_NOT_FOUND);
+        }
 
         if (task.getDiffQuantity() != 0) {
             adjustStock(task.getSkuId(), task.getDiffQuantity(), "盘点差异调整");

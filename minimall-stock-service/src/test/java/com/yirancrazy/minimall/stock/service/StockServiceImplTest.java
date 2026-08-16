@@ -64,42 +64,64 @@ public class StockServiceImplTest {
     }
 
     /**
-     * 验证预占库存时按数量扣减可用量并等额增加预占量，且在可用量不足时抛出 BizException。
+     * 验证预占成功时原子扣减命中 1 行并记录流水。
      */
     @Test
-    public void reserve_decrements_available_and_throws_when_insufficient() {
+    public void reserve_atomic_success_records_journal() {
+        StockPO s = new StockPO();
+        s.setId(1L);
+        s.setSkuId(100L);
+        s.setAvailable(10L);
+        s.setReserved(0L);
+        when(manager.getOne(any())).thenReturn(s);
+        when(stockMapper.deductAvailable(100L, 2L)).thenReturn(1);
+
+        boolean ok = service.reserve(100L, 2);
+        assertEquals(true, ok);
+        assertEquals(8L, s.getAvailable());
+        assertEquals(2L, s.getReserved());
+        verify(stockMapper).deductAvailable(100L, 2L);
+        verify(journalManager).save(any(StockJournalPO.class));
+    }
+
+    /**
+     * 验证原子扣减未命中（0 行）时抛出 STOCK_INSUFFICIENT 且不记录流水。
+     */
+    @Test
+    public void reserve_insufficient_stock_throws() {
         StockPO s = new StockPO();
         s.setId(1L);
         s.setSkuId(100L);
         s.setAvailable(3L);
         s.setReserved(0L);
         when(manager.getOne(any())).thenReturn(s);
+        when(stockMapper.deductAvailable(100L, 100L)).thenReturn(0);
 
-        boolean ok = service.reserve(100L, 2);
-        assertEquals(true, ok);
-        assertEquals(1L, s.getAvailable());
-        assertEquals(2L, s.getReserved());
-
-        when(manager.getOne(any())).thenReturn(s);
         assertThrows(BizException.class, () -> service.reserve(100L, 100));
+        verify(journalManager, never()).save(any(StockJournalPO.class));
     }
 
     /**
-     * 验证释放预占库存时按数量扣减预占量并等额回补可用量，且返回释放成功。
+     * 验证预占数量非法（null 或 <= 0）时抛出 BizException。
      */
     @Test
-    public void release_restores_available() {
-        StockPO s = new StockPO();
-        s.setId(1L);
-        s.setSkuId(100L);
-        s.setAvailable(0L);
-        s.setReserved(5L);
-        when(manager.getOne(any())).thenReturn(s);
+    public void reserve_invalid_quantity_throws() {
+        assertThrows(BizException.class, () -> service.reserve(100L, null));
+        assertThrows(BizException.class, () -> service.reserve(100L, 0));
+        assertThrows(BizException.class, () -> service.reserve(100L, -1));
+    }
+
+    /**
+     * 验证释放预占库存时原子回补命中 1 行并记录流水。
+     */
+    @Test
+    public void release_restores_stock() {
+        when(stockMapper.restoreReserved(100L, 3L)).thenReturn(1);
 
         boolean ok = service.release(100L, 3);
         assertEquals(true, ok);
-        assertEquals(3L, s.getAvailable());
-        assertEquals(2L, s.getReserved());
+        verify(stockMapper).restoreReserved(100L, 3L);
+        verify(journalManager).save(any(StockJournalPO.class));
     }
 
     /**
@@ -112,26 +134,21 @@ public class StockServiceImplTest {
     }
 
     /**
-     * 验证释放不存在的 SKU 库存时返回 false 而非抛出异常。
+     * 验证释放不存在的 SKU 库存时原子释放未命中（0 行）返回 false 而非抛出异常。
      */
     @Test
     public void release_missing_returns_false() {
-        when(manager.getOne(any())).thenReturn(null);
+        when(stockMapper.restoreReserved(999L, 1L)).thenReturn(0);
         boolean ok = service.release(999L, 1);
         assertEquals(false, ok);
     }
 
     /**
-     * 验证释放数量超过预占数量时返回 false。
+     * 验证释放数量超过预占数量（原子释放未命中）时返回 false。
      */
     @Test
-    public void release_exceeds_reserved_returns_false() {
-        StockPO s = new StockPO();
-        s.setId(1L);
-        s.setSkuId(100L);
-        s.setAvailable(0L);
-        s.setReserved(2L);
-        when(manager.getOne(any())).thenReturn(s);
+    public void release_insufficient_reserved_returns_false() {
+        when(stockMapper.restoreReserved(100L, 5L)).thenReturn(0);
 
         boolean ok = service.release(100L, 5);
         assertEquals(false, ok);
@@ -239,6 +256,8 @@ public class StockServiceImplTest {
         to.setAvailable(5L);
         to.setReserved(0L);
         when(manager.getOne(any())).thenReturn(from, to);
+        when(stockMapper.deductAvailable(100L, 3L)).thenReturn(1);
+        when(stockMapper.increaseAvailable(200L, 3L)).thenReturn(1);
 
         StockTransferDTO dto = new StockTransferDTO();
         dto.setFromSkuId(100L);
@@ -250,6 +269,8 @@ public class StockServiceImplTest {
 
         assertEquals(7L, from.getAvailable());
         assertEquals(8L, to.getAvailable());
+        verify(stockMapper).deductAvailable(100L, 3L);
+        verify(stockMapper).increaseAvailable(200L, 3L);
         verify(transferManager).save(any(StockTransferPO.class));
     }
 

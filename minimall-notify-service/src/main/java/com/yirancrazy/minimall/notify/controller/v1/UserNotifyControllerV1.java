@@ -35,12 +35,17 @@ public class UserNotifyControllerV1 {
     }
 
     /**
-     * 拉取指定用户的消息列表（向后兼容入口），按ID降序返回全部通知记录。
+     * 拉取当前登录用户的消息列表（向后兼容入口），按ID降序返回全部通知记录。
+     * userId 以网关注入的 X-User-Id 为准并强制覆盖请求参数，防止越权读取他人站内信。
+     * @param userId 用户ID（Header 注入）
      * @param dto 查询条件
      * @return 通知消息列表的 Result 包装
      */
     @GetMapping
-    public Result<List<NotifyMessageVO>> list(@Valid NotifyListDTO dto) {
+    public Result<List<NotifyMessageVO>> list(@RequestHeader("X-User-Id") Long userId,
+                                              @Valid NotifyListDTO dto) {
+        dto.setUserId(userId);
+        dto.setRecipientType(RecipientTypeEnum.USER.intCode());
         return Result.success(notifyService.listByUser(dto).stream().map(NotifyMessageVO::from).toList());
     }
 

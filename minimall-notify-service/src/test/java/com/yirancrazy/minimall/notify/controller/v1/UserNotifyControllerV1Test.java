@@ -3,9 +3,11 @@ package com.yirancrazy.minimall.notify.controller.v1;
 import java.util.Collections;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -19,6 +21,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
+import com.yirancrazy.minimall.notify.constant.RecipientTypeEnum;
 import com.yirancrazy.minimall.notify.dto.NotifyBatchDeleteDTO;
 import com.yirancrazy.minimall.notify.dto.NotifyListDTO;
 import com.yirancrazy.minimall.notify.entity.NotifyMessagePO;
@@ -110,10 +113,11 @@ class UserNotifyControllerV1Test {
     }
 
     /**
-     * 验证 GET /api/v1/user/notify 向后兼容入口返回通知列表。
+     * 验证 GET /api/v1/user/notify 向后兼容入口：userId 以 X-User-Id 头为准，
+     * 请求参数传入他人 userId 时被强制覆盖，防止越权读取他人站内信。
      */
     @Test
-    void list_returns_vo_list() throws Exception {
+    void list_overrides_userId_from_header() throws Exception {
         NotifyMessagePO po = new NotifyMessagePO();
         po.setId(1L);
         po.setUserId(1L);
@@ -122,9 +126,15 @@ class UserNotifyControllerV1Test {
         when(notifyService.listByUser(any(NotifyListDTO.class)))
             .thenReturn(java.util.List.of(po));
         mockMvc.perform(get("/api/v1/user/notify")
-                .param("userId", "1"))
+                .header("X-User-Id", 1L)
+                .param("userId", "999"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.code").value("00000"))
             .andExpect(jsonPath("$.data[0].id").value(1));
+        ArgumentCaptor<NotifyListDTO> captor = ArgumentCaptor.forClass(NotifyListDTO.class);
+        verify(notifyService).listByUser(captor.capture());
+        NotifyListDTO captured = captor.getValue();
+        assertEquals(1L, captured.getUserId());
+        assertEquals(RecipientTypeEnum.USER.intCode(), captured.getRecipientType());
     }
 }

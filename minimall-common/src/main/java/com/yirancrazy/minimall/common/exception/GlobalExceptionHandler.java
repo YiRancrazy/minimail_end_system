@@ -78,12 +78,13 @@ public class GlobalExceptionHandler {
 
     /**
      * 兜底处理未被其他处理器捕获的异常，记录完整堆栈并返回系统繁忙提示。
+     * 仅捕获 Exception，Error（OOM、StackOverflow 等）交由容器处理，避免掩盖 JVM 致命错误。
      *
-     * @param e 任意未预期的异常或错误
+     * @param e 任意未预期的异常
      * @return HTTP 200 包装的失败响应，错误码为 {@link CommonCode#SYS_ERROR}，不对外暴露内部细节
      */
-    @ExceptionHandler(Throwable.class)
-    public ResponseEntity<Result<Void>> unknown(Throwable e) {
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<Result<Void>> unknown(Exception e) {
         log.error("unknown error", e);
         return ResponseEntity.status(HttpStatus.OK).body(Result.fail(CommonCode.SYS_ERROR, "系统繁忙"));
     }

@@ -44,6 +44,7 @@ import com.yirancrazy.minimall.stock.vo.StockStatisticsVO;
 public class StockServiceImpl implements StockService {
 
     private static final int EXPORT_MAX_ROWS = 10000;
+    private static final int QUERY_MAX_ROWS = 200;
 
     private final StockManager stockManager;
     private final StockJournalManager journalManager;
@@ -145,10 +146,11 @@ public class StockServiceImpl implements StockService {
 
     /**
      * 手动调整库存数量。库存记录不存在时自动创建（初始可用 0），保证商家首次入库可用。
+     * 负向调整不允许把可用库存调成负值。
      * @param skuId 商品SKU ID
      * @param quantity 调整数量，正数增加、负数扣减，不能为0
      * @param reason 调整原因
-     * @throws BizException 当调整数量为0时
+     * @throws BizException 当调整数量为0或负向调整超过可用库存时
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -157,6 +159,10 @@ public class StockServiceImpl implements StockService {
             throw new BizException(StockCodeEnum.ADJUST_QUANTITY_ZERO);
         }
         StockPO po = getOrCreateStock(skuId);
+        // 负向调整下限校验：可用库存不得被调成负数
+        if (po.getAvailable() + quantity < 0) {
+            throw new BizException(StockCodeEnum.STOCK_INSUFFICIENT);
+        }
         po.setAvailable(po.getAvailable() + quantity);
         if (!stockManager.updateById(po)) {
             throw new BizException(StockCodeEnum.STOCK_NOT_FOUND);
@@ -168,7 +174,7 @@ public class StockServiceImpl implements StockService {
     }
 
     /**
-     * 查询指定SKU的库存流水记录。
+     * 查询指定SKU的库存流水记录，最多返回 200 条。
      * @param skuId 商品SKU ID
      * @return 库存流水列表，按ID降序
      */
@@ -177,7 +183,8 @@ public class StockServiceImpl implements StockService {
         return journalManager.list(
             Wrappers.lambdaQuery(StockJournalPO.class)
                 .eq(StockJournalPO::getSkuId, skuId)
-                .orderByDesc(StockJournalPO::getId));
+                .orderByDesc(StockJournalPO::getId)
+                .last("LIMIT " + QUERY_MAX_ROWS));
     }
 
     /**
@@ -368,21 +375,24 @@ public class StockServiceImpl implements StockService {
         if (task.getStatus() != StockCountTaskStatusEnum.PENDING.intCode()) {
             throw new BizException(StockCodeEnum.STOCK_COUNT_TASK_NOT_PENDING);
         }
-        task.setActualQuantity(dto.getActualQuantity());
-        task.setDiffQuantity(dto.getActualQuantity() - task.getExpectedQuantity());
-        if (dto.getRemark() != null) {
-            task.setRemark(dto.getRemark());
+        Long actualQuantity = dto.getActualQuantity();
+        Long diffQuantity = actualQuantity - task.getExpectedQuantity();
+        String remark = dto.getRemark() != null ? dto.getRemark() : task.getRemark();
+        // 条件更新（PENDING->COMPLETED 原子迁移）未命中说明任务已被并发方完成，
+        // 此时不得再次入账盘点差异，避免差异被重复调整
+        if (countTaskManager.completeIfStatus(id, StockCountTaskStatusEnum.PENDING.intCode(),
+            StockCountTaskStatusEnum.COMPLETED.intCode(), actualQuantity, diffQuantity, remark) == 0) {
+            throw new BizException(StockCodeEnum.STOCK_COUNT_TASK_NOT_PENDING);
         }
+        task.setActualQuantity(actualQuantity);
+        task.setDiffQuantity(diffQuantity);
         task.setStatus(StockCountTaskStatusEnum.COMPLETED.intCode());
-        if (!countTaskManager.updateById(task)) {
-            throw new BizException(StockCodeEnum.STOCK_COUNT_TASK_NOT_FOUND);
-        }
 
-        if (task.getDiffQuantity() != 0) {
-            adjustStock(task.getSkuId(), task.getDiffQuantity(), "盘点差异调整");
+        if (diffQuantity != 0) {
+            adjustStock(task.getSkuId(), diffQuantity, "盘点差异调整");
         }
         log.info("count task completed, id={}, skuId={}, diff={}",
-            id, task.getSkuId(), task.getDiffQuantity());
+            id, task.getSkuId(), diffQuantity);
     }
 
     /**
@@ -401,13 +411,17 @@ public class StockServiceImpl implements StockService {
         if (task.getStatus() != StockCountTaskStatusEnum.PENDING.intCode()) {
             throw new BizException(StockCodeEnum.STOCK_COUNT_TASK_NOT_PENDING);
         }
+        // 条件更新（PENDING->CANCELLED 原子迁移），并发下完成/取消互斥，未命中说明已被并发方处理
+        if (countTaskManager.cancelIfStatus(id, StockCountTaskStatusEnum.PENDING.intCode(),
+            StockCountTaskStatusEnum.CANCELLED.intCode()) == 0) {
+            throw new BizException(StockCodeEnum.STOCK_COUNT_TASK_NOT_PENDING);
+        }
         task.setStatus(StockCountTaskStatusEnum.CANCELLED.intCode());
-        countTaskManager.updateById(task);
         log.info("count task cancelled, id={}, operator={}", id, operatorId);
     }
 
     /**
-     * 查询异常库存记录（available &lt; 0 或 reserved &lt; 0）。
+     * 查询异常库存记录（available &lt; 0 或 reserved &lt; 0），最多返回 200 条。
      * @return 异常库存列表
      */
     @Override
@@ -416,7 +430,8 @@ public class StockServiceImpl implements StockService {
             Wrappers.lambdaQuery(StockPO.class)
                 .lt(StockPO::getAvailable, 0)
                 .or()
-                .lt(StockPO::getReserved, 0));
+                .lt(StockPO::getReserved, 0)
+                .last("LIMIT " + QUERY_MAX_ROWS));
     }
 
     /**

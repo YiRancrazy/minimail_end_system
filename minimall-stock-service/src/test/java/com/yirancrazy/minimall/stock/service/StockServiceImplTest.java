@@ -3,17 +3,25 @@ package com.yirancrazy.minimall.stock.service;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import com.baomidou.mybatisplus.core.MybatisConfiguration;
+import com.baomidou.mybatisplus.core.conditions.Wrapper;
+import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.stock.constant.StockCountTaskStatusEnum;
@@ -50,6 +58,13 @@ public class StockServiceImplTest {
 
     @BeforeEach
     void setUp() {
+        // Initialize TableInfo so LambdaQueryWrapper can resolve lambda cache
+        MybatisConfiguration configuration = new MybatisConfiguration();
+        MapperBuilderAssistant assistant = new MapperBuilderAssistant(configuration, "");
+        assistant.setCurrentNamespace("com.yirancrazy.minimall.stock.mapper.StockMapper");
+        TableInfoHelper.initTableInfo(assistant, StockPO.class);
+        TableInfoHelper.initTableInfo(assistant, StockJournalPO.class);
+
         manager = mock(StockManager.class);
         journalManager = mock(StockJournalManager.class);
         stockMapper = mock(StockMapper.class);
@@ -368,6 +383,8 @@ public class StockServiceImplTest {
         task.setExpectedQuantity(10L);
         task.setStatus(StockCountTaskStatusEnum.PENDING.intCode());
         when(countTaskManager.getById(1L)).thenReturn(task);
+        when(countTaskManager.completeIfStatus(eq(1L), anyInt(), anyInt(), any(), any(), any()))
+            .thenReturn(1);
 
         StockPO s = new StockPO();
         s.setId(2L);
@@ -381,6 +398,9 @@ public class StockServiceImplTest {
 
         assertEquals(StockCountTaskStatusEnum.COMPLETED.intCode(), task.getStatus());
         assertEquals(-2L, task.getDiffQuantity());
+        verify(countTaskManager).completeIfStatus(eq(1L),
+            eq(StockCountTaskStatusEnum.PENDING.intCode()),
+            eq(StockCountTaskStatusEnum.COMPLETED.intCode()), eq(8L), eq(-2L), any());
         verify(manager).updateById(any(StockPO.class));
     }
 
@@ -395,6 +415,8 @@ public class StockServiceImplTest {
         task.setExpectedQuantity(10L);
         task.setStatus(StockCountTaskStatusEnum.PENDING.intCode());
         when(countTaskManager.getById(1L)).thenReturn(task);
+        when(countTaskManager.completeIfStatus(eq(1L), anyInt(), anyInt(), any(), any(), any()))
+            .thenReturn(1);
 
         StockCountTaskCompleteDTO dto = new StockCountTaskCompleteDTO();
         dto.setActualQuantity(10L);
@@ -402,6 +424,29 @@ public class StockServiceImplTest {
 
         assertEquals(0L, task.getDiffQuantity());
         verify(manager, never()).updateById(any(StockPO.class));
+    }
+
+    /**
+     * F28: 验证并发完成时条件更新未命中（影响 0 行）抛出 BizException 且盘点差异不重复入账。
+     */
+    @Test
+    public void completeCountTask_concurrent_update_miss_throws() {
+        StockCountTaskPO task = new StockCountTaskPO();
+        task.setId(1L);
+        task.setSkuId(100L);
+        task.setExpectedQuantity(10L);
+        task.setStatus(StockCountTaskStatusEnum.PENDING.intCode());
+        when(countTaskManager.getById(1L)).thenReturn(task);
+        when(countTaskManager.completeIfStatus(eq(1L), anyInt(), anyInt(), any(), any(), any()))
+            .thenReturn(0);
+
+        StockCountTaskCompleteDTO dto = new StockCountTaskCompleteDTO();
+        dto.setActualQuantity(8L);
+        assertThrows(BizException.class, () -> service.completeCountTask(1L, dto));
+        // 条件更新未命中：不触发库存调整与流水记录
+        verify(manager, never()).getOne(any());
+        verify(manager, never()).updateById(any(StockPO.class));
+        verify(journalManager, never()).save(any(StockJournalPO.class));
     }
 
     /**
@@ -428,10 +473,13 @@ public class StockServiceImplTest {
         task.setId(1L);
         task.setStatus(StockCountTaskStatusEnum.PENDING.intCode());
         when(countTaskManager.getById(1L)).thenReturn(task);
+        when(countTaskManager.cancelIfStatus(1L, StockCountTaskStatusEnum.PENDING.intCode(),
+            StockCountTaskStatusEnum.CANCELLED.intCode())).thenReturn(1);
 
         service.cancelCountTask(1L, 99L);
         assertEquals(StockCountTaskStatusEnum.CANCELLED.intCode(), task.getStatus());
-        verify(countTaskManager).updateById(task);
+        verify(countTaskManager).cancelIfStatus(1L, StockCountTaskStatusEnum.PENDING.intCode(),
+            StockCountTaskStatusEnum.CANCELLED.intCode());
     }
 
     /**
@@ -568,6 +616,23 @@ public class StockServiceImplTest {
     }
 
     /**
+     * F53: 验证负向调整超过可用库存（调整后可用为负）时抛出 BizException 且不更新库存。
+     */
+    @Test
+    public void adjustStock_negative_below_zero_throws() {
+        StockPO s = new StockPO();
+        s.setId(1L);
+        s.setSkuId(100L);
+        s.setAvailable(3L);
+        s.setReserved(0L);
+        when(manager.getOne(any())).thenReturn(s);
+
+        assertThrows(BizException.class, () -> service.adjustStock(100L, -5L, "correction"));
+        verify(manager, never()).updateById(any(StockPO.class));
+        verify(journalManager, never()).save(any(StockJournalPO.class));
+    }
+
+    /**
      * 验证 adjustStock 调整数量为 null 时抛出 BizException。
      */
     @Test
@@ -663,13 +728,41 @@ public class StockServiceImplTest {
         po.setId(1L);
         po.setSkuId(100L);
         po.setQuantity(-2L);
-        when(journalManager.list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class)))
+        when(journalManager.list(any(Wrapper.class)))
             .thenReturn(List.of(po));
 
         List<StockJournalPO> result = service.queryJournal(100L);
         assertEquals(1, result.size());
         assertEquals(1L, result.get(0).getId());
-        verify(journalManager).list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class));
+        verify(journalManager).list(any(Wrapper.class));
+    }
+
+    /**
+     * F54: 验证 queryJournal 传入的查询被限制在 200 条上限。
+     */
+    @Test
+    public void queryJournal_applies_limit_200() {
+        when(journalManager.list(any(Wrapper.class))).thenReturn(new ArrayList<>());
+
+        service.queryJournal(100L);
+
+        ArgumentCaptor<Wrapper> captor = ArgumentCaptor.forClass(Wrapper.class);
+        verify(journalManager).list(captor.capture());
+        assertTrue(captor.getValue().getCustomSqlSegment().contains("LIMIT 200"));
+    }
+
+    /**
+     * F54: 验证 listAbnormalStock 传入的查询被限制在 200 条上限。
+     */
+    @Test
+    public void listAbnormalStock_applies_limit_200() {
+        when(manager.list(any(Wrapper.class))).thenReturn(new ArrayList<>());
+
+        service.listAbnormalStock();
+
+        ArgumentCaptor<Wrapper> captor = ArgumentCaptor.forClass(Wrapper.class);
+        verify(manager).list(captor.capture());
+        assertTrue(captor.getValue().getCustomSqlSegment().contains("LIMIT 200"));
     }
 
     /**

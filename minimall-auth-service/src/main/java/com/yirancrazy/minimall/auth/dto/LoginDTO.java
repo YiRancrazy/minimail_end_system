@@ -21,10 +21,8 @@ public class LoginDTO {
     @NotBlank
     private String password;
 
-    private String captchaToken;
-
     /**
-     * 便利构造函数（不含验证码）。
+     * 便利构造函数。
      * @param account 登录账号
      * @param password 密码
      */

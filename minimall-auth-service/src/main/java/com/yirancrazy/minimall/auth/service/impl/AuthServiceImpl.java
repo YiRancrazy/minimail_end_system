@@ -53,6 +53,10 @@ public class AuthServiceImpl implements AuthService {
     private static final String RESET_CODE_FAIL_KEY_PREFIX = "pwd:reset:fail:";
     private static final long RESET_CODE_FAIL_TTL_SECONDS = 600L;
     private static final long RESET_CODE_FAIL_THRESHOLD = 5L;
+    private static final String LOGIN_FAIL_KEY_PREFIX = "login:fail:";
+    // 登录失败锁定窗口：10 分钟内累计 5 次失败后临时锁定
+    private static final long LOGIN_FAIL_TTL_SECONDS = 600L;
+    private static final long LOGIN_FAIL_THRESHOLD = 5L;
 
     private final AuthUserManager authUserManager;
     private final AuthRoleManager authRoleManager;
@@ -116,6 +120,12 @@ public class AuthServiceImpl implements AuthService {
         if (po == null) {
             throw new BizException(AuthCodeEnum.USER_NOT_FOUND);
         }
+        // 失败计数已达阈值时直接拒绝，防密码在线枚举
+        String failKey = LOGIN_FAIL_KEY_PREFIX + dto.getAccount();
+        String failCount = redisTemplate.opsForValue().get(failKey);
+        if (failCount != null && Long.parseLong(failCount) >= LOGIN_FAIL_THRESHOLD) {
+            throw new BizException(AuthCodeEnum.LOGIN_ATTEMPT_EXCEEDED);
+        }
         if (po.getAccountType() == null || po.getAccountType() != ACCOUNT_TYPE_USER) {
             throw new BizException(AuthCodeEnum.ACCOUNT_ROLE_MISMATCH);
         }
@@ -123,8 +133,12 @@ public class AuthServiceImpl implements AuthService {
             throw new BizException(AuthCodeEnum.ACCOUNT_DISABLED);
         }
         if (!BCrypt.checkpw(dto.getPassword() + po.getSalt(), po.getPasswordHash())) {
+            // 失败计数累加并刷新窗口，成功后清除
+            redisTemplate.opsForValue().increment(failKey);
+            redisTemplate.expire(failKey, LOGIN_FAIL_TTL_SECONDS, TimeUnit.SECONDS);
             throw new BizException(AuthCodeEnum.PWD_INVALID);
         }
+        redisTemplate.delete(failKey);
         updateLastLoginAt(po);
         String roleCode = resolveRoleCode(po.getRoleId());
         return issueTokens(po.getId(), po.getAccount(), roleCode, po.getRoleId());
@@ -137,26 +151,25 @@ public class AuthServiceImpl implements AuthService {
      */
     @Override
     public TokenVO refreshToken(String refreshToken) {
-        var keys = redisTemplate.keys(REFRESH_KEY_PREFIX + "*");
-        if (keys == null || keys.isEmpty()) {
+        // 刷新令牌为JWT，解析后携带 userId(subject) 与 jti，可直查索引键避免 KEYS 全表扫描
+        Claims c;
+        try {
+            c = jwtUtil.parse(refreshToken);
+        }
+        catch (JwtException ex) {
+            throw new BizException(AuthCodeEnum.REFRESH_TOKEN_INVALID.getCode(),
+                AuthCodeEnum.REFRESH_TOKEN_INVALID.getAlias(),
+                AuthCodeEnum.REFRESH_TOKEN_INVALID.getMessage());
+        }
+        Long userId = Long.parseLong(c.getSubject());
+        String jti = c.get("jti", String.class);
+        String key = REFRESH_KEY_PREFIX + userId + ":" + jti;
+        String stored = redisTemplate.opsForValue().get(key);
+        if (stored == null || !refreshToken.equals(stored)) {
             throw new BizException(AuthCodeEnum.REFRESH_TOKEN_INVALID);
         }
-        String matchedKey = null;
-        for (String key : keys) {
-            String stored = redisTemplate.opsForValue().get(key);
-            if (refreshToken.equals(stored)) {
-                matchedKey = key;
-                break;
-            }
-        }
-        if (matchedKey == null) {
-            throw new BizException(AuthCodeEnum.REFRESH_TOKEN_INVALID);
-        }
-        redisTemplate.delete(matchedKey);
-        String[] parts = matchedKey.split(":");
-        Long userId = Long.parseLong(parts[1]);
-        String oldJti = parts[2];
-        revokeToken(oldJti, userId, "refresh_rotated");
+        redisTemplate.delete(key);
+        revokeToken(jti, userId, "refresh_rotated");
 
         AuthUserPO po = authUserManager.getById(userId);
         if (po == null) {
@@ -324,7 +337,8 @@ public class AuthServiceImpl implements AuthService {
     private TokenVO issueTokens(Long userId, String account, String roleCode, Long roleId) {
         String jti = UUID.randomUUID().toString().replace("-", "");
         String accessToken = jwtUtil.sign(userId, account, roleCode, roleId, jti);
-        String refreshToken = jwtUtil.generateRefreshToken();
+        // 刷新令牌签发为JWT（含 userId/jti），refreshToken 可解析后直查 Redis 索引键
+        String refreshToken = jwtUtil.sign(userId, account, roleCode, roleId, jti, refreshTtlSeconds * 1000L);
         redisTemplate.opsForValue().set(
             REFRESH_KEY_PREFIX + userId + ":" + jti,
             refreshToken, refreshTtlSeconds, TimeUnit.SECONDS);

@@ -29,7 +29,7 @@ public class JwtUtil {
     }
 
     /**
-     * 生成JWT令牌。
+     * 生成JWT令牌，有效期使用默认TTL。
      * @param userId 用户ID
      * @param account 登录账号
      * @param role 角色编码
@@ -38,6 +38,20 @@ public class JwtUtil {
      * @return JWT令牌
      */
     public String sign(Long userId, String account, String role, Long roleId, String jti) {
+        return sign(userId, account, role, roleId, jti, ttlMillis);
+    }
+
+    /**
+     * 生成JWT令牌，有效期由调用方指定（刷新令牌有效期与访问令牌不同，需显式传入）。
+     * @param userId 用户ID
+     * @param account 登录账号
+     * @param role 角色编码
+     * @param roleId 角色ID
+     * @param jti 令牌唯一标识
+     * @param ttlMillis 令牌有效期（毫秒）
+     * @return JWT令牌
+     */
+    public String sign(Long userId, String account, String role, Long roleId, String jti, long ttlMillis) {
         long now = System.currentTimeMillis();
         return Jwts.builder()
             .subject(String.valueOf(userId))

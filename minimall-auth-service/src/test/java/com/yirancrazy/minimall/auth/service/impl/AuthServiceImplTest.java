@@ -19,9 +19,15 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
 import com.yirancrazy.minimall.api.dto.auth.TokenVO;
 import com.yirancrazy.minimall.auth.constant.AuthCodeEnum;
 import com.yirancrazy.minimall.auth.dto.ChangePasswordDTO;
@@ -85,7 +91,8 @@ class AuthServiceImplTest {
             return true;
         });
         when(jwtUtil.sign(anyLong(), anyString(), anyString(), anyLong(), anyString())).thenReturn("access-token");
-        when(jwtUtil.generateRefreshToken()).thenReturn("refresh-token");
+        when(jwtUtil.sign(anyLong(), anyString(), anyString(), anyLong(), anyString(), anyLong()))
+            .thenReturn("refresh-token");
 
         TokenVO vo = authService.register(new RegisterDTO("testuser", "pass123"));
         assertNotNull(vo.getAccessToken());
@@ -121,7 +128,8 @@ class AuthServiceImplTest {
         when(authUserManager.getOne(any())).thenReturn(po);
         when(authUserManager.updateById(any(AuthUserPO.class))).thenReturn(true);
         when(jwtUtil.sign(anyLong(), anyString(), anyString(), anyLong(), anyString())).thenReturn("access-token");
-        when(jwtUtil.generateRefreshToken()).thenReturn("refresh-token");
+        when(jwtUtil.sign(anyLong(), anyString(), anyString(), anyLong(), anyString(), anyLong()))
+            .thenReturn("refresh-token");
 
         TokenVO vo = authService.login(new LoginDTO("alice", "pass123"));
 
@@ -173,8 +181,48 @@ class AuthServiceImplTest {
 
     @Test
     void refreshToken_invalid_throws() {
-        when(redisTemplate.keys(anyString())).thenReturn(Set.of());
+        when(jwtUtil.parse(anyString())).thenThrow(new JwtException("bad token"));
         assertThrows(BizException.class, () -> authService.refreshToken("bad-refresh"));
+    }
+
+    @Test
+    void refreshToken_resolves_by_indexed_key() {
+        stubUserRole();
+        Claims claims = mock(Claims.class);
+        when(claims.getSubject()).thenReturn("1");
+        when(claims.get("jti", String.class)).thenReturn("abc");
+        when(jwtUtil.parse("refresh-jwt")).thenReturn(claims);
+        // 直查索引键 refresh:1:abc 命中，不再 KEYS 全表扫描
+        when(valueOperations.get("refresh:1:abc")).thenReturn("refresh-jwt");
+        when(tokenBlacklistManager.save(any())).thenReturn(true);
+        when(jwtUtil.sign(anyLong(), anyString(), anyString(), anyLong(), anyString())).thenReturn("new-access");
+        when(jwtUtil.sign(anyLong(), anyString(), anyString(), anyLong(), anyString(), anyLong()))
+            .thenReturn("new-refresh");
+        AuthUserPO po = new AuthUserPO();
+        po.setId(1L);
+        po.setAccount("alice");
+        po.setRoleId(1L);
+        when(authUserManager.getById(1L)).thenReturn(po);
+
+        TokenVO vo = authService.refreshToken("refresh-jwt");
+
+        assertNotNull(vo.getAccessToken());
+        assertNotNull(vo.getRefreshToken());
+        verify(valueOperations).get("refresh:1:abc");
+        verify(redisTemplate).delete("refresh:1:abc");
+        verify(tokenBlacklistManager).save(any());
+    }
+
+    @Test
+    void refreshToken_stored_value_mismatch_throws() {
+        Claims claims = mock(Claims.class);
+        when(claims.getSubject()).thenReturn("1");
+        when(claims.get("jti", String.class)).thenReturn("abc");
+        when(jwtUtil.parse("refresh-jwt")).thenReturn(claims);
+        // 索引键存在但值不匹配（旧 token 重放防御），视为无效
+        when(valueOperations.get("refresh:1:abc")).thenReturn("another-token");
+
+        assertThrows(BizException.class, () -> authService.refreshToken("refresh-jwt"));
     }
 
     @Test
@@ -342,5 +390,73 @@ class AuthServiceImplTest {
 
         verify(redisTemplate).delete("pwd:reset:fail:testuser");
         verify(redisTemplate).delete("pwd:reset:code:testuser");
+    }
+
+    @Test
+    void login_attempt_exceeded_throws() {
+        AuthUserPO po = new AuthUserPO();
+        po.setAccountType(1);
+        po.setStatus(1);
+        when(authUserManager.getOne(any())).thenReturn(po);
+        // 失败计数已达阈值 5，直接拒绝登录
+        when(valueOperations.get("login:fail:alice")).thenReturn("5");
+
+        BizException ex = assertThrows(BizException.class,
+            () -> authService.login(new LoginDTO("alice", "pass123")));
+        assertEquals(AuthCodeEnum.LOGIN_ATTEMPT_EXCEEDED.getCode(), ex.getCode());
+    }
+
+    @Test
+    void login_wrong_password_increments_fail_counter() {
+        String salt = "testsalt";
+        String hash = BCrypt.hashpw("correctpass" + salt, BCrypt.gensalt());
+        AuthUserPO po = new AuthUserPO();
+        po.setId(1L);
+        po.setAccount("alice");
+        po.setAccountType(1);
+        po.setStatus(1);
+        po.setSalt(salt);
+        po.setPasswordHash(hash);
+        when(authUserManager.getOne(any())).thenReturn(po);
+
+        assertThrows(BizException.class,
+            () -> authService.login(new LoginDTO("alice", "wrongpass")));
+
+        verify(valueOperations).increment("login:fail:alice");
+        verify(redisTemplate).expire("login:fail:alice", 600L, TimeUnit.SECONDS);
+    }
+
+    @Test
+    void login_success_clears_fail_counter() {
+        stubUserRole();
+        String salt = "testsalt";
+        String hash = BCrypt.hashpw("pass123" + salt, BCrypt.gensalt());
+        AuthUserPO po = new AuthUserPO();
+        po.setId(1L);
+        po.setAccount("alice");
+        po.setAccountType(1);
+        po.setRoleId(1L);
+        po.setStatus(1);
+        po.setSalt(salt);
+        po.setPasswordHash(hash);
+        when(authUserManager.getOne(any())).thenReturn(po);
+        when(authUserManager.updateById(any(AuthUserPO.class))).thenReturn(true);
+        when(valueOperations.get("login:fail:alice")).thenReturn("3");
+        when(jwtUtil.sign(anyLong(), anyString(), anyString(), anyLong(), anyString())).thenReturn("access-token");
+        when(jwtUtil.sign(anyLong(), anyString(), anyString(), anyLong(), anyString(), anyLong()))
+            .thenReturn("refresh-token");
+
+        authService.login(new LoginDTO("alice", "pass123"));
+
+        verify(redisTemplate).delete("login:fail:alice");
+    }
+
+    @Test
+    void register_password_too_short_rejected() {
+        Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
+        Set<ConstraintViolation<RegisterDTO>> violations =
+            validator.validate(new RegisterDTO("testuser", "12345"));
+        assertEquals(1, violations.size());
+        assertEquals("password", violations.iterator().next().getPropertyPath().toString());
     }
 }

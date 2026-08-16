@@ -1,9 +1,10 @@
 package com.yirancrazy.minimall.notify.service;
 
-import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,6 +18,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
+import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
@@ -197,15 +199,21 @@ public class CommentServiceImplTest {
     }
 
     /**
-     * 验证 stats 计算平均分与各档分布。
+     * 验证 stats 基于数据库聚合结果计算平均分与各档分布。
      */
     @Test
     public void stats_aggregates_rating_distribution() {
-        CommentPO a = buildComment(100L, 5);
-        CommentPO b = buildComment(100L, 4);
-        CommentPO c = buildComment(100L, 3);
-        when(commentManager.list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class)))
-                .thenReturn(Arrays.asList(a, b, c));
+        Map<String, Object> r5 = new HashMap<>();
+        r5.put("rating", 5);
+        r5.put("cnt", 1L);
+        Map<String, Object> r4 = new HashMap<>();
+        r4.put("rating", 4);
+        r4.put("cnt", 1L);
+        Map<String, Object> r3 = new HashMap<>();
+        r3.put("rating", 3);
+        r3.put("cnt", 1L);
+        when(commentManager.countGroupByRating(100L, CommentStatusEnum.NORMAL.intCode()))
+                .thenReturn(Arrays.asList(r5, r4, r3));
 
         CommentStatsVO stats = service.stats(100L);
 
@@ -214,6 +222,8 @@ public class CommentServiceImplTest {
         assertEquals(1, stats.getRating5Count());
         assertEquals(1, stats.getRating4Count());
         assertEquals(1, stats.getRating3Count());
+        verify(commentManager).countGroupByRating(100L, CommentStatusEnum.NORMAL.intCode());
+        verify(commentManager, never()).list(any(Wrapper.class));
     }
 
     /**
@@ -221,21 +231,12 @@ public class CommentServiceImplTest {
      */
     @Test
     public void stats_returns_zeros_when_empty() {
-        when(commentManager.list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class)))
+        when(commentManager.countGroupByRating(100L, CommentStatusEnum.NORMAL.intCode()))
                 .thenReturn(Collections.emptyList());
 
         CommentStatsVO stats = service.stats(100L);
 
         assertEquals(0, stats.getTotalCount());
         assertEquals(0.0, stats.getAvgRating());
-    }
-
-    private CommentPO buildComment(Long spuId, int rating) {
-        CommentPO p = new CommentPO();
-        p.setSpuId(spuId);
-        p.setRating(rating);
-        p.setStatus(CommentStatusEnum.NORMAL.intCode());
-        p.setCreateTime(LocalDateTime.now());
-        return p;
     }
 }

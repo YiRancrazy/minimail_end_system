@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -123,27 +124,37 @@ public class CommentServiceImpl implements CommentService {
     }
 
     /**
-     * 统计 SPU 的评价总数 / 平均分 / 各评分数量。
+     * 统计 SPU 的评价总数 / 平均分 / 各评分数量，聚合在数据库侧完成。
      * @param spuId 商品SPU ID
      * @return 评价统计视图
      */
     @Override
     public CommentStatsVO stats(Long spuId) {
-        LambdaQueryWrapper<CommentPO> wrapper = Wrappers.lambdaQuery(CommentPO.class);
-        wrapper.eq(CommentPO::getSpuId, spuId);
-        wrapper.eq(CommentPO::getStatus, CommentStatusEnum.NORMAL.intCode());
-        List<CommentPO> all = commentManager.list(wrapper);
-        long total = all.size();
+        List<Map<String, Object>> rows = commentManager.countGroupByRating(
+            spuId, CommentStatusEnum.NORMAL.intCode());
+        long total = 0;
         long sum = 0;
         long r1 = 0, r2 = 0, r3 = 0, r4 = 0, r5 = 0;
-        for (CommentPO po : all) {
-            int rating = po.getRating() == null ? 0 : po.getRating();
-            sum += rating;
-            if (rating == 1) r1++;
-            else if (rating == 2) r2++;
-            else if (rating == 3) r3++;
-            else if (rating == 4) r4++;
-            else if (rating == 5) r5++;
+        for (Map<String, Object> row : rows) {
+            int rating = ((Number) row.get("rating")).intValue();
+            long cnt = ((Number) row.get("cnt")).longValue();
+            total += cnt;
+            sum += (long) rating * cnt;
+            if (rating == 1) {
+                r1 = cnt;
+            }
+            else if (rating == 2) {
+                r2 = cnt;
+            }
+            else if (rating == 3) {
+                r3 = cnt;
+            }
+            else if (rating == 4) {
+                r4 = cnt;
+            }
+            else if (rating == 5) {
+                r5 = cnt;
+            }
         }
         double avg = total == 0 ? 0.0
                 : BigDecimal.valueOf(sum)

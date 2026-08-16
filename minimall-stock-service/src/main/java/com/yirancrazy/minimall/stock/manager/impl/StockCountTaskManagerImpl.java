@@ -15,4 +15,16 @@ import com.yirancrazy.minimall.stock.mapper.StockCountTaskMapper;
 @Manager
 public class StockCountTaskManagerImpl extends ServiceImpl<StockCountTaskMapper, StockCountTaskPO>
     implements StockCountTaskManager {
+
+    @Override
+    public int completeIfStatus(Long id, int fromStatus, int toStatus, Long actualQuantity,
+                                Long diffQuantity, String remark) {
+        return baseMapper.completeIfStatus(id, fromStatus, toStatus, actualQuantity,
+            diffQuantity, remark);
+    }
+
+    @Override
+    public int cancelIfStatus(Long id, int fromStatus, int toStatus) {
+        return baseMapper.cancelIfStatus(id, fromStatus, toStatus);
+    }
 }

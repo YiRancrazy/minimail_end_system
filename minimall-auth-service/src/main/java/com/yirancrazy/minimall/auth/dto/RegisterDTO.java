@@ -1,6 +1,7 @@
 package com.yirancrazy.minimall.auth.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -21,5 +22,6 @@ public class RegisterDTO {
     private String account;
 
     @NotBlank
+    @Size(min = 6, max = 64, message = "password length must be between 6 and 64")
     private String password;
 }

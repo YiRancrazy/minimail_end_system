@@ -44,7 +44,7 @@ public final class CursorUtils {
             return Long.parseLong(new String(decoded, StandardCharsets.UTF_8));
         }
         catch (Exception e) {
-            throw new BizException(CommonCode.SYS_ERROR, "invalid cursor");
+            throw new BizException(CommonCode.PARAM_INVALID, "无效游标");
         }
     }
 }

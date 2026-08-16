@@ -243,9 +243,35 @@ public class OrderServiceImpl implements OrderService {
         return mainOrderId;
     }
 
+    /**
+     * 用户支付订单：校验订单归属后推进 PAID 并广播事件，归属不符抛出 ORDER_NOT_FOUND。
+     * @param orderId 订单ID
+     * @param userId 用户ID（归属校验，来自可信 Header）
+     */
+    @Override
+    public void pay(Long orderId, Long userId) {
+        OrderPO po = getOrder(orderId);
+        if (!po.getUserId().equals(userId)) {
+            throw new BizException(OrderCodeEnum.ORDER_NOT_FOUND);
+        }
+        doPay(po);
+    }
+
+    /**
+     * 内部推进订单为已支付（支付服务回调/事务消息场景），不校验用户归属。
+     * @param orderId 订单ID
+     */
     @Override
     public void pay(Long orderId) {
-        OrderPO po = getOrder(orderId);
+        doPay(getOrder(orderId));
+    }
+
+    /**
+     * 推进订单为已支付并广播事件：用户支付与内部回调共用，事件携带订单归属用户ID。
+     * @param po 订单实体（调用方已校验归属）
+     */
+    private void doPay(OrderPO po) {
+        Long orderId = po.getId();
         OrderPaidDTO event = new OrderPaidDTO(
             orderId, po.getUserId(), po.getAmount(), LocalDateTime.now().toString());
         eventBus.publishInTx(event,
@@ -372,6 +398,26 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
+    /**
+     * 查询订单状态，校验归属，非本人订单抛出 ORDER_NOT_FOUND。
+     * @param orderId 订单ID
+     * @param userId 用户ID（归属校验，来自可信 Header）
+     * @return 订单状态码
+     */
+    @Override
+    public Integer getStatus(Long orderId, Long userId) {
+        OrderPO po = getOrder(orderId);
+        if (!po.getUserId().equals(userId)) {
+            throw new BizException(OrderCodeEnum.ORDER_NOT_FOUND);
+        }
+        return po.getStatus();
+    }
+
+    /**
+     * 查询订单状态（内部/平台入口），不校验用户归属。
+     * @param orderId 订单ID
+     * @return 订单状态码
+     */
     @Override
     public Integer getStatus(Long orderId) {
         return getOrder(orderId).getStatus();
@@ -406,7 +452,22 @@ public class OrderServiceImpl implements OrderService {
     }
 
     /**
-     * 查询订单详情，不存在时抛出 ORDER_NOT_FOUND。
+     * 查询订单详情，校验归属，非本人订单抛出 ORDER_NOT_FOUND。
+     * @param orderId 订单ID
+     * @param userId 用户ID（归属校验，来自可信 Header）
+     * @return 订单持久化实体
+     */
+    @Override
+    public OrderPO getDetail(Long orderId, Long userId) {
+        OrderPO po = getOrder(orderId);
+        if (!po.getUserId().equals(userId)) {
+            throw new BizException(OrderCodeEnum.ORDER_NOT_FOUND);
+        }
+        return po;
+    }
+
+    /**
+     * 查询订单详情（平台/内部入口），不校验用户归属。
      * @param orderId 订单ID
      * @return 订单持久化实体
      */
@@ -793,13 +854,17 @@ public class OrderServiceImpl implements OrderService {
     }
 
     /**
-     * 查询订单物流轨迹，按创建时间正序返回；订单不存在抛出 ORDER_NOT_FOUND。
+     * 查询订单物流轨迹，校验归属，非本人订单抛出 ORDER_NOT_FOUND；按创建时间正序返回。
      * @param orderId 订单ID
+     * @param userId 用户ID（归属校验，来自可信 Header）
      * @return 物流节点列表
      */
     @Override
-    public List<OrderLogisticsVO> queryLogistics(Long orderId) {
-        getOrder(orderId);
+    public List<OrderLogisticsVO> queryLogistics(Long orderId, Long userId) {
+        OrderPO po = getOrder(orderId);
+        if (!po.getUserId().equals(userId)) {
+            throw new BizException(OrderCodeEnum.ORDER_NOT_FOUND);
+        }
         List<OrderLogisticsPO> nodes = orderLogisticsManager.list(
             Wrappers.lambdaQuery(OrderLogisticsPO.class)
                 .eq(OrderLogisticsPO::getOrderId, orderId)

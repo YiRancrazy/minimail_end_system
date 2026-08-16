@@ -26,6 +26,17 @@ public interface OrderService {
      */
     Long checkout(Long userId, List<OrderCheckoutItemDTO> items);
 
+    /**
+     * 用户支付订单：校验订单归属后推进 PAID 并广播 OrderPaidDTO 事件。
+     * @param orderId 订单ID
+     * @param userId 用户ID（归属校验，来自可信 Header）
+     */
+    void pay(Long orderId, Long userId);
+
+    /**
+     * 内部推进订单为已支付（支付服务回调/事务消息场景），不校验用户归属。
+     * @param orderId 订单ID
+     */
     void pay(Long orderId);
 
     /**
@@ -66,6 +77,19 @@ public interface OrderService {
      */
     void handleRefundCallback(Long orderId, boolean success);
 
+    /**
+     * 查询订单状态，校验归属，非本人订单抛出 ORDER_NOT_FOUND。
+     * @param orderId 订单ID
+     * @param userId 用户ID（归属校验，来自可信 Header）
+     * @return 订单状态码
+     */
+    Integer getStatus(Long orderId, Long userId);
+
+    /**
+     * 查询订单状态（内部/平台入口），不校验用户归属。
+     * @param orderId 订单ID
+     * @return 订单状态码
+     */
     Integer getStatus(Long orderId);
 
     /**
@@ -76,7 +100,15 @@ public interface OrderService {
     Long resolveMerchantId(String ref);
 
     /**
-     * 查询订单详情，不存在时抛出 ORDER_NOT_FOUND。
+     * 查询订单详情，校验归属，非本人订单抛出 ORDER_NOT_FOUND。
+     * @param orderId 订单ID
+     * @param userId 用户ID（归属校验，来自可信 Header）
+     * @return 订单持久化实体
+     */
+    OrderPO getDetail(Long orderId, Long userId);
+
+    /**
+     * 查询订单详情（平台/内部入口），不校验用户归属。
      * @param orderId 订单ID
      * @return 订单持久化实体
      */
@@ -133,11 +165,12 @@ public interface OrderService {
     void arbitrateRefund(Long orderId, boolean approved);
 
     /**
-     * 查询订单物流轨迹，按创建时间正序返回；订单不存在抛出 ORDER_NOT_FOUND。
+     * 查询订单物流轨迹，校验归属，非本人订单抛出 ORDER_NOT_FOUND；按创建时间正序返回。
      * @param orderId 订单ID
+     * @param userId 用户ID（归属校验，来自可信 Header）
      * @return 物流节点列表
      */
-    List<OrderLogisticsVO> queryLogistics(Long orderId);
+    List<OrderLogisticsVO> queryLogistics(Long orderId, Long userId);
 
     /**
      * 导出商家订单列表，最多 10000 行，merchantId 强制绑定。

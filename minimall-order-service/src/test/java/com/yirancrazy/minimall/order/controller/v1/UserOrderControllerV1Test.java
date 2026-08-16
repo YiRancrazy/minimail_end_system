@@ -111,29 +111,29 @@ class UserOrderControllerV1Test {
     }
 
     /**
-     * 验证 POST /api/v1/user/orders/{id}/pay 调用 service 并返回成功。
+     * 验证 POST /api/v1/user/orders/{id}/pay 带 X-User-Id 调用 service。
      */
     @Test
     void pay_invokes_service() throws Exception {
-        mockMvc.perform(post("/api/v1/user/orders/99/pay"))
+        mockMvc.perform(post("/api/v1/user/orders/99/pay").header("X-User-Id", 1L))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.code").value("00000"));
-        verify(service).pay(99L);
+        verify(service).pay(99L, 1L);
     }
 
     /**
-     * 验证 GET /api/v1/user/orders/{id} 返回订单状态。
+     * 验证 GET /api/v1/user/orders/{id} 带 X-User-Id 返回订单状态。
      */
     @Test
     void status_returns_integer() throws Exception {
-        when(service.getStatus(99L)).thenReturn(2);
-        mockMvc.perform(get("/api/v1/user/orders/99"))
+        when(service.getStatus(99L, 1L)).thenReturn(2);
+        mockMvc.perform(get("/api/v1/user/orders/99").header("X-User-Id", 1L))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data").value(2));
     }
 
     /**
-     * 验证 GET /api/v1/user/orders/{id}/detail 调用 service 并返回 VO。
+     * 验证 GET /api/v1/user/orders/{id}/detail 带 X-User-Id 调用 service 并返回 VO。
      */
     @Test
     void detail_returns_vo() throws Exception {
@@ -142,10 +142,23 @@ class UserOrderControllerV1Test {
         po.setUserId(1L);
         po.setAmount(java.math.BigDecimal.TEN);
         po.setStatus(2);
-        when(service.getDetail(99L)).thenReturn(po);
-        mockMvc.perform(get("/api/v1/user/orders/99/detail"))
+        when(service.getDetail(99L, 1L)).thenReturn(po);
+        mockMvc.perform(get("/api/v1/user/orders/99/detail").header("X-User-Id", 1L))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.id").value(99));
+    }
+
+    /**
+     * 验证 GET /api/v1/user/orders/{orderId}/logistics 带 X-User-Id 调用 service 并返回物流节点。
+     */
+    @Test
+    void logistics_returns_nodes() throws Exception {
+        when(service.queryLogistics(99L, 1L)).thenReturn(java.util.List.of(
+            new com.yirancrazy.minimall.order.vo.OrderLogisticsVO()));
+        mockMvc.perform(get("/api/v1/user/orders/99/logistics").header("X-User-Id", 1L))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.code").value("00000"));
+        verify(service).queryLogistics(99L, 1L);
     }
 
     /**

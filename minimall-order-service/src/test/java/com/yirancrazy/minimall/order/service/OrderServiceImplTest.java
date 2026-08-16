@@ -146,7 +146,7 @@ public class OrderServiceImplTest {
         OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.PENDING.intCode());
         when(manager.getById(99L)).thenReturn(existing);
 
-        service.pay(99L);
+        service.pay(99L, 1L);
         assertEquals(OrderStatusEnum.PAID.intCode(), existing.getStatus());
         verify(manager).updateById(existing);
     }
@@ -157,7 +157,7 @@ public class OrderServiceImplTest {
     @Test
     public void pay_missing_order_throws() {
         when(manager.getById(99L)).thenReturn(null);
-        assertThrows(BizException.class, () -> service.pay(99L));
+        assertThrows(BizException.class, () -> service.pay(99L, 1L));
     }
 
     /**
@@ -168,7 +168,18 @@ public class OrderServiceImplTest {
         OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.PAID.intCode());
         when(manager.getById(99L)).thenReturn(existing);
 
-        assertThrows(BizException.class, () -> service.pay(99L));
+        assertThrows(BizException.class, () -> service.pay(99L, 1L));
+    }
+
+    /**
+     * 验证非本人支付他人订单时抛出 ORDER_NOT_FOUND。
+     */
+    @Test
+    public void pay_wrong_user_throws() {
+        OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.PENDING.intCode());
+        when(manager.getById(99L)).thenReturn(existing);
+
+        assertThrows(BizException.class, () -> service.pay(99L, 999L));
     }
 
     /**
@@ -358,7 +369,7 @@ public class OrderServiceImplTest {
         OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.PAID.intCode());
         when(manager.getById(99L)).thenReturn(existing);
 
-        Integer status = service.getStatus(99L);
+        Integer status = service.getStatus(99L, 1L);
         assertEquals(OrderStatusEnum.PAID.intCode(), status);
     }
 
@@ -368,7 +379,18 @@ public class OrderServiceImplTest {
     @Test
     public void getStatus_missing_order_throws() {
         when(manager.getById(99L)).thenReturn(null);
-        assertThrows(BizException.class, () -> service.getStatus(99L));
+        assertThrows(BizException.class, () -> service.getStatus(99L, 1L));
+    }
+
+    /**
+     * 验证非本人查询他人订单状态时抛出 ORDER_NOT_FOUND。
+     */
+    @Test
+    public void getStatus_wrong_user_throws() {
+        OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.PAID.intCode());
+        when(manager.getById(99L)).thenReturn(existing);
+
+        assertThrows(BizException.class, () -> service.getStatus(99L, 999L));
     }
 
     /**
@@ -395,7 +417,7 @@ public class OrderServiceImplTest {
         OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.PAID.intCode());
         when(manager.getById(99L)).thenReturn(existing);
 
-        OrderPO result = service.getDetail(99L);
+        OrderPO result = service.getDetail(99L, 1L);
         assertEquals(99L, result.getId());
     }
 
@@ -405,7 +427,18 @@ public class OrderServiceImplTest {
     @Test
     public void getDetail_missing_throws() {
         when(manager.getById(99L)).thenReturn(null);
-        assertThrows(BizException.class, () -> service.getDetail(99L));
+        assertThrows(BizException.class, () -> service.getDetail(99L, 1L));
+    }
+
+    /**
+     * 验证非本人查询他人订单详情时抛出 ORDER_NOT_FOUND。
+     */
+    @Test
+    public void getDetail_wrong_user_throws() {
+        OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.PAID.intCode());
+        when(manager.getById(99L)).thenReturn(existing);
+
+        assertThrows(BizException.class, () -> service.getDetail(99L, 999L));
     }
 
     /**
@@ -713,7 +746,7 @@ public class OrderServiceImplTest {
         nodes.add(second);
         when(logisticsManager.list(any(Wrapper.class))).thenReturn(nodes);
 
-        List<OrderLogisticsVO> result = service.queryLogistics(99L);
+        List<OrderLogisticsVO> result = service.queryLogistics(99L, 1L);
         assertEquals(2, result.size());
         assertEquals("已发货", result.get(0).getNode());
         assertEquals("已签收", result.get(1).getNode());
@@ -725,7 +758,18 @@ public class OrderServiceImplTest {
     @Test
     public void queryLogistics_missing_order_throws() {
         when(manager.getById(99L)).thenReturn(null);
-        assertThrows(BizException.class, () -> service.queryLogistics(99L));
+        assertThrows(BizException.class, () -> service.queryLogistics(99L, 1L));
+    }
+
+    /**
+     * 验证非本人查询他人订单物流时抛出 ORDER_NOT_FOUND。
+     */
+    @Test
+    public void queryLogistics_wrong_user_throws() {
+        OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.SHIPPED.intCode());
+        when(manager.getById(99L)).thenReturn(existing);
+
+        assertThrows(BizException.class, () -> service.queryLogistics(99L, 999L));
     }
 
     /**
@@ -959,7 +1003,7 @@ public class OrderServiceImplTest {
         OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.PENDING.intCode());
         when(manager.getById(99L)).thenReturn(existing);
 
-        service.pay(99L);
+        service.pay(99L, 1L);
 
         assertNotNull(existing.getPaidAt());
         verify(statusLogManager).save(any(OrderStatusLogPO.class));

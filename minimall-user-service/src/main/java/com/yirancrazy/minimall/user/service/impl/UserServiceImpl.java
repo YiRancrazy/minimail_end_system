@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.util.CursorUtils;
+import com.yirancrazy.minimall.common.util.SensitiveDataUtils;
 import com.yirancrazy.minimall.user.constant.UserCodeEnum;
 import com.yirancrazy.minimall.user.dto.UserCreateDTO;
 import com.yirancrazy.minimall.user.dto.UserPageDTO;
@@ -59,6 +60,7 @@ public class UserServiceImpl implements UserService {
         user.setUsername(dto.getUsername());
         user.setNickname(dto.getNickname());
         user.setPhone(dto.getPhone());
+        user.setPhoneMasked(SensitiveDataUtils.maskPhone(dto.getPhone()));
         user.setEmail(dto.getEmail());
         userManager.save(user);
         return user.getId();
@@ -78,6 +80,7 @@ public class UserServiceImpl implements UserService {
         user.setUsername(dto.getUsername());
         user.setNickname(dto.getNickname());
         user.setPhone(dto.getPhone());
+        user.setPhoneMasked(SensitiveDataUtils.maskPhone(dto.getPhone()));
         user.setEmail(dto.getEmail());
         return userManager.updateById(user);
     }

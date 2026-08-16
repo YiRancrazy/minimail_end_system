@@ -4,6 +4,7 @@ import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -90,6 +91,24 @@ public class UserServiceImplTest {
     }
 
     /**
+     * 验证 create 同步写入 phoneMasked 脱敏列，供平台列表模糊查询。
+     */
+    @Test
+    public void create_sets_phoneMasked() {
+        UserCreateDTO dto = new UserCreateDTO();
+        dto.setUsername("bob");
+        dto.setNickname("Bob");
+        dto.setPhone("13800000000");
+        dto.setEmail("bob@example.com");
+
+        service.create(dto);
+
+        ArgumentCaptor<UserPO> captor = ArgumentCaptor.forClass(UserPO.class);
+        verify(userManager).save(captor.capture());
+        assertEquals("138****0000", captor.getValue().getPhoneMasked());
+    }
+
+    /**
      * 验证 update 调用 updateById 并返回其结果。
      */
     @Test
@@ -101,6 +120,23 @@ public class UserServiceImplTest {
         boolean ok = service.update(1L, dto);
         assertTrue(ok);
         verify(userManager).updateById(any(UserPO.class));
+    }
+
+    /**
+     * 验证 update 同步刷新 phoneMasked 脱敏列。
+     */
+    @Test
+    public void update_sets_phoneMasked() {
+        UserUpdateDTO dto = new UserUpdateDTO();
+        dto.setUsername("alice-new");
+        dto.setNickname("Alice New");
+        dto.setPhone("13812345678");
+
+        service.update(1L, dto);
+
+        ArgumentCaptor<UserPO> captor = ArgumentCaptor.forClass(UserPO.class);
+        verify(userManager).updateById(captor.capture());
+        assertEquals("138****5678", captor.getValue().getPhoneMasked());
     }
 
     /**

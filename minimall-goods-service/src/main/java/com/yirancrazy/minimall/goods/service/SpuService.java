@@ -25,6 +25,15 @@ public interface SpuService {
     SpuPO getById(Long id);
 
     /**
+     * 根据ID查询SPU，并校验归属商家，供商家端使用。
+     * @param id SPU ID
+     * @param merchantId 商家ID，来自可信Header
+     * @return SPU PO
+     * @throws BizException 当 SPU 不存在或不属于该商家时
+     */
+    SpuPO getById(Long id, Long merchantId);
+
+    /**
      * 创建SPU，初始状态为草稿。
      * @param merchantId 商家ID，来自可信Header
      * @param dto SPU创建DTO
@@ -42,31 +51,35 @@ public interface SpuService {
     /**
      * 根据ID更新SPU信息，字段为空表示不更新。
      * @param id SPU ID
+     * @param merchantId 商家ID，来自可信Header
      * @param dto SPU修改DTO
      * @return 更新是否成功
      */
-    boolean update(Long id, SpuUpdateDTO dto);
+    boolean update(Long id, Long merchantId, SpuUpdateDTO dto);
 
     /**
      * 根据ID删除SPU。
      * @param id SPU ID
+     * @param merchantId 商家ID，来自可信Header
      * @return 删除是否成功
      */
-    boolean delete(Long id);
+    boolean delete(Long id, Long merchantId);
 
     /**
      * 商家提交上架审核，仅草稿/下架/驳回状态可提交，提交后进入待审核。
      * @param id SPU ID
+     * @param merchantId 商家ID，来自可信Header
      * @return 提交是否成功
      */
-    boolean onShelf(Long id);
+    boolean onShelf(Long id, Long merchantId);
 
     /**
      * 下架SPU，仅在售状态可下架。
      * @param id SPU ID
+     * @param merchantId 商家ID，来自可信Header
      * @return 下架是否成功
      */
-    boolean offShelf(Long id);
+    boolean offShelf(Long id, Long merchantId);
 
     /**
      * 平台游标分页查询待审核 SPU。

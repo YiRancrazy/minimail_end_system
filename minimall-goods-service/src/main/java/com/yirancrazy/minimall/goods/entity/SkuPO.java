@@ -17,6 +17,8 @@ import com.yirancrazy.minimall.common.base.BasePO;
 @TableName("t_sku")
 public class SkuPO extends BasePO {
     private Long spuId;
+    // 归属商家ID：冗余自父SPU，用于商家侧越权校验
+    private Long merchantId;
     private String skuName;
     private BigDecimal price;
     private Integer stock;

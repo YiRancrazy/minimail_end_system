@@ -71,6 +71,30 @@ public class SpuServiceImpl implements SpuService {
     }
 
     /**
+     * 按主键查询 SPU 并校验归属商家，供商家端使用；非本人商品按"不存在"返回，避免越权信息泄露。
+     * @param id SPU 主键 ID
+     * @param merchantId 商家ID，来自可信Header
+     * @return 属于该商家的 SPU 实体
+     */
+    @Override
+    public SpuPO getById(Long id, Long merchantId) {
+        SpuPO s = getById(id);
+        checkOwner(s, merchantId);
+        return s;
+    }
+
+    /**
+     * 归属校验：实体归属商家与请求商家不一致时抛出 SPU_NOT_FOUND，防越权的同时不暴露资源存在性。
+     * @param existing 已查出的 SPU 实体
+     * @param merchantId 请求方商家ID
+     */
+    private void checkOwner(SpuPO existing, Long merchantId) {
+        if (existing.getMerchantId() != null && !existing.getMerchantId().equals(merchantId)) {
+            throw new BizException(SpuCodeEnum.SPU_NOT_FOUND);
+        }
+    }
+
+    /**
      * 创建 SPU，生成业务编号并初始化为草稿状态后落库。
      * @param merchantId 商家ID，来自可信Header
      * @param dto 待保存的 SPU 信息
@@ -133,17 +157,19 @@ public class SpuServiceImpl implements SpuService {
     }
 
     /**
-     * 按主键更新 SPU，字段为空表示不更新对应列，不存在时抛出 SPU_NOT_FOUND。
+     * 按主键更新 SPU，字段为空表示不更新对应列，不存在或非本人商品时抛出 SPU_NOT_FOUND。
      * @param id SPU 主键 ID
+     * @param merchantId 商家ID，来自可信Header
      * @param dto 待更新的 SPU 信息
      * @return 更新是否成功
      */
     @Override
-    public boolean update(Long id, SpuUpdateDTO dto) {
+    public boolean update(Long id, Long merchantId, SpuUpdateDTO dto) {
         SpuPO existing = spuManager.getById(id);
         if (existing == null) {
             throw new BizException(SpuCodeEnum.SPU_NOT_FOUND);
         }
+        checkOwner(existing, merchantId);
         if (dto.getCategoryId() != null) {
             existing.setCategoryId(dto.getCategoryId());
         }
@@ -164,16 +190,18 @@ public class SpuServiceImpl implements SpuService {
     }
 
     /**
-     * 按主键删除 SPU，不存在时抛出 SPU_NOT_FOUND。
+     * 按主键删除 SPU，不存在或非本人商品时抛出 SPU_NOT_FOUND。
      * @param id SPU 主键 ID
+     * @param merchantId 商家ID，来自可信Header
      * @return 删除是否成功
      */
     @Override
-    public boolean delete(Long id) {
+    public boolean delete(Long id, Long merchantId) {
         SpuPO existing = spuManager.getById(id);
         if (existing == null) {
             throw new BizException(SpuCodeEnum.SPU_NOT_FOUND);
         }
+        checkOwner(existing, merchantId);
         log.info("spu deleted, spuId={}", id);
         return spuManager.removeById(id);
     }
@@ -181,14 +209,16 @@ public class SpuServiceImpl implements SpuService {
     /**
      * 商家提交上架审核，仅草稿/下架/驳回状态可提交，提交后进入待审核，由平台审核通过后才会上架。
      * @param id SPU 主键 ID
+     * @param merchantId 商家ID，来自可信Header
      * @return 提交是否成功
      */
     @Override
-    public boolean onShelf(Long id) {
+    public boolean onShelf(Long id, Long merchantId) {
         SpuPO existing = spuManager.getById(id);
         if (existing == null) {
             throw new BizException(SpuCodeEnum.SPU_NOT_FOUND);
         }
+        checkOwner(existing, merchantId);
         Integer s = existing.getStatus();
         if (s == null
             || (s != SpuStatusEnum.DRAFT.statusValue()
@@ -208,14 +238,16 @@ public class SpuServiceImpl implements SpuService {
     /**
      * 下架 SPU，仅在售状态可下架，否则抛出 SPU_STATUS_INVALID。
      * @param id SPU 主键 ID
+     * @param merchantId 商家ID，来自可信Header
      * @return 下架是否成功
      */
     @Override
-    public boolean offShelf(Long id) {
+    public boolean offShelf(Long id, Long merchantId) {
         SpuPO existing = spuManager.getById(id);
         if (existing == null) {
             throw new BizException(SpuCodeEnum.SPU_NOT_FOUND);
         }
+        checkOwner(existing, merchantId);
         if (existing.getStatus() == null
             || existing.getStatus() != SpuStatusEnum.ON_SALE.statusValue()) {
             throw new BizException(SpuCodeEnum.SPU_STATUS_INVALID);

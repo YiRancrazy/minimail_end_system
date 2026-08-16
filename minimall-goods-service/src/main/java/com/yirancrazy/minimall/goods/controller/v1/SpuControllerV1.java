@@ -36,12 +36,14 @@ public class SpuControllerV1 {
 
     /**
      * 根据主键查询 SPU 详情。
+     * @param merchantId 商家ID，来自可信Header
      * @param id SPU 主键 ID
-     * @return SPU 视图，不存在时由 Service 层抛出业务异常
+     * @return SPU 视图，不存在或非本人商品时由 Service 层抛出业务异常
      */
     @GetMapping("/{id}")
-    public Result<SpuVO> get(@PathVariable("id") Long id) {
-        return Result.success(SpuVO.from(spuService.getById(id)));
+    public Result<SpuVO> get(@RequestHeader("X-Merchant-Id") Long merchantId,
+                             @PathVariable("id") Long id) {
+        return Result.success(SpuVO.from(spuService.getById(id, merchantId)));
     }
 
     /**
@@ -71,43 +73,51 @@ public class SpuControllerV1 {
 
     /**
      * 根据ID更新 SPU 信息。
+     * @param merchantId 商家ID，来自可信Header
      * @param id SPU ID
      * @param dto SPU修改DTO
      * @return 更新是否成功
      */
     @PutMapping("/{id}")
-    public Result<Boolean> update(@PathVariable("id") Long id,
+    public Result<Boolean> update(@RequestHeader("X-Merchant-Id") Long merchantId,
+                                  @PathVariable("id") Long id,
                                   @Valid @RequestBody SpuUpdateDTO dto) {
-        return Result.success(spuService.update(id, dto));
+        return Result.success(spuService.update(id, merchantId, dto));
     }
 
     /**
      * 根据ID删除 SPU。
+     * @param merchantId 商家ID，来自可信Header
      * @param id SPU ID
      * @return 删除是否成功
      */
     @DeleteMapping("/{id}")
-    public Result<Boolean> delete(@PathVariable("id") Long id) {
-        return Result.success(spuService.delete(id));
+    public Result<Boolean> delete(@RequestHeader("X-Merchant-Id") Long merchantId,
+                                  @PathVariable("id") Long id) {
+        return Result.success(spuService.delete(id, merchantId));
     }
 
     /**
      * 上架 SPU。
+     * @param merchantId 商家ID，来自可信Header
      * @param id SPU ID
      * @return 上架是否成功
      */
     @PutMapping("/{id}/on-shelf")
-    public Result<Boolean> onShelf(@PathVariable("id") Long id) {
-        return Result.success(spuService.onShelf(id));
+    public Result<Boolean> onShelf(@RequestHeader("X-Merchant-Id") Long merchantId,
+                                   @PathVariable("id") Long id) {
+        return Result.success(spuService.onShelf(id, merchantId));
     }
 
     /**
      * 下架 SPU。
+     * @param merchantId 商家ID，来自可信Header
      * @param id SPU ID
      * @return 下架是否成功
      */
     @PutMapping("/{id}/off-shelf")
-    public Result<Boolean> offShelf(@PathVariable("id") Long id) {
-        return Result.success(spuService.offShelf(id));
+    public Result<Boolean> offShelf(@RequestHeader("X-Merchant-Id") Long merchantId,
+                                    @PathVariable("id") Long id) {
+        return Result.success(spuService.offShelf(id, merchantId));
     }
 }

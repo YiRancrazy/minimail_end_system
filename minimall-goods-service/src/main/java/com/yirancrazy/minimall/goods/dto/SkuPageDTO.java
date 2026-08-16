@@ -14,5 +14,6 @@ import com.yirancrazy.minimall.common.dto.CursorPageDTO;
 @EqualsAndHashCode(callSuper = true)
 public class SkuPageDTO extends CursorPageDTO {
 
+    private Long merchantId;
     private String skuName;
 }

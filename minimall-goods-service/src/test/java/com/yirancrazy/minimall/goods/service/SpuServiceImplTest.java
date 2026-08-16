@@ -87,6 +87,33 @@ public class SpuServiceImplTest {
     }
 
     /**
+     * 验证 getById 带商家校验：SPU 归属其他商家时抛出 BizException，防止越权读取。
+     */
+    @Test
+    public void getById_throws_when_merchant_mismatch() {
+        SpuPO s = new SpuPO();
+        s.setId(100L);
+        s.setMerchantId(10L);
+        when(spuManager.getById(100L)).thenReturn(s);
+
+        assertThrows(BizException.class, () -> service.getById(100L, 99L));
+    }
+
+    /**
+     * 验证 getById 带商家校验：SPU 归属本人时正常返回。
+     */
+    @Test
+    public void getById_returns_spu_when_owned() {
+        SpuPO s = new SpuPO();
+        s.setId(100L);
+        s.setMerchantId(10L);
+        when(spuManager.getById(100L)).thenReturn(s);
+
+        SpuPO result = service.getById(100L, 10L);
+        assertEquals(100L, result.getId());
+    }
+
+    /**
      * 验证 create 生成编号、初始为草稿状态并返回新 ID。
      */
     @Test
@@ -140,7 +167,22 @@ public class SpuServiceImplTest {
         when(spuManager.getById(999L)).thenReturn(null);
         SpuUpdateDTO dto = new SpuUpdateDTO();
         dto.setTitle("updated");
-        assertThrows(BizException.class, () -> service.update(999L, dto));
+        assertThrows(BizException.class, () -> service.update(999L, 10L, dto));
+    }
+
+    /**
+     * 验证 update 在 SPU 归属其他商家时抛出 BizException，防止越权修改。
+     */
+    @Test
+    public void update_throws_when_merchant_mismatch() {
+        SpuPO existing = new SpuPO();
+        existing.setId(100L);
+        existing.setMerchantId(10L);
+        when(spuManager.getById(100L)).thenReturn(existing);
+
+        SpuUpdateDTO dto = new SpuUpdateDTO();
+        dto.setTitle("new");
+        assertThrows(BizException.class, () -> service.update(100L, 99L, dto));
     }
 
     /**
@@ -150,13 +192,14 @@ public class SpuServiceImplTest {
     public void update_returns_true_on_success() {
         SpuPO existing = new SpuPO();
         existing.setId(100L);
+        existing.setMerchantId(10L);
         existing.setTitle("old");
         when(spuManager.getById(100L)).thenReturn(existing);
 
         SpuUpdateDTO dto = new SpuUpdateDTO();
         dto.setTitle("new");
         dto.setSubtitle("sub");
-        boolean ok = service.update(100L, dto);
+        boolean ok = service.update(100L, 10L, dto);
 
         assertTrue(ok);
         assertEquals("new", existing.getTitle());
@@ -170,7 +213,20 @@ public class SpuServiceImplTest {
     @Test
     public void delete_throws_when_missing() {
         when(spuManager.getById(999L)).thenReturn(null);
-        assertThrows(BizException.class, () -> service.delete(999L));
+        assertThrows(BizException.class, () -> service.delete(999L, 10L));
+    }
+
+    /**
+     * 验证 delete 在 SPU 归属其他商家时抛出 BizException，防止越权删除。
+     */
+    @Test
+    public void delete_throws_when_merchant_mismatch() {
+        SpuPO existing = new SpuPO();
+        existing.setId(100L);
+        existing.setMerchantId(10L);
+        when(spuManager.getById(100L)).thenReturn(existing);
+
+        assertThrows(BizException.class, () -> service.delete(100L, 99L));
     }
 
     /**
@@ -180,9 +236,10 @@ public class SpuServiceImplTest {
     public void delete_returns_true_on_success() {
         SpuPO existing = new SpuPO();
         existing.setId(100L);
+        existing.setMerchantId(10L);
         when(spuManager.getById(100L)).thenReturn(existing);
 
-        boolean ok = service.delete(100L);
+        boolean ok = service.delete(100L, 10L);
         assertTrue(ok);
         verify(spuManager).removeById(100L);
     }
@@ -193,7 +250,20 @@ public class SpuServiceImplTest {
     @Test
     public void onShelf_throws_when_missing() {
         when(spuManager.getById(999L)).thenReturn(null);
-        assertThrows(BizException.class, () -> service.onShelf(999L));
+        assertThrows(BizException.class, () -> service.onShelf(999L, 10L));
+    }
+
+    /**
+     * 验证 onShelf 在 SPU 归属其他商家时抛出 BizException，防止越权上架。
+     */
+    @Test
+    public void onShelf_throws_when_merchant_mismatch() {
+        SpuPO existing = new SpuPO();
+        existing.setId(100L);
+        existing.setMerchantId(10L);
+        when(spuManager.getById(100L)).thenReturn(existing);
+
+        assertThrows(BizException.class, () -> service.onShelf(100L, 99L));
     }
 
     /**
@@ -203,10 +273,11 @@ public class SpuServiceImplTest {
     public void onShelf_throws_when_status_invalid() {
         SpuPO existing = new SpuPO();
         existing.setId(100L);
+        existing.setMerchantId(10L);
         existing.setStatus(SpuStatusEnum.ON_SALE.statusValue());
         when(spuManager.getById(100L)).thenReturn(existing);
 
-        assertThrows(BizException.class, () -> service.onShelf(100L));
+        assertThrows(BizException.class, () -> service.onShelf(100L, 10L));
     }
 
     /**
@@ -216,10 +287,11 @@ public class SpuServiceImplTest {
     public void onShelf_returns_true_on_success() {
         SpuPO existing = new SpuPO();
         existing.setId(100L);
+        existing.setMerchantId(10L);
         existing.setStatus(SpuStatusEnum.DRAFT.statusValue());
         when(spuManager.getById(100L)).thenReturn(existing);
 
-        boolean ok = service.onShelf(100L);
+        boolean ok = service.onShelf(100L, 10L);
         assertTrue(ok);
         assertEquals(SpuStatusEnum.PENDING_AUDIT.statusValue(), existing.getStatus());
     }
@@ -230,7 +302,20 @@ public class SpuServiceImplTest {
     @Test
     public void offShelf_throws_when_missing() {
         when(spuManager.getById(999L)).thenReturn(null);
-        assertThrows(BizException.class, () -> service.offShelf(999L));
+        assertThrows(BizException.class, () -> service.offShelf(999L, 10L));
+    }
+
+    /**
+     * 验证 offShelf 在 SPU 归属其他商家时抛出 BizException，防止越权下架。
+     */
+    @Test
+    public void offShelf_throws_when_merchant_mismatch() {
+        SpuPO existing = new SpuPO();
+        existing.setId(100L);
+        existing.setMerchantId(10L);
+        when(spuManager.getById(100L)).thenReturn(existing);
+
+        assertThrows(BizException.class, () -> service.offShelf(100L, 99L));
     }
 
     /**
@@ -240,10 +325,11 @@ public class SpuServiceImplTest {
     public void offShelf_throws_when_status_invalid() {
         SpuPO existing = new SpuPO();
         existing.setId(100L);
+        existing.setMerchantId(10L);
         existing.setStatus(SpuStatusEnum.DRAFT.statusValue());
         when(spuManager.getById(100L)).thenReturn(existing);
 
-        assertThrows(BizException.class, () -> service.offShelf(100L));
+        assertThrows(BizException.class, () -> service.offShelf(100L, 10L));
     }
 
     /**
@@ -253,10 +339,11 @@ public class SpuServiceImplTest {
     public void offShelf_returns_true_on_success() {
         SpuPO existing = new SpuPO();
         existing.setId(100L);
+        existing.setMerchantId(10L);
         existing.setStatus(SpuStatusEnum.ON_SALE.statusValue());
         when(spuManager.getById(100L)).thenReturn(existing);
 
-        boolean ok = service.offShelf(100L);
+        boolean ok = service.offShelf(100L, 10L);
         assertTrue(ok);
         assertEquals(SpuStatusEnum.OFF_SHELF.statusValue(), existing.getStatus());
     }

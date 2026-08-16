@@ -57,25 +57,28 @@ public class CartControllerV1 {
     }
 
     /**
-     * 根据购物车项 ID 逻辑删除该条目。
+     * 根据购物车项 ID 逻辑删除该条目，仅允许删除当前登录用户自己的条目。
      *
      * @param id 购物车项 ID
+     * @param userId 用户ID，来自网关X-User-Id头
      * @return 是否删除成功
      */
     @DeleteMapping("/{id}")
-    public Result<Boolean> delete(@PathVariable("id") Long id) {
-        return Result.success(cartService.delete(id));
+    public Result<Boolean> delete(@PathVariable("id") Long id, @RequestHeader("X-User-Id") Long userId) {
+        return Result.success(cartService.delete(id, userId));
     }
 
     /**
-     * 部分更新购物车项，支持同时修改数量和勾选状态。
+     * 部分更新购物车项，支持同时修改数量和勾选状态，仅允许更新当前登录用户自己的条目。
      * @param id 购物车项ID
+     * @param userId 用户ID，来自网关X-User-Id头
      * @param dto 更新入参，仅非空字段生效
      * @return 更新是否成功
      */
     @PatchMapping("/{id}")
-    public Result<Boolean> update(@PathVariable("id") Long id, @Valid @RequestBody CartUpdateDTO dto) {
-        return Result.success(cartService.update(id, dto));
+    public Result<Boolean> update(@PathVariable("id") Long id, @RequestHeader("X-User-Id") Long userId,
+                                  @Valid @RequestBody CartUpdateDTO dto) {
+        return Result.success(cartService.update(id, userId, dto));
     }
 
     /**

@@ -10,10 +10,12 @@ import com.yirancrazy.minimall.common.result.Result;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 购物车内部控制器，提供Cart相关内部接口
- * @Version: 1.0
+ * @Description: 购物车内部控制器，提供Cart相关内部接口，供网关内 CartFeignClient 调用
+ * @Version: 1.1
  * @DateTime: 2026/07/31
  */
+@RestController
+@RequestMapping("/internal/cart")
 public class InternalCartControllerV1 {
 
     private final CartService cartService;

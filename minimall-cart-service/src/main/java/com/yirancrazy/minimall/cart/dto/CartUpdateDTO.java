@@ -1,5 +1,6 @@
 package com.yirancrazy.minimall.cart.dto;
 
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import lombok.Data;
 
@@ -13,6 +14,7 @@ import lombok.Data;
 public class CartUpdateDTO {
 
     @Min(value = 1, message = "数量至少为1")
+    @Max(value = 999, message = "数量不能超过999")
     private Integer quantity;
 
     private Boolean isSelected;

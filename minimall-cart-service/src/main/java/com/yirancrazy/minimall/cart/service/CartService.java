@@ -28,11 +28,13 @@ public interface CartService {
     Long add(Long userId, CartItemAddDTO dto);
 
     /**
-     * 删除购物车项。
+     * 删除购物车项，仅允许删除归属于当前用户的条目。
      * @param id 购物车项ID
+     * @param userId 用户ID，来自网关X-User-Id可信头
      * @return 删除是否成功
+     * @throws com.yirancrazy.minimall.common.exception.BizException 条目不存在或不属于该用户时抛 CART_ITEM_NOT_FOUND
      */
-    boolean delete(Long id);
+    boolean delete(Long id, Long userId);
 
     /**
      * 统计用户购物车项数量。
@@ -42,12 +44,14 @@ public interface CartService {
     long countByUser(Long userId);
 
     /**
-     * 部分更新购物车项，仅更新非空字段（quantity / isSelected），不存在时抛出业务异常。
+     * 部分更新购物车项，仅更新非空字段（quantity / isSelected），条目不存在或不属于当前用户时抛出业务异常。
      * @param id 购物车项ID
+     * @param userId 用户ID，来自网关X-User-Id可信头
      * @param dto 更新入参
      * @return 更新是否成功
+     * @throws com.yirancrazy.minimall.common.exception.BizException 条目不存在或不属于该用户时抛 CART_ITEM_NOT_FOUND
      */
-    boolean update(Long id, CartUpdateDTO dto);
+    boolean update(Long id, Long userId, CartUpdateDTO dto);
 
     /**
      * 全选或取消全选指定用户的购物车项。

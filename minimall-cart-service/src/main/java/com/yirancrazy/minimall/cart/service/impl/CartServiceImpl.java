@@ -29,6 +29,9 @@ import com.yirancrazy.minimall.common.result.Result;
 @Service
 public class CartServiceImpl implements CartService {
 
+    // 购物车单项数量上限，与 CartItemAddDTO/CartUpdateDTO 的 @Max(999) 校验保持一致
+    private static final int MAX_QUANTITY = 999;
+
     private final CartItemManager cartItemManager;
     private final UserFeignClient userFeignClient;
     private final GoodsFeignClient goodsFeignClient;
@@ -61,14 +64,25 @@ public class CartServiceImpl implements CartService {
     }
 
     /**
-     * 新增一条购物车条目，若未设置选中状态则默认为选中。
+     * 新增一条购物车条目；同用户同 SKU 已存在时累加数量（上限 999），否则新建。
+     * SKU 有效性未在此校验，由结算链路兜底（快照缺失时购物车展示降级、下单时校验）。
      *
      * @param userId 用户ID，来自网关X-User-Id可信头
      * @param dto 购物车条目信息
-     * @return 新增条目的主键 ID
+     * @return 购物车条目 ID（合并时返回已有条目 ID）
      */
     @Override
     public Long add(Long userId, CartItemAddDTO dto) {
+        // 依赖 t_cart_item 的 uk_user_sku 唯一索引，同 SKU 只能存在一行，重复加入时累加数量
+        CartItemPO existing = cartItemManager.getOne(Wrappers.lambdaQuery(CartItemPO.class)
+            .eq(CartItemPO::getUserId, userId)
+            .eq(CartItemPO::getSkuId, dto.getSkuId()));
+        if (existing != null) {
+            int merged = existing.getQuantity() + dto.getQuantity();
+            existing.setQuantity(Math.min(merged, MAX_QUANTITY));
+            cartItemManager.updateById(existing);
+            return existing.getId();
+        }
         CartItemPO item = new CartItemPO();
         item.setUserId(userId);
         item.setSkuId(dto.getSkuId());
@@ -79,13 +93,19 @@ public class CartServiceImpl implements CartService {
     }
 
     /**
-     * 根据购物车项 ID 逻辑删除该条目。
+     * 根据购物车项 ID 逻辑删除该条目，仅允许删除归属于当前用户的条目。
      *
      * @param id 购物车项 ID
+     * @param userId 用户ID，来自网关X-User-Id可信头
      * @return 是否删除成功
+     * @throws BizException 条目不存在或不属于该用户时抛 CART_ITEM_NOT_FOUND
      */
     @Override
-    public boolean delete(Long id) {
+    public boolean delete(Long id, Long userId) {
+        CartItemPO existing = cartItemManager.getById(id);
+        if (existing == null || !userId.equals(existing.getUserId())) {
+            throw new BizException(CartCodeEnum.CART_ITEM_NOT_FOUND);
+        }
         return cartItemManager.removeById(id);
     }
 
@@ -101,16 +121,17 @@ public class CartServiceImpl implements CartService {
     }
 
     /**
-     * 部分更新购物车项，仅更新非空字段（quantity / isSelected），不存在时抛出 CART_ITEM_NOT_FOUND。
+     * 部分更新购物车项，仅更新非空字段（quantity / isSelected），条目不存在或不属于当前用户时抛出 CART_ITEM_NOT_FOUND。
      *
      * @param id 购物车项 ID
+     * @param userId 用户ID，来自网关X-User-Id可信头
      * @param dto 更新入参
      * @return 更新是否成功
      */
     @Override
-    public boolean update(Long id, CartUpdateDTO dto) {
+    public boolean update(Long id, Long userId, CartUpdateDTO dto) {
         CartItemPO existing = cartItemManager.getById(id);
-        if (existing == null) {
+        if (existing == null || !userId.equals(existing.getUserId())) {
             throw new BizException(CartCodeEnum.CART_ITEM_NOT_FOUND);
         }
         if (dto.getQuantity() != null) {
@@ -166,7 +187,7 @@ public class CartServiceImpl implements CartService {
             .eq(CartItemPO::getUserId, userId)
             .eq(CartItemPO::getSkuId, skuId));
         for (CartItemPO item : items) {
-            delete(item.getId());
+            delete(item.getId(), userId);
         }
         log.info("cart item moved to favorite, userId={}, skuId={}, removed={}", userId, skuId, items.size());
     }

@@ -9,6 +9,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -74,21 +75,66 @@ class CartControllerV1Test {
     }
 
     /**
-     * 验证 PATCH /{id} 部分更新购物车项并返回成功。
+     * 验证 PATCH /{id}（带 X-User-Id 头）部分更新购物车项并返回成功。
      */
     @Test
     void update_returns_boolean() throws Exception {
-        when(cartService.update(anyLong(), any(CartUpdateDTO.class))).thenReturn(true);
+        when(cartService.update(anyLong(), anyLong(), any(CartUpdateDTO.class))).thenReturn(true);
         CartUpdateDTO dto = new CartUpdateDTO();
         dto.setQuantity(3);
         dto.setIsSelected(true);
         mockMvc.perform(patch("/api/v1/user/cart/99")
+                .header("X-User-Id", 1L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(mapper.writeValueAsString(dto)))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.code").value("00000"))
             .andExpect(jsonPath("$.data").value(true));
-        verify(cartService).update(anyLong(), any(CartUpdateDTO.class));
+        verify(cartService).update(eq(99L), eq(1L), any(CartUpdateDTO.class));
+    }
+
+    /**
+     * 验证 DELETE /{id}（带 X-User-Id 头）删除购物车项并返回成功。
+     */
+    @Test
+    void delete_invokes_service_with_user() throws Exception {
+        when(cartService.delete(anyLong(), anyLong())).thenReturn(true);
+        mockMvc.perform(delete("/api/v1/user/cart/99").header("X-User-Id", 1L))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.code").value("00000"))
+            .andExpect(jsonPath("$.data").value(true));
+        verify(cartService).delete(99L, 1L);
+    }
+
+    /**
+     * 验证 POST / 在 quantity 超过上限 999 时被 @Valid 拦截返回 400。
+     */
+    @Test
+    void add_rejects_quantity_over_max() throws Exception {
+        CartItemAddDTO dto = new CartItemAddDTO();
+        dto.setSkuId(99L);
+        dto.setQuantity(1000);
+        mockMvc.perform(post("/api/v1/user/cart")
+                .header("X-User-Id", 1L)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(mapper.writeValueAsString(dto)))
+            .andExpect(status().isBadRequest());
+        verify(cartService, never()).add(any(), any());
+    }
+
+    /**
+     * 验证 PATCH /{id} 在 quantity 超过上限 999 时被 @Valid 拦截返回 400。
+     */
+    @Test
+    void update_rejects_quantity_over_max() throws Exception {
+        CartUpdateDTO dto = new CartUpdateDTO();
+        dto.setQuantity(1000);
+        mockMvc.perform(patch("/api/v1/user/cart/99")
+                .header("X-User-Id", 1L)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(mapper.writeValueAsString(dto)))
+            .andExpect(status().isBadRequest());
+        verify(cartService, never()).update(any(), any(), any());
     }
 
     /**

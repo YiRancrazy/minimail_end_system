@@ -171,8 +171,12 @@ public class CartServiceImplTest {
      */
     @Test
     public void delete_returns_true_on_success() {
+        CartItemPO item = new CartItemPO();
+        item.setId(1L);
+        item.setUserId(7L);
+        when(cartItemManager.getById(1L)).thenReturn(item);
         when(cartItemManager.removeById(1L)).thenReturn(true);
-        boolean ok = service.delete(1L);
+        boolean ok = service.delete(1L, 7L);
         assertTrue(ok);
         verify(cartItemManager).removeById(eq(1L));
     }
@@ -182,9 +186,26 @@ public class CartServiceImplTest {
      */
     @Test
     public void delete_returns_false_on_failure() {
+        CartItemPO item = new CartItemPO();
+        item.setId(1L);
+        item.setUserId(7L);
+        when(cartItemManager.getById(1L)).thenReturn(item);
         when(cartItemManager.removeById(1L)).thenReturn(false);
-        boolean ok = service.delete(1L);
+        boolean ok = service.delete(1L, 7L);
         assertFalse(ok);
+    }
+
+    /**
+     * 验证 delete 在条目不属于当前用户时抛出 BizException 且不删除。
+     */
+    @Test
+    public void delete_throws_when_user_mismatch() {
+        CartItemPO item = new CartItemPO();
+        item.setId(1L);
+        item.setUserId(7L);
+        when(cartItemManager.getById(1L)).thenReturn(item);
+        assertThrows(BizException.class, () -> service.delete(1L, 999L));
+        verify(cartItemManager, never()).removeById(any());
     }
 
     /**
@@ -216,7 +237,22 @@ public class CartServiceImplTest {
         when(cartItemManager.getById(999L)).thenReturn(null);
         CartUpdateDTO dto = new CartUpdateDTO();
         dto.setQuantity(3);
-        assertThrows(BizException.class, () -> service.update(999L, dto));
+        assertThrows(BizException.class, () -> service.update(999L, 7L, dto));
+    }
+
+    /**
+     * 验证 update 在条目不属于当前用户时抛出 BizException 且不更新。
+     */
+    @Test
+    public void update_throws_when_user_mismatch() {
+        CartItemPO existing = new CartItemPO();
+        existing.setId(1L);
+        existing.setUserId(7L);
+        when(cartItemManager.getById(1L)).thenReturn(existing);
+        CartUpdateDTO dto = new CartUpdateDTO();
+        dto.setQuantity(3);
+        assertThrows(BizException.class, () -> service.update(1L, 999L, dto));
+        verify(cartItemManager, never()).updateById(any());
     }
 
     /**
@@ -226,6 +262,7 @@ public class CartServiceImplTest {
     public void update_quantity_only_returns_true_on_success() {
         CartItemPO existing = new CartItemPO();
         existing.setId(1L);
+        existing.setUserId(7L);
         existing.setQuantity(2);
         existing.setSelected(0);
         when(cartItemManager.getById(1L)).thenReturn(existing);
@@ -233,7 +270,7 @@ public class CartServiceImplTest {
 
         CartUpdateDTO dto = new CartUpdateDTO();
         dto.setQuantity(5);
-        boolean ok = service.update(1L, dto);
+        boolean ok = service.update(1L, 7L, dto);
 
         assertTrue(ok);
         assertEquals(5, existing.getQuantity());
@@ -247,6 +284,7 @@ public class CartServiceImplTest {
     public void update_selected_only_returns_true_on_success() {
         CartItemPO existing = new CartItemPO();
         existing.setId(1L);
+        existing.setUserId(7L);
         existing.setQuantity(3);
         existing.setSelected(0);
         when(cartItemManager.getById(1L)).thenReturn(existing);
@@ -254,7 +292,7 @@ public class CartServiceImplTest {
 
         CartUpdateDTO dto = new CartUpdateDTO();
         dto.setIsSelected(true);
-        boolean ok = service.update(1L, dto);
+        boolean ok = service.update(1L, 7L, dto);
 
         assertTrue(ok);
         assertEquals(1, existing.getSelected());
@@ -268,6 +306,7 @@ public class CartServiceImplTest {
     public void update_both_fields_returns_true_on_success() {
         CartItemPO existing = new CartItemPO();
         existing.setId(1L);
+        existing.setUserId(7L);
         existing.setQuantity(2);
         existing.setSelected(0);
         when(cartItemManager.getById(1L)).thenReturn(existing);
@@ -276,7 +315,7 @@ public class CartServiceImplTest {
         CartUpdateDTO dto = new CartUpdateDTO();
         dto.setQuantity(5);
         dto.setIsSelected(true);
-        boolean ok = service.update(1L, dto);
+        boolean ok = service.update(1L, 7L, dto);
 
         assertTrue(ok);
         assertEquals(5, existing.getQuantity());
@@ -290,17 +329,67 @@ public class CartServiceImplTest {
     public void update_no_fields_changed_returns_true_on_success() {
         CartItemPO existing = new CartItemPO();
         existing.setId(1L);
+        existing.setUserId(7L);
         existing.setQuantity(2);
         existing.setSelected(0);
         when(cartItemManager.getById(1L)).thenReturn(existing);
         when(cartItemManager.updateById(any(CartItemPO.class))).thenReturn(true);
 
         CartUpdateDTO dto = new CartUpdateDTO();
-        boolean ok = service.update(1L, dto);
+        boolean ok = service.update(1L, 7L, dto);
 
         assertTrue(ok);
         assertEquals(2, existing.getQuantity());
         assertEquals(0, existing.getSelected());
+    }
+
+    /**
+     * 验证 add 在同用户同 SKU 已存在时合并累加数量并返回已有条目 ID。
+     */
+    @Test
+    public void add_merges_same_sku_quantity() {
+        CartItemPO existing = new CartItemPO();
+        existing.setId(1L);
+        existing.setUserId(7L);
+        existing.setSkuId(100L);
+        existing.setQuantity(2);
+        existing.setSelected(1);
+        when(cartItemManager.getOne(any(Wrapper.class))).thenReturn(existing);
+        when(cartItemManager.updateById(any(CartItemPO.class))).thenReturn(true);
+
+        CartItemAddDTO dto = new CartItemAddDTO();
+        dto.setSkuId(100L);
+        dto.setQuantity(3);
+
+        Long id = service.add(7L, dto);
+
+        assertEquals(1L, id);
+        assertEquals(5, existing.getQuantity());
+        verify(cartItemManager).updateById(existing);
+        verify(cartItemManager, never()).save(any(CartItemPO.class));
+    }
+
+    /**
+     * 验证 add 合并时数量累加结果封顶为 999。
+     */
+    @Test
+    public void add_merge_caps_quantity_at_max() {
+        CartItemPO existing = new CartItemPO();
+        existing.setId(1L);
+        existing.setUserId(7L);
+        existing.setSkuId(100L);
+        existing.setQuantity(998);
+        existing.setSelected(1);
+        when(cartItemManager.getOne(any(Wrapper.class))).thenReturn(existing);
+        when(cartItemManager.updateById(any(CartItemPO.class))).thenReturn(true);
+
+        CartItemAddDTO dto = new CartItemAddDTO();
+        dto.setSkuId(100L);
+        dto.setQuantity(3);
+
+        service.add(7L, dto);
+
+        assertEquals(999, existing.getQuantity());
     }
 
     /**
@@ -342,6 +431,7 @@ public class CartServiceImplTest {
         item.setUserId(7L);
         item.setSkuId(100L);
         when(cartItemManager.list(any(Wrapper.class))).thenReturn(List.of(item));
+        when(cartItemManager.getById(1L)).thenReturn(item);
         when(cartItemManager.removeById(1L)).thenReturn(true);
 
         service.moveToFavorite(7L, 100L);

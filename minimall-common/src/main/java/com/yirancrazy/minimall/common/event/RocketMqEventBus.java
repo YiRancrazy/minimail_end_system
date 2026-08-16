@@ -139,6 +139,7 @@ public class RocketMqEventBus implements EventBus {
         try {
             Message msg = new Message(topic, MqEventJsonCodec.tagFor(event.getClass()),
                 MqEventJsonCodec.encode(event));
+            attachTraceId(msg);
             producer.send(msg);
             log.debug("rocketmq send ok for {}", event.getClass().getSimpleName());
         }
@@ -185,6 +186,12 @@ public class RocketMqEventBus implements EventBus {
         }
         catch (Exception e) {
             log.warn("rocketmq txn send failed for {}: {}", event.getClass().getSimpleName(), e.getMessage());
+        }
+        finally {
+            // checker 仅在发送窗口期供 broker 回查事务状态，发送流程结束即移除，避免注册表无界增长
+            // （持久化回查应配置 OutboxStore；内存 checker 在进程重启后本就丢失）
+            checkers.remove(tag);
+            tagTypes.remove(tag);
         }
     }
 

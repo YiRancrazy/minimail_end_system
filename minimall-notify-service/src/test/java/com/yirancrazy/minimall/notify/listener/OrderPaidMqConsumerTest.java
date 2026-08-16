@@ -2,6 +2,7 @@ package com.yirancrazy.minimall.notify.listener;
 
 import java.math.BigDecimal;
 import java.time.Duration;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -83,5 +84,20 @@ class OrderPaidMqConsumerTest {
         consumer.onPaid(event);
 
         verifyNoInteractions(notifyService);
+    }
+
+    /**
+     * 验证 push 落库失败时删除幂等键并重抛异常：否则 RocketMQ 重投会被 SETNX 挡掉，通知永久丢失。
+     */
+    @Test
+    void onPaid_givenPushFailure_thenRemovesIdempotencyKeyAndRethrows() {
+        when(notifyService.push(any(Long.class), anyString(), anyString()))
+            .thenThrow(new RuntimeException("db unavailable"));
+        OrderPaidDTO event = new OrderPaidDTO(
+            99L, 7L, new BigDecimal("100.00"), "2026-07-29T10:00:00");
+
+        Assertions.assertThrows(RuntimeException.class, () -> consumer.onPaid(event));
+
+        verify(redis).delete("notify:order:paid:99");
     }
 }

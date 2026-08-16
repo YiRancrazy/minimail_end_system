@@ -118,8 +118,9 @@ public class RocketMqEventConsumer {
                             payload = MqEventJsonCodec.decode(msg.getBody(), matched);
                         }
                         catch (Exception ex) {
-                            log.warn("rocketmq consumer decode failed for tag={}: {}", tag, ex.getMessage());
-                            continue;
+                            // 解码失败不静默丢弃：返回 RECONSUME_LATER 由 RocketMQ 重投，重试耗尽进死信队列
+                            log.warn("rocketmq consumer decode failed for tag={}, retry later", tag, ex);
+                            return ConsumeConcurrentlyStatus.RECONSUME_LATER;
                         }
                         try {
                             handlers.get(matched).accept(payload);

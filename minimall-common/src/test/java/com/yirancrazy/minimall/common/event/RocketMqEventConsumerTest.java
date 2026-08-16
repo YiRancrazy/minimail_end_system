@@ -54,7 +54,7 @@ class RocketMqEventConsumerTest {
     }
 
     @Test
-    void consumeMessage_givenDecodeFailure_thenConsumesSuccessfully() throws Exception {
+    void consumeMessage_givenDecodeFailure_thenReconsumeLater() throws Exception {
         Map<Class<?>, Consumer<Object>> handlers = new ConcurrentHashMap<>();
         handlers.put(SampleEvent.class, event -> {
         });
@@ -64,7 +64,7 @@ class RocketMqEventConsumerTest {
         ConsumeConcurrentlyStatus status = listenerFrom(wrapper).consumeMessage(
             List.of(message(new byte[] {'{'})), null);
 
-        assertThat(status).isEqualTo(ConsumeConcurrentlyStatus.CONSUME_SUCCESS);
+        assertThat(status).isEqualTo(ConsumeConcurrentlyStatus.RECONSUME_LATER);
     }
 
     @Test

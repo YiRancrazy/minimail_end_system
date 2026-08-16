@@ -7,6 +7,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -30,6 +31,8 @@ import com.yirancrazy.minimall.merchant.service.ShopService;
  **/
 class ShopControllerV1Test {
 
+    private static final String X_MERCHANT_ID = "X-Merchant-Id";
+
     private MockMvc mockMvc;
     private ShopService shopService;
     private final ObjectMapper mapper = new ObjectMapper();
@@ -41,17 +44,19 @@ class ShopControllerV1Test {
     }
 
     /**
-     * 验证 GET /api/v1/merchant/shops/{id} 返回店铺详情。
+     * 验证 GET /api/v1/merchant/shops/{id} 携带商家头返回店铺详情。
      */
     @Test
     void get_returns_shop() throws Exception {
         ShopPO po = new ShopPO();
         po.setId(99L);
+        po.setMerchantId(1L);
         po.setShopName("薄荷商城");
         po.setLicenseNo("ABC123456789012");
         po.setStatus("ACTIVE");
-        when(shopService.getById(99L)).thenReturn(po);
-        mockMvc.perform(get("/api/v1/merchant/shops/99"))
+        when(shopService.getById(1L, 99L)).thenReturn(po);
+        mockMvc.perform(get("/api/v1/merchant/shops/99")
+                .header(X_MERCHANT_ID, "1"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.code").value("00000"))
             .andExpect(jsonPath("$.data.id").value(99))
@@ -59,53 +64,56 @@ class ShopControllerV1Test {
     }
 
     /**
-     * 验证 POST /api/v1/merchant/shops 创建店铺并返回店铺 ID。
+     * 验证 POST /api/v1/merchant/shops 携带商家头创建店铺并返回店铺 ID。
      */
     @Test
     void create_returns_id() throws Exception {
-        when(shopService.create(any(ShopCreateDTO.class))).thenReturn(100L);
+        when(shopService.create(eq(1L), any(ShopCreateDTO.class))).thenReturn(100L);
         ShopCreateDTO dto = new ShopCreateDTO();
         dto.setShopName("新店");
         dto.setLicenseNo("ABC123456789012");
         dto.setStatus("ACTIVE");
         mockMvc.perform(post("/api/v1/merchant/shops")
+                .header(X_MERCHANT_ID, "1")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(mapper.writeValueAsString(dto)))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.code").value("00000"))
             .andExpect(jsonPath("$.data").value(100));
-        verify(shopService).create(any(ShopCreateDTO.class));
+        verify(shopService).create(eq(1L), any(ShopCreateDTO.class));
     }
 
     /**
-     * 验证 PUT /api/v1/merchant/shops/{id} 更新店铺信息并返回成功。
+     * 验证 PUT /api/v1/merchant/shops/{id} 携带商家头更新店铺信息并返回成功。
      */
     @Test
     void update_returns_boolean() throws Exception {
-        when(shopService.update(anyLong(), any(ShopUpdateDTO.class))).thenReturn(true);
+        when(shopService.update(eq(1L), anyLong(), any(ShopUpdateDTO.class))).thenReturn(true);
         ShopUpdateDTO dto = new ShopUpdateDTO();
         dto.setShopName("改名后");
         dto.setLicenseNo("XYZ987654321098");
         dto.setStatus("ACTIVE");
         mockMvc.perform(put("/api/v1/merchant/shops/99")
+                .header(X_MERCHANT_ID, "1")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(mapper.writeValueAsString(dto)))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.code").value("00000"))
             .andExpect(jsonPath("$.data").value(true));
-        verify(shopService).update(anyLong(), any(ShopUpdateDTO.class));
+        verify(shopService).update(eq(1L), anyLong(), any(ShopUpdateDTO.class));
     }
 
     /**
-     * 验证 DELETE /api/v1/merchant/shops/{id} 删除店铺并返回成功。
+     * 验证 DELETE /api/v1/merchant/shops/{id} 携带商家头删除店铺并返回成功。
      */
     @Test
     void delete_returns_boolean() throws Exception {
-        when(shopService.delete(99L)).thenReturn(true);
-        mockMvc.perform(delete("/api/v1/merchant/shops/99"))
+        when(shopService.delete(1L, 99L)).thenReturn(true);
+        mockMvc.perform(delete("/api/v1/merchant/shops/99")
+                .header(X_MERCHANT_ID, "1"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.code").value("00000"))
             .andExpect(jsonPath("$.data").value(true));
-        verify(shopService).delete(99L);
+        verify(shopService).delete(1L, 99L);
     }
 }

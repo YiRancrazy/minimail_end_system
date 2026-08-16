@@ -31,7 +31,8 @@ public class InternalShopControllerV1 {
      */
     @GetMapping("/{id}")
     public Result<ShopSnapshotDTO> snapshot(@PathVariable Long id) {
-        ShopPO s = shopService.getById(id);
+        // 内部服务间调用无商家上下文，传 null 跳过归属校验
+        ShopPO s = shopService.getById(null, id);
         return Result.success(new ShopSnapshotDTO(s.getId(), s.getShopName(), s.getStatus()));
     }
 }

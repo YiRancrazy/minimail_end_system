@@ -14,6 +14,10 @@ import com.yirancrazy.minimall.common.base.BasePO;
 @Data
 @TableName("t_merch_shop")
 public class ShopPO extends BasePO {
+    /**
+     * 归属商家ID，越权校验依据（商家只能访问自己名下的店铺）。
+     */
+    private Long merchantId;
     private String shopName;
     private String licenseNo;
     private String status;

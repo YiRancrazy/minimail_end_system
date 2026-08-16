@@ -36,12 +36,15 @@ public class ShopControllerV1 {
     /**
      * 根据主键 ID 查询店铺详情。
      *
+     * @param merchantId 商家账号 ID（来自网关 X-Merchant-Id）
      * @param id 店铺主键 ID
      * @return 店铺详情结果
      */
     @GetMapping("/{id}")
-    public Result<ShopPO> get(@PathVariable("id") Long id) {
-        return Result.success(shopService.getById(id));
+    public Result<ShopPO> get(
+            @RequestHeader("X-Merchant-Id") Long merchantId,
+            @PathVariable("id") Long id) {
+        return Result.success(shopService.getById(merchantId, id));
     }
 
     /**
@@ -60,34 +63,44 @@ public class ShopControllerV1 {
     }
 
     /**
-     * 创建店铺。
+     * 创建店铺，归属绑定到当前商家。
+     * @param merchantId 商家账号 ID（来自网关 X-Merchant-Id）
      * @param dto 店铺创建DTO
      * @return 店铺ID
      */
     @PostMapping
-    public Result<Long> create(@Valid @RequestBody ShopCreateDTO dto) {
-        return Result.success(shopService.create(dto));
+    public Result<Long> create(
+            @RequestHeader("X-Merchant-Id") Long merchantId,
+            @Valid @RequestBody ShopCreateDTO dto) {
+        return Result.success(shopService.create(merchantId, dto));
     }
 
     /**
-     * 根据主键 ID 更新店铺信息。
+     * 根据主键 ID 更新店铺信息，仅允许更新本人名下店铺。
      *
+     * @param merchantId 商家账号 ID（来自网关 X-Merchant-Id）
      * @param id 店铺主键 ID
      * @param dto 待更新的店铺信息
      * @return 是否更新成功
      */
     @PutMapping("/{id}")
-    public Result<Boolean> update(@PathVariable("id") Long id, @Valid @RequestBody ShopUpdateDTO dto) {
-        return Result.success(shopService.update(id, dto));
+    public Result<Boolean> update(
+            @RequestHeader("X-Merchant-Id") Long merchantId,
+            @PathVariable("id") Long id,
+            @Valid @RequestBody ShopUpdateDTO dto) {
+        return Result.success(shopService.update(merchantId, id, dto));
     }
 
     /**
-     * 删除店铺。
+     * 删除店铺，仅允许删除本人名下店铺。
+     * @param merchantId 商家账号 ID（来自网关 X-Merchant-Id）
      * @param id 店铺ID
      * @return 删除是否成功
      */
     @DeleteMapping("/{id}")
-    public Result<Boolean> delete(@PathVariable("id") Long id) {
-        return Result.success(shopService.delete(id));
+    public Result<Boolean> delete(
+            @RequestHeader("X-Merchant-Id") Long merchantId,
+            @PathVariable("id") Long id) {
+        return Result.success(shopService.delete(merchantId, id));
     }
 }

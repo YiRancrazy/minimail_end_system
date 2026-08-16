@@ -58,6 +58,10 @@ public class PayServiceImpl implements PayService {
     private static final DateTimeFormatter EXPIRE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final int PAY_CALLBACK_RPC_BUFFER_SECONDS = 30;
     private static final int ORDER_PENDING_CODE = 1;
+    // 对账补偿扫描分批参数：单批 100 条、单次最多 10 批，仅扫描近 24h 成功流水，限制单次调度扫描量与耗时
+    private static final int SCAN_BATCH_SIZE = 100;
+    private static final int SCAN_MAX_BATCHES = 10;
+    private static final long SCAN_WINDOW_HOURS = 24L;
 
     private final PayManager payManager;
     private final PayGateway payGateway;
@@ -631,37 +635,54 @@ public class PayServiceImpl implements PayService {
     }
 
     /**
-     * 扫描支付成功但订单状态仍为 PENDING 的流水（paid_at + 30s < NOW()），主动调 Order RPC 兜底推进。
-     * ponytail: 主路径已是同步 RPC，此任务只作为回调丢失时的补偿。
+     * 扫描支付成功但订单状态仍为 PENDING 的流水（paidAt 落在 [now-24h, now-30s) 时间窗内），主动调 Order RPC 兜底推进。
+     * 按 id 升序每批 100 条游标推进（id > lastId），单次调用最多 10 批即返回，防止全表扫描随流水量增长拖垮数据库；
+     * 幂等由订单状态探测保证（订单已非 PENDING 则跳过），Feign 失败仅记 WARN 不阻断后续批次。
      * @return 处理的流水数
      */
     @Override
     public int scanPaidButOrderPending() {
-        LocalDateTime threshold = LocalDateTime.now().minusSeconds(PAY_CALLBACK_RPC_BUFFER_SECONDS);
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime windowStart = now.minusHours(SCAN_WINDOW_HOURS);
+        LocalDateTime threshold = now.minusSeconds(PAY_CALLBACK_RPC_BUFFER_SECONDS);
         int successCode = Integer.parseInt(PayStatusEnum.SUCCESS.getCode());
-        List<PayTransactionPO> paid = payManager.list(Wrappers.lambdaQuery(PayTransactionPO.class)
-            .eq(PayTransactionPO::getStatus, successCode)
-            .lt(PayTransactionPO::getPaidAt, threshold));
+        Long lastId = null;
         int count = 0;
-        for (PayTransactionPO po : paid) {
-            Long orderId;
-            try {
-                orderId = Long.valueOf(po.getOrderNo());
+        for (int batch = 0; batch < SCAN_MAX_BATCHES; batch++) {
+            List<PayTransactionPO> paid = payManager.list(Wrappers.lambdaQuery(PayTransactionPO.class)
+                .eq(PayTransactionPO::getStatus, successCode)
+                .ge(PayTransactionPO::getPaidAt, windowStart)
+                .lt(PayTransactionPO::getPaidAt, threshold)
+                .gt(lastId != null, PayTransactionPO::getId, lastId)
+                .orderByAsc(PayTransactionPO::getId)
+                .last("LIMIT " + SCAN_BATCH_SIZE));
+            if (paid.isEmpty()) {
+                break;
             }
-            catch (NumberFormatException e) {
-                log.warn("scanPaidButOrderPending skip non-numeric orderNo, paymentNo={}", po.getPaymentNo());
-                continue;
-            }
-            try {
-                Integer orderStatus = orderFeignClient.status(orderId).getData();
-                if (orderStatus != null && orderStatus == ORDER_PENDING_CODE) {
-                    orderFeignClient.pay(orderId);
-                    count++;
+            for (PayTransactionPO po : paid) {
+                Long orderId;
+                try {
+                    orderId = Long.valueOf(po.getOrderNo());
+                }
+                catch (NumberFormatException e) {
+                    log.warn("scanPaidButOrderPending skip non-numeric orderNo, paymentNo={}", po.getPaymentNo());
+                    continue;
+                }
+                try {
+                    Integer orderStatus = orderFeignClient.status(orderId).getData();
+                    if (orderStatus != null && orderStatus == ORDER_PENDING_CODE) {
+                        orderFeignClient.pay(orderId);
+                        count++;
+                    }
+                }
+                catch (Exception e) {
+                    log.warn("scanPaidButOrderPending probe failed, paymentNo={}, orderId={}, err={}",
+                        po.getPaymentNo(), orderId, e.getMessage());
                 }
             }
-            catch (Exception e) {
-                log.warn("scanPaidButOrderPending probe failed, paymentNo={}, orderId={}, err={}",
-                    po.getPaymentNo(), orderId, e.getMessage());
+            lastId = paid.get(paid.size() - 1).getId();
+            if (paid.size() < SCAN_BATCH_SIZE) {
+                break;
             }
         }
         if (count > 0) {

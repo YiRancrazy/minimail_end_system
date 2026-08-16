@@ -5,6 +5,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import org.apache.ibatis.builder.MapperBuilderAssistant;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -12,6 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -23,9 +26,14 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import com.baomidou.mybatisplus.core.MybatisConfiguration;
+import com.baomidou.mybatisplus.core.conditions.Wrapper;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.yirancrazy.minimall.api.feign.IdFeignClient;
 import com.yirancrazy.minimall.api.feign.OrderFeignClient;
 import com.yirancrazy.minimall.common.exception.BizException;
@@ -70,6 +78,14 @@ public class PayServiceImplTest {
     private MerchantWithdrawMapper merchantWithdrawMapper;
     private IdFeignClient idFeignClient;
     private PayServiceImpl service;
+
+    @BeforeAll
+    static void initLambdaCache() {
+        // 无 MyBatis 容器时 LambdaQueryWrapper 列名解析/参数绑定懒执行到 getSqlSegment 才触发，
+        // 需预置 TableInfo 的 lambda 缓存，否则 wrapper.getSqlSegment() 抛 "can not find lambda cache"
+        MybatisConfiguration configuration = new MybatisConfiguration();
+        TableInfoHelper.initTableInfo(new MapperBuilderAssistant(configuration, ""), PayTransactionPO.class);
+    }
 
     @BeforeEach
     void setUp() {
@@ -1072,6 +1088,76 @@ public class PayServiceImplTest {
 
         assertEquals(0, count);
         verify(orderFeignClient, never()).pay(any());
+    }
+
+    /**
+     * 验证 scanPaidButOrderPending 分批扫描：每批查询带 24h 时间窗与 LIMIT 100，
+     * 第一批满 100 条后第二批按 id 游标（id > 100）推进，不满批即停止。
+     */
+    @Test
+    public void scanPaidButOrderPending_batches_with_window_and_cursor() {
+        List<PayTransactionPO> firstBatch = new ArrayList<>(100);
+        for (long i = 1; i <= 100; i++) {
+            PayTransactionPO tx = new PayTransactionPO();
+            tx.setId(i);
+            tx.setPaymentNo("PAY" + i);
+            tx.setOrderNo(String.valueOf(i));
+            tx.setStatus(2);
+            firstBatch.add(tx);
+        }
+        PayTransactionPO last = new PayTransactionPO();
+        last.setId(101L);
+        last.setPaymentNo("PAY101");
+        last.setOrderNo("101");
+        last.setStatus(2);
+        when(manager.list(any(Wrapper.class))).thenReturn(firstBatch).thenReturn(List.of(last));
+        // 订单状态统一返回非 PENDING，仅验证扫描/分批逻辑不触发订单推进
+        when(orderFeignClient.status(anyLong())).thenReturn(Result.success(2));
+
+        service.scanPaidButOrderPending();
+
+        ArgumentCaptor<Wrapper<PayTransactionPO>> captor = ArgumentCaptor.forClass(Wrapper.class);
+        verify(manager, times(2)).list(captor.capture());
+        LambdaQueryWrapper<PayTransactionPO> first =
+            (LambdaQueryWrapper<PayTransactionPO>) captor.getAllValues().get(0);
+        LambdaQueryWrapper<PayTransactionPO> second =
+            (LambdaQueryWrapper<PayTransactionPO>) captor.getAllValues().get(1);
+        String firstSql = first.getSqlSegment();
+        String secondSql = second.getSqlSegment();
+        // 每批均带 LIMIT 100 分页
+        assertTrue(firstSql.contains("LIMIT 100"));
+        assertTrue(secondSql.contains("LIMIT 100"));
+        // 时间窗：paidAt >= 窗口起点 AND paidAt < 阈值，对应参数各一个 LocalDateTime
+        assertTrue(firstSql.contains("paid_at >="));
+        assertTrue(firstSql.contains("paid_at <"));
+        assertEquals(2, first.getParamNameValuePairs().values().stream()
+            .filter(LocalDateTime.class::isInstance).count());
+        // 第二批游标推进为 id > 100，且按 id 升序取批
+        assertTrue(secondSql.contains("id >"));
+        assertTrue(secondSql.contains("ORDER BY id ASC"));
+        assertTrue(second.getParamNameValuePairs().containsValue(100L));
+    }
+
+    /**
+     * 验证 scanPaidButOrderPending 每批满 100 条时最多扫描 SCAN_MAX_BATCHES(10) 批即返回，防止单次调用无限循环。
+     */
+    @Test
+    public void scanPaidButOrderPending_stops_after_max_batches() {
+        List<PayTransactionPO> fullBatch = new ArrayList<>(100);
+        for (long i = 1; i <= 100; i++) {
+            PayTransactionPO tx = new PayTransactionPO();
+            tx.setId(i);
+            tx.setPaymentNo("PAY" + i);
+            tx.setOrderNo(String.valueOf(i));
+            tx.setStatus(2);
+            fullBatch.add(tx);
+        }
+        when(manager.list(any(Wrapper.class))).thenReturn(fullBatch);
+        when(orderFeignClient.status(anyLong())).thenReturn(Result.success(2));
+
+        service.scanPaidButOrderPending();
+
+        verify(manager, times(10)).list(any(Wrapper.class));
     }
 
     /**

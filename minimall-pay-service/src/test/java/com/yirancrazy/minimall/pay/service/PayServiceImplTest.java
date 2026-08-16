@@ -13,6 +13,8 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.lenient;
@@ -875,6 +877,109 @@ public class PayServiceImplTest {
 
         assertEquals(3, rec.getStatus());
         verify(orderFeignClient, never()).pay(any());
+    }
+
+    /**
+     * 验证 handleCallback 回调金额与库内支付单不符时冻结支付单且不推进订单（防伪造/篡改回调）。
+     */
+    @Test
+    public void handleCallback_amount_mismatch_freezes_without_advancing_order() {
+        PayTransactionPO rec = new PayTransactionPO();
+        rec.setId(1L);
+        rec.setStatus(1);
+        rec.setOrderNo("100");
+        rec.setAmount(new BigDecimal("100.00"));
+        when(manager.getOne(any())).thenReturn(rec);
+
+        PayCallbackDTO dto = new PayCallbackDTO("PAY123", "TRADE123", true, "response", new BigDecimal("99.99"));
+        service.handleCallback(dto);
+
+        assertEquals(7, rec.getStatus()); // FROZEN
+        verify(manager).updateById(rec);
+        verify(orderFeignClient, never()).pay(anyLong());
+        verify(orderFeignClient, never()).payByOrderNo(anyString());
+    }
+
+    /**
+     * 验证 handleCallback 对已 SUCCESS 支付单的重复回调直接幂等返回，不重复推进订单。
+     */
+    @Test
+    public void handleCallback_already_success_ignores_duplicate() {
+        PayTransactionPO rec = new PayTransactionPO();
+        rec.setId(1L);
+        rec.setStatus(2); // SUCCESS
+        rec.setOrderNo("100");
+        when(manager.getOne(any())).thenReturn(rec);
+
+        PayCallbackDTO dto = new PayCallbackDTO("PAY123", "TRADE123", true, "response");
+        service.handleCallback(dto);
+
+        assertEquals(2, rec.getStatus());
+        verify(manager, never()).updateById(any(PayTransactionPO.class));
+        verify(orderFeignClient, never()).pay(anyLong());
+    }
+
+    /**
+     * 验证 handleCallback 失败回调不得覆盖已 SUCCESS 支付单（防状态倒灌）。
+     */
+    @Test
+    public void handleCallback_failure_does_not_overwrite_success() {
+        PayTransactionPO rec = new PayTransactionPO();
+        rec.setId(1L);
+        rec.setStatus(2); // SUCCESS
+        rec.setOrderNo("100");
+        when(manager.getOne(any())).thenReturn(rec);
+
+        PayCallbackDTO dto = new PayCallbackDTO("PAY123", "TRADE123", false, "fail-response");
+        service.handleCallback(dto);
+
+        assertEquals(2, rec.getStatus());
+        verify(manager, never()).updateById(any(PayTransactionPO.class));
+        verify(orderFeignClient, never()).pay(anyLong());
+    }
+
+    /**
+     * 验证 handleCallback 失败回调仅迁移 PENDING，已 FAILED 等非 PENDING 状态不重复更新。
+     */
+    @Test
+    public void handleCallback_failure_ignored_when_not_pending() {
+        PayTransactionPO rec = new PayTransactionPO();
+        rec.setId(1L);
+        rec.setStatus(3); // FAILED
+        when(manager.getOne(any())).thenReturn(rec);
+
+        PayCallbackDTO dto = new PayCallbackDTO("PAY123", "TRADE123", false, "fail-response");
+        service.handleCallback(dto);
+
+        assertEquals(3, rec.getStatus());
+        verify(manager, never()).updateById(any(PayTransactionPO.class));
+    }
+
+    /**
+     * 验证 createRefund 对非数字业务单号（C 端直付）退款不抛 NumberFormatException，
+     * 退款流程正常完成且跳过订单推进回调。
+     */
+    @Test
+    public void createRefund_non_numeric_order_no_skips_feign() {
+        PayTransactionPO payTx = new PayTransactionPO();
+        payTx.setId(1L);
+        payTx.setStatus(2); // SUCCESS
+        payTx.setPaymentNo("PAY123");
+        payTx.setAmount(new BigDecimal("100.00"));
+        payTx.setOrderNo("OD20260814001");
+        when(manager.getById(1L)).thenReturn(payTx);
+        when(payTransactionMapper.updateStatusIf("PAY123", 2, 5)).thenReturn(1);
+        when(payRefundMapper.sumCommittedAmount("PAY123")).thenReturn(new BigDecimal("0.00"));
+        when(payGateway.refund(anyString(), anyString(), any(BigDecimal.class), anyString()))
+            .thenReturn("REFUND_TRADE_123");
+
+        RefundVO vo = service.createRefund(
+            new com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO(1L, new BigDecimal("50.00"), "reason"));
+
+        assertNotNull(vo);
+        verify(payGateway).refund(anyString(), anyString(), any(BigDecimal.class), anyString());
+        verify(orderFeignClient, never()).refundCallback(anyLong(), anyBoolean());
+        verify(payTransactionMapper).updateStatusIf("PAY123", 5, 2); // 未退满回 SUCCESS
     }
 
     /**

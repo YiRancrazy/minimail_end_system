@@ -149,7 +149,8 @@ public class PayServiceImpl implements PayService {
     }
 
     /**
-     * 处理支付回调。成功时通过 Feign 推进订单状态，触发 OrderPaidDTO 事件广播。
+     * 处理支付回调（验签已在 Controller 完成）：幂等去重、金额校验、状态防倒灌，
+     * 成功后通过 Feign 推进订单状态，触发 OrderPaidDTO 事件广播。
      * @param dto 支付回调DTO
      */
     @Override
@@ -160,16 +161,55 @@ public class PayServiceImpl implements PayService {
             throw new BizException(PayCodeEnum.PAY_NOT_FOUND);
         }
 
+        // 幂等：支付单已 SUCCESS 时直接返回，避免重复推进订单与重复回调 order 服务
+        if (po.getStatus() == Integer.parseInt(PayStatusEnum.SUCCESS.getCode())) {
+            log.info("callback ignored, payment already success, paymentNo={}", dto.getPaymentNo());
+            return;
+        }
+
+        // 金额校验：回调金额与库内支付单不符时冻结并告警，返回 success 避免支付宝重复投递
+        if (dto.getTotalAmount() != null && dto.getTotalAmount().compareTo(po.getAmount()) != 0) {
+            po.setStatus(Integer.parseInt(PayStatusEnum.FROZEN.getCode()));
+            po.setChannelResponse(dto.getChannelResponse());
+            payManager.updateById(po);
+            log.error("callback amount mismatch, payment frozen, paymentNo={}, callbackAmount={}, dbAmount={}",
+                dto.getPaymentNo(), dto.getTotalAmount(), po.getAmount());
+            return;
+        }
+
+        if (dto.isSuccess()) {
+            applyCallbackSuccess(po, dto);
+        }
+        else {
+            applyCallbackFailure(po, dto);
+        }
+        log.info("payment callback handled, paymentNo={}, success={}", dto.getPaymentNo(), dto.isSuccess());
+    }
+
+    /**
+     * 成功回调迁移：非终态（PENDING/FAILED/CLOSED）置 SUCCESS 并推进订单；
+     * 退款中/已退款/已冻结等终态不再迁移，防止订单状态与支付单脱节。
+     * @param po 支付单
+     * @param dto 回调DTO
+     */
+    private void applyCallbackSuccess(PayTransactionPO po, PayCallbackDTO dto) {
+        int status = po.getStatus();
+        if (status == Integer.parseInt(PayStatusEnum.REFUNDING.getCode())
+            || status == Integer.parseInt(PayStatusEnum.REFUNDED.getCode())
+            || status == Integer.parseInt(PayStatusEnum.FROZEN.getCode())) {
+            log.warn("callback success ignored, payment not in payable state, paymentNo={}, status={}",
+                dto.getPaymentNo(), status);
+            return;
+        }
+
         po.setTradeNo(dto.getTradeNo());
-        po.setStatus(Integer.parseInt(
-            dto.isSuccess() ? PayStatusEnum.SUCCESS.getCode() : PayStatusEnum.FAILED.getCode()));
+        po.setStatus(Integer.parseInt(PayStatusEnum.SUCCESS.getCode()));
         po.setChannelResponse(dto.getChannelResponse());
         po.setPaidAt(LocalDateTime.now());
         payManager.updateById(po);
 
-        // ponytail: 同步 Feign 触发 order.pay，失败走 fallback 仅记日志；事务消息升级路径见 RocketMqEventBus。
         // 订单标识可能为订单ID（内部下单路径）或业务单号（C 端直付路径），按数字与否分流推进订单
-        if (dto.isSuccess() && po.getOrderNo() != null) {
+        if (po.getOrderNo() != null) {
             if (po.getOrderNo().matches("\\d+")) {
                 orderFeignClient.pay(Long.valueOf(po.getOrderNo()));
             }
@@ -177,7 +217,24 @@ public class PayServiceImpl implements PayService {
                 orderFeignClient.payByOrderNo(po.getOrderNo());
             }
         }
-        log.info("payment callback handled, paymentNo={}, success={}", dto.getPaymentNo(), dto.isSuccess());
+    }
+
+    /**
+     * 失败回调迁移：仅 PENDING 允许置 FAILED，已 SUCCESS 或终态不回退（防状态倒灌），
+     * 避免订单已推进后支付单被失败回调覆盖导致状态脱节。
+     * @param po 支付单
+     * @param dto 回调DTO
+     */
+    private void applyCallbackFailure(PayTransactionPO po, PayCallbackDTO dto) {
+        int status = po.getStatus();
+        if (status != Integer.parseInt(PayStatusEnum.PENDING.getCode())) {
+            log.warn("callback failure ignored, payment not pending, paymentNo={}, status={}",
+                dto.getPaymentNo(), status);
+            return;
+        }
+        po.setStatus(Integer.parseInt(PayStatusEnum.FAILED.getCode()));
+        po.setChannelResponse(dto.getChannelResponse());
+        payManager.updateById(po);
     }
 
     private String generatePaymentNo() {
@@ -230,7 +287,17 @@ public class PayServiceImpl implements PayService {
         refund.setIdempotencyKey(UUID.randomUUID().toString());
         payRefundMapper.insert(refund);
 
-        Long orderId = Long.valueOf(payTx.getOrderNo());
+        // C 端直付订单号可能为非数字业务单号，OrderFeignClient 仅有按订单ID的退款回调，
+        // 无法推进时记 WARN 跳过订单推进，避免 NumberFormatException 导致退款中断
+        Long orderId = null;
+        try {
+            orderId = Long.valueOf(payTx.getOrderNo());
+        }
+        catch (NumberFormatException e) {
+            log.warn("refund skip order advance for non-numeric orderNo, paymentNo={}, orderNo={}",
+                paymentNo, payTx.getOrderNo());
+        }
+
         try {
             String refundTradeNo = payGateway.refund(paymentNo, refundNo, dto.getAmount(), dto.getReason());
             refund.setStatus(Integer.parseInt(RefundStatusEnum.SUCCESS.getCode()));
@@ -244,14 +311,18 @@ public class PayServiceImpl implements PayService {
                 ? Integer.parseInt(PayStatusEnum.REFUNDED.getCode()) : successCode;
             payTransactionMapper.updateStatusIf(paymentNo, refundingCode, targetStatus);
 
-            orderFeignClient.refundCallback(orderId, true);
+            if (orderId != null) {
+                orderFeignClient.refundCallback(orderId, true);
+            }
             log.info("refund success, refundNo={}, paymentNo={}", refundNo, paymentNo);
         }
         catch (Exception e) {
             refund.setStatus(Integer.parseInt(RefundStatusEnum.FAILED.getCode()));
             payRefundMapper.updateById(refund);
             payTransactionMapper.updateStatusIf(paymentNo, refundingCode, successCode);
-            orderFeignClient.refundCallback(orderId, false);
+            if (orderId != null) {
+                orderFeignClient.refundCallback(orderId, false);
+            }
             throw new BizException(PayCodeEnum.REFUND_FAILED);
         }
 

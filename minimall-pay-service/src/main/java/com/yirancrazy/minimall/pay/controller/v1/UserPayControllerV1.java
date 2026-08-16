@@ -1,5 +1,6 @@
 package com.yirancrazy.minimall.pay.controller.v1;
 
+import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.Map;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -77,7 +78,8 @@ public class UserPayControllerV1 {
             String tradeStatus = params.get("trade_status");
             boolean success = "TRADE_SUCCESS".equals(tradeStatus) || "TRADE_FINISHED".equals(tradeStatus);
 
-            PayCallbackDTO dto = new PayCallbackDTO(paymentNo, tradeNo, success, params.toString());
+            PayCallbackDTO dto = new PayCallbackDTO(
+                paymentNo, tradeNo, success, params.toString(), parseTotalAmount(paymentNo, params));
             payService.handleCallback(dto);
             log.info("alipay callback handled, paymentNo={}, tradeNo={}, success={}", paymentNo, tradeNo, success);
             return "success";
@@ -122,5 +124,25 @@ public class UserPayControllerV1 {
     @GetMapping("/params/{paymentNo}")
     public Result<PaymentParamsVO> getParams(@PathVariable("paymentNo") String paymentNo) {
         return Result.success(payService.getPaymentParams(paymentNo));
+    }
+
+    /**
+     * 解析支付宝回调金额 total_amount，缺失或非法时返回 null（金额校验由 service 对 null 放行）。
+     * @param paymentNo 支付单号，仅用于日志定位
+     * @param params 回调参数
+     * @return 回调金额；缺失或非法时返回 null
+     */
+    private BigDecimal parseTotalAmount(String paymentNo, Map<String, String> params) {
+        String rawAmount = params.get("total_amount");
+        if (rawAmount == null) {
+            return null;
+        }
+        try {
+            return new BigDecimal(rawAmount);
+        }
+        catch (NumberFormatException e) {
+            log.warn("callback total_amount invalid, paymentNo={}, totalAmount={}", paymentNo, rawAmount);
+            return null;
+        }
     }
 }

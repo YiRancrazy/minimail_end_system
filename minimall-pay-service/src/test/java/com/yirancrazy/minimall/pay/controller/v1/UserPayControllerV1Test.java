@@ -3,9 +3,13 @@ package com.yirancrazy.minimall.pay.controller.v1;
 import java.math.BigDecimal;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
@@ -22,6 +26,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO;
 import com.yirancrazy.minimall.common.exception.GlobalExceptionHandler;
 import com.yirancrazy.minimall.pay.constant.PayChannelEnum;
+import com.yirancrazy.minimall.pay.dto.PayCallbackDTO;
 import com.yirancrazy.minimall.pay.dto.PayCreateDTO;
 import com.yirancrazy.minimall.pay.entity.PayTransactionPO;
 import com.yirancrazy.minimall.pay.gateway.PayGateway;
@@ -126,6 +131,42 @@ class UserPayControllerV1Test {
             .andExpect(status().isOk())
             .andExpect(content().string("fail"));
         verify(service, never()).handleCallback(any());
+    }
+
+    /**
+     * 验证回调金额 total_amount 被解析为 BigDecimal 传入 service（金额校验依据）。
+     */
+    @Test
+    void callback_passes_total_amount_to_service() throws Exception {
+        when(gateway.verifyCallback(any())).thenReturn("T123");
+        mockMvc.perform(post("/api/v1/user/pay/callback/alipay")
+                .param("trade_no", "T123")
+                .param("out_trade_no", "P456")
+                .param("trade_status", "TRADE_SUCCESS")
+                .param("total_amount", "10.00"))
+            .andExpect(status().isOk())
+            .andExpect(content().string("success"));
+        ArgumentCaptor<PayCallbackDTO> cap = ArgumentCaptor.forClass(PayCallbackDTO.class);
+        verify(service).handleCallback(cap.capture());
+        assertTrue(cap.getValue().isSuccess());
+        assertEquals(0, new BigDecimal("10.00").compareTo(cap.getValue().getTotalAmount()));
+    }
+
+    /**
+     * 验证 TRADE_CLOSED 失败回调标记 success=false 传给 service（防状态倒灌依据）。
+     */
+    @Test
+    void callback_trade_closed_marks_not_success() throws Exception {
+        when(gateway.verifyCallback(any())).thenReturn("T123");
+        mockMvc.perform(post("/api/v1/user/pay/callback/alipay")
+                .param("trade_no", "T123")
+                .param("out_trade_no", "P456")
+                .param("trade_status", "TRADE_CLOSED"))
+            .andExpect(status().isOk())
+            .andExpect(content().string("success"));
+        ArgumentCaptor<PayCallbackDTO> cap = ArgumentCaptor.forClass(PayCallbackDTO.class);
+        verify(service).handleCallback(cap.capture());
+        assertFalse(cap.getValue().isSuccess());
     }
 
     /**

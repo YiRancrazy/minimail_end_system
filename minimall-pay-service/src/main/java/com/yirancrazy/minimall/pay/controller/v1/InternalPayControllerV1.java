@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.api.dto.pay.PayCreateDTO;
 import com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO;
+import com.yirancrazy.minimall.common.annotation.Idempotent;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.pay.dto.PayCallbackDTO;
 import com.yirancrazy.minimall.pay.service.PayService;
@@ -57,11 +58,13 @@ public class InternalPayControllerV1 {
     /**
      * Create a refund for an existing payment and notify the order service
      * of the result so it can advance its status.
+     * 幂等键取网关注入的 X-Idempotency-Key，防内部重复退款重放。
      *
      * @param dto 退款创建参数
      * @return 退款是否成功
      */
     @PostMapping("/refund")
+    @Idempotent
     public Result<Boolean> refund(@Valid @RequestBody RefundCreateDTO dto) {
         payService.createRefund(dto);
         return Result.success(true);

@@ -185,7 +185,8 @@ public class PayServiceImpl implements PayService {
     }
 
     /**
-     * 创建退款。成功后通过 Feign 通知 order 服务推进退款状态。
+     * 创建退款。先原子抢占支付单为 REFUNDING（并发退款影响 0 行直接拒绝），再校验累计退款上限，
+     * 成功后通过 Feign 通知 order 服务推进退款状态；部分退款未退满时支付单回到 SUCCESS 允许继续退款。
      * @param dto 退款创建DTO
      * @return 退款VO
      */
@@ -205,6 +206,20 @@ public class PayServiceImpl implements PayService {
 
         String refundNo = generateRefundNo();
         String paymentNo = payTx.getPaymentNo();
+        int successCode = Integer.parseInt(PayStatusEnum.SUCCESS.getCode());
+        int refundingCode = Integer.parseInt(PayStatusEnum.REFUNDING.getCode());
+
+        // 原子抢占：仅当支付单仍为 SUCCESS 时置为 REFUNDING，并发退款第二个请求影响 0 行直接拒绝，杜绝双重退款
+        if (payTransactionMapper.updateStatusIf(paymentNo, successCode, refundingCode) == 0) {
+            throw new BizException(PayCodeEnum.REFUND_CONFLICT);
+        }
+
+        // 累计校验：已占用退款（在途 + 成功）+ 本次金额不得超过支付金额，超限回滚抢占状态
+        BigDecimal committedAmount = payRefundMapper.sumCommittedAmount(paymentNo);
+        if (dto.getAmount().add(committedAmount).compareTo(payTx.getAmount()) > 0) {
+            payTransactionMapper.updateStatusIf(paymentNo, refundingCode, successCode);
+            throw new BizException(PayCodeEnum.REFUND_EXCEED);
+        }
 
         PayRefundPO refund = new PayRefundPO();
         refund.setRefundNo(refundNo);
@@ -215,9 +230,6 @@ public class PayServiceImpl implements PayService {
         refund.setIdempotencyKey(UUID.randomUUID().toString());
         payRefundMapper.insert(refund);
 
-        payTx.setStatus(Integer.parseInt(PayStatusEnum.REFUNDING.getCode()));
-        payManager.updateById(payTx);
-
         Long orderId = Long.valueOf(payTx.getOrderNo());
         try {
             String refundTradeNo = payGateway.refund(paymentNo, refundNo, dto.getAmount(), dto.getReason());
@@ -226,8 +238,11 @@ public class PayServiceImpl implements PayService {
             refund.setNotifiedAt(LocalDateTime.now());
             payRefundMapper.updateById(refund);
 
-            payTx.setStatus(Integer.parseInt(PayStatusEnum.REFUNDED.getCode()));
-            payManager.updateById(payTx);
+            // 部分退款语义：累计退满支付金额才置 REFUNDED，未退满回到 SUCCESS 允许继续部分退款
+            BigDecimal totalRefunded = payRefundMapper.sumCommittedAmount(paymentNo);
+            int targetStatus = totalRefunded.compareTo(payTx.getAmount()) >= 0
+                ? Integer.parseInt(PayStatusEnum.REFUNDED.getCode()) : successCode;
+            payTransactionMapper.updateStatusIf(paymentNo, refundingCode, targetStatus);
 
             orderFeignClient.refundCallback(orderId, true);
             log.info("refund success, refundNo={}, paymentNo={}", refundNo, paymentNo);
@@ -235,8 +250,7 @@ public class PayServiceImpl implements PayService {
         catch (Exception e) {
             refund.setStatus(Integer.parseInt(RefundStatusEnum.FAILED.getCode()));
             payRefundMapper.updateById(refund);
-            payTx.setStatus(Integer.parseInt(PayStatusEnum.SUCCESS.getCode()));
-            payManager.updateById(payTx);
+            payTransactionMapper.updateStatusIf(paymentNo, refundingCode, successCode);
             orderFeignClient.refundCallback(orderId, false);
             throw new BizException(PayCodeEnum.REFUND_FAILED);
         }

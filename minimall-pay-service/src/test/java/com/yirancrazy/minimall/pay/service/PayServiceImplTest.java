@@ -19,6 +19,7 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import com.yirancrazy.minimall.api.feign.OrderFeignClient;
 import com.yirancrazy.minimall.common.exception.BizException;
@@ -28,6 +29,7 @@ import com.yirancrazy.minimall.pay.dto.PayPageDTO;
 import com.yirancrazy.minimall.pay.dto.PayStatementDTO;
 import com.yirancrazy.minimall.pay.dto.WithdrawApplyDTO;
 import com.yirancrazy.minimall.pay.entity.MerchantWithdrawPO;
+import com.yirancrazy.minimall.pay.entity.PayRefundPO;
 import com.yirancrazy.minimall.pay.entity.PayTransactionPO;
 import com.yirancrazy.minimall.pay.gateway.AlipayGateway;
 import com.yirancrazy.minimall.pay.gateway.PayGateway;
@@ -39,6 +41,7 @@ import com.yirancrazy.minimall.pay.service.impl.PayServiceImpl;
 import com.yirancrazy.minimall.pay.vo.PayStatementVO;
 import com.yirancrazy.minimall.pay.vo.PayStatisticsVO;
 import com.yirancrazy.minimall.pay.vo.PaymentParamsVO;
+import com.yirancrazy.minimall.pay.vo.RefundVO;
 import com.yirancrazy.minimall.pay.vo.WithdrawVO;
 
 
@@ -574,7 +577,7 @@ public class PayServiceImplTest {
     }
 
     /**
-     * 验证 createRefund 退款成功时返回 RefundVO 并推进支付单状态为 REFUNDED。
+     * 验证 createRefund 退款成功时返回 RefundVO 并推进支付单状态。
      */
     @Test
     public void createRefund_success_returns_vo() {
@@ -585,6 +588,8 @@ public class PayServiceImplTest {
         payTx.setAmount(new BigDecimal("100.00"));
         payTx.setOrderNo("100");
         when(manager.getById(1L)).thenReturn(payTx);
+        when(payTransactionMapper.updateStatusIf("PAY123", 2, 5)).thenReturn(1);
+        when(payRefundMapper.sumCommittedAmount("PAY123")).thenReturn(new BigDecimal("0.00"));
         when(payGateway.refund(anyString(), anyString(), any(BigDecimal.class), anyString()))
             .thenReturn("REFUND_TRADE_123");
 
@@ -600,7 +605,125 @@ public class PayServiceImplTest {
     }
 
     /**
-     * 验证 createRefund 退款网关异常时状态回退并抛出 REFUND_FAILED。
+     * 验证 createRefund 并发抢占失败（条件更新影响 0 行）时抛出 REFUND_CONFLICT，
+     * 不落退款记录、不调网关与订单服务，杜绝双重退款。
+     */
+    @Test
+    public void createRefund_atomic_claim_fails_when_not_success() {
+        PayTransactionPO payTx = new PayTransactionPO();
+        payTx.setId(1L);
+        payTx.setStatus(2); // 读到 SUCCESS，但行级抢占已被并发退款先行置为 REFUNDING
+        payTx.setPaymentNo("PAY123");
+        payTx.setAmount(new BigDecimal("100.00"));
+        payTx.setOrderNo("100");
+        when(manager.getById(1L)).thenReturn(payTx);
+        when(payTransactionMapper.updateStatusIf("PAY123", 2, 5)).thenReturn(0);
+
+        com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO dto =
+            new com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO(1L, new BigDecimal("50.00"), "test");
+        BizException ex = assertThrows(BizException.class, () -> service.createRefund(dto));
+
+        assertEquals("40007", ex.getCode());
+        verify(payRefundMapper, never()).insert(any(PayRefundPO.class));
+        verify(payGateway, never()).refund(anyString(), anyString(), any(BigDecimal.class), anyString());
+        verifyNoInteractions(orderFeignClient);
+    }
+
+    /**
+     * 验证 createRefund 累计退款（已退 + 本次）超过支付金额时抛出 REFUND_EXCEED 并回滚抢占状态。
+     */
+    @Test
+    public void createRefund_rejects_when_cumulative_exceeds() {
+        PayTransactionPO payTx = new PayTransactionPO();
+        payTx.setId(1L);
+        payTx.setStatus(2); // SUCCESS
+        payTx.setPaymentNo("PAY123");
+        payTx.setAmount(new BigDecimal("100.00"));
+        payTx.setOrderNo("100");
+        when(manager.getById(1L)).thenReturn(payTx);
+        when(payTransactionMapper.updateStatusIf("PAY123", 2, 5)).thenReturn(1);
+        when(payRefundMapper.sumCommittedAmount("PAY123")).thenReturn(new BigDecimal("80.00"));
+
+        com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO dto =
+            new com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO(1L, new BigDecimal("30.00"), "test");
+        BizException ex = assertThrows(BizException.class, () -> service.createRefund(dto));
+
+        assertEquals("40008", ex.getCode());
+        verify(payTransactionMapper).updateStatusIf("PAY123", 5, 2); // 回滚抢占
+        verify(payRefundMapper, never()).insert(any(PayRefundPO.class));
+        verify(payGateway, never()).refund(anyString(), anyString(), any(BigDecimal.class), anyString());
+        verifyNoInteractions(orderFeignClient);
+    }
+
+    /**
+     * 验证 createRefund 正常路径：退款记录以 PENDING 落库、成功后置 SUCCESS，
+     * 部分退款未退满时支付单回到 SUCCESS（允许继续部分退款）而非置 REFUNDED 挡住后续退款。
+     */
+    @Test
+    public void createRefund_success_records_refund() {
+        PayTransactionPO payTx = new PayTransactionPO();
+        payTx.setId(1L);
+        payTx.setStatus(2); // SUCCESS
+        payTx.setPaymentNo("PAY123");
+        payTx.setAmount(new BigDecimal("100.00"));
+        payTx.setOrderNo("100");
+        when(manager.getById(1L)).thenReturn(payTx);
+        when(payTransactionMapper.updateStatusIf("PAY123", 2, 5)).thenReturn(1);
+        when(payRefundMapper.sumCommittedAmount("PAY123")).thenReturn(new BigDecimal("0.00"));
+        when(payGateway.refund(anyString(), anyString(), any(BigDecimal.class), anyString()))
+            .thenReturn("REFUND_TRADE_123");
+
+        com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO dto =
+            new com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO(1L, new BigDecimal("50.00"), "reason");
+        // insert 时点快照：同一退款对象后续会被服务置为 SUCCESS，需在插入瞬间记录状态
+        final int[] insertStatusSnapshot = new int[1];
+        doAnswer(inv -> {
+            PayRefundPO p = inv.getArgument(0);
+            insertStatusSnapshot[0] = p.getStatus();
+            return 1;
+        }).when(payRefundMapper).insert(any(PayRefundPO.class));
+
+        RefundVO vo = service.createRefund(dto);
+
+        assertEquals(1, vo.getStatus()); // 退款记录最终 SUCCESS
+        ArgumentCaptor<PayRefundPO> cap = ArgumentCaptor.forClass(PayRefundPO.class);
+        verify(payRefundMapper).insert(cap.capture());
+        assertEquals("PAY123", cap.getValue().getPaymentNo());
+        assertEquals(0, insertStatusSnapshot[0]); // 落库时为 PENDING
+        verify(payRefundMapper).updateById(cap.getValue());
+        assertEquals(1, cap.getValue().getStatus()); // 成功后 SUCCESS
+        verify(payTransactionMapper).updateStatusIf("PAY123", 5, 2); // 未退满回 SUCCESS
+        verify(orderFeignClient).refundCallback(100L, true);
+    }
+
+    /**
+     * 验证 createRefund 累计退满支付金额时支付单置 REFUNDED（部分退款终态语义）。
+     */
+    @Test
+    public void createRefund_full_refund_marks_refunded() {
+        PayTransactionPO payTx = new PayTransactionPO();
+        payTx.setId(1L);
+        payTx.setStatus(2); // SUCCESS
+        payTx.setPaymentNo("PAY123");
+        payTx.setAmount(new BigDecimal("100.00"));
+        payTx.setOrderNo("100");
+        when(manager.getById(1L)).thenReturn(payTx);
+        when(payTransactionMapper.updateStatusIf("PAY123", 2, 5)).thenReturn(1);
+        when(payRefundMapper.sumCommittedAmount("PAY123"))
+            .thenReturn(new BigDecimal("0.00")).thenReturn(new BigDecimal("100.00"));
+        when(payGateway.refund(anyString(), anyString(), any(BigDecimal.class), anyString()))
+            .thenReturn("REFUND_TRADE_123");
+
+        com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO dto =
+            new com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO(1L, new BigDecimal("100.00"), "reason");
+        service.createRefund(dto);
+
+        verify(payTransactionMapper).updateStatusIf("PAY123", 5, 6); // 累计退满置 REFUNDED
+        verify(orderFeignClient).refundCallback(100L, true);
+    }
+
+    /**
+     * 验证 createRefund 退款网关异常时退款记录置 FAILED、回滚抢占状态并抛出 REFUND_FAILED。
      */
     @Test
     public void createRefund_gateway_exception_throws() {
@@ -611,12 +734,15 @@ public class PayServiceImplTest {
         payTx.setAmount(new BigDecimal("100.00"));
         payTx.setOrderNo("100");
         when(manager.getById(1L)).thenReturn(payTx);
+        when(payTransactionMapper.updateStatusIf("PAY123", 2, 5)).thenReturn(1);
+        when(payRefundMapper.sumCommittedAmount("PAY123")).thenReturn(new BigDecimal("0.00"));
         when(payGateway.refund(anyString(), anyString(), any(BigDecimal.class), anyString()))
             .thenThrow(new RuntimeException("gateway down"));
 
         com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO dto =
             new com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO(1L, new BigDecimal("50.00"), "reason");
         assertThrows(BizException.class, () -> service.createRefund(dto));
+        verify(payTransactionMapper).updateStatusIf("PAY123", 5, 2); // 回滚抢占
         verify(orderFeignClient).refundCallback(100L, false);
     }
 

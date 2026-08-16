@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.yirancrazy.minimall.pay.entity.PayTransactionPO;
 import com.yirancrazy.minimall.pay.vo.PayStatementVO;
@@ -37,6 +38,20 @@ public interface PayTransactionMapper extends BaseMapper<PayTransactionPO> {
     PayStatisticsVO statistics(@Param("merchantId") Long merchantId,
                                @Param("startTime") LocalDateTime startTime,
                                @Param("endTime") LocalDateTime endTime);
+
+    /**
+     * 条件更新支付单状态：仅当当前状态为 fromStatus 时原子更新为 toStatus，返回影响行数。
+     * 用于退款流程的抢占（SUCCESS→REFUNDING）、回滚与终态推进，行级条件保证并发退款只放行一个，杜绝双重退款。
+     * @param paymentNo 支付单号
+     * @param fromStatus 期望的当前状态码（见 PayStatusEnum）
+     * @param toStatus 目标状态码（见 PayStatusEnum）
+     * @return 影响行数，0 表示当前状态不匹配（抢占失败）
+     */
+    @Update("UPDATE t_pay_transaction SET status = #{toStatus}, update_time = NOW() "
+        + "WHERE payment_no = #{paymentNo} AND status = #{fromStatus}")
+    int updateStatusIf(@Param("paymentNo") String paymentNo,
+                       @Param("fromStatus") int fromStatus,
+                       @Param("toStatus") int toStatus);
 
     /**
      * 对账单聚合查询，按状态分组统计交易笔数与金额。

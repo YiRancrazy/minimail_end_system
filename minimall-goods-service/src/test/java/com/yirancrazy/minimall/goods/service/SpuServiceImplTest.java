@@ -3,11 +3,13 @@ package com.yirancrazy.minimall.goods.service;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -17,6 +19,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
+import com.yirancrazy.minimall.api.dto.goods.SpuSnapshotDTO;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.goods.constant.AuditDecisionEnum;
@@ -559,5 +562,36 @@ public class SpuServiceImplTest {
 
         assertEquals(1, records.size());
         assertEquals(AuditDecisionEnum.APPROVE.getCode(), records.get(0).getDecision());
+    }
+
+    /**
+     * 验证 listSnapshots 返回 spuId -> 快照 Map，不存在的 SPU 不放入结果。
+     */
+    @Test
+    public void listSnapshots_returns_map() {
+        SpuPO spu1 = new SpuPO();
+        spu1.setId(1L);
+        spu1.setTitle("标题一");
+        spu1.setMainImageUrl("http://img/1.jpg");
+        SpuPO spu2 = new SpuPO();
+        spu2.setId(2L);
+        spu2.setTitle("标题二");
+        when(spuManager.list(any(Wrapper.class))).thenReturn(List.of(spu1, spu2));
+
+        Map<Long, SpuSnapshotDTO> result = service.listSnapshots(List.of(1L, 2L, 3L));
+
+        assertEquals(2, result.size());
+        assertEquals("标题一", result.get(1L).getTitle());
+        assertEquals("http://img/1.jpg", result.get(1L).getMainImageUrl());
+        assertEquals("标题二", result.get(2L).getTitle());
+        assertNull(result.get(3L));
+    }
+
+    /**
+     * 验证 listSnapshots 空入参返回空 Map。
+     */
+    @Test
+    public void listSnapshots_empty_returns_empty_map() {
+        assertTrue(service.listSnapshots(List.of()).isEmpty());
     }
 }

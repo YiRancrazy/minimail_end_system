@@ -1,6 +1,8 @@
 package com.yirancrazy.minimall.goods.service;
 
 import java.util.List;
+import java.util.Map;
+import com.yirancrazy.minimall.api.dto.goods.SpuSnapshotDTO;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.goods.dto.SpuCreateDTO;
 import com.yirancrazy.minimall.goods.dto.SpuPageDTO;
@@ -12,7 +14,7 @@ import com.yirancrazy.minimall.goods.vo.SpuVO;
 /**
  * @Author: yirancrazy@gmail.com
  * @Description: 商品领域服务接口，定义Spu相关业务契约
- * @Version: 1.2
+ * @Version: 1.3
  * @DateTime: 2026/08/04
  */
 public interface SpuService {
@@ -117,4 +119,11 @@ public interface SpuService {
      * @param spuId SPU 主键 ID
      */
     void refreshEsDocument(Long spuId);
+
+    /**
+     * 批量查询 SPU 快照，供购物车列表等跨服务链路一次调用替代逐 SPU 的 N 次请求；不存在的 SPU 不放入结果。
+     * @param spuIds SPU 主键集合，允许为空
+     * @return spuId -> SPU 快照，空入参返回空 Map
+     */
+    Map<Long, SpuSnapshotDTO> listSnapshots(List<Long> spuIds);
 }

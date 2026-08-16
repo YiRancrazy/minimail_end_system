@@ -11,6 +11,7 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.extern.slf4j.Slf4j;
+import com.yirancrazy.minimall.api.dto.goods.SpuSnapshotDTO;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.util.CursorUtils;
@@ -417,5 +418,21 @@ public class SpuServiceImpl implements SpuService {
         catch (Exception e) {
             log.error("sync spu to ES failed, spuId={}", po.getId(), e);
         }
+    }
+
+    /**
+     * 批量查询 SPU 快照：一次 IN 查询替代逐 SPU 的 N 次请求；不存在的 SPU 不放入结果，由调用方兜底降级。
+     * @param spuIds SPU 主键集合，允许为空
+     * @return spuId -> SPU 快照，空入参返回空 Map
+     */
+    @Override
+    public Map<Long, SpuSnapshotDTO> listSnapshots(List<Long> spuIds) {
+        List<Long> ids = spuIds.stream().filter(Objects::nonNull).distinct().collect(Collectors.toList());
+        if (ids.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        return spuManager.list(Wrappers.lambdaQuery(SpuPO.class).in(SpuPO::getId, ids)).stream()
+            .collect(Collectors.toMap(SpuPO::getId,
+                spu -> new SpuSnapshotDTO(spu.getId(), spu.getTitle(), spu.getMainImageUrl())));
     }
 }

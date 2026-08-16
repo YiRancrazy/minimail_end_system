@@ -2,6 +2,7 @@ package com.yirancrazy.minimall.cart.service;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,6 +19,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
@@ -71,7 +73,7 @@ public class CartServiceImplTest {
     }
 
     /**
-     * 验证 listByUser 返回指定用户的购物车条目并叠加商品快照。
+     * 验证 listByUser 返回指定用户的购物车条目并叠加商品快照，且快照通过批量接口一次获取。
      */
     @Test
     public void listByUser_returns_items() {
@@ -82,10 +84,10 @@ public class CartServiceImplTest {
         item.setQuantity(2);
         item.setSelected(1);
         when(cartItemManager.list(any(Wrapper.class))).thenReturn(List.of(item));
-        when(goodsFeignClient.skuSnapshot(100L)).thenReturn(
-            Result.success(new SkuSnapshotDTO(100L, 10L, "S 白色", new java.math.BigDecimal("9.90"), 99, 7L)));
-        when(goodsFeignClient.spuSnapshot(10L)).thenReturn(
-            Result.success(new SpuSnapshotDTO(10L, "商品标题", "http://img/a.jpg")));
+        when(goodsFeignClient.batchSkuSnapshot(List.of(100L))).thenReturn(Result.success(
+            Map.of(100L, new SkuSnapshotDTO(100L, 10L, "S 白色", new java.math.BigDecimal("9.90"), 99, 7L))));
+        when(goodsFeignClient.batchSpuSnapshot(List.of(10L))).thenReturn(Result.success(
+            Map.of(10L, new SpuSnapshotDTO(10L, "商品标题", "http://img/a.jpg"))));
 
         List<CartItemVO> result = service.listByUser(7L);
 
@@ -94,6 +96,10 @@ public class CartServiceImplTest {
         assertEquals(100L, vo.getSkuId());
         assertEquals("商品标题", vo.getTitle());
         assertEquals("S 白色", vo.getSkuSpec());
+        verify(goodsFeignClient).batchSkuSnapshot(List.of(100L));
+        verify(goodsFeignClient).batchSpuSnapshot(List.of(10L));
+        verify(goodsFeignClient, never()).skuSnapshot(any());
+        verify(goodsFeignClient, never()).spuSnapshot(any());
     }
 
     /**
@@ -106,11 +112,12 @@ public class CartServiceImplTest {
         List<CartItemVO> result = service.listByUser(999L);
 
         assertTrue(result.isEmpty());
-        verify(goodsFeignClient, never()).skuSnapshot(any());
+        verify(goodsFeignClient, never()).batchSkuSnapshot(any());
+        verify(goodsFeignClient, never()).batchSpuSnapshot(any());
     }
 
     /**
-     * 验证商品服务降级返回空快照时购物车条目仍返回基础字段。
+     * 验证商品服务降级返回空快照 Map 时购物车条目仍返回基础字段。
      */
     @Test
     public void listByUser_handles_null_snapshot() {
@@ -121,13 +128,46 @@ public class CartServiceImplTest {
         item.setQuantity(2);
         item.setSelected(1);
         when(cartItemManager.list(any(Wrapper.class))).thenReturn(List.of(item));
-        when(goodsFeignClient.skuSnapshot(100L)).thenReturn(Result.success(null));
+        when(goodsFeignClient.batchSkuSnapshot(any())).thenReturn(Result.success(Collections.emptyMap()));
 
         List<CartItemVO> result = service.listByUser(7L);
 
         assertEquals(1, result.size());
         assertNull(result.get(0).getPrice());
         assertNull(result.get(0).getTitle());
+        verify(goodsFeignClient, never()).batchSpuSnapshot(any());
+    }
+
+    /**
+     * 验证多条目购物车通过批量快照接口一次拉取（1 次 SKU + 1 次 SPU），消除逐条目 N+1 远程调用。
+     */
+    @Test
+    public void listByUser_batch_snapshot_called_once_for_multiple_items() {
+        CartItemPO item1 = new CartItemPO();
+        item1.setId(1L);
+        item1.setUserId(7L);
+        item1.setSkuId(100L);
+        item1.setQuantity(1);
+        item1.setSelected(1);
+        CartItemPO item2 = new CartItemPO();
+        item2.setId(2L);
+        item2.setUserId(7L);
+        item2.setSkuId(200L);
+        item2.setQuantity(2);
+        item2.setSelected(1);
+        when(cartItemManager.list(any(Wrapper.class))).thenReturn(List.of(item1, item2));
+        when(goodsFeignClient.batchSkuSnapshot(any())).thenReturn(Result.success(Map.of(
+            100L, new SkuSnapshotDTO(100L, 10L, "S 白色", new java.math.BigDecimal("9.90"), 99, 7L),
+            200L, new SkuSnapshotDTO(200L, 10L, "L 黑色", new java.math.BigDecimal("19.90"), 50, 7L))));
+        when(goodsFeignClient.batchSpuSnapshot(any())).thenReturn(Result.success(
+            Map.of(10L, new SpuSnapshotDTO(10L, "商品标题", "http://img/a.jpg"))));
+
+        List<CartItemVO> result = service.listByUser(7L);
+
+        assertEquals(2, result.size());
+        verify(goodsFeignClient).batchSkuSnapshot(any());
+        verify(goodsFeignClient).batchSpuSnapshot(any());
+        verify(goodsFeignClient, times(0)).skuSnapshot(any());
     }
 
     /**
@@ -421,7 +461,7 @@ public class CartServiceImplTest {
     }
 
     /**
-     * 验证 moveToFavorite 在收藏成功后删除对应购物车项。
+     * 验证 moveToFavorite 在收藏成功后按条目 ID 删除对应购物车项。
      */
     @Test
     public void moveToFavorite_success_deletes_cart_item() {
@@ -431,13 +471,12 @@ public class CartServiceImplTest {
         item.setUserId(7L);
         item.setSkuId(100L);
         when(cartItemManager.list(any(Wrapper.class))).thenReturn(List.of(item));
-        when(cartItemManager.getById(1L)).thenReturn(item);
-        when(cartItemManager.removeById(1L)).thenReturn(true);
+        when(cartItemManager.removeByIds(List.of(1L))).thenReturn(true);
 
-        service.moveToFavorite(7L, 100L);
+        service.moveToFavorite(7L, List.of(1L));
 
         verify(userFeignClient).addFavorite(eq(7L), eq(100L));
-        verify(cartItemManager).removeById(eq(1L));
+        verify(cartItemManager).removeByIds(List.of(1L));
     }
 
     /**
@@ -447,22 +486,75 @@ public class CartServiceImplTest {
     public void moveToFavorite_feign_fail_throws() {
         when(userFeignClient.addFavorite(any(), any()))
             .thenReturn(Result.fail(CommonCode.SYS_ERROR, "down"));
+        CartItemPO item = new CartItemPO();
+        item.setId(1L);
+        item.setUserId(7L);
+        item.setSkuId(100L);
+        when(cartItemManager.list(any(Wrapper.class))).thenReturn(List.of(item));
 
-        assertThrows(BizException.class, () -> service.moveToFavorite(7L, 100L));
+        assertThrows(BizException.class, () -> service.moveToFavorite(7L, List.of(1L)));
+        verify(cartItemManager, never()).removeByIds(any());
+    }
+
+    /**
+     * 验证 moveToFavorite 在删除失败时抛出 BizException（事务回滚信号），条目保持原状。
+     */
+    @Test
+    public void moveToFavorite_delete_fail_throws() {
+        when(userFeignClient.addFavorite(any(), any())).thenReturn(Result.success(null));
+        CartItemPO item = new CartItemPO();
+        item.setId(1L);
+        item.setUserId(7L);
+        item.setSkuId(100L);
+        when(cartItemManager.list(any(Wrapper.class))).thenReturn(List.of(item));
+        when(cartItemManager.removeByIds(List.of(1L))).thenReturn(false);
+
+        assertThrows(BizException.class, () -> service.moveToFavorite(7L, List.of(1L)));
+        verify(userFeignClient).addFavorite(eq(7L), eq(100L));
+    }
+
+    /**
+     * 验证 moveToFavorite 在条目不存在或不属于当前用户时抛出 BizException 且不收藏、不删除。
+     */
+    @Test
+    public void moveToFavorite_missing_item_throws() {
+        when(cartItemManager.list(any(Wrapper.class))).thenReturn(Collections.emptyList());
+
+        assertThrows(BizException.class, () -> service.moveToFavorite(7L, List.of(1L)));
+        verify(userFeignClient, never()).addFavorite(any(), any());
+        verify(cartItemManager, never()).removeByIds(any());
+    }
+
+    /**
+     * 验证 moveToFavorite 入参为空列表时抛出 BizException。
+     */
+    @Test
+    public void moveToFavorite_empty_item_ids_throws() {
+        assertThrows(BizException.class, () -> service.moveToFavorite(7L, List.of()));
         verify(cartItemManager, never()).list(any(Wrapper.class));
     }
 
     /**
-     * 验证 moveToFavorite 在购物车无该商品时收藏成功且不抛异常。
+     * 验证 moveToFavorite 多条目时逐 SKU 收藏且按条目 ID 整体删除。
      */
     @Test
-    public void moveToFavorite_no_cart_item_still_succeeds() {
+    public void moveToFavorite_multiple_items_favorites_each_sku_and_deletes_by_ids() {
         when(userFeignClient.addFavorite(any(), any())).thenReturn(Result.success(null));
-        when(cartItemManager.list(any(Wrapper.class))).thenReturn(Collections.emptyList());
+        CartItemPO item1 = new CartItemPO();
+        item1.setId(1L);
+        item1.setUserId(7L);
+        item1.setSkuId(100L);
+        CartItemPO item2 = new CartItemPO();
+        item2.setId(2L);
+        item2.setUserId(7L);
+        item2.setSkuId(200L);
+        when(cartItemManager.list(any(Wrapper.class))).thenReturn(List.of(item1, item2));
+        when(cartItemManager.removeByIds(List.of(1L, 2L))).thenReturn(true);
 
-        service.moveToFavorite(7L, 100L);
+        service.moveToFavorite(7L, List.of(1L, 2L));
 
         verify(userFeignClient).addFavorite(eq(7L), eq(100L));
-        verify(cartItemManager).list(any(Wrapper.class));
+        verify(userFeignClient).addFavorite(eq(7L), eq(200L));
+        verify(cartItemManager).removeByIds(List.of(1L, 2L));
     }
 }

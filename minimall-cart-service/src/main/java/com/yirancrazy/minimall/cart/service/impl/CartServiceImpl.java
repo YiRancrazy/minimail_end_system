@@ -1,7 +1,10 @@
 package com.yirancrazy.minimall.cart.service.impl;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.api.dto.goods.SkuSnapshotDTO;
@@ -22,7 +25,7 @@ import com.yirancrazy.minimall.common.result.Result;
 /**
  * @Author: yirancrazy@gmail.com
  * @Description: 购物车领域服务实现，实现Cart相关业务逻辑
- * @Version: 1.3
+ * @Version: 1.4
  * @DateTime: 2026/08/03
  */
 @Slf4j
@@ -53,12 +56,23 @@ public class CartServiceImpl implements CartService {
     public List<CartItemVO> listByUser(Long userId) {
         List<CartItemPO> items = cartItemManager.list(Wrappers.lambdaQuery(CartItemPO.class)
             .eq(CartItemPO::getUserId, userId));
-        // ponytail: 逐条拉取快照，购物车规模小可接受；量大再改批量快照接口
+        if (items.isEmpty()) {
+            return List.of();
+        }
+        // 批量快照替代逐条目 2N 次 Feign：1 次批量 SKU + 按需 1 次批量 SPU；缺失快照沿用原降级逻辑
+        List<Long> skuIds = items.stream().map(CartItemPO::getSkuId).filter(Objects::nonNull).toList();
+        Map<Long, SkuSnapshotDTO> skuMap = goodsFeignClient.batchSkuSnapshot(skuIds).getData();
+        List<Long> spuIds = skuMap == null ? List.of() : skuMap.values().stream()
+            .map(SkuSnapshotDTO::getSpuId).filter(Objects::nonNull).distinct().toList();
+        Map<Long, SpuSnapshotDTO> spuMap = spuIds.isEmpty() ? Map.of()
+            : goodsFeignClient.batchSpuSnapshot(spuIds).getData();
+        Map<Long, SkuSnapshotDTO> effectiveSkuMap = skuMap == null ? Map.of() : skuMap;
+        Map<Long, SpuSnapshotDTO> effectiveSpuMap = spuMap == null ? Map.of() : spuMap;
         return items.stream().map(item -> {
-            SkuSnapshotDTO sku = goodsFeignClient.skuSnapshot(item.getSkuId()).getData();
+            SkuSnapshotDTO sku = effectiveSkuMap.get(item.getSkuId());
             SpuSnapshotDTO spu = sku == null || sku.getSpuId() == null
                 ? null
-                : goodsFeignClient.spuSnapshot(sku.getSpuId()).getData();
+                : effectiveSpuMap.get(sku.getSpuId());
             return CartItemVO.from(item, sku, spu);
         }).toList();
     }
@@ -170,25 +184,39 @@ public class CartServiceImpl implements CartService {
     }
 
     /**
-     * 将指定用户的某个购物车商品移入收藏夹：先调用收藏服务收藏，成功后删除该购物车项。
+     * 将指定购物车条目移入收藏夹：先调用收藏服务按 SKU 收藏，成功后按条目 ID 删除购物车项。
+     * 收藏与删除在同一事务内，删除失败整体回滚，避免"已收藏但条目残留"的重复收藏状态；
+     * 按条目 ID 精确删除，避免按 userId+skuId 批量删误伤并发加购的同 SKU 新条目。
      *
-     * @param userId 用户ID
-     * @param skuId 商品SKU ID
+     * @param userId 用户ID，来自网关X-User-Id可信头
+     * @param itemIds 待移入收藏夹的购物车条目 ID 列表，不可为空且必须全部归属于该用户
+     * @throws BizException 条目不存在/不属于该用户时抛 CART_ITEM_NOT_FOUND；收藏或删除失败时抛 MOVE_TO_FAVORITE_FAIL
      */
+    @Transactional(rollbackFor = Exception.class)
     @Override
-    public void moveToFavorite(Long userId, Long skuId) {
-        Result<Void> result = userFeignClient.addFavorite(userId, skuId);
-        if (result == null || !CommonCode.SUCCESS.equals(result.getCode())) {
-            log.error("moveToFavorite feign addFavorite failed, userId={}, skuId={}, code={}",
-                userId, skuId, result == null ? null : result.getCode());
-            throw new BizException(CartCodeEnum.MOVE_TO_FAVORITE_FAIL);
+    public void moveToFavorite(Long userId, List<Long> itemIds) {
+        if (itemIds == null || itemIds.isEmpty()) {
+            throw new BizException(CartCodeEnum.CART_ITEM_NOT_FOUND);
         }
         List<CartItemPO> items = cartItemManager.list(Wrappers.lambdaQuery(CartItemPO.class)
             .eq(CartItemPO::getUserId, userId)
-            .eq(CartItemPO::getSkuId, skuId));
-        for (CartItemPO item : items) {
-            delete(item.getId(), userId);
+            .in(CartItemPO::getId, itemIds));
+        // 条目数与入参不匹配说明存在不属于当前用户或已删除的条目，整体失败避免部分收藏
+        if (items.size() != itemIds.stream().distinct().count()) {
+            throw new BizException(CartCodeEnum.CART_ITEM_NOT_FOUND);
         }
-        log.info("cart item moved to favorite, userId={}, skuId={}, removed={}", userId, skuId, items.size());
+        for (CartItemPO item : items) {
+            Result<Void> result = userFeignClient.addFavorite(userId, item.getSkuId());
+            if (result == null || !CommonCode.SUCCESS.equals(result.getCode())) {
+                log.error("moveToFavorite feign addFavorite failed, userId={}, skuId={}, code={}",
+                    userId, item.getSkuId(), result == null ? null : result.getCode());
+                throw new BizException(CartCodeEnum.MOVE_TO_FAVORITE_FAIL);
+            }
+        }
+        if (!cartItemManager.removeByIds(itemIds)) {
+            // 删除失败抛异常触发事务回滚，购物车条目保持原状，由调用方重试
+            throw new BizException(CartCodeEnum.MOVE_TO_FAVORITE_FAIL);
+        }
+        log.info("cart items moved to favorite, userId={}, itemIds={}", userId, itemIds);
     }
 }

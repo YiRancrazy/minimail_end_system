@@ -3,21 +3,26 @@ package com.yirancrazy.minimall.goods.service;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
+import com.yirancrazy.minimall.api.dto.goods.SkuSnapshotDTO;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
+import com.yirancrazy.minimall.goods.constant.SpuStatusEnum;
 import com.yirancrazy.minimall.goods.dto.SkuCreateDTO;
 import com.yirancrazy.minimall.goods.dto.SkuPageDTO;
 import com.yirancrazy.minimall.goods.dto.SkuUpdateDTO;
@@ -280,5 +285,49 @@ public class SkuServiceImplTest {
         assertTrue(ok);
         verify(skuManager).removeById(100L);
         verify(spuService).refreshEsDocument(10L);
+    }
+
+    /**
+     * 验证 listSnapshots 仅返回所属 SPU 在售的 SKU 快照，非在售 SPU 的 SKU 不放入结果。
+     */
+    @Test
+    public void listSnapshots_returns_on_sale_only() {
+        SkuPO skuOnSale = new SkuPO();
+        skuOnSale.setId(100L);
+        skuOnSale.setSpuId(1L);
+        skuOnSale.setSkuName("on-sale");
+        skuOnSale.setPrice(new BigDecimal("9.90"));
+        skuOnSale.setStock(10);
+        SkuPO skuOff = new SkuPO();
+        skuOff.setId(200L);
+        skuOff.setSpuId(2L);
+        skuOff.setSkuName("off-shelf");
+        when(skuManager.list(any(Wrapper.class))).thenReturn(List.of(skuOnSale, skuOff));
+        SpuPO spuOnSale = new SpuPO();
+        spuOnSale.setId(1L);
+        spuOnSale.setStatus(SpuStatusEnum.ON_SALE.statusValue());
+        spuOnSale.setMerchantId(7L);
+        SpuPO spuOff = new SpuPO();
+        spuOff.setId(2L);
+        spuOff.setStatus(SpuStatusEnum.OFF_SHELF.statusValue());
+        when(spuManager.list(any(Wrapper.class))).thenReturn(List.of(spuOnSale, spuOff));
+
+        Map<Long, SkuSnapshotDTO> result = service.listSnapshots(List.of(100L, 200L));
+
+        assertEquals(1, result.size());
+        SkuSnapshotDTO dto = result.get(100L);
+        assertNotNull(dto);
+        assertEquals("on-sale", dto.getSkuName());
+        assertEquals(7L, dto.getMerchantId());
+        assertNull(result.get(200L));
+    }
+
+    /**
+     * 验证 listSnapshots 空入参返回空 Map 且不查询数据库。
+     */
+    @Test
+    public void listSnapshots_empty_returns_empty_map() {
+        assertTrue(service.listSnapshots(List.of()).isEmpty());
+        verify(skuManager, never()).list(any(Wrapper.class));
     }
 }

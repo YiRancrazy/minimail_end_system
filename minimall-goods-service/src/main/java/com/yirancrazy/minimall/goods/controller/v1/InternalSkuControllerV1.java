@@ -1,7 +1,11 @@
 package com.yirancrazy.minimall.goods.controller.v1;
 
+import java.util.List;
+import java.util.Map;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import com.yirancrazy.minimall.api.dto.goods.SkuSnapshotDTO;
@@ -17,7 +21,7 @@ import com.yirancrazy.minimall.goods.service.SpuService;
 /**
  * @Author: yirancrazy@gmail.com
  * @Description: 商品内部控制器，提供Sku相关内部接口
- * @Version: 1.1
+ * @Version: 1.2
  * @DateTime: 2026/08/05
  */
 @RestController
@@ -48,5 +52,16 @@ public class InternalSkuControllerV1 {
         }
         return Result.success(new SkuSnapshotDTO(s.getId(), s.getSpuId(), s.getSkuName(),
             s.getPrice(), s.getStock(), spu.getMerchantId()));
+    }
+
+    /**
+     * 批量查询 SKU 快照，供购物车列表等跨服务链路一次调用替代逐 SKU 的 N 次请求；
+     * 返回契约与单条快照一致（仅在售 SPU 的 SKU 入 Map），缺失项由调用方兜底降级。
+     * @param skuIds SKU 主键集合，允许为空
+     * @return skuId -> SKU 快照 Map
+     */
+    @PostMapping("/batch-snapshot")
+    public Result<Map<Long, SkuSnapshotDTO>> batchSnapshot(@RequestBody List<Long> skuIds) {
+        return Result.success(skuService.listSnapshots(skuIds));
     }
 }

@@ -1,5 +1,8 @@
 package com.yirancrazy.minimall.api.fallback;
 
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import org.springframework.cloud.openfeign.FallbackFactory;
 import org.springframework.stereotype.Component;
 import lombok.extern.slf4j.Slf4j;
@@ -11,7 +14,7 @@ import com.yirancrazy.minimall.common.result.Result;
 /**
  * @Author: yirancrazy@gmail.com
  * @Description: GoodsFeign Feign 降级工厂，处理GoodsFeign服务调用失败降级
- * @Version: 1.1
+ * @Version: 1.2
  * @DateTime: 2026/08/02
  */
 @Slf4j
@@ -29,6 +32,16 @@ public class GoodsFeignFallbackFactory implements FallbackFactory<GoodsFeignClie
             @Override
             public Result<SpuSnapshotDTO> spuSnapshot(Long id) {
                 return Result.success(null);
+            }
+
+            @Override
+            public Result<Map<Long, SkuSnapshotDTO>> batchSkuSnapshot(List<Long> skuIds) {
+                return Result.success(Collections.emptyMap());
+            }
+
+            @Override
+            public Result<Map<Long, SpuSnapshotDTO>> batchSpuSnapshot(List<Long> spuIds) {
+                return Result.success(Collections.emptyMap());
             }
         };
     }

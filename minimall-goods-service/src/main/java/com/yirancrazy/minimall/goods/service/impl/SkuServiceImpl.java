@@ -1,14 +1,22 @@
 package com.yirancrazy.minimall.goods.service.impl;
 
 import java.math.BigDecimal;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.yirancrazy.minimall.api.dto.goods.SkuSnapshotDTO;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.util.CursorUtils;
 import com.yirancrazy.minimall.goods.constant.SkuCodeEnum;
 import com.yirancrazy.minimall.goods.constant.SpuCodeEnum;
+import com.yirancrazy.minimall.goods.constant.SpuStatusEnum;
 import com.yirancrazy.minimall.goods.dto.SkuCreateDTO;
 import com.yirancrazy.minimall.goods.dto.SkuPageDTO;
 import com.yirancrazy.minimall.goods.dto.SkuUpdateDTO;
@@ -22,7 +30,7 @@ import com.yirancrazy.minimall.goods.service.SpuService;
 /**
  * @Author: yirancrazy@gmail.com
  * @Description: 商品领域服务实现，实现Sku相关业务逻辑
- * @Version: 1.2
+ * @Version: 1.3
  * @DateTime: 2026/08/02
  */
 @Service
@@ -174,5 +182,40 @@ public class SkuServiceImpl implements SkuService {
             spuService.refreshEsDocument(spuId);
         }
         return ok;
+    }
+
+    /**
+     * 批量查询 SKU 快照：一次 IN 查询 SKU、一次 IN 查询所属 SPU，替代逐 SKU 的 N 次请求；
+     * 仅返回所属 SPU 在售的 SKU，与单条快照的防越权/防未过审语义保持一致，缺失项由调用方兜底降级。
+     * @param skuIds SKU 主键集合，允许为空
+     * @return skuId -> SKU 快照，空入参返回空 Map
+     */
+    @Override
+    public Map<Long, SkuSnapshotDTO> listSnapshots(List<Long> skuIds) {
+        List<Long> ids = skuIds.stream().filter(Objects::nonNull).distinct().collect(Collectors.toList());
+        if (ids.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        List<SkuPO> skus = skuManager.list(Wrappers.lambdaQuery(SkuPO.class).in(SkuPO::getId, ids));
+        if (skus.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        List<Long> spuIds = skus.stream().map(SkuPO::getSpuId).filter(Objects::nonNull).distinct()
+            .collect(Collectors.toList());
+        Map<Long, SpuPO> spuMap = spuIds.isEmpty() ? Collections.emptyMap()
+            : spuManager.list(Wrappers.lambdaQuery(SpuPO.class).in(SpuPO::getId, spuIds)).stream()
+                .collect(Collectors.toMap(SpuPO::getId, Function.identity()));
+        Map<Long, SkuSnapshotDTO> snapshots = new HashMap<>(ids.size() * 2);
+        for (SkuPO s : skus) {
+            SpuPO spu = s.getSpuId() == null ? null : spuMap.get(s.getSpuId());
+            // 非在售/孤儿 SPU 的 SKU 不返回，购物车侧展示降级，防止未过审商品被下单
+            if (spu == null || spu.getStatus() == null
+                || spu.getStatus() != SpuStatusEnum.ON_SALE.statusValue()) {
+                continue;
+            }
+            snapshots.put(s.getId(), new SkuSnapshotDTO(s.getId(), s.getSpuId(), s.getSkuName(),
+                s.getPrice(), s.getStock(), spu.getMerchantId()));
+        }
+        return snapshots;
     }
 }

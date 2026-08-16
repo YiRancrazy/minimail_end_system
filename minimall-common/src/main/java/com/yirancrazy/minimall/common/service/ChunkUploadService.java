@@ -38,11 +38,12 @@ public class ChunkUploadService {
      * @param chunkIndex 分片序号（0 起）
      * @param totalChunks 总分片数
      * @param contentType 内容类型
+     * @param fileName 原始文件名，用于生成 objectKey 后缀（可空）
      * @param in 分片输入流
      * @return 上传结果；done=true 时含 objectKey
      */
     public ChunkResult saveChunk(String uploadId, int chunkIndex, int totalChunks,
-                                 String contentType, InputStream in) {
+                                 String contentType, String fileName, InputStream in) {
         validateParams(uploadId, chunkIndex, totalChunks);
         try {
             Files.createDirectories(taskDir(uploadId));
@@ -56,7 +57,7 @@ public class ChunkUploadService {
         }
         List<Integer> received = receivedChunks(uploadId, totalChunks);
         if (received.size() == totalChunks) {
-            String objectKey = mergeAndUpload(uploadId, totalChunks, contentType);
+            String objectKey = mergeAndUpload(uploadId, totalChunks, contentType, fileName);
             return new ChunkResult(true, received.size(), objectKey);
         }
         return new ChunkResult(false, received.size(), null);
@@ -112,9 +113,10 @@ public class ChunkUploadService {
      * @param uploadId 上传任务 ID
      * @param totalChunks 总分片数
      * @param contentType 内容类型
+     * @param fileName 原始文件名，用于生成 objectKey 后缀（可空）
      * @return MinIO objectKey
      */
-    private String mergeAndUpload(String uploadId, int totalChunks, String contentType) {
+    private String mergeAndUpload(String uploadId, int totalChunks, String contentType, String fileName) {
         Path dir = taskDir(uploadId);
         Path merged = dir.resolve("merged.bin");
         try {
@@ -127,7 +129,7 @@ public class ChunkUploadService {
                     }
                 }
             }
-            return minioUtil.upload(merged, uploadId, contentType);
+            return minioUtil.upload(merged, uploadId + extensionOf(fileName), contentType);
         }
         catch (IOException e) {
             throw new BizException(UploadCodeEnum.CHUNK_MERGE_FAIL);
@@ -135,6 +137,23 @@ public class ChunkUploadService {
         finally {
             deleteDir(dir);
         }
+    }
+
+    /**
+     * 从原始文件名提取合法后缀（如 "avatar.png" -> ".png"），无后缀或后缀非法时返回空串。
+     * @param fileName 原始文件名
+     * @return 小写后缀（含点），如 ".png"；无合法后缀返回 ""
+     */
+    private static String extensionOf(String fileName) {
+        if (fileName == null) {
+            return "";
+        }
+        int dot = fileName.lastIndexOf('.');
+        if (dot < 0 || dot == fileName.length() - 1) {
+            return "";
+        }
+        String ext = fileName.substring(dot + 1).toLowerCase();
+        return ext.matches("[a-z0-9]{1,10}") ? "." + ext : "";
     }
 
     private static void deleteDir(Path dir) {

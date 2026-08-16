@@ -36,19 +36,21 @@ public class UploadControllerV1 {
      * @param uploadId 上传任务 ID
      * @param chunkIndex 分片序号（0 起）
      * @param totalChunks 总分片数
+     * @param fileName 原始文件名，用于生成 objectKey 后缀（可空）
      * @return 分片结果；done=true 时 data.objectKey 为最终文件 key
      */
     @PostMapping("/chunk")
     public Result<ChunkResultVO> chunk(@RequestParam("file") MultipartFile file,
                                        @RequestParam("uploadId") String uploadId,
                                        @RequestParam("chunkIndex") int chunkIndex,
-                                       @RequestParam("totalChunks") int totalChunks) {
+                                       @RequestParam("totalChunks") int totalChunks,
+                                       @RequestParam(value = "fileName", required = false) String fileName) {
         ChunkUploadService.ChunkResult result;
         try (InputStream in = file.getInputStream()) {
             result = chunkUploadService.saveChunk(
                 uploadId, chunkIndex, totalChunks,
                 file.getContentType() != null ? file.getContentType() : "application/octet-stream",
-                in);
+                fileName, in);
         }
         catch (IOException e) {
             throw new BizException(UploadCodeEnum.CHUNK_UPLOAD_FAIL);

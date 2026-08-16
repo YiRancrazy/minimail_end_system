@@ -59,26 +59,38 @@ class ChunkUploadServiceTest {
     @Test
     void saveChunk_param_invalid_throws() {
         assertThrows(BizException.class,
-            () -> service.saveChunk("", 0, 2, "image/png", chunk("x")));
+            () -> service.saveChunk("", 0, 2, "image/png", "a.png", chunk("x")));
         assertThrows(BizException.class,
-            () -> service.saveChunk(uploadId, 2, 2, "image/png", chunk("x")));
+            () -> service.saveChunk(uploadId, 2, 2, "image/png", "a.png", chunk("x")));
         assertThrows(BizException.class,
-            () -> service.saveChunk(uploadId, -1, 2, "image/png", chunk("x")));
+            () -> service.saveChunk(uploadId, -1, 2, "image/png", "a.png", chunk("x")));
         assertThrows(BizException.class,
-            () -> service.saveChunk(uploadId, 0, 0, "image/png", chunk("x")));
+            () -> service.saveChunk(uploadId, 0, 0, "image/png", "a.png", chunk("x")));
         verify(minioUtil, never()).upload(any(InputStream.class), any(long.class), any(String.class));
     }
 
     @Test
     void saveChunk_single_chunk_done_uploads() {
-        // 单分片任务收满后走合并上传路径，命中 Path 重载
-        when(minioUtil.upload(any(Path.class), eq(uploadId), eq("image/png")))
-            .thenReturn(uploadId);
+        // 单分片任务收满后走合并上传路径，命中 Path 重载；后缀大写归一为小写
+        when(minioUtil.upload(any(Path.class), eq(uploadId + ".png"), eq("image/png")))
+            .thenReturn(uploadId + ".png");
         ChunkUploadService.ChunkResult result =
-            service.saveChunk(uploadId, 0, 1, "image/png", chunk("data"));
+            service.saveChunk(uploadId, 0, 1, "image/png", "avatar.PNG", chunk("data"));
 
         assertTrue(result.done());
         assertEquals(1, result.received());
+        assertEquals(uploadId + ".png", result.objectKey());
+        verify(minioUtil).upload(any(Path.class), eq(uploadId + ".png"), eq("image/png"));
+    }
+
+    @Test
+    void saveChunk_fileName_without_extension_uses_plain_uploadId() {
+        when(minioUtil.upload(any(Path.class), eq(uploadId), eq("image/png")))
+            .thenReturn(uploadId);
+        ChunkUploadService.ChunkResult result =
+            service.saveChunk(uploadId, 0, 1, "image/png", "avatar", chunk("data"));
+
+        assertTrue(result.done());
         assertEquals(uploadId, result.objectKey());
         verify(minioUtil).upload(any(Path.class), eq(uploadId), eq("image/png"));
     }
@@ -86,7 +98,7 @@ class ChunkUploadServiceTest {
     @Test
     void saveChunk_partial_returns_not_done() {
         ChunkUploadService.ChunkResult result =
-            service.saveChunk(uploadId, 0, 2, "image/png", chunk("hello"));
+            service.saveChunk(uploadId, 0, 2, "image/png", "a.png", chunk("hello"));
 
         assertFalse(result.done());
         assertEquals(1, result.received());
@@ -95,25 +107,26 @@ class ChunkUploadServiceTest {
 
     @Test
     void saveChunk_last_chunk_triggers_merge_and_upload() {
-        service.saveChunk(uploadId, 0, 2, "image/png", chunk("hello"));
+        service.saveChunk(uploadId, 0, 2, "image/png", "a.png", chunk("hello"));
         Path dir = ROOT.resolve(uploadId);
         assertFalse(Files.exists(dir.resolve("merged.bin")), "未收满时不得提前合并");
 
-        when(minioUtil.upload(any(Path.class), eq(uploadId), eq("image/png"))).thenReturn(uploadId);
+        when(minioUtil.upload(any(Path.class), eq(uploadId + ".png"), eq("image/png")))
+            .thenReturn(uploadId + ".png");
         ChunkUploadService.ChunkResult result =
-            service.saveChunk(uploadId, 1, 2, "image/png", chunk("world"));
+            service.saveChunk(uploadId, 1, 2, "image/png", "a.png", chunk("world"));
 
         assertTrue(result.done());
         assertEquals(2, result.received());
-        verify(minioUtil).upload(any(Path.class), eq(uploadId), eq("image/png"));
+        verify(minioUtil).upload(any(Path.class), eq(uploadId + ".png"), eq("image/png"));
         // 上传后清理临时目录
         assertFalse(Files.isDirectory(dir));
     }
 
     @Test
     void receivedChunks_lists_uploaded_chunks_in_order() {
-        service.saveChunk(uploadId, 2, 4, "image/png", chunk("c2"));
-        service.saveChunk(uploadId, 0, 4, "image/png", chunk("c0"));
+        service.saveChunk(uploadId, 2, 4, "image/png", "a.png", chunk("c2"));
+        service.saveChunk(uploadId, 0, 4, "image/png", "a.png", chunk("c0"));
 
         List<Integer> received = service.receivedChunks(uploadId, 4);
         assertEquals(List.of(0, 2), received);
@@ -126,7 +139,7 @@ class ChunkUploadServiceTest {
 
     @Test
     void deleteTask_removes_temp_dir() {
-        service.saveChunk(uploadId, 0, 3, "image/png", chunk("c0"));
+        service.saveChunk(uploadId, 0, 3, "image/png", "a.png", chunk("c0"));
         Path dir = ROOT.resolve(uploadId);
         assertTrue(Files.isDirectory(dir));
 
@@ -136,13 +149,13 @@ class ChunkUploadServiceTest {
 
     @Test
     void merge_upload_failure_propagates_and_cleans_up() {
-        service.saveChunk(uploadId, 0, 2, "image/png", chunk("hello"));
+        service.saveChunk(uploadId, 0, 2, "image/png", "a.png", chunk("hello"));
         // 模拟合并后上传 MinIO 失败，异常透出且临时目录仍被清理
-        when(minioUtil.upload(any(Path.class), eq(uploadId), eq("image/png")))
+        when(minioUtil.upload(any(Path.class), eq(uploadId + ".png"), eq("image/png")))
             .thenThrow(new BizException(CommonCode.SYS_ERROR, "MINIO_UPLOAD_FAIL", "minio down"));
 
         BizException ex = assertThrows(BizException.class,
-            () -> service.saveChunk(uploadId, 1, 2, "image/png", chunk("world")));
+            () -> service.saveChunk(uploadId, 1, 2, "image/png", "a.png", chunk("world")));
         assertEquals("MINIO_UPLOAD_FAIL", ex.getAlias());
         assertFalse(Files.isDirectory(ROOT.resolve(uploadId)));
     }

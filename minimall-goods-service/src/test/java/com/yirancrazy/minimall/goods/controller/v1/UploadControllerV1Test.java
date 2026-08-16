@@ -39,7 +39,7 @@ class UploadControllerV1Test {
 
     @Test
     void chunk_returns_received_count_when_not_done() throws Exception {
-        when(chunkUploadService.saveChunk(anyString(), anyInt(), anyInt(), anyString(), any()))
+        when(chunkUploadService.saveChunk(anyString(), anyInt(), anyInt(), anyString(), any(), any()))
             .thenReturn(new ChunkResult(false, 1, null));
 
         MockMultipartFile file = new MockMultipartFile("file", "a.png",
@@ -53,12 +53,12 @@ class UploadControllerV1Test {
             .andExpect(jsonPath("$.code").value("00000"))
             .andExpect(jsonPath("$.data.done").value(false))
             .andExpect(jsonPath("$.data.received").value(1));
-        verify(chunkUploadService).saveChunk(eq("task-1"), eq(0), eq(3), eq("image/png"), any());
+        verify(chunkUploadService).saveChunk(eq("task-1"), eq(0), eq(3), eq("image/png"), any(), any());
     }
 
     @Test
     void chunk_returns_object_key_when_done() throws Exception {
-        when(chunkUploadService.saveChunk(anyString(), anyInt(), anyInt(), anyString(), any()))
+        when(chunkUploadService.saveChunk(anyString(), anyInt(), anyInt(), anyString(), any(), any()))
             .thenReturn(new ChunkResult(true, 3, "final-key"));
 
         MockMultipartFile file = new MockMultipartFile("file", "a.png",

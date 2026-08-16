@@ -111,6 +111,12 @@ public class AuthServiceImpl implements AuthService {
         if (po == null) {
             throw new BizException(AuthCodeEnum.USER_NOT_FOUND);
         }
+        if (po.getAccountType() == null || po.getAccountType() != ACCOUNT_TYPE_USER) {
+            throw new BizException(AuthCodeEnum.ACCOUNT_ROLE_MISMATCH);
+        }
+        if (po.getStatus() == null || po.getStatus() != 1) {
+            throw new BizException(AuthCodeEnum.ACCOUNT_DISABLED);
+        }
         if (!BCrypt.checkpw(dto.getPassword() + po.getSalt(), po.getPasswordHash())) {
             throw new BizException(AuthCodeEnum.PWD_INVALID);
         }

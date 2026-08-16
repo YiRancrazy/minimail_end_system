@@ -105,6 +105,72 @@ class AuthServiceImplTest {
     }
 
     @Test
+    void login_user_account_succeeds() {
+        stubUserRole();
+        String salt = "testsalt";
+        String hash = BCrypt.hashpw("pass123" + salt, BCrypt.gensalt());
+        AuthUserPO po = new AuthUserPO();
+        po.setId(1L);
+        po.setAccount("alice");
+        po.setAccountType(1);
+        po.setRoleId(1L);
+        po.setStatus(1);
+        po.setSalt(salt);
+        po.setPasswordHash(hash);
+        when(authUserManager.getOne(any())).thenReturn(po);
+        when(authUserManager.updateById(any(AuthUserPO.class))).thenReturn(true);
+        when(jwtUtil.sign(anyLong(), anyString(), anyString(), anyLong(), anyString())).thenReturn("access-token");
+        when(jwtUtil.generateRefreshToken()).thenReturn("refresh-token");
+
+        TokenVO vo = authService.login(new LoginDTO("alice", "pass123"));
+
+        assertNotNull(vo.getAccessToken());
+        assertNotNull(vo.getRefreshToken());
+        verify(jwtUtil).sign(eq(1L), eq("alice"), eq("USER"), eq(1L), anyString());
+    }
+
+    @Test
+    void login_platform_account_rejected() {
+        AuthUserPO po = new AuthUserPO();
+        po.setAccountType(3);
+        po.setStatus(1);
+        when(authUserManager.getOne(any())).thenReturn(po);
+
+        BizException ex = assertThrows(BizException.class,
+            () -> authService.login(new LoginDTO("admin", "pass")));
+        assertEquals(AuthCodeEnum.ACCOUNT_ROLE_MISMATCH.getCode(), ex.getCode());
+    }
+
+    @Test
+    void login_disabled_account_rejected() {
+        AuthUserPO po = new AuthUserPO();
+        po.setAccountType(1);
+        po.setStatus(0);
+        when(authUserManager.getOne(any())).thenReturn(po);
+
+        BizException ex = assertThrows(BizException.class,
+            () -> authService.login(new LoginDTO("alice", "pass")));
+        assertEquals(AuthCodeEnum.ACCOUNT_DISABLED.getCode(), ex.getCode());
+    }
+
+    @Test
+    void login_wrong_password_still_throws() {
+        String salt = "testsalt";
+        String hash = BCrypt.hashpw("correctpass" + salt, BCrypt.gensalt());
+        AuthUserPO po = new AuthUserPO();
+        po.setId(1L);
+        po.setAccountType(1);
+        po.setStatus(1);
+        po.setSalt(salt);
+        po.setPasswordHash(hash);
+        when(authUserManager.getOne(any())).thenReturn(po);
+
+        BizException ex = assertThrows(BizException.class,
+            () -> authService.login(new LoginDTO("alice", "wrongpass")));
+        assertEquals(AuthCodeEnum.PWD_INVALID.getCode(), ex.getCode());
+    }
+
+    @Test
     void refreshToken_invalid_throws() {
         when(redisTemplate.keys(anyString())).thenReturn(Set.of());
         assertThrows(BizException.class, () -> authService.refreshToken("bad-refresh"));

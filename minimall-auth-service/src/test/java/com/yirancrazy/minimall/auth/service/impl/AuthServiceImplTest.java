@@ -19,6 +19,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import com.yirancrazy.minimall.api.dto.auth.TokenVO;
@@ -230,10 +231,39 @@ class AuthServiceImplTest {
         AuthUserPO po = new AuthUserPO();
         po.setAccount("testuser");
         when(authUserManager.getOne(any())).thenReturn(po);
+        when(valueOperations.setIfAbsent(eq("pwd:reset:cooldown:testuser"), eq("1"), eq(60L), any()))
+            .thenReturn(true);
 
         authService.sendResetCode(new SendResetCodeDTO("testuser"));
 
         verify(valueOperations).set(eq("pwd:reset:code:testuser"), anyString(), eq(600L), any());
+    }
+
+    @Test
+    void sendResetCode_cooldown_blocks_repeat_within_60s() {
+        AuthUserPO po = new AuthUserPO();
+        po.setAccount("testuser");
+        when(authUserManager.getOne(any())).thenReturn(po);
+        // 冷却键已存在（60s 窗口内第二次发送），setIfAbsent 返回 false
+        when(valueOperations.setIfAbsent(eq("pwd:reset:cooldown:testuser"), eq("1"), eq(60L), any()))
+            .thenReturn(false);
+
+        BizException ex = assertThrows(BizException.class,
+            () -> authService.sendResetCode(new SendResetCodeDTO("testuser")));
+
+        assertEquals(AuthCodeEnum.RESET_CODE_TOO_FREQUENT.getCode(), ex.getCode());
+        verify(valueOperations, never()).set(eq("pwd:reset:code:testuser"), anyString(), anyLong(), any());
+    }
+
+    @Test
+    void sendResetCode_ok_after_no_cooldown() {
+        AuthUserPO po = new AuthUserPO();
+        po.setAccount("testuser");
+        when(authUserManager.getOne(any())).thenReturn(po);
+        when(valueOperations.setIfAbsent(eq("pwd:reset:cooldown:testuser"), eq("1"), eq(60L), any()))
+            .thenReturn(true);
+
+        authService.sendResetCode(new SendResetCodeDTO("testuser"));
     }
 
     @Test
@@ -277,5 +307,40 @@ class AuthServiceImplTest {
 
         assertThrows(BizException.class,
             () -> authService.resetPassword(new ResetPasswordDTO("testuser", "123456", "newpass123")));
+    }
+
+    @Test
+    void resetPassword_verify_code_fails_after_max_attempts() {
+        AuthUserPO po = new AuthUserPO();
+        po.setId(1L);
+        po.setAccount("testuser");
+        when(authUserManager.getOne(any())).thenReturn(po);
+        // 失败计数已到阈值 5，即使验证码正确也拒绝
+        when(valueOperations.get("pwd:reset:fail:testuser")).thenReturn("5");
+        when(valueOperations.get("pwd:reset:code:testuser")).thenReturn("123456");
+
+        BizException ex = assertThrows(BizException.class,
+            () -> authService.resetPassword(new ResetPasswordDTO("testuser", "123456", "newpass123")));
+
+        assertEquals(AuthCodeEnum.VERIFY_CODE_ATTEMPT_EXCEEDED.getCode(), ex.getCode());
+        verify(authUserManager, never()).updateById(any(AuthUserPO.class));
+    }
+
+    @Test
+    void resetPassword_success_clears_fail_counter() {
+        AuthUserPO po = new AuthUserPO();
+        po.setId(1L);
+        po.setAccount("testuser");
+        when(authUserManager.getOne(any())).thenReturn(po);
+        // 此前已失败 3 次，本次验证码正确，应清除失败计数并重置密码
+        when(valueOperations.get("pwd:reset:fail:testuser")).thenReturn("3");
+        when(valueOperations.get("pwd:reset:code:testuser")).thenReturn("123456");
+        when(authUserManager.updateById(any(AuthUserPO.class))).thenReturn(true);
+        when(redisTemplate.keys("refresh:1:*")).thenReturn(Set.of("refresh:1:abc"));
+
+        authService.resetPassword(new ResetPasswordDTO("testuser", "123456", "newpass123"));
+
+        verify(redisTemplate).delete("pwd:reset:fail:testuser");
+        verify(redisTemplate).delete("pwd:reset:code:testuser");
     }
 }

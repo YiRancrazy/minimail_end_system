@@ -48,6 +48,11 @@ public class AuthServiceImpl implements AuthService {
     private static final String BLACKLIST_KEY_PREFIX = "blacklist:jti:";
     private static final String RESET_CODE_KEY_PREFIX = "pwd:reset:code:";
     private static final long RESET_CODE_TTL_SECONDS = 600L;
+    private static final String RESET_CODE_COOLDOWN_KEY_PREFIX = "pwd:reset:cooldown:";
+    private static final long RESET_CODE_COOLDOWN_SECONDS = 60L;
+    private static final String RESET_CODE_FAIL_KEY_PREFIX = "pwd:reset:fail:";
+    private static final long RESET_CODE_FAIL_TTL_SECONDS = 600L;
+    private static final long RESET_CODE_FAIL_THRESHOLD = 5L;
 
     private final AuthUserManager authUserManager;
     private final AuthRoleManager authRoleManager;
@@ -229,6 +234,13 @@ public class AuthServiceImpl implements AuthService {
         if (po == null) {
             throw new BizException(AuthCodeEnum.USER_NOT_FOUND);
         }
+        // setIfAbsent 原子占位冷却键，防止对同一账号轰炸验证码请求
+        String cooldownKey = RESET_CODE_COOLDOWN_KEY_PREFIX + dto.getAccount();
+        Boolean acquired = redisTemplate.opsForValue().setIfAbsent(
+            cooldownKey, "1", RESET_CODE_COOLDOWN_SECONDS, TimeUnit.SECONDS);
+        if (!Boolean.TRUE.equals(acquired)) {
+            throw new BizException(AuthCodeEnum.RESET_CODE_TOO_FREQUENT);
+        }
         String code = String.format("%06d",
             java.util.concurrent.ThreadLocalRandom.current().nextInt(1_000_000));
         redisTemplate.opsForValue().set(
@@ -248,10 +260,19 @@ public class AuthServiceImpl implements AuthService {
         if (po == null) {
             throw new BizException(AuthCodeEnum.USER_NOT_FOUND);
         }
+        String failKey = RESET_CODE_FAIL_KEY_PREFIX + dto.getAccount();
+        String failCount = redisTemplate.opsForValue().get(failKey);
+        if (failCount != null && Long.parseLong(failCount) >= RESET_CODE_FAIL_THRESHOLD) {
+            throw new BizException(AuthCodeEnum.VERIFY_CODE_ATTEMPT_EXCEEDED);
+        }
         String stored = redisTemplate.opsForValue().get(RESET_CODE_KEY_PREFIX + dto.getAccount());
         if (stored == null || !stored.equals(dto.getVerifyCode())) {
+            // 验证码错误累计计数并刷新窗口，防 6 位数字验证码在线枚举
+            redisTemplate.opsForValue().increment(failKey);
+            redisTemplate.expire(failKey, RESET_CODE_FAIL_TTL_SECONDS, TimeUnit.SECONDS);
             throw new BizException(AuthCodeEnum.VERIFY_CODE_INVALID);
         }
+        redisTemplate.delete(failKey);
         applyNewPassword(po, dto.getNewPassword());
         redisTemplate.delete(RESET_CODE_KEY_PREFIX + dto.getAccount());
         invalidateRefreshTokens(po.getId());

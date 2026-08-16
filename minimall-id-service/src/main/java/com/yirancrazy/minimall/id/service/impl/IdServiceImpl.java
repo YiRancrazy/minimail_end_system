@@ -10,6 +10,7 @@ import com.yirancrazy.minimall.id.service.Snowflake;
  * @Version: 1.0
  * @DateTime: 2026/07/31
  */
+@Service
 public class IdServiceImpl implements IdService {
 
     private final Snowflake snowflake = new Snowflake(1L, 1L);

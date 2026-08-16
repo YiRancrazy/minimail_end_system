@@ -57,4 +57,17 @@ public class IdServiceImplTest {
         long id = service.nextId(null);
         assertTrue(id > 0L);
     }
+
+    /**
+     * 验证连续两次调用返回的 ID 不同且均为正数。
+     */
+    @Test
+    public void nextId_consecutive_calls_distinct_and_positive() {
+        IdServiceImpl service = new IdServiceImpl();
+        long a = service.nextId("ORDER");
+        long b = service.nextId("ORDER");
+        assertTrue(a > 0L);
+        assertTrue(b > 0L);
+        assertNotEquals(a, b);
+    }
 }

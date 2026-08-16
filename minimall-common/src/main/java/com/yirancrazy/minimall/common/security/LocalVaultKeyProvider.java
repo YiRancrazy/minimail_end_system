@@ -19,7 +19,7 @@ public class LocalVaultKeyProvider implements VaultKeyProvider {
      * @param base64Key Base64编码的32字节AES-256密钥
      */
     public LocalVaultKeyProvider(
-        @Value("${minimall.security.aes-key:MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=}") String base64Key) {
+        @Value("${minimall.security.aes-key:${MINIMALL_SECURITY_AES_KEY}}") String base64Key) {
         byte[] decoded = Base64.getDecoder().decode(base64Key);
         if (decoded.length != 32) {
             throw new IllegalArgumentException("AES-256 key must be 32 bytes, got " + decoded.length);

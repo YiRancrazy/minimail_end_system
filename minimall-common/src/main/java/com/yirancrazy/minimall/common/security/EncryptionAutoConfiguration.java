@@ -19,7 +19,7 @@ public class EncryptionAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean(VaultKeyProvider.class)
     public VaultKeyProvider vaultKeyProvider(
-            @Value("${minimall.security.aes-key:MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=}") String base64Key) {
+            @Value("${minimall.security.aes-key:${MINIMALL_SECURITY_AES_KEY}}") String base64Key) {
         return new LocalVaultKeyProvider(base64Key);
     }
 

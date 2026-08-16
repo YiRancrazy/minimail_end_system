@@ -26,7 +26,7 @@ spring:
 
 minimall:
   jwt:
-    secret: dev-secret-change-me-32bytes-min!!
+    secret: ${MINIMALL_JWT_SECRET}
     ttl-seconds: 900
     refresh-ttl-seconds: 604800
   knife4j:

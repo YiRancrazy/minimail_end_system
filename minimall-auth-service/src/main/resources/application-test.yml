@@ -9,3 +9,9 @@ spring:
     nacos:
       discovery:
         enabled: false
+
+minimall:
+  jwt:
+    secret: test-jwt-secret-0123456789abcdef0123456789abcdef
+  security:
+    aes-key: pwKs8yE75abt15VzzFRV6ynHoD4I/idpBDQ8sN92fLA=

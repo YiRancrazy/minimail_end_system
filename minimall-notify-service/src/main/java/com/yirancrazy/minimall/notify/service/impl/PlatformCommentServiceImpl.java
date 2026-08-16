@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
+import com.yirancrazy.minimall.common.util.CursorUtils;
 import com.yirancrazy.minimall.notify.constant.CommentStatusEnum;
 import com.yirancrazy.minimall.notify.constant.NotifyCodeEnum;
 import com.yirancrazy.minimall.notify.dto.CommentPageDTO;
@@ -29,13 +30,16 @@ public class PlatformCommentServiceImpl implements PlatformCommentService {
     }
 
     /**
-     * 分页查询评价，按 ID 降序返回，支持状态/订单号过滤。
+     * 分页查询评价，按 ID 降序返回，支持状态/订单号过滤；游标解码后按 id < lastId 取下一页。
      * @param dto 分页入参
      * @return 评价游标分页结果
      */
     @Override
     public CursorPageVO<CommentPO> page(CommentPageDTO dto) {
+        Long lastId = CursorUtils.decode(dto.getCursor());
+        int limit = dto.getLimit();
         LambdaQueryWrapper<CommentPO> wrapper = Wrappers.lambdaQuery(CommentPO.class);
+        wrapper.lt(lastId != null, CommentPO::getId, lastId);
         if (dto.getStatus() != null) {
             wrapper.eq(CommentPO::getStatus, dto.getStatus());
         }
@@ -43,8 +47,7 @@ public class PlatformCommentServiceImpl implements PlatformCommentService {
             wrapper.like(CommentPO::getOrderNo, dto.getOrderNo());
         }
         wrapper.orderByDesc(CommentPO::getId);
-        int limit = dto.getLimit() == null ? 20 : dto.getLimit();
-        wrapper.last("LIMIT " + limit);
+        wrapper.last("LIMIT " + (limit + 1));
         return CursorPageVO.of(commentManager.list(wrapper), limit, CommentPO::getId);
     }
 

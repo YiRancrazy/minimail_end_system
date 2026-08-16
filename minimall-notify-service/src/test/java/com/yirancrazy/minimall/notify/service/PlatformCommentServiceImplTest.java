@@ -5,8 +5,10 @@ import java.util.List;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
@@ -14,9 +16,11 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
+import com.yirancrazy.minimall.common.util.CursorUtils;
 import com.yirancrazy.minimall.notify.constant.CommentStatusEnum;
 import com.yirancrazy.minimall.notify.dto.CommentPageDTO;
 import com.yirancrazy.minimall.notify.entity.CommentPO;
@@ -56,6 +60,27 @@ public class PlatformCommentServiceImplTest {
         CursorPageVO<CommentPO> r = service.page(dto);
         assertEquals(20, r.getLimit());
         verify(commentManager).list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class));
+    }
+
+    /**
+     * 验证 page 解码游标后追加 id < lastId 条件，翻页不再永远返回第一页。
+     */
+    @Test
+    public void page_applies_cursor_condition() {
+        CommentPageDTO dto = new CommentPageDTO();
+        dto.setLimit(10);
+        dto.setCursor(CursorUtils.encode(100L));
+        when(commentManager.list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class)))
+                .thenReturn(Collections.emptyList());
+
+        service.page(dto);
+
+        ArgumentCaptor<LambdaQueryWrapper<CommentPO>> cap =
+            ArgumentCaptor.forClass(LambdaQueryWrapper.class);
+        verify(commentManager).list(cap.capture());
+        // 条件参数在 SQL 生成（getCustomSqlSegment）时才写入 paramNameValuePairs，需先触发
+        cap.getValue().getCustomSqlSegment();
+        assertTrue(cap.getValue().getParamNameValuePairs().containsValue(100L));
     }
 
     /**

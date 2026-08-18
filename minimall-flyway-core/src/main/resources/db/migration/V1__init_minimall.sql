@@ -136,8 +136,8 @@ CREATE TABLE IF NOT EXISTS t_user_favorite (
   create_time     DATETIME        DEFAULT CURRENT_TIMESTAMP,
   update_time     DATETIME        DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
-  UNIQUE KEY uk_user_sku (user_id, sku_id),
-  INDEX idx_user_id (user_id)
+  UNIQUE KEY uk_user_favorite_user_sku (user_id, sku_id),
+  INDEX idx_user_favorite_user_id (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- ============================================================
@@ -305,7 +305,7 @@ CREATE TABLE IF NOT EXISTS t_order (
   PRIMARY KEY (id),
   UNIQUE KEY uk_order_no (order_no),
   UNIQUE KEY uk_order_idem (idempotency_key),
-  INDEX idx_user (user_id),
+  INDEX idx_order_user (user_id),
   INDEX idx_status (status),
   INDEX idx_order_group_no (order_group_no),
   INDEX idx_order_pay_expire (status, pay_expire_at),
@@ -460,7 +460,7 @@ CREATE TABLE IF NOT EXISTS t_stock_count_task (
   update_time         DATETIME        DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   INDEX idx_sku (sku_id),
-  INDEX idx_status (status)
+  INDEX idx_stock_count_task_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- ============================================================
@@ -531,7 +531,7 @@ CREATE TABLE IF NOT EXISTS t_notify_message (
   create_time     DATETIME        DEFAULT CURRENT_TIMESTAMP,
   update_time     DATETIME        DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
-  INDEX idx_user (user_id),
+  INDEX idx_notify_message_user (user_id),
   INDEX idx_recipient (recipient_type, user_id, read_flag),
   UNIQUE KEY uk_notify_message_receiver_unread (recipient_type, user_id, read_flag, create_time DESC),
   INDEX idx_notify_message_biz (biz_id)
@@ -556,7 +556,7 @@ CREATE TABLE IF NOT EXISTS t_notify_complaint (
   update_time         DATETIME        DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   INDEX idx_complainant (complainant_type, complainant_id),
-  INDEX idx_status (status)
+  INDEX idx_notify_complaint_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE IF NOT EXISTS t_notify_comment (
@@ -578,9 +578,9 @@ CREATE TABLE IF NOT EXISTS t_notify_comment (
   update_time             DATETIME        DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   INDEX idx_spu (spu_id, status),
-  INDEX idx_user (user_id),
+  INDEX idx_notify_comment_user (user_id),
   INDEX idx_merchant (merchant_id),
-  INDEX idx_order (order_no)
+  INDEX idx_notify_comment_order (order_no)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE IF NOT EXISTS t_notify_preference (
@@ -595,7 +595,7 @@ CREATE TABLE IF NOT EXISTS t_notify_preference (
   update_time     DATETIME        DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   UNIQUE KEY uk_user_category (user_id, category_code),
-  INDEX idx_user (user_id)
+  INDEX idx_notify_preference_user (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- ============================================================

@@ -24,7 +24,7 @@ public abstract class BasePO implements Serializable {
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
 
-    @TableLogic
+    @TableLogic(value = "0", delval = "NULL")
     @TableField(fill = FieldFill.INSERT)
     private Integer isDeleted;
 

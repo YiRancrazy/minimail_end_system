@@ -7,6 +7,7 @@ import java.sql.SQLException;
 import org.apache.ibatis.type.BaseTypeHandler;
 import org.apache.ibatis.type.JdbcType;
 import org.apache.ibatis.type.MappedTypes;
+import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CommonCode;
 
@@ -16,6 +17,7 @@ import com.yirancrazy.minimall.common.result.CommonCode;
  * @Version: 1.0
  * @DateTime: 2026/08/04
  **/
+@Slf4j
 @MappedTypes(String.class)
 public class EncryptedStringTypeHandler extends BaseTypeHandler<String> {
 
@@ -55,7 +57,11 @@ public class EncryptedStringTypeHandler extends BaseTypeHandler<String> {
             return AesEncryptor.decrypt(value, key);
         }
         catch (Exception e) {
-            throw new BizException(CommonCode.SYS_ERROR, "DECRYPT_FAIL", "敏感字段解密失败");
+            // 诊断日志：保留原始异常类型和密文长度，便于区分密钥不匹配(AEADBadTagException)
+            // vs 明文数据(IllegalArgumentException) vs 密文截断(IllegalBlockSizeException)
+            log.error("decrypt failed, valueLength={}, exceptionType={}",
+                value.length(), e.getClass().getSimpleName(), e);
+            throw new BizException(CommonCode.SYS_ERROR, "DECRYPT_FAIL", "敏感字段解密失败", e);
         }
     }
 }

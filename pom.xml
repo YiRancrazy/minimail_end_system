@@ -83,6 +83,13 @@
         <artifactId>xxl-job-core</artifactId>
         <version>${xxl-job.version}</version>
       </dependency>
+        <dependency>
+            <groupId>me.paulschwarz</groupId>
+            <artifactId>spring-dotenv-bom</artifactId>
+            <version>5.0.1</version>
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>
       <!-- 子模块按需引入 starter，版本由 mybatis-plus-bom 统一管理（坐标：com.baomidou:mybatis-plus-spring-boot3-starter） -->
       <dependency>
         <groupId>com.yirancrazy</groupId>

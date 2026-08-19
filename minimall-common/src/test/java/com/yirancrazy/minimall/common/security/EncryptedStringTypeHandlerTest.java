@@ -4,6 +4,7 @@ import java.sql.ResultSet;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
@@ -64,5 +65,26 @@ class EncryptedStringTypeHandlerTest {
         BizException ex = assertThrows(BizException.class, () -> handler.getNullableResult(rs, "phone"));
         assertEquals(CommonCode.SYS_ERROR, ex.getCode());
         assertEquals("敏感字段解密失败", ex.getMessage());
+        assertNotNull(ex.getCause(), "原始异常应作为 cause 保留");
+    }
+
+    @Test
+    void getNullableResult_wrongKey_preservesOriginalCause() throws Exception {
+        // 用 KEY_A 加密，再用 KEY_B 解密 → cause 应为 IllegalStateException（AES decryption failed）
+        byte[] keyA = EncryptionContext.getKey();
+        String cipher = AesEncryptor.encrypt("secret", keyA);
+        byte[] keyB = "99999999999999999999999999999999".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        EncryptionContext.initialize(keyB);
+
+        ResultSet rs = mock(ResultSet.class);
+        when(rs.getString("name")).thenReturn(cipher);
+
+        BizException ex = assertThrows(BizException.class, () -> handler.getNullableResult(rs, "name"));
+        assertEquals("敏感字段解密失败", ex.getMessage());
+        assertNotNull(ex.getCause());
+        assertEquals("IllegalStateException", ex.getCause().getClass().getSimpleName());
+
+        // 恢复原始密钥，避免污染其他测试
+        EncryptionContext.initialize(keyA);
     }
 }

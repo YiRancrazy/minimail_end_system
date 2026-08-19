@@ -1,3 +1,0 @@
-﻿buyer_e2e_1786309019 / Pwd@123 / buyer
-merchant_e2e_1786309019 / Pwd@123 / merchant
-admin / (see Nacos) / platform

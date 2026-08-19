@@ -394,7 +394,7 @@ public class CartServiceImplTest {
         existing.setSkuId(100L);
         existing.setQuantity(2);
         existing.setSelected(1);
-        when(cartItemManager.getOne(any(Wrapper.class))).thenReturn(existing);
+        when(cartItemManager.getByUserIdAndSkuId(7L, 100L)).thenReturn(existing);
         when(cartItemManager.updateById(any(CartItemPO.class))).thenReturn(true);
 
         CartItemAddDTO dto = new CartItemAddDTO();
@@ -420,7 +420,7 @@ public class CartServiceImplTest {
         existing.setSkuId(100L);
         existing.setQuantity(998);
         existing.setSelected(1);
-        when(cartItemManager.getOne(any(Wrapper.class))).thenReturn(existing);
+        when(cartItemManager.getByUserIdAndSkuId(7L, 100L)).thenReturn(existing);
         when(cartItemManager.updateById(any(CartItemPO.class))).thenReturn(true);
 
         CartItemAddDTO dto = new CartItemAddDTO();
@@ -430,6 +430,32 @@ public class CartServiceImplTest {
         service.add(7L, dto);
 
         assertEquals(999, existing.getQuantity());
+    }
+
+    /**
+     * 验证 add 在同用户同 SKU 已存在时走显式封装查询方法，避免直接插入触发唯一索引冲突。
+     */
+    @Test
+    public void add_uses_getByUserIdAndSkuId_before_save() {
+        CartItemPO existing = new CartItemPO();
+        existing.setId(9L);
+        existing.setUserId(7L);
+        existing.setSkuId(100L);
+        existing.setQuantity(1);
+        existing.setSelected(1);
+        when(cartItemManager.getByUserIdAndSkuId(7L, 100L)).thenReturn(existing);
+        when(cartItemManager.updateById(any(CartItemPO.class))).thenReturn(true);
+
+        CartItemAddDTO dto = new CartItemAddDTO();
+        dto.setSkuId(100L);
+        dto.setQuantity(2);
+
+        Long id = service.add(7L, dto);
+
+        assertEquals(9L, id);
+        verify(cartItemManager).getByUserIdAndSkuId(7L, 100L);
+        verify(cartItemManager).updateById(existing);
+        verify(cartItemManager, never()).save(any(CartItemPO.class));
     }
 
     /**

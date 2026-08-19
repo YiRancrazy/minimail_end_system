@@ -13,7 +13,11 @@ spring:
     web-application-type: reactive
   config:
     # Nacos config is optional; the gateway only needs discovery for routing.
-    import: "optional:nacos:minimall-gateway-dev.yaml"
+    # Gateway does not depend on minimall-common (to keep the reactive stack
+    # clean), so DotenvConfig never runs here; import the repo .env directly
+    # instead. Relative paths resolve against the JVM working dir, which varies
+    # between repo root (mvnw) and the module dir (IDE / java -jar).
+    import: "optional:nacos:minimall-gateway-dev.yaml,optional:file:.env[.properties],optional:file:../.env[.properties],optional:file:../../.env[.properties]"
   cloud:
     nacos:
       discovery:

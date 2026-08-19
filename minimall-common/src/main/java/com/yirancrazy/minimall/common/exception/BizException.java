@@ -26,6 +26,12 @@ public class BizException extends RuntimeException {
         this.alias = alias;
     }
 
+    public BizException(String code, String alias, String message, Throwable cause) {
+        super(message, cause);
+        this.code = code;
+        this.alias = alias;
+    }
+
     public BizException(ResultCode rc) {
         super(rc.getMessage());
         this.code = rc.getCode();

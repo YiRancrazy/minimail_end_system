@@ -88,15 +88,17 @@ public class CartServiceImpl implements CartService {
     @Override
     public Long add(Long userId, CartItemAddDTO dto) {
         // 依赖 t_cart_item 的 uk_user_sku 唯一索引，同 SKU 只能存在一行，重复加入时累加数量
-        CartItemPO existing = cartItemManager.getOne(Wrappers.lambdaQuery(CartItemPO.class)
-            .eq(CartItemPO::getUserId, userId)
-            .eq(CartItemPO::getSkuId, dto.getSkuId()));
+        CartItemPO existing = cartItemManager.getByUserIdAndSkuId(userId, dto.getSkuId());
+
+        // 数据存在则对应数量+1
         if (existing != null) {
             int merged = existing.getQuantity() + dto.getQuantity();
             existing.setQuantity(Math.min(merged, MAX_QUANTITY));
             cartItemManager.updateById(existing);
             return existing.getId();
         }
+
+        // 数据不存在则新建
         CartItemPO item = new CartItemPO();
         item.setUserId(userId);
         item.setSkuId(dto.getSkuId());

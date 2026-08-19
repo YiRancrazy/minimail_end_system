@@ -36,3 +36,4 @@ minimall-frontend/
 # 临时文件（不提交）
 %TEMP%
 backend-code-analysis-report.md
+test-*

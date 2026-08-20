@@ -1,6 +1,7 @@
 package com.yirancrazy.minimall.goods.service.impl;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Collections;
 import java.util.List;
 import java.util.LongSummaryStatistics;
@@ -393,6 +394,20 @@ public class SpuServiceImpl implements SpuService {
         syncToEs(spu);
     }
 
+    /**
+     * 全量重灌 ES 索引：遍历全部在售 SPU 重新同步文档，用于索引重建后补齐数据。
+     * 单条失败由 syncToEs 内部捕获并记录，不阻断其余 SPU 同步。
+     */
+    @Override
+    public void rebuildAllEsDocuments() {
+        List<SpuPO> onSaleList = spuManager.list(
+            Wrappers.lambdaQuery(SpuPO.class)
+                .eq(SpuPO::getStatus, SpuStatusEnum.ON_SALE.statusValue()));
+        log.info("rebuild ES documents start, count={}", onSaleList.size());
+        onSaleList.forEach(this::syncToEs);
+        log.info("rebuild ES documents done, count={}", onSaleList.size());
+    }
+
     private void syncToEs(SpuPO po) {
         // 搜索引擎是只读镜像，同步失败不阻断主链路写入（ES 恢复后由后续写操作补齐）
         try {
@@ -403,7 +418,7 @@ public class SpuServiceImpl implements SpuService {
             doc.setMerchantId(po.getMerchantId());
             doc.setSaleStatus(po.getStatus());
             doc.setMainImage(po.getMainImageUrl());
-            doc.setCreateTime(po.getCreateTime());
+            doc.setCreateTime(po.getCreateTime().atZone(ZoneId.systemDefault()).toInstant());
             // 价格区间聚合该 SPU 全部 SKU 的 min/max（元→分），供 ES 价格过滤使用，null 价格跳过
             LongSummaryStatistics stats = skuManager.list(
                 Wrappers.lambdaQuery(SkuPO.class).eq(SkuPO::getSpuId, po.getId())).stream()

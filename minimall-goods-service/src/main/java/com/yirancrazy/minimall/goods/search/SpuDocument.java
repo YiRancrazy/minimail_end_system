@@ -1,7 +1,8 @@
 package com.yirancrazy.minimall.goods.search;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.elasticsearch.annotations.DateFormat;
 import org.springframework.data.elasticsearch.annotations.Document;
 import org.springframework.data.elasticsearch.annotations.Field;
 import org.springframework.data.elasticsearch.annotations.FieldType;
@@ -46,6 +47,11 @@ public class SpuDocument {
     @Field(type = FieldType.Keyword)
     private String mainImage;
 
-    @Field(type = FieldType.Date)
-    private LocalDateTime createTime;
+    /**
+     * 创建时间，以 epoch 毫秒写入 ES。
+     * 不用 LocalDateTime：Spring Data ES 5.1 按 date_optional_time 序列化时只写日期部分，
+     * 读取又按完整时间解析，导致 "Unable to convert value 'yyyy-MM-dd' to LocalDateTime"。
+     */
+    @Field(type = FieldType.Date, format = DateFormat.epoch_millis)
+    private Instant createTime;
 }

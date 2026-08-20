@@ -121,6 +121,12 @@ public interface SpuService {
     void refreshEsDocument(Long spuId);
 
     /**
+     * 全量重灌 ES 索引：遍历全部在售 SPU 重新同步文档，用于索引重建后补齐数据。
+     * 幂等，单条失败由 syncToEs 内部捕获，不影响其余 SPU。
+     */
+    void rebuildAllEsDocuments();
+
+    /**
      * 批量查询 SPU 快照，供购物车列表等跨服务链路一次调用替代逐 SPU 的 N 次请求；不存在的 SPU 不放入结果。
      * @param spuIds SPU 主键集合，允许为空
      * @return spuId -> SPU 快照，空入参返回空 Map

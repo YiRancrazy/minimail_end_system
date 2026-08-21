@@ -41,6 +41,7 @@ import com.yirancrazy.minimall.order.manager.OrderManager;
 import com.yirancrazy.minimall.order.manager.OrderStatusLogManager;
 import com.yirancrazy.minimall.order.mapper.OrderMapper;
 import com.yirancrazy.minimall.order.service.OrderService;
+import com.yirancrazy.minimall.order.vo.OrderItemVO;
 import com.yirancrazy.minimall.order.vo.OrderLogisticsVO;
 import com.yirancrazy.minimall.order.vo.OrderStatisticsVO;
 import com.yirancrazy.minimall.order.vo.OrderStatusCountsVO;
@@ -482,6 +483,18 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public OrderPO getDetail(Long orderId) {
         return getOrder(orderId);
+    }
+
+    /**
+     * 查询订单商品明细行，按创建时间正序返回，供订单详情页展示。
+     * @param orderId 订单ID
+     * @return 商品明细VO列表
+     */
+    @Override
+    public List<OrderItemVO> listItemVO(Long orderId) {
+        List<OrderItemPO> items = orderItemManager.list(
+            Wrappers.lambdaQuery(OrderItemPO.class).eq(OrderItemPO::getOrderId, orderId));
+        return items.stream().map(OrderItemVO::from).collect(java.util.stream.Collectors.toList());
     }
 
     /**

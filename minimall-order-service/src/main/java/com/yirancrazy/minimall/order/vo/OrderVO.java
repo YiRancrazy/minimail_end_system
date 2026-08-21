@@ -1,6 +1,7 @@
 package com.yirancrazy.minimall.order.vo;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import lombok.Data;
 import com.yirancrazy.minimall.order.entity.OrderPO;
 
@@ -25,6 +26,8 @@ public class OrderVO {
     private String status;
     private String addressSnapshot;
     private LocalDateTime createTime;
+    /** 订单商品明细，用户端详情页展示 */
+    private List<OrderItemVO> items;
 
     /**
      * 将 OrderPO 转换为 OrderVO。

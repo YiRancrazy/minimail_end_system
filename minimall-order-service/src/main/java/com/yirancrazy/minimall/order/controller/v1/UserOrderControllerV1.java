@@ -125,7 +125,10 @@ public class UserOrderControllerV1 {
     @GetMapping("/{id}/detail")
     public Result<OrderVO> detail(@PathVariable("id") Long id,
                                   @RequestHeader("X-User-Id") Long userId) {
-        return Result.success(OrderVO.from(orderService.getDetail(id, userId)));
+        OrderPO po = orderService.getDetail(id, userId);
+        OrderVO vo = OrderVO.from(po);
+        vo.setItems(orderService.listItemVO(id));
+        return Result.success(vo);
     }
 
     /**

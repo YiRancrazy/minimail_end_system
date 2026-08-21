@@ -5,6 +5,7 @@ import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.order.dto.OrderCheckoutItemDTO;
 import com.yirancrazy.minimall.order.dto.OrderPageDTO;
 import com.yirancrazy.minimall.order.entity.OrderPO;
+import com.yirancrazy.minimall.order.vo.OrderItemVO;
 import com.yirancrazy.minimall.order.vo.OrderLogisticsVO;
 import com.yirancrazy.minimall.order.vo.OrderStatisticsVO;
 import com.yirancrazy.minimall.order.vo.OrderStatusCountsVO;
@@ -113,6 +114,13 @@ public interface OrderService {
      * @return 订单持久化实体
      */
     OrderPO getDetail(Long orderId);
+
+    /**
+     * 查询订单商品明细行，供订单详情页展示；无明细时返回空列表。
+     * @param orderId 订单ID
+     * @return 商品明细VO列表
+     */
+    List<OrderItemVO> listItemVO(Long orderId);
 
     /**
      * 商家关闭订单，仅允许 PENDING 状态关闭并释放库存，归属不符时抛出 ORDER_NOT_FOUND。

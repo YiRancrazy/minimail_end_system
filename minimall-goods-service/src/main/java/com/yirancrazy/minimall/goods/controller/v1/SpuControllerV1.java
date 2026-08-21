@@ -35,7 +35,7 @@ public class SpuControllerV1 {
     }
 
     /**
-     * 根据主键查询 SPU 详情。
+     * 根据主键查询 SPU 详情（含 SKU 列表，供编辑页回显）。
      * @param merchantId 商家ID，来自可信Header
      * @param id SPU 主键 ID
      * @return SPU 视图，不存在或非本人商品时由 Service 层抛出业务异常
@@ -43,7 +43,7 @@ public class SpuControllerV1 {
     @GetMapping("/{id}")
     public Result<SpuVO> get(@RequestHeader("X-Merchant-Id") Long merchantId,
                              @PathVariable("id") Long id) {
-        return Result.success(SpuVO.from(spuService.getById(id, merchantId)));
+        return Result.success(spuService.getDetail(id, merchantId));
     }
 
     /**

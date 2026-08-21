@@ -15,6 +15,8 @@ import com.yirancrazy.minimall.common.base.BasePO;
 @TableName("t_goods_spu")
 public class SpuPO extends BasePO {
     private String spuNo;
+    // 归属店铺ID，商品必须挂靠在营业中店铺下，杜绝无店铺发布
+    private Long shopId;
     private Long merchantId;
     private Long categoryId;
     private String title;

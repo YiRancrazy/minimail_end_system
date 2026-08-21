@@ -36,6 +36,14 @@ public interface SpuService {
     SpuPO getById(Long id, Long merchantId);
 
     /**
+     * 查询 SPU 详情并装配其 SKU 列表，供商家端编辑页回显；非本人商品按"不存在"处理。
+     * @param id SPU ID
+     * @param merchantId 商家ID，来自可信Header
+     * @return SPU 视图，含 skus
+     */
+    SpuVO getDetail(Long id, Long merchantId);
+
+    /**
      * 创建SPU，初始状态为草稿。
      * @param merchantId 商家ID，来自可信Header
      * @param dto SPU创建DTO

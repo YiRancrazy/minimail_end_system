@@ -208,6 +208,7 @@ CREATE TABLE IF NOT EXISTS t_goods_spu (
                                            id              BIGINT          NOT NULL COMMENT '主键ID',
                                            spu_no          VARCHAR(32)     NOT NULL COMMENT 'SPU编号',
     merchant_id     BIGINT          NOT NULL COMMENT '商家ID',
+    shop_id         BIGINT          NULL COMMENT '所属店铺ID',
     category_id     BIGINT          NOT NULL COMMENT '分类ID',
     title           VARCHAR(128)    NOT NULL COMMENT '商品标题',
     subtitle        VARCHAR(255)    NULL COMMENT '副标题',
@@ -220,7 +221,8 @@ CREATE TABLE IF NOT EXISTS t_goods_spu (
     update_time     DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (id),
     UNIQUE KEY uk_goods_spu_spu_no (spu_no, is_deleted),
-    INDEX idx_goods_spu_merchant_status (merchant_id, status, update_time)
+    INDEX idx_goods_spu_merchant_status (merchant_id, status, update_time),
+    INDEX idx_goods_spu_shop (shop_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='商品SPU表';
 
 CREATE TABLE IF NOT EXISTS t_sku (

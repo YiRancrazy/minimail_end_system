@@ -1,6 +1,7 @@
 package com.yirancrazy.minimall.goods.service;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -13,6 +14,8 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
@@ -20,10 +23,14 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.yirancrazy.minimall.api.dto.goods.SpuSnapshotDTO;
+import com.yirancrazy.minimall.api.dto.merchant.ShopSnapshotDTO;
+import com.yirancrazy.minimall.api.feign.MerchantFeignClient;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
+import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.goods.constant.AuditDecisionEnum;
 import com.yirancrazy.minimall.goods.constant.SpuStatusEnum;
+import com.yirancrazy.minimall.goods.dto.SkuItemDTO;
 import com.yirancrazy.minimall.goods.dto.SpuCreateDTO;
 import com.yirancrazy.minimall.goods.dto.SpuPageDTO;
 import com.yirancrazy.minimall.goods.dto.SpuUpdateDTO;
@@ -47,6 +54,7 @@ public class SpuServiceImplTest {
     private SpuAuditRecordManager spuAuditRecordManager;
     private SpuSearchService spuSearchService;
     private SkuManager skuManager;
+    private MerchantFeignClient merchantFeignClient;
     private SpuServiceImpl service;
 
     @BeforeEach
@@ -55,6 +63,7 @@ public class SpuServiceImplTest {
         spuAuditRecordManager = mock(SpuAuditRecordManager.class);
         spuSearchService = mock(SpuSearchService.class);
         skuManager = mock(SkuManager.class);
+        merchantFeignClient = mock(MerchantFeignClient.class);
         lenient().doAnswer(inv -> {
             SpuPO p = inv.getArgument(0);
             if (p.getId() == null) {
@@ -66,7 +75,11 @@ public class SpuServiceImplTest {
         lenient().when(spuManager.removeById(100L)).thenReturn(true);
         lenient().when(skuManager.list(any(Wrapper.class))).thenReturn(List.of());
         lenient().when(spuAuditRecordManager.save(any(SpuAuditRecordPO.class))).thenReturn(true);
-        service = new SpuServiceImpl(spuManager, spuAuditRecordManager, spuSearchService, skuManager);
+        // 默认店铺快照：店铺1归属商家10且营业中，覆盖正常路径
+        lenient().when(merchantFeignClient.shopSnapshot(anyLong()))
+            .thenReturn(Result.success(new ShopSnapshotDTO(1L, 10L, "shop-1", "ACTIVE")));
+        service = new SpuServiceImpl(spuManager, spuAuditRecordManager,
+            spuSearchService, skuManager, merchantFeignClient);
     }
 
     /**
@@ -126,6 +139,7 @@ public class SpuServiceImplTest {
     @Test
     public void create_returns_id_and_sets_draft() {
         SpuCreateDTO dto = new SpuCreateDTO();
+        dto.setShopId(1L);
         dto.setCategoryId(1L);
         dto.setTitle("new-spu");
 
@@ -136,11 +150,192 @@ public class SpuServiceImplTest {
             SpuPO p = inv.getArgument(0);
             assertEquals(SpuStatusEnum.DRAFT.statusValue(), p.getStatus());
             assertEquals(10L, p.getMerchantId());
+            assertEquals(1L, p.getShopId());
             assertNotNull(p.getSpuNo());
             return true;
         }).when(spuManager).save(any(SpuPO.class));
 
         service.create(10L, dto);
+    }
+
+    /**
+     * 验证 create 携带 SKU 清单时批量保存，并回填 spuId 与商家ID，价格/库存原样落库。
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void create_saves_skus_with_spu_id() {
+        SpuCreateDTO dto = new SpuCreateDTO();
+        dto.setShopId(1L);
+        dto.setCategoryId(1L);
+        dto.setTitle("new-spu");
+        SkuItemDTO item = new SkuItemDTO();
+        item.setSkuName("颜色/黑");
+        item.setPrice(new BigDecimal("19.90"));
+        item.setStock(5);
+        dto.setSkus(List.of(item));
+
+        service.create(10L, dto);
+
+        ArgumentCaptor<List<SkuPO>> captor = ArgumentCaptor.forClass(List.class);
+        verify(skuManager).saveBatch(captor.capture());
+        SkuPO saved = captor.getValue().get(0);
+        assertEquals(10L, saved.getMerchantId());
+        assertEquals("颜色/黑", saved.getSkuName());
+        assertEquals(new BigDecimal("19.90"), saved.getPrice());
+        assertEquals(5, saved.getStock());
+        assertNotNull(saved.getSpuId());
+    }
+
+    /**
+     * 验证 create 未携带 SKU 清单时不触发批量保存，兼容仅建 SPU 的场景。
+     */
+    @Test
+    public void create_without_skus_skips_batch_save() {
+        SpuCreateDTO dto = new SpuCreateDTO();
+        dto.setShopId(1L);
+        dto.setCategoryId(1L);
+        dto.setTitle("new-spu");
+
+        service.create(10L, dto);
+
+        verify(skuManager, org.mockito.Mockito.never()).saveBatch(anyList());
+    }
+
+    /**
+     * 验证 create 缺店铺（shopId 为空）时拒绝，无店铺商家不能发布商品。
+     */
+    @Test
+    public void create_throws_when_shop_id_missing() {
+        SpuCreateDTO dto = new SpuCreateDTO();
+        dto.setCategoryId(1L);
+        dto.setTitle("new-spu");
+
+        assertThrows(BizException.class, () -> service.create(10L, dto));
+        verify(spuManager, org.mockito.Mockito.never()).save(any(SpuPO.class));
+    }
+
+    /**
+     * 验证 create 绑定他人店铺时拒绝，防止越权把商品挂到别的商家店铺下。
+     */
+    @Test
+    public void create_throws_when_shop_not_owned() {
+        SpuCreateDTO dto = new SpuCreateDTO();
+        dto.setShopId(1L);
+        dto.setCategoryId(1L);
+        dto.setTitle("new-spu");
+        when(merchantFeignClient.shopSnapshot(1L))
+            .thenReturn(Result.success(new ShopSnapshotDTO(1L, 99L, "shop-1", "ACTIVE")));
+
+        assertThrows(BizException.class, () -> service.create(10L, dto));
+    }
+
+    /**
+     * 验证 create 绑定停业/冻结店铺时拒绝。
+     */
+    @Test
+    public void create_throws_when_shop_inactive() {
+        SpuCreateDTO dto = new SpuCreateDTO();
+        dto.setShopId(1L);
+        dto.setCategoryId(1L);
+        dto.setTitle("new-spu");
+        when(merchantFeignClient.shopSnapshot(1L))
+            .thenReturn(Result.success(new ShopSnapshotDTO(1L, 10L, "shop-1", "INACTIVE")));
+
+        assertThrows(BizException.class, () -> service.create(10L, dto));
+    }
+
+    /**
+     * 验证 create 在 merchant-service 不可用（Feign 降级哨兵）时拒绝发布，fail-closed 而非放行。
+     */
+    @Test
+    public void create_throws_when_shop_service_down() {
+        SpuCreateDTO dto = new SpuCreateDTO();
+        dto.setShopId(1L);
+        dto.setCategoryId(1L);
+        dto.setTitle("new-spu");
+        when(merchantFeignClient.shopSnapshot(1L))
+            .thenReturn(Result.success(new ShopSnapshotDTO(-1L, -1L, "unknown", "DOWN")));
+
+        assertThrows(BizException.class, () -> service.create(10L, dto));
+    }
+
+    /**
+     * 验证 getDetail 装配 SKU 列表，供商家端编辑页回显。
+     */
+    @Test
+    public void getDetail_assembles_skus() {
+        SpuPO po = new SpuPO();
+        po.setId(100L);
+        po.setMerchantId(10L);
+        po.setTitle("t");
+        when(spuManager.getById(100L)).thenReturn(po);
+        SkuPO sku = new SkuPO();
+        sku.setId(1L);
+        sku.setSpuId(100L);
+        sku.setSkuName("颜色/黑");
+        sku.setPrice(new BigDecimal("19.90"));
+        sku.setStock(5);
+        when(skuManager.list(any(Wrapper.class))).thenReturn(List.of(sku));
+
+        SpuVO vo = service.getDetail(100L, 10L);
+
+        assertEquals(1, vo.getSkus().size());
+        assertEquals("颜色/黑", vo.getSkus().get(0).getSkuName());
+        assertEquals(5, vo.getSkus().get(0).getStock());
+    }
+
+    /**
+     * 验证 update 携带 skus 时按 id 增改、未出现者删除：已有 SKU 更新价格/库存，无 id 新建，被移除 SKU 删除。
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void update_syncs_skus() {
+        SpuPO po = new SpuPO();
+        po.setId(100L);
+        po.setMerchantId(10L);
+        po.setStatus(SpuStatusEnum.DRAFT.statusValue());
+        po.setCreateTime(LocalDateTime.now());
+        when(spuManager.getById(100L)).thenReturn(po);
+
+        SkuPO keptSku = new SkuPO();
+        keptSku.setId(1L);
+        keptSku.setSpuId(100L);
+        keptSku.setSkuName("旧规格");
+        SkuPO goneSku = new SkuPO();
+        goneSku.setId(2L);
+        goneSku.setSpuId(100L);
+        goneSku.setSkuName("被移除");
+        when(skuManager.list(any(Wrapper.class))).thenReturn(List.of(keptSku, goneSku));
+
+        SpuUpdateDTO dto = new SpuUpdateDTO();
+        SkuItemDTO kept = new SkuItemDTO();
+        kept.setId(1L);
+        kept.setSkuName("新规格");
+        kept.setPrice(new BigDecimal("29.90"));
+        kept.setStock(9);
+        SkuItemDTO added = new SkuItemDTO();
+        added.setSkuName("新增规格");
+        added.setPrice(new BigDecimal("9.90"));
+        added.setStock(2);
+        dto.setSkus(List.of(kept, added));
+
+        service.update(100L, 10L, dto);
+
+        ArgumentCaptor<List<SkuPO>> createCaptor = ArgumentCaptor.forClass(List.class);
+        verify(skuManager).saveBatch(createCaptor.capture());
+        assertEquals(1, createCaptor.getValue().size());
+        assertEquals("新增规格", createCaptor.getValue().get(0).getSkuName());
+
+        ArgumentCaptor<List<SkuPO>> updateCaptor = ArgumentCaptor.forClass(List.class);
+        verify(skuManager).updateBatchById(updateCaptor.capture());
+        SkuPO updated = updateCaptor.getValue().get(0);
+        assertEquals("新规格", updated.getSkuName());
+        assertEquals(new BigDecimal("29.90"), updated.getPrice());
+        assertEquals(9, updated.getStock());
+
+        ArgumentCaptor<List<Long>> deleteCaptor = ArgumentCaptor.forClass(List.class);
+        verify(skuManager).removeByIds(deleteCaptor.capture());
+        assertEquals(List.of(2L), deleteCaptor.getValue());
     }
 
     /**
@@ -388,6 +583,7 @@ public class SpuServiceImplTest {
         SpuPO existing = new SpuPO();
         existing.setId(100L);
         existing.setMerchantId(10L);
+        existing.setShopId(1L);
         existing.setStatus(SpuStatusEnum.ON_SALE.statusValue());
         when(spuManager.getById(100L)).thenReturn(existing);
 
@@ -402,12 +598,31 @@ public class SpuServiceImplTest {
         SpuPO existing = new SpuPO();
         existing.setId(100L);
         existing.setMerchantId(10L);
+        existing.setShopId(1L);
         existing.setStatus(SpuStatusEnum.DRAFT.statusValue());
         when(spuManager.getById(100L)).thenReturn(existing);
 
         boolean ok = service.onShelf(100L, 10L);
         assertTrue(ok);
         assertEquals(SpuStatusEnum.PENDING_AUDIT.statusValue(), existing.getStatus());
+    }
+
+    /**
+     * 验证 onShelf 绑定店铺非营业中（如被冻结）时拒绝送审，防止店铺停业后仍发布商品。
+     */
+    @Test
+    public void onShelf_throws_when_shop_not_active() {
+        SpuPO existing = new SpuPO();
+        existing.setId(100L);
+        existing.setMerchantId(10L);
+        existing.setShopId(1L);
+        existing.setStatus(SpuStatusEnum.DRAFT.statusValue());
+        when(spuManager.getById(100L)).thenReturn(existing);
+        when(merchantFeignClient.shopSnapshot(1L))
+            .thenReturn(Result.success(new ShopSnapshotDTO(1L, 10L, "shop-1", "SUSPENDED")));
+
+        assertThrows(BizException.class, () -> service.onShelf(100L, 10L));
+        verify(spuManager, org.mockito.Mockito.never()).updateById(any(SpuPO.class));
     }
 
     /**

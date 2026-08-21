@@ -1,24 +1,33 @@
 package com.yirancrazy.minimall.goods.service.impl;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.LongSummaryStatistics;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.api.dto.goods.SpuSnapshotDTO;
+import com.yirancrazy.minimall.api.dto.merchant.ShopSnapshotDTO;
+import com.yirancrazy.minimall.api.feign.MerchantFeignClient;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
+import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.common.util.CursorUtils;
 import com.yirancrazy.minimall.goods.constant.AuditDecisionEnum;
 import com.yirancrazy.minimall.goods.constant.SpuCodeEnum;
 import com.yirancrazy.minimall.goods.constant.SpuStatusEnum;
+import com.yirancrazy.minimall.goods.dto.SkuItemDTO;
 import com.yirancrazy.minimall.goods.dto.SpuCreateDTO;
 import com.yirancrazy.minimall.goods.dto.SpuPageDTO;
 import com.yirancrazy.minimall.goods.dto.SpuUpdateDTO;
@@ -48,15 +57,40 @@ public class SpuServiceImpl implements SpuService {
     private final SpuAuditRecordManager spuAuditRecordManager;
     private final SpuSearchService spuSearchService;
     private final SkuManager skuManager;
+    private final MerchantFeignClient merchantFeignClient;
+
+    /** 店铺营业中状态 alias，跨服务通过 MerchantFeignClient 快照透传 */
+    private static final String SHOP_STATUS_ACTIVE = "ACTIVE";
 
     public SpuServiceImpl(SpuManager spuManager,
                           SpuAuditRecordManager spuAuditRecordManager,
                           SpuSearchService spuSearchService,
-                          SkuManager skuManager) {
+                          SkuManager skuManager,
+                          MerchantFeignClient merchantFeignClient) {
         this.spuManager = spuManager;
         this.spuAuditRecordManager = spuAuditRecordManager;
         this.spuSearchService = spuSearchService;
         this.skuManager = skuManager;
+        this.merchantFeignClient = merchantFeignClient;
+    }
+
+    /**
+     * 发布前置校验：店铺必须存在、归属当前商家且状态为营业中，否则拒绝创建/送审。
+     * Feign 降级（merchant-service 不可用）时快照返回哨兵值，此处 fail-closed，宁可拒绝不可放行。
+     * @param shopId 目标店铺 ID
+     * @param merchantId 请求方商家 ID
+     */
+    private void requireActiveShop(Long shopId, Long merchantId) {
+        if (shopId == null) {
+            throw new BizException(SpuCodeEnum.SPU_SHOP_INVALID);
+        }
+        Result<ShopSnapshotDTO> result = merchantFeignClient.shopSnapshot(shopId);
+        ShopSnapshotDTO snap = result == null ? null : result.getData();
+        if (snap == null || snap.getShopId() == null || snap.getShopId() <= 0
+            || !merchantId.equals(snap.getMerchantId())
+            || !SHOP_STATUS_ACTIVE.equals(snap.getStatus())) {
+            throw new BizException(SpuCodeEnum.SPU_SHOP_INVALID);
+        }
     }
 
     /**
@@ -98,15 +132,19 @@ public class SpuServiceImpl implements SpuService {
     }
 
     /**
-     * 创建 SPU，生成业务编号并初始化为草稿状态后落库。
+     * 创建 SPU，生成业务编号并初始化为草稿状态后落库；携带的 SKU 清单一并批量保存，
+     * 否则列表页商品将无图片与库存展示。
      * @param merchantId 商家ID，来自可信Header
      * @param dto 待保存的 SPU 信息
      * @return 新建 SPU 的主键 ID
      */
     @Override
     public Long create(Long merchantId, SpuCreateDTO dto) {
+        // 发布前提：店铺存在、归属当前商家且营业中，无店铺商家无法发布商品
+        requireActiveShop(dto.getShopId(), merchantId);
         SpuPO po = new SpuPO();
         po.setSpuNo(UUID.randomUUID().toString().replace("-", ""));
+        po.setShopId(dto.getShopId());
         po.setMerchantId(merchantId);
         po.setCategoryId(dto.getCategoryId());
         po.setTitle(dto.getTitle());
@@ -114,8 +152,47 @@ public class SpuServiceImpl implements SpuService {
         po.setMainImageUrl(dto.getMainImageUrl());
         po.setStatus(SpuStatusEnum.DRAFT.statusValue());
         spuManager.save(po);
+        saveSkus(merchantId, po.getId(), dto.getSkus());
         log.info("spu created, spuId={}, merchantId={}", po.getId(), merchantId);
         return po.getId();
+    }
+
+    /**
+     * 批量保存创建时携带的 SKU，空清单直接忽略；价格/库存缺省值兜底，规格描述为空时占位 "-"。
+     * @param merchantId 商家ID，来自可信Header
+     * @param spuId 新建 SPU 的主键
+     * @param items 创建入参携带的 SKU 清单，允许为空
+     */
+    private void saveSkus(Long merchantId, Long spuId, List<SkuItemDTO> items) {
+        if (items == null || items.isEmpty()) {
+            return;
+        }
+        List<SkuPO> skus = items.stream().map(it -> {
+            SkuPO sku = new SkuPO();
+            sku.setSpuId(spuId);
+            sku.setMerchantId(merchantId);
+            sku.setSkuName(it.getSkuName() == null || it.getSkuName().isBlank() ? "-" : it.getSkuName());
+            sku.setPrice(it.getPrice() != null ? it.getPrice() : BigDecimal.ZERO);
+            sku.setStock(it.getStock() != null ? it.getStock() : 0);
+            return sku;
+        }).collect(Collectors.toList());
+        skuManager.saveBatch(skus);
+    }
+
+    /**
+     * 查询 SPU 详情并装配其 SKU 列表，供商家端编辑页回显。
+     * @param id SPU 主键 ID
+     * @param merchantId 商家ID，来自可信Header
+     * @return SPU 视图，含 skus
+     */
+    @Override
+    public SpuVO getDetail(Long id, Long merchantId) {
+        SpuPO po = getById(id, merchantId);
+        SpuVO vo = SpuVO.from(po);
+        List<SkuPO> skus = skuManager.list(
+            Wrappers.lambdaQuery(SkuPO.class).eq(SkuPO::getSpuId, id));
+        vo.setSkus(skus.stream().map(SkuVO::from).collect(Collectors.toList()));
+        return vo;
     }
 
     /**
@@ -178,6 +255,11 @@ public class SpuServiceImpl implements SpuService {
             throw new BizException(SpuCodeEnum.SPU_NOT_FOUND);
         }
         checkOwner(existing, merchantId);
+        // 更换店铺时同样要求新店铺存在、归属当前商家且营业中
+        if (dto.getShopId() != null) {
+            requireActiveShop(dto.getShopId(), merchantId);
+            existing.setShopId(dto.getShopId());
+        }
         if (dto.getCategoryId() != null) {
             existing.setCategoryId(dto.getCategoryId());
         }
@@ -197,9 +279,58 @@ public class SpuServiceImpl implements SpuService {
         }
         boolean ok = spuManager.updateById(existing);
         if (ok) {
+            // skus 非空时先同步 SKU 再刷 ES，保证价格区间聚合到最新 SKU
+            if (dto.getSkus() != null) {
+                syncSkus(merchantId, id, dto.getSkus());
+            }
             syncToEs(existing);
         }
         return ok;
+    }
+
+    /**
+     * 按 id 增改、未出现者删除的 SKU 全量同步：已存在 SKU 更新价格/库存/规格，
+     * 无 id 的 SKU 新建，原 SKU 未出现在清单中则删除，防止编辑页改库存不落库。
+     * @param merchantId 商家ID，来自可信Header
+     * @param spuId SPU 主键 ID
+     * @param items 编辑后 SKU 全量清单
+     */
+    private void syncSkus(Long merchantId, Long spuId, List<SkuItemDTO> items) {
+        List<SkuPO> existing = skuManager.list(
+            Wrappers.lambdaQuery(SkuPO.class).eq(SkuPO::getSpuId, spuId));
+        Map<Long, SkuPO> existingById = existing.stream()
+            .filter(s -> s.getId() != null)
+            .collect(Collectors.toMap(SkuPO::getId, Function.identity()));
+        Set<Long> keepIds = new HashSet<>();
+        List<SkuPO> toCreate = new ArrayList<>();
+        List<SkuPO> toUpdate = new ArrayList<>();
+        for (SkuItemDTO it : items) {
+            SkuPO sku = existingById.get(it.getId());
+            if (sku == null) {
+                sku = new SkuPO();
+                sku.setSpuId(spuId);
+                sku.setMerchantId(merchantId);
+                toCreate.add(sku);
+            }
+            else {
+                keepIds.add(it.getId());
+                toUpdate.add(sku);
+            }
+            sku.setSkuName(it.getSkuName() == null || it.getSkuName().isBlank() ? "-" : it.getSkuName());
+            sku.setPrice(it.getPrice() != null ? it.getPrice() : BigDecimal.ZERO);
+            sku.setStock(it.getStock() != null ? it.getStock() : 0);
+        }
+        if (!toCreate.isEmpty()) {
+            skuManager.saveBatch(toCreate);
+        }
+        if (!toUpdate.isEmpty()) {
+            skuManager.updateBatchById(toUpdate);
+        }
+        List<Long> toDelete = existing.stream().map(SkuPO::getId)
+            .filter(id -> id != null && !keepIds.contains(id)).collect(Collectors.toList());
+        if (!toDelete.isEmpty()) {
+            skuManager.removeByIds(toDelete);
+        }
     }
 
     /**
@@ -242,6 +373,8 @@ public class SpuServiceImpl implements SpuService {
             throw new BizException(SpuCodeEnum.SPU_NOT_FOUND);
         }
         checkOwner(existing, merchantId);
+        // 送审即发布前置，重新校验绑定店铺仍营业中，店铺被冻结/停业则禁止送审
+        requireActiveShop(existing.getShopId(), merchantId);
         Integer s = existing.getStatus();
         if (s == null
             || (s != SpuStatusEnum.DRAFT.statusValue()

@@ -26,7 +26,8 @@ public class MerchantFeignFallbackFactory implements FallbackFactory<MerchantFei
         return new MerchantFeignClient() {
             @Override
             public Result<ShopSnapshotDTO> shopSnapshot(Long id) {
-                return Result.success(new ShopSnapshotDTO(-1L, "unknown", "DOWN"));
+                // 哨兵值：shopId/merchantId=-1 且 status=DOWN，下游校验必然失败，确保降级时拒绝发布而非放行
+                return Result.success(new ShopSnapshotDTO(-1L, -1L, "unknown", "DOWN"));
             }
 
             @Override

@@ -34,10 +34,10 @@ public class InternalShopControllerV1 {
      */
     @GetMapping("/{id}")
     public Result<ShopSnapshotDTO> snapshot(@PathVariable Long id) {
-        // 内部服务间调用无商家上下文，传 null 跳过归属校验
+        // 内部服务间调用无商家上下文，传 null 跳过归属校验；merchantId 一并透出供下游归属校验
         ShopPO s = shopService.getById(null, id);
         ShopStatusEnum status = ShopStatusEnum.fromCode(s.getStatus());
-        return Result.success(new ShopSnapshotDTO(s.getId(), s.getShopName(),
+        return Result.success(new ShopSnapshotDTO(s.getId(), s.getMerchantId(), s.getShopName(),
             status == null ? null : status.getAlias()));
     }
 }

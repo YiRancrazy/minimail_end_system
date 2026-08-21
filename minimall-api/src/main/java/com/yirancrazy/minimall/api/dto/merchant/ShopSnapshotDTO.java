@@ -15,6 +15,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class ShopSnapshotDTO {
     private Long shopId;
+    /** 归属商家ID，供下游服务校验店铺归属，防越权绑定他人店铺 */
+    private Long merchantId;
     private String shopName;
     private String status;
 }

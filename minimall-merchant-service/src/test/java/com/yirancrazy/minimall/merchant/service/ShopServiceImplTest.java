@@ -14,11 +14,16 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.yirancrazy.minimall.common.exception.BizException;
+import com.yirancrazy.minimall.merchant.constant.MerchantAuditStatusEnum;
+import com.yirancrazy.minimall.merchant.constant.ShopStatusEnum;
 import com.yirancrazy.minimall.merchant.dto.ShopCreateDTO;
 import com.yirancrazy.minimall.merchant.dto.ShopUpdateDTO;
+import com.yirancrazy.minimall.merchant.entity.MerchantPO;
 import com.yirancrazy.minimall.merchant.entity.ShopPO;
+import com.yirancrazy.minimall.merchant.manager.MerchantManager;
 import com.yirancrazy.minimall.merchant.manager.ShopManager;
 import com.yirancrazy.minimall.merchant.service.impl.ShopServiceImpl;
 
@@ -28,11 +33,13 @@ import com.yirancrazy.minimall.merchant.service.impl.ShopServiceImpl;
 public class ShopServiceImplTest {
 
     private ShopManager shopManager;
+    private MerchantManager merchantManager;
     private ShopServiceImpl service;
 
     @BeforeEach
     void setUp() {
         shopManager = mock(ShopManager.class);
+        merchantManager = mock(MerchantManager.class);
         lenient().doAnswer(inv -> {
             ShopPO p = inv.getArgument(0);
             if (p.getId() == null) {
@@ -41,7 +48,15 @@ public class ShopServiceImplTest {
             return true;
         }).when(shopManager).save(any(ShopPO.class));
         lenient().when(shopManager.updateById(any(ShopPO.class))).thenReturn(true);
-        service = new ShopServiceImpl(shopManager);
+        service = new ShopServiceImpl(shopManager, merchantManager);
+    }
+
+    private MerchantPO approvedMerchant(Long merchantId) {
+        MerchantPO m = new MerchantPO();
+        m.setId(merchantId);
+        m.setUserId(merchantId);
+        m.setAuditStatus(Integer.parseInt(MerchantAuditStatusEnum.APPROVED.getCode()));
+        return m;
     }
 
     private ShopPO ownerShop(Long id, Long merchantId) {
@@ -111,22 +126,40 @@ public class ShopServiceImplTest {
     }
 
     /**
-     * 验证 create 持久化店铺并绑定归属商家、返回新 ID。
+     * 验证 create 持久化店铺并绑定归属商家、返回新 ID；新店状态由服务端固定为营业中。
      */
     @Test
     public void create_persists_and_returns_id() {
+        when(merchantManager.getOne(any())).thenReturn(approvedMerchant(1L));
         ShopCreateDTO dto = new ShopCreateDTO();
         dto.setShopName("new-shop");
         dto.setLicenseNo("ABC123456789012");
-        dto.setStatus("ACTIVE");
 
         Long id = service.create(1L, dto);
         assertNotNull(id);
         ArgumentCaptor<ShopPO> captor = ArgumentCaptor.forClass(ShopPO.class);
         verify(shopManager).save(captor.capture());
         assertEquals(1L, captor.getValue().getMerchantId());
-        assertEquals(com.yirancrazy.minimall.merchant.constant.ShopStatusEnum.ACTIVE.intCode(),
-            captor.getValue().getStatus());
+        assertEquals(ShopStatusEnum.ACTIVE.intCode(), captor.getValue().getStatus());
+    }
+
+    /**
+     * 验证 create 在商家资质未审核通过（未提交/待审/驳回）时拒绝开店。
+     */
+    @Test
+    public void create_throws_when_merchant_not_approved() {
+        when(merchantManager.getOne(any())).thenReturn(null);
+        ShopCreateDTO dto = new ShopCreateDTO();
+        dto.setShopName("new-shop");
+        dto.setLicenseNo("ABC123456789012");
+
+        assertThrows(BizException.class, () -> service.create(1L, dto));
+        verify(shopManager, org.mockito.Mockito.never()).save(any(ShopPO.class));
+
+        MerchantPO rejected = new MerchantPO();
+        rejected.setAuditStatus(Integer.parseInt(MerchantAuditStatusEnum.REJECTED.getCode()));
+        when(merchantManager.getOne(any())).thenReturn(rejected);
+        assertThrows(BizException.class, () -> service.create(1L, dto));
     }
 
     /**
@@ -158,6 +191,20 @@ public class ShopServiceImplTest {
 
         boolean ok = service.update(1L, 10L, dto);
         assertFalse(ok);
+    }
+
+    /**
+     * 验证 update 商家设置冻结（SUSPENDED）状态被拒绝，冻结仅平台可操作。
+     */
+    @Test
+    public void update_throws_when_setting_suspended() {
+        when(shopManager.getById(10L)).thenReturn(ownerShop(10L, 1L));
+        ShopUpdateDTO dto = new ShopUpdateDTO();
+        dto.setShopName("x");
+        dto.setStatus("SUSPENDED");
+
+        assertThrows(BizException.class, () -> service.update(1L, 10L, dto));
+        verify(shopManager, org.mockito.Mockito.never()).updateById(any(ShopPO.class));
     }
 
     /**

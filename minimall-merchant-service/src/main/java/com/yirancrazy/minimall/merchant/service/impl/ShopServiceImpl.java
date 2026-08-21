@@ -1,28 +1,34 @@
 package com.yirancrazy.minimall.merchant.service.impl;
 
 import org.springframework.stereotype.Service;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.yirancrazy.minimall.common.exception.BizException;
+import com.yirancrazy.minimall.merchant.constant.MerchantAuditStatusEnum;
 import com.yirancrazy.minimall.merchant.constant.ShopCodeEnum;
 import com.yirancrazy.minimall.merchant.constant.ShopStatusEnum;
 import com.yirancrazy.minimall.merchant.dto.ShopCreateDTO;
 import com.yirancrazy.minimall.merchant.dto.ShopUpdateDTO;
+import com.yirancrazy.minimall.merchant.entity.MerchantPO;
 import com.yirancrazy.minimall.merchant.entity.ShopPO;
+import com.yirancrazy.minimall.merchant.manager.MerchantManager;
 import com.yirancrazy.minimall.merchant.manager.ShopManager;
 import com.yirancrazy.minimall.merchant.service.ShopService;
 
 /**
  * @Author: yirancrazy@gmail.com
  * @Description: 商户领域服务实现，实现Shop相关业务逻辑
- * @Version: 1.1
+ * @Version: 1.2
  * @DateTime: 2026/08/16
  */
 @Service
 public class ShopServiceImpl implements ShopService {
 
     private final ShopManager shopManager;
+    private final MerchantManager merchantManager;
 
-    public ShopServiceImpl(ShopManager shopManager) {
+    public ShopServiceImpl(ShopManager shopManager, MerchantManager merchantManager) {
         this.shopManager = shopManager;
+        this.merchantManager = merchantManager;
     }
 
     /**
@@ -65,6 +71,8 @@ public class ShopServiceImpl implements ShopService {
 
     /**
      * 新增店铺记录并绑定归属商家，返回持久化后的主键 ID。
+     * 前置要求商家资质已审核通过（APPROVED），未提交或未通过禁止开店；
+     * 店铺状态由服务端统一管控，新店固定为营业中，不接受客户端自设。
      *
      * @param merchantId 商家账号 ID
      * @param dto 待创建的店铺信息
@@ -72,17 +80,24 @@ public class ShopServiceImpl implements ShopService {
      */
     @Override
     public Long create(Long merchantId, ShopCreateDTO dto) {
+        MerchantPO merchant = merchantManager.getOne(
+            Wrappers.lambdaQuery(MerchantPO.class).eq(MerchantPO::getUserId, merchantId));
+        if (merchant == null || merchant.getAuditStatus() == null
+            || merchant.getAuditStatus() != Integer.parseInt(MerchantAuditStatusEnum.APPROVED.getCode())) {
+            throw new BizException(ShopCodeEnum.SHOP_MERCHANT_NOT_APPROVED);
+        }
         ShopPO shop = new ShopPO();
         shop.setMerchantId(merchantId);
         shop.setShopName(dto.getShopName());
         shop.setLicenseNo(dto.getLicenseNo());
-        shop.setStatus(resolveStatus(dto.getStatus()));
+        shop.setStatus(ShopStatusEnum.ACTIVE.intCode());
         shopManager.save(shop);
         return shop.getId();
     }
 
     /**
      * 根据主键 ID 更新店铺信息，先校验归属（复用 getById 的越权判定）。
+     * 店铺状态服务端管控：商家仅可在营业/停业间调整，冻结（SUSPENDED）为平台专用，商家无权设置。
      *
      * @param merchantId 商家账号 ID
      * @param id 店铺主键 ID
@@ -92,11 +107,17 @@ public class ShopServiceImpl implements ShopService {
     @Override
     public boolean update(Long merchantId, Long id, ShopUpdateDTO dto) {
         getById(merchantId, id);
+        if (ShopStatusEnum.SUSPENDED.getAlias().equals(dto.getStatus())) {
+            throw new BizException(ShopCodeEnum.SHOP_STATUS_FORBIDDEN);
+        }
         ShopPO shop = new ShopPO();
         shop.setId(id);
         shop.setShopName(dto.getShopName());
         shop.setLicenseNo(dto.getLicenseNo());
-        shop.setStatus(resolveStatus(dto.getStatus()));
+        // 状态未传视为不修改，保持服务端既有管控值
+        if (dto.getStatus() != null) {
+            shop.setStatus(resolveStatus(dto.getStatus()));
+        }
         return shopManager.updateById(shop);
     }
 

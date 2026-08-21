@@ -72,7 +72,6 @@ class ShopControllerV1Test {
         ShopCreateDTO dto = new ShopCreateDTO();
         dto.setShopName("新店");
         dto.setLicenseNo("ABC123456789012");
-        dto.setStatus("ACTIVE");
         mockMvc.perform(post("/api/v1/merchant/shops")
                 .header(X_MERCHANT_ID, "1")
                 .contentType(MediaType.APPLICATION_JSON)

@@ -22,7 +22,6 @@ public class ShopUpdateDTO {
     @Pattern(regexp = "^[A-Z0-9]{15,20}$", message = "licenseNo format is invalid")
     private String licenseNo;
 
-    // 状态入参沿用 alias 字符串（ACTIVE/INACTIVE/SUSPENDED），服务层转 ShopStatusEnum int code 落库
-    @NotBlank(message = "status cannot be blank")
+    // 状态可选：传值则校验变更，不传保持服务端既有管控值（SUSPENDED 为平台专用，商家无权设置）
     private String status;
 }

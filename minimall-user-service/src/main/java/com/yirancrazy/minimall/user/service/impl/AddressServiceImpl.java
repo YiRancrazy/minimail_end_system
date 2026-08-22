@@ -68,7 +68,7 @@ public class AddressServiceImpl implements AddressService {
         po.setCity(dto.getCity());
         po.setDistrict(dto.getDistrict());
         po.setDetailAddress(dto.getDetail());
-        po.setIsDefault(count == 0 ? 1 : 0);
+        po.setIsDefault(count == 0 ? 1 : null);
 
         addressManager.save(po);
         log.info("address created, userId={}, addressId={}", userId, po.getId());
@@ -125,10 +125,12 @@ public class AddressServiceImpl implements AddressService {
     public void setDefault(Long userId, Long id) {
         AddressPO existing = getOwnedAddress(userId, id);
 
+        // 将旧默认置空。非默认地址统一以 NULL 表示，配合唯一索引 (user_id,is_default,is_deleted)
+        // 允许同一用户存在多条非默认地址，且保证默认地址最多一条（is_default=1）
         addressManager.update(Wrappers.lambdaUpdate(AddressPO.class)
             .eq(AddressPO::getUserId, userId)
             .eq(AddressPO::getIsDefault, 1)
-            .set(AddressPO::getIsDefault, 0));
+            .set(AddressPO::getIsDefault, null));
 
         existing.setIsDefault(1);
         addressManager.updateById(existing);

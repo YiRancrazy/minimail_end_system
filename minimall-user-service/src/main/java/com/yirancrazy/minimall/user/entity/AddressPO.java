@@ -1,5 +1,6 @@
 package com.yirancrazy.minimall.user.entity;
 
+import com.baomidou.mybatisplus.annotation.FieldStrategy;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
@@ -42,6 +43,7 @@ public class AddressPO extends BasePO {
     @TableField(typeHandler = EncryptedStringTypeHandler.class)
     private String detailAddress;
 
-    /** 是否默认地址 0=否 1=是 */
+    /** 是否默认地址 1=是，非默认以 NULL 表示（配合唯一索引允许多条非默认地址） */
+    @TableField(value = "is_default", insertStrategy = FieldStrategy.IGNORED)
     private Integer isDefault;
 }

@@ -71,6 +71,10 @@ public class RouterConfig {
                 "/api/v1/merchant/notify/**",
                 "/api/v1/platform/notify/**",
                 "/api/v1/platform/complaints/**",
+                "/api/v1/user/comments/**",
+                "/api/v1/merchant/comments/**",
+                "/api/v1/platform/comments/**",
+                "/api/v1/goods/comments/**",
                 "/api/v1/notify/sse")
                 .uri(HOST + ":8209"))
             .route("platform-service", r -> r.path(

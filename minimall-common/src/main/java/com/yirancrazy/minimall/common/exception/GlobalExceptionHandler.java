@@ -85,6 +85,17 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Result<Void>> unknown(Exception e) {
+        // 深挖 cause 链，找回被 Seata 代理吞掉类型的 BizException/BaseException，恢复业务错误码语义，避免越权/不存在订单误报"系统繁忙"
+        for (Throwable t = e; t != null; t = t.getCause()) {
+            if (t instanceof BizException biz) {
+                log.warn("unwrapped biz exception code={} alias={} msg={}", biz.getCode(), biz.getAlias(), biz.getMessage());
+                return ResponseEntity.status(HttpStatus.OK).body(Result.fail(biz.getCode(), biz.getMessage()));
+            }
+            if (t instanceof BaseException base) {
+                log.warn("unwrapped base exception code={} msg={}", base.getCode(), base.getMessage());
+                return ResponseEntity.status(HttpStatus.OK).body(Result.fail(base.getCode(), base.getMessage()));
+            }
+        }
         log.error("unknown error", e);
         return ResponseEntity.status(HttpStatus.OK).body(Result.fail(CommonCode.SYS_ERROR, "系统繁忙"));
     }

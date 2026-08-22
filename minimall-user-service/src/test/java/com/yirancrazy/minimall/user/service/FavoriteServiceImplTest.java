@@ -1,12 +1,15 @@
 package com.yirancrazy.minimall.user.service;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -16,8 +19,12 @@ import static org.mockito.Mockito.when;
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
+import com.yirancrazy.minimall.api.dto.goods.SkuSnapshotDTO;
+import com.yirancrazy.minimall.api.dto.goods.SpuSnapshotDTO;
+import com.yirancrazy.minimall.api.feign.GoodsFeignClient;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
+import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.user.dto.FavoritePageDTO;
 import com.yirancrazy.minimall.user.entity.UserFavoritePO;
 import com.yirancrazy.minimall.user.manager.UserFavoriteManager;
@@ -40,12 +47,14 @@ public class FavoriteServiceImplTest {
     }
 
     private UserFavoriteManager userFavoriteManager;
+    private GoodsFeignClient goodsFeignClient;
     private FavoriteServiceImpl service;
 
     @BeforeEach
     void setUp() {
         userFavoriteManager = mock(UserFavoriteManager.class);
-        service = new FavoriteServiceImpl(userFavoriteManager);
+        goodsFeignClient = mock(GoodsFeignClient.class);
+        service = new FavoriteServiceImpl(userFavoriteManager, goodsFeignClient);
     }
 
     /**
@@ -109,10 +118,10 @@ public class FavoriteServiceImplTest {
     }
 
     /**
-     * 验证 pageFavorites 将持久化对象转换为 VO 并返回。
+     * 验证 pageFavorites 用 SKU/SPU 快照富化商品标题、主图与价格。
      */
     @Test
-    public void pageFavorites_returns_vos() {
+    public void pageFavorites_enriches_with_goods_snapshot() {
         FavoritePageDTO dto = new FavoritePageDTO();
         dto.setLimit(10);
         UserFavoritePO po = new UserFavoritePO();
@@ -122,11 +131,61 @@ public class FavoriteServiceImplTest {
         po.setCreateTime(LocalDateTime.now());
         when(userFavoriteManager.list(any(Wrapper.class))).thenReturn(List.of(po));
 
+        SkuSnapshotDTO sku = new SkuSnapshotDTO(100L, 200L, "无线鼠标", BigDecimal.valueOf(199.00), 5, 3L);
+        SpuSnapshotDTO spu = new SpuSnapshotDTO(200L, "无线鼠标旗舰版", "http://img/200.jpg");
+        when(goodsFeignClient.batchSkuSnapshot(List.of(100L))).thenReturn(Result.success(Map.of(100L, sku)));
+        when(goodsFeignClient.batchSpuSnapshot(List.of(200L))).thenReturn(Result.success(Map.of(200L, spu)));
+
         CursorPageVO<FavoriteVO> result = service.pageFavorites(7L, dto);
 
-        assertEquals(1, result.getRecords().size());
-        assertEquals(1L, result.getRecords().get(0).getId());
-        assertEquals(100L, result.getRecords().get(0).getSkuId());
+        FavoriteVO vo = result.getRecords().get(0);
+        assertEquals(1L, vo.getId());
+        assertEquals(100L, vo.getSkuId());
+        assertEquals(200L, vo.getSpuId());
+        assertEquals("无线鼠标", vo.getSkuName());
+        assertEquals("http://img/200.jpg", vo.getSkuImage());
+        assertEquals(BigDecimal.valueOf(199.00), vo.getPrice());
+    }
+
+    /**
+     * 验证商品快照缺失时收藏核心字段仍返回，商品展示字段保持 null。
+     */
+    @Test
+    public void pageFavorites_degrades_when_goods_snapshot_missing() {
+        FavoritePageDTO dto = new FavoritePageDTO();
+        dto.setLimit(10);
+        UserFavoritePO po = new UserFavoritePO();
+        po.setId(1L);
+        po.setUserId(7L);
+        po.setSkuId(100L);
+        po.setCreateTime(LocalDateTime.now());
+        when(userFavoriteManager.list(any(Wrapper.class))).thenReturn(List.of(po));
+        // 商品服务不可用时 fallback 返回空 Map
+        when(goodsFeignClient.batchSkuSnapshot(List.of(100L))).thenReturn(Result.success(Map.of()));
+
+        CursorPageVO<FavoriteVO> result = service.pageFavorites(7L, dto);
+
+        FavoriteVO vo = result.getRecords().get(0);
+        assertEquals(1L, vo.getId());
+        assertEquals(100L, vo.getSkuId());
+        assertNull(vo.getSkuName());
+        assertNull(vo.getSkuImage());
+        assertNull(vo.getPrice());
+    }
+
+    /**
+     * 验证无收藏且无商品快照请求时返回空分页。
+     */
+    @Test
+    public void pageFavorites_returns_empty_when_no_records() {
+        FavoritePageDTO dto = new FavoritePageDTO();
+        dto.setLimit(10);
+        when(userFavoriteManager.list(any(Wrapper.class))).thenReturn(List.of());
+
+        CursorPageVO<FavoriteVO> result = service.pageFavorites(7L, dto);
+
+        assertEquals(0, result.getRecords().size());
+        verify(goodsFeignClient, never()).batchSkuSnapshot(any());
     }
 
     /**

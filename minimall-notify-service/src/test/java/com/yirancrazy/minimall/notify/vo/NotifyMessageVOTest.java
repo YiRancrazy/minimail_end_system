@@ -37,10 +37,10 @@ public class NotifyMessageVOTest {
         assertEquals(1L, vo.getId());
         assertEquals(7L, vo.getUserId());
         assertEquals(1, vo.getRecipientType());
-        assertEquals(2, vo.getMessageType());
+        assertEquals("LOGISTICS", vo.getType());
         assertEquals("订单发货通知", vo.getTitle());
         assertEquals("您的订单已发货", vo.getContent());
-        assertEquals(0, vo.getReadFlag());
+        assertEquals("UNREAD", vo.getStatus());
         assertEquals(now, vo.getCreateTime());
     }
 
@@ -63,8 +63,8 @@ public class NotifyMessageVOTest {
         assertEquals(1L, vo.getId());
         assertEquals(7L, vo.getUserId());
         assertEquals(1, vo.getRecipientType());
-        assertEquals(2, vo.getMessageType());
-        assertEquals(0, vo.getReadFlag());
+        assertEquals("LOGISTICS", vo.getType());
+        assertEquals("UNREAD", vo.getStatus());
         assertNull(vo.getTitle());
         assertNull(vo.getContent());
         assertNull(vo.getCreateTime());

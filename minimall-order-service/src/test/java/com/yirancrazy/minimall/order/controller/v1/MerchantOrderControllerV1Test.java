@@ -19,6 +19,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.order.dto.OrderPageDTO;
 import com.yirancrazy.minimall.order.service.OrderService;
+import com.yirancrazy.minimall.order.vo.OrderVO;
 
 /**
  * @Author: yirancrazy@gmail.com
@@ -42,7 +43,7 @@ class MerchantOrderControllerV1Test {
      */
     @Test
     void page_returns_cursor_result() throws Exception {
-        when(service.page(any(OrderPageDTO.class)))
+        when(service.merchantPageVO(any(OrderPageDTO.class)))
             .thenReturn(new CursorPageVO<>(Collections.emptyList(), null, false, 20));
         mockMvc.perform(get("/api/v1/merchant/orders").header("X-Merchant-Id", 1L))
             .andExpect(status().isOk())
@@ -96,6 +97,6 @@ class MerchantOrderControllerV1Test {
                 .param("approved", "true"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.code").value("00000"));
-        verify(service).reviewRefund(99L, true, 1L);
+        verify(service).reviewRefund(99L, true, 1L, null);
     }
 }

@@ -44,6 +44,7 @@ import com.yirancrazy.minimall.order.manager.OrderStatusLogManager;
 import com.yirancrazy.minimall.order.mapper.OrderMapper;
 import com.yirancrazy.minimall.order.service.impl.OrderServiceImpl;
 import com.yirancrazy.minimall.order.vo.OrderLogisticsVO;
+import com.yirancrazy.minimall.order.vo.OrderVO;
 
 /**
 * OrderServiceImpl 单元测试，覆盖订单状态机创建、支付、取消、发货、确认、退款及异常路径。
@@ -657,7 +658,7 @@ public class OrderServiceImplTest {
         existing.setPayId(2001L);
         when(manager.getById(99L)).thenReturn(existing);
 
-        service.reviewRefund(99L, true, 10L);
+        service.reviewRefund(99L, true, 10L, null);
         assertEquals(OrderStatusEnum.REFUNDING.intCode(), existing.getStatus());
         verify(payFeignClient).refund(any());
     }
@@ -671,7 +672,7 @@ public class OrderServiceImplTest {
         existing.setRefundFromStatus(OrderStatusEnum.PAID.intCode());
         when(manager.getById(99L)).thenReturn(existing);
 
-        service.reviewRefund(99L, false, 10L);
+        service.reviewRefund(99L, false, 10L, "证据不足");
         assertEquals(OrderStatusEnum.PAID.intCode(), existing.getStatus());
         verify(manager).updateById(existing);
     }
@@ -684,7 +685,7 @@ public class OrderServiceImplTest {
         OrderPO existing = buildOrder(99L, 1L, 10L, OrderStatusEnum.REFUNDING.intCode());
         when(manager.getById(99L)).thenReturn(existing);
 
-        assertThrows(BizException.class, () -> service.reviewRefund(99L, true, 999L));
+        assertThrows(BizException.class, () -> service.reviewRefund(99L, true, 999L, null));
     }
 
     /**
@@ -695,7 +696,7 @@ public class OrderServiceImplTest {
         OrderPO existing = buildOrder(99L, 1L, 10L, OrderStatusEnum.PAID.intCode());
         when(manager.getById(99L)).thenReturn(existing);
 
-        assertThrows(BizException.class, () -> service.reviewRefund(99L, true, 10L));
+        assertThrows(BizException.class, () -> service.reviewRefund(99L, true, 10L, null));
     }
 
     /**
@@ -750,7 +751,7 @@ public class OrderServiceImplTest {
         existing.setRefundAmount(new BigDecimal("5.00"));
         when(manager.getById(99L)).thenReturn(existing);
 
-        service.reviewRefund(99L, true, 10L);
+        service.reviewRefund(99L, true, 10L, null);
 
         org.mockito.ArgumentCaptor<RefundCreateDTO> captor =
             org.mockito.ArgumentCaptor.forClass(RefundCreateDTO.class);
@@ -1132,5 +1133,27 @@ public class OrderServiceImplTest {
         OrderPO po = buildOrder(id, userId, status);
         po.setMerchantId(merchantId);
         return po;
+    }
+
+    /**
+     * 验证商家端分页装配商品名与驳回原因，且状态映射为枚举别名。
+     */
+    @Test
+    public void merchantPageVO_enriches_skuName_and_rejectReason() {
+        OrderPO po = buildOrder(88L, 1L, 10L, OrderStatusEnum.REFUNDED.intCode());
+        when(manager.list(any(Wrapper.class))).thenReturn(java.util.Collections.singletonList(po));
+        when(goodsFeignClient.batchSkuSnapshot(any())).thenReturn(Result.success(
+            java.util.Map.of(100L, new SkuSnapshotDTO(100L, 1L, "iPhone 15", new BigDecimal("5999.00"), 10, 10L))));
+        OrderStatusLogPO log = new OrderStatusLogPO();
+        log.setOrderId(88L);
+        log.setNote("证据不足");
+        when(statusLogManager.list(any(Wrapper.class))).thenReturn(java.util.Collections.singletonList(log));
+
+        CursorPageVO<OrderVO> result = service.merchantPageVO(new OrderPageDTO());
+
+        OrderVO vo = result.getRecords().get(0);
+        assertEquals("iPhone 15", vo.getSkuName());
+        assertEquals("证据不足", vo.getRejectReason());
+        assertEquals("REFUNDED", vo.getStatus());
     }
 }

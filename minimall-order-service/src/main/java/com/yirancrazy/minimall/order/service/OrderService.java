@@ -9,6 +9,7 @@ import com.yirancrazy.minimall.order.vo.OrderItemVO;
 import com.yirancrazy.minimall.order.vo.OrderLogisticsVO;
 import com.yirancrazy.minimall.order.vo.OrderStatisticsVO;
 import com.yirancrazy.minimall.order.vo.OrderStatusCountsVO;
+import com.yirancrazy.minimall.order.vo.OrderVO;
 
 /**
  * @Author: yirancrazy@gmail.com
@@ -157,13 +158,21 @@ public interface OrderService {
     CursorPageVO<OrderPO> page(OrderPageDTO dto);
 
     /**
+     * 商家端游标分页查询订单并装配展示字段（商品名、驳回原因），返回 Controller 边界 VO。
+     * @param dto 游标分页查询入参
+     * @return 订单 VO 游标分页结果
+     */
+    CursorPageVO<OrderVO> merchantPageVO(OrderPageDTO dto);
+
+    /**
      * 商家审核退款，仅允许 REFUNDING 状态订单；approved=true 发起真实支付退款（状态由回调驱动到 REFUNDED），
-     * false 回退到 refundFromStatus。
+     * false 回退到 refundFromStatus 并将驳回原因写入状态日志。
      * @param orderId 订单ID
      * @param approved 是否同意退款
      * @param merchantId 商家ID，来自可信 Header
+     * @param reason 驳回原因，仅 approved=false 时有效；同意退款或无需驳回原因时传 null
      */
-    void reviewRefund(Long orderId, boolean approved, Long merchantId);
+    void reviewRefund(Long orderId, boolean approved, Long merchantId, String reason);
 
     /**
      * 平台退款仲裁，仅允许 REFUNDING 状态订单；approved=true 强制推进 REFUNDED，false 回退到 refundFromStatus。

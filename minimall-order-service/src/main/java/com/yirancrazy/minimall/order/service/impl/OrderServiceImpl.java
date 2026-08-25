@@ -3,7 +3,11 @@ package com.yirancrazy.minimall.order.service.impl;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
@@ -45,6 +49,7 @@ import com.yirancrazy.minimall.order.vo.OrderItemVO;
 import com.yirancrazy.minimall.order.vo.OrderLogisticsVO;
 import com.yirancrazy.minimall.order.vo.OrderStatisticsVO;
 import com.yirancrazy.minimall.order.vo.OrderStatusCountsVO;
+import com.yirancrazy.minimall.order.vo.OrderVO;
 
 /**
  * @Author: yirancrazy@gmail.com
@@ -386,7 +391,7 @@ public class OrderServiceImpl implements OrderService {
         }
         // 申请退款仅登记退款意向（记录原状态并置 REFUNDING），真实退款由商家审核通过后调用支付网关触发
         po.setRefundFromStatus(po.getStatus());
-        transition(po, OrderStatusEnum.REFUNDING, "USER_APPLY_REFUND", null);
+        transition(po, OrderStatusEnum.REFUNDING, "USER_APPLY_REFUND", null, null);
         log.info("order refunding, orderId={}", orderId);
     }
 
@@ -603,7 +608,7 @@ public class OrderServiceImpl implements OrderService {
      * @param closeReason 关闭原因（仅 CANCELED 使用）
      */
     private void transitStatus(Long orderId, OrderStatusEnum target, String triggerSource, String closeReason) {
-        transition(getOrder(orderId), target, triggerSource, closeReason);
+        transition(getOrder(orderId), target, triggerSource, closeReason, null);
     }
 
     /**
@@ -613,8 +618,9 @@ public class OrderServiceImpl implements OrderService {
      * @param target 目标状态
      * @param triggerSource 触发来源（状态日志）
      * @param closeReason 关闭原因（仅 CANCELED 使用）
+     * @param note 状态日志备注（如驳回退款原因），无则传 null
      */
-    private void transition(OrderPO po, OrderStatusEnum target, String triggerSource, String closeReason) {
+    private void transition(OrderPO po, OrderStatusEnum target, String triggerSource, String closeReason, String note) {
         Integer fromStatus = po.getStatus();
         statusMachine.transit(po, target);
         applyTargetTimestamps(po, target, closeReason);
@@ -622,7 +628,7 @@ public class OrderServiceImpl implements OrderService {
             // 并发下后写者更新 0 行：目标状态已被先行事务推进，拒绝继续执行副作用
             throw new BizException(OrderCodeEnum.ORDER_STATUS_TRANSITION_INVALID);
         }
-        saveStatusLog(po, fromStatus, target, triggerSource);
+        saveStatusLog(po, fromStatus, target, triggerSource, note);
     }
 
     /**
@@ -663,13 +669,16 @@ public class OrderServiceImpl implements OrderService {
      * @param fromStatus 原状态码
      * @param toStatus 目标状态
      * @param triggerSource 触发来源
+     * @param note 日志备注（如驳回退款原因），无则传 null
      */
-    private void saveStatusLog(OrderPO po, Integer fromStatus, OrderStatusEnum toStatus, String triggerSource) {
+    private void saveStatusLog(OrderPO po, Integer fromStatus, OrderStatusEnum toStatus,
+                               String triggerSource, String note) {
         OrderStatusLogPO log = new OrderStatusLogPO();
         log.setOrderId(po.getId());
         log.setFromStatus(fromStatus);
         log.setToStatus(toStatus.intCode());
         log.setTriggerSource(triggerSource);
+        log.setNote(note);
         orderStatusLogManager.save(log);
     }
 
@@ -776,6 +785,63 @@ public class OrderServiceImpl implements OrderService {
     }
 
     /**
+     * 商家端订单分页查询并装配展示字段，返回 Controller 边界 VO。
+     * @param dto 游标分页查询入参
+     * @return 订单 VO 游标分页结果
+     */
+    @Override
+    public CursorPageVO<OrderVO> merchantPageVO(OrderPageDTO dto) {
+        CursorPageVO<OrderVO> result = page(dto).map(OrderVO::from);
+        fillSkuName(result.getRecords());
+        fillRejectReason(result.getRecords());
+        return result;
+    }
+
+    /**
+     * 按 skuId 批量装配商品名；goods 服务不可用或 SKU 缺失时保持 null，不阻断列表返回。
+     * @param vos 待填充的订单 VO 列表
+     */
+    private void fillSkuName(List<OrderVO> vos) {
+        List<Long> skuIds = vos.stream().map(OrderVO::getSkuId).filter(Objects::nonNull).distinct().toList();
+        if (skuIds.isEmpty()) {
+            return;
+        }
+        Result<Map<Long, SkuSnapshotDTO>> result = goodsFeignClient.batchSkuSnapshot(skuIds);
+        Map<Long, SkuSnapshotDTO> snapshots =
+            (result != null && result.getData() != null) ? result.getData() : Collections.emptyMap();
+        for (OrderVO vo : vos) {
+            SkuSnapshotDTO snap = snapshots.get(vo.getSkuId());
+            if (snap != null) {
+                vo.setSkuName(snap.getSkuName());
+            }
+        }
+    }
+
+    /**
+     * 批量装配各订单最近一次商家驳回退款的原因（来自状态日志 note）。
+     * @param vos 待填充的订单 VO 列表
+     */
+    private void fillRejectReason(List<OrderVO> vos) {
+        List<Long> orderIds = vos.stream().map(OrderVO::getId).toList();
+        if (orderIds.isEmpty()) {
+            return;
+        }
+        List<OrderStatusLogPO> logs = orderStatusLogManager.list(
+            Wrappers.lambdaQuery(OrderStatusLogPO.class)
+                .in(OrderStatusLogPO::getOrderId, orderIds)
+                .eq(OrderStatusLogPO::getTriggerSource, "MERCHANT_REJECT_REFUND")
+                .isNotNull(OrderStatusLogPO::getNote)
+                .orderByDesc(OrderStatusLogPO::getId));
+        Map<Long, String> reasonByOrder = new HashMap<>();
+        for (OrderStatusLogPO log : logs) {
+            reasonByOrder.putIfAbsent(log.getOrderId(), log.getNote());
+        }
+        for (OrderVO vo : vos) {
+            vo.setRejectReason(reasonByOrder.get(vo.getId()));
+        }
+    }
+
+    /**
      * 导出商家订单列表，最多 10000 行，merchantId 强制绑定。
      * @param merchantId 商家ID
      * @param dto 查询入参
@@ -876,7 +942,7 @@ public class OrderServiceImpl implements OrderService {
      * @param merchantId 商家ID
      */
     @Override
-    public void reviewRefund(Long orderId, boolean approved, Long merchantId) {
+    public void reviewRefund(Long orderId, boolean approved, Long merchantId, String reason) {
         OrderPO po = getOrder(orderId);
         if (po.getMerchantId() == null || !po.getMerchantId().equals(merchantId)) {
             throw new BizException(OrderCodeEnum.ORDER_NOT_FOUND);
@@ -885,7 +951,8 @@ public class OrderServiceImpl implements OrderService {
             throw new BizException(OrderCodeEnum.ORDER_NOT_REFUNDING);
         }
         if (!approved) {
-            transition(po, revertTarget(po), "MERCHANT_REJECT_REFUND", null);
+            // 驳回原因写入状态日志 note，供商家端列表回显
+            transition(po, revertTarget(po), "MERCHANT_REJECT_REFUND", null, reason);
             log.info("refund rejected by merchant, orderId={}, merchantId={}", orderId, merchantId);
             return;
         }

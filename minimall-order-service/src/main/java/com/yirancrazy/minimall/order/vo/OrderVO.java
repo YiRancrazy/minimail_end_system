@@ -19,13 +19,19 @@ public class OrderVO {
     private Long userId;
     private Long merchantId;
     private Long skuId;
+    /** 商品名，商家端列表由 skuId 批量装配，查询失败时为 null */
+    private String skuName;
     private Integer quantity;
     /** 订单金额（元），字符串避免前端浮点精度问题 */
     private String amount;
     /** 订单状态枚举别名（如 PENDING），未知状态码原样返回 */
     private String status;
+    /** 收货地址快照（JSON 字符串，由下单时地址序列化而来） */
     private String addressSnapshot;
     private LocalDateTime createTime;
+    private LocalDateTime shippedAt;
+    /** 商家驳回退款原因，来自状态日志；未驳回时为 null */
+    private String rejectReason;
     /** 订单商品明细，用户端详情页展示 */
     private List<OrderItemVO> items;
 
@@ -46,6 +52,7 @@ public class OrderVO {
         vo.setStatus(statusAlias(po.getStatus()));
         vo.setAddressSnapshot(po.getReceiverSnapshotJson());
         vo.setCreateTime(po.getCreateTime());
+        vo.setShippedAt(po.getShippedAt());
         return vo;
     }
 

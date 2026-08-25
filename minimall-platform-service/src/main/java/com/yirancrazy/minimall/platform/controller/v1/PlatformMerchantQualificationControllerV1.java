@@ -1,6 +1,5 @@
 package com.yirancrazy.minimall.platform.controller.v1;
 
-import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -11,6 +10,8 @@ import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import com.yirancrazy.minimall.api.dto.common.InternalPageQuery;
+import com.yirancrazy.minimall.api.dto.merchant.MerchantManageVO;
 import com.yirancrazy.minimall.api.feign.MerchantFeignClient;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CommonCode;
@@ -35,18 +36,60 @@ public class PlatformMerchantQualificationControllerV1 {
     private final MerchantFeignClient merchantFeignClient;
 
     /**
-     * 平台分页查询商家资质列表（仅返回当前 PENDING 状态）。
-     * 数据由 merchant-service 提供；本端作为契约入口。
+     * 平台分页查询待审核商家资质。
+     * 数据经 MerchantFeignClient 委托 merchant-service 返回 PENDING 状态商家，再映射为资质视图。
      * @param cursor 游标
      * @param limit  每页条数
+     * @return 待审核资质分页结果
      */
     @GetMapping("/qualifications")
     public Result<CursorPageVO<MerchantQualificationVO>> listPending(@RequestParam(required = false) String cursor,
                                                                     @RequestParam(defaultValue = "20") int limit) {
-        CursorPageVO<MerchantQualificationVO> page =
-                new CursorPageVO<>(List.of(), null, false, limit);
-        log.info("list pending merchant qualifications, cursor={}, limit={}", cursor, limit);
-        return Result.success(page);
+        InternalPageQuery query = new InternalPageQuery();
+        query.setCursor(cursor);
+        query.setLimit(limit);
+        // 商家资质待审核码：MerchantAuditStatusEnum.PENDING.code = 0
+        query.setStatus(0);
+        Result<CursorPageVO<MerchantManageVO>> result = merchantFeignClient.pageManage(query);
+        if (result == null || !CommonCode.SUCCESS.equals(result.getCode())) {
+            log.warn("list pending merchant qualifications failed, cursor={}, limit={}", cursor, limit);
+            throw new BizException(CommonCode.SYS_ERROR, "商家服务处理失败");
+        }
+        CursorPageVO<MerchantManageVO> page = result.getData();
+        return Result.success(page.map(this::toQualificationVO));
+    }
+
+    /**
+     * 商家管理 VO 映射为资质视图（merchantId 与 userId 等值；法人/经营范围等字段未在商家管理契约中暴露）。
+     * @param manage 商家管理VO
+     * @return 资质视图
+     */
+    private MerchantQualificationVO toQualificationVO(MerchantManageVO manage) {
+        MerchantQualificationVO vo = new MerchantQualificationVO();
+        vo.setId(manage.getMerchantId());
+        vo.setMerchantId(manage.getMerchantId());
+        vo.setMerchantName(manage.getMerchantName());
+        vo.setLicenseNo(manage.getLicenseNo());
+        vo.setStatus(auditStatusName(manage.getAuditStatus()));
+        vo.setRejectReason(manage.getAuditReason());
+        vo.setSubmitTime(manage.getCreateTime());
+        vo.setAuditTime(manage.getAuditAt());
+        return vo;
+    }
+
+    /**
+     * 审核状态码映射为枚举名（MerchantAuditStatusEnum：0-待审核, 1-已通过, 2-已驳回）。
+     * @param code 审核状态码
+     * @return 枚举名；未知码返回 REJECTED 前原样数值字符串
+     */
+    private String auditStatusName(Integer code) {
+        if (code == null) return "PENDING";
+        switch (code) {
+            case 0: return "PENDING";
+            case 1: return "APPROVED";
+            case 2: return "REJECTED";
+            default: return String.valueOf(code);
+        }
     }
 
     /**

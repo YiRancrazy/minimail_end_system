@@ -23,6 +23,9 @@ public class MerchantQualificationVO {
     /** 商家主体ID（与 userId 等值） */
     private Long merchantId;
 
+    /** 商家名称 */
+    private String merchantName;
+
     /** 证照编号 */
     private String licenseNo;
 

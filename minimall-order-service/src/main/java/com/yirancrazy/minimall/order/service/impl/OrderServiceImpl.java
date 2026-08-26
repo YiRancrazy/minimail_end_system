@@ -1,7 +1,9 @@
 package com.yirancrazy.minimall.order.service.impl;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -49,6 +51,9 @@ import com.yirancrazy.minimall.order.vo.OrderItemVO;
 import com.yirancrazy.minimall.order.vo.OrderLogisticsVO;
 import com.yirancrazy.minimall.order.vo.OrderStatisticsVO;
 import com.yirancrazy.minimall.order.vo.OrderStatusCountsVO;
+import com.yirancrazy.minimall.order.vo.OrderSummaryVO;
+import com.yirancrazy.minimall.order.vo.OrderTrendPointVO;
+import com.yirancrazy.minimall.order.vo.OrderTrendVO;
 import com.yirancrazy.minimall.order.vo.OrderVO;
 
 /**
@@ -978,6 +983,74 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public OrderStatisticsVO statistics(OrderPageDTO dto) {
         return orderMapper.statistics(dto.getMerchantId(), dto.getStartTime(), dto.getEndTime());
+    }
+
+    /**
+     * 平台财务汇总，日期范围空值兜底：解析失败或为空时不限制对应边界。
+     * @param startDate 起始日期（yyyy-MM-dd）
+     * @param endDate 截止日期（yyyy-MM-dd）
+     * @param merchantId 商家ID
+     * @return 订单财务汇总VO
+     */
+    @Override
+    public OrderSummaryVO orderSummary(String startDate, String endDate, String merchantId) {
+        return orderMapper.summary(parseMerchantId(merchantId), parseStart(startDate), parseEnd(endDate));
+    }
+
+    /**
+     * 平台订单趋势，按日聚合；无数据时返回空点集而非 null。
+     * @param startDate 起始日期（yyyy-MM-dd）
+     * @param endDate 截止日期（yyyy-MM-dd）
+     * @param merchantId 商家ID
+     * @return 订单趋势VO
+     */
+    @Override
+    public OrderTrendVO orderTrend(String startDate, String endDate, String merchantId) {
+        List<OrderTrendPointVO> points =
+                orderMapper.trend(parseMerchantId(merchantId), parseStart(startDate), parseEnd(endDate));
+        return new OrderTrendVO(points == null ? Collections.emptyList() : points);
+    }
+
+    /** 解析商家ID，非法或为空返回 null（表示全平台）。 */
+    private Long parseMerchantId(String merchantId) {
+        if (merchantId == null || merchantId.isBlank()) {
+            return null;
+        }
+        try {
+            return Long.parseLong(merchantId.trim());
+        }
+        catch (NumberFormatException e) {
+            log.warn("invalid merchantId in order summary, treat as all-platform. merchantId={}", merchantId);
+            return null;
+        }
+    }
+
+    /** 解析起始日期为当天 00:00:00，空或非法返回 null。 */
+    private LocalDateTime parseStart(String date) {
+        if (date == null || date.isBlank()) {
+            return null;
+        }
+        try {
+            return LocalDate.parse(date).atStartOfDay();
+        }
+        catch (Exception e) {
+            log.warn("invalid startDate in order summary, ignore boundary. date={}", date);
+            return null;
+        }
+    }
+
+    /** 解析截止日期为当天 23:59:59，空或非法返回 null。 */
+    private LocalDateTime parseEnd(String date) {
+        if (date == null || date.isBlank()) {
+            return null;
+        }
+        try {
+            return LocalDate.parse(date).atTime(LocalTime.MAX);
+        }
+        catch (Exception e) {
+            log.warn("invalid endDate in order summary, ignore boundary. date={}", date);
+            return null;
+        }
     }
 
     /**

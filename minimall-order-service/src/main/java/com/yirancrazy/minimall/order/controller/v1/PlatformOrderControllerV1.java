@@ -18,6 +18,8 @@ import com.yirancrazy.minimall.order.dto.OrderPageDTO;
 import com.yirancrazy.minimall.order.entity.OrderPO;
 import com.yirancrazy.minimall.order.service.OrderService;
 import com.yirancrazy.minimall.order.vo.OrderStatisticsVO;
+import com.yirancrazy.minimall.order.vo.OrderSummaryVO;
+import com.yirancrazy.minimall.order.vo.OrderTrendVO;
 import com.yirancrazy.minimall.order.vo.OrderVO;
 
 /**
@@ -113,6 +115,34 @@ public class PlatformOrderControllerV1 {
     @GetMapping("/statistics")
     public Result<OrderStatisticsVO> statistics(@Valid OrderPageDTO dto) {
         return Result.success(orderService.statistics(dto));
+    }
+
+    /**
+     * 平台订单财务汇总：按日期范围与可选商家聚合金额概览。
+     * @param startDate 起始日期（yyyy-MM-dd），可空
+     * @param endDate 截止日期（yyyy-MM-dd），可空
+     * @param merchantId 商家ID，可空
+     * @return 订单财务汇总VO
+     */
+    @GetMapping("/summary")
+    public Result<OrderSummaryVO> summary(@RequestParam(required = false) String startDate,
+                                          @RequestParam(required = false) String endDate,
+                                          @RequestParam(required = false) String merchantId) {
+        return Result.success(orderService.orderSummary(startDate, endDate, merchantId));
+    }
+
+    /**
+     * 平台订单趋势：按日聚合区间订单数与已支付金额。
+     * @param startDate 起始日期（yyyy-MM-dd），可空
+     * @param endDate 截止日期（yyyy-MM-dd），可空
+     * @param merchantId 商家ID，可空
+     * @return 订单趋势VO
+     */
+    @GetMapping("/trend")
+    public Result<OrderTrendVO> trend(@RequestParam(required = false) String startDate,
+                                      @RequestParam(required = false) String endDate,
+                                      @RequestParam(required = false) String merchantId) {
+        return Result.success(orderService.orderTrend(startDate, endDate, merchantId));
     }
 
     private List<String[]> toOrderRows(List<OrderPO> list) {

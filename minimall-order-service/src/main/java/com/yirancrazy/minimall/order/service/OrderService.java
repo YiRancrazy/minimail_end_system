@@ -9,6 +9,8 @@ import com.yirancrazy.minimall.order.vo.OrderItemVO;
 import com.yirancrazy.minimall.order.vo.OrderLogisticsVO;
 import com.yirancrazy.minimall.order.vo.OrderStatisticsVO;
 import com.yirancrazy.minimall.order.vo.OrderStatusCountsVO;
+import com.yirancrazy.minimall.order.vo.OrderSummaryVO;
+import com.yirancrazy.minimall.order.vo.OrderTrendVO;
 import com.yirancrazy.minimall.order.vo.OrderVO;
 
 /**
@@ -219,6 +221,24 @@ public interface OrderService {
      * @return 订单统计VO
      */
     OrderStatisticsVO statistics(OrderPageDTO dto);
+
+    /**
+     * 平台财务汇总：按日期范围与可选商家聚合订单金额概览。
+     * @param startDate 起始日期（yyyy-MM-dd），空则不限
+     * @param endDate 截止日期（yyyy-MM-dd），空则不限
+     * @param merchantId 商家ID（字符串），空则全平台
+     * @return 订单财务汇总VO
+     */
+    OrderSummaryVO orderSummary(String startDate, String endDate, String merchantId);
+
+    /**
+     * 平台订单趋势：按日聚合区间订单数与已支付金额。
+     * @param startDate 起始日期（yyyy-MM-dd），空则不限
+     * @param endDate 截止日期（yyyy-MM-dd），空则不限
+     * @param merchantId 商家ID（字符串），空则全平台
+     * @return 订单趋势VO
+     */
+    OrderTrendVO orderTrend(String startDate, String endDate, String merchantId);
 
     /**
      * 统计指定用户各状态订单数量（待支付/待发货/待收货/已完成），供用户端"我的"页角标展示。

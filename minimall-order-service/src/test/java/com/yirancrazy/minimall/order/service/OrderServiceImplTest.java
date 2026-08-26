@@ -9,8 +9,12 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
@@ -641,6 +645,66 @@ public class OrderServiceImplTest {
         assertEquals(0L, vo.getCanceledCount());
         assertEquals(0L, vo.getRefundingCount());
         assertEquals(0L, vo.getRefundedCount());
+    }
+
+    /**
+     * 验证平台财务汇总委托 mapper 并按日期边界与商家ID解析调用。
+     */
+    @Test
+    public void orderSummary_delegates_to_mapper_with_parsed_range() {
+        com.yirancrazy.minimall.order.vo.OrderSummaryVO expected =
+                new com.yirancrazy.minimall.order.vo.OrderSummaryVO();
+        when(orderMapper.summary(eq(10L), any(), any())).thenReturn(expected);
+
+        com.yirancrazy.minimall.order.vo.OrderSummaryVO vo =
+                service.orderSummary("2026-08-01", "2026-08-26", "10");
+
+        assertSame(expected, vo);
+        verify(orderMapper).summary(eq(10L), any(java.time.LocalDateTime.class), any(java.time.LocalDateTime.class));
+    }
+
+    /**
+     * 验证平台财务汇总对非法商家ID/日期兜底为 null 边界（全平台），不抛异常。
+     */
+    @Test
+    public void orderSummary_tolerates_invalid_params() {
+        com.yirancrazy.minimall.order.vo.OrderSummaryVO expected =
+                new com.yirancrazy.minimall.order.vo.OrderSummaryVO();
+        when(orderMapper.summary(isNull(), isNull(), isNull())).thenReturn(expected);
+
+        com.yirancrazy.minimall.order.vo.OrderSummaryVO vo =
+                service.orderSummary("bad-date", "2026-13-99", "not-a-number");
+
+        assertNotNull(vo);
+        verify(orderMapper).summary(isNull(), isNull(), isNull());
+    }
+
+    /**
+     * 验证平台订单趋势按日聚合，无数据时返回空点集。
+     */
+    @Test
+    public void orderTrend_returns_empty_points_when_no_data() {
+        when(orderMapper.trend(isNull(), isNull(), isNull())).thenReturn(null);
+
+        com.yirancrazy.minimall.order.vo.OrderTrendVO vo = service.orderTrend(null, null, null);
+
+        assertNotNull(vo);
+        assertTrue(vo.getPoints().isEmpty());
+    }
+
+    /**
+     * 验证平台订单趋势委托 mapper 并原样返回点集。
+     */
+    @Test
+    public void orderTrend_delegates_to_mapper() {
+        com.yirancrazy.minimall.order.vo.OrderTrendPointVO point =
+                new com.yirancrazy.minimall.order.vo.OrderTrendPointVO("2026-08-26", 2L, java.math.BigDecimal.TEN);
+        when(orderMapper.trend(eq(1L), any(), any())).thenReturn(java.util.List.of(point));
+
+        com.yirancrazy.minimall.order.vo.OrderTrendVO vo = service.orderTrend("2026-08-01", "2026-08-26", "1");
+
+        assertEquals(1, vo.getPoints().size());
+        assertEquals("2026-08-26", vo.getPoints().get(0).getDate());
     }
 
     /**

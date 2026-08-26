@@ -3,7 +3,9 @@ package com.yirancrazy.minimall.auth.service;
 import com.yirancrazy.minimall.api.dto.auth.TokenVO;
 import com.yirancrazy.minimall.auth.dto.AdminCreateDTO;
 import com.yirancrazy.minimall.auth.dto.AdminPageDTO;
+import com.yirancrazy.minimall.auth.dto.AdminRoleDTO;
 import com.yirancrazy.minimall.auth.dto.AdminUpdateDTO;
+import com.yirancrazy.minimall.auth.dto.ChangePasswordDTO;
 import com.yirancrazy.minimall.auth.dto.LoginDTO;
 import com.yirancrazy.minimall.auth.vo.AdminVO;
 import com.yirancrazy.minimall.auth.vo.UserInfoVO;
@@ -54,6 +56,22 @@ public interface PlatformAuthService {
      * @throws com.yirancrazy.minimall.common.exception.BizException 管理员不存在时
      */
     boolean adminUpdate(Long id, AdminUpdateDTO dto);
+
+    /**
+     * 分配平台管理员角色，按角色编码解析角色并落库。
+     * @param id 管理员ID
+     * @param dto 角色分配入参
+     * @throws com.yirancrazy.minimall.common.exception.BizException 管理员或角色不存在时
+     */
+    void adminAssignRole(Long id, AdminRoleDTO dto);
+
+    /**
+     * 平台管理员修改密码，校验旧密码后设置新密码并失效刷新令牌。
+     * @param adminAccountId 管理员账号ID
+     * @param dto 修改密码入参
+     * @throws com.yirancrazy.minimall.common.exception.BizException 账号不存在或旧密码错误时
+     */
+    void changePassword(Long adminAccountId, ChangePasswordDTO dto);
 
     /**
      * 逻辑删除平台管理员，不允许删除自己。

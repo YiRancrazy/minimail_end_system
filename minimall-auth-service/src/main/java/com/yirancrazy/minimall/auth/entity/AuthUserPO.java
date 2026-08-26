@@ -34,5 +34,7 @@ public class AuthUserPO extends BasePO {
 
     private String nickname;
 
+    private String contact;
+
     private LocalDateTime lastLoginAt;
 }

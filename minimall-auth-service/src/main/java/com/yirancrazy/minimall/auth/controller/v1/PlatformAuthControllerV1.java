@@ -13,7 +13,9 @@ import jakarta.validation.Valid;
 import com.yirancrazy.minimall.api.dto.auth.TokenVO;
 import com.yirancrazy.minimall.auth.dto.AdminCreateDTO;
 import com.yirancrazy.minimall.auth.dto.AdminPageDTO;
+import com.yirancrazy.minimall.auth.dto.AdminRoleDTO;
 import com.yirancrazy.minimall.auth.dto.AdminUpdateDTO;
+import com.yirancrazy.minimall.auth.dto.ChangePasswordDTO;
 import com.yirancrazy.minimall.auth.dto.LoginDTO;
 import com.yirancrazy.minimall.auth.service.PlatformAuthService;
 import com.yirancrazy.minimall.auth.vo.AdminVO;
@@ -102,6 +104,32 @@ public class PlatformAuthControllerV1 {
     public Result<Boolean> adminUpdate(@PathVariable("id") Long id,
                                        @Valid @RequestBody AdminUpdateDTO dto) {
         return Result.success(platformAuthService.adminUpdate(id, dto));
+    }
+
+    /**
+     * 分配平台管理员角色。
+     * @param id 管理员ID
+     * @param dto 角色分配入参
+     * @return 无业务数据的成功响应
+     */
+    @PutMapping("/admins/{id}/role")
+    public Result<Void> adminAssignRole(@PathVariable("id") Long id,
+                                        @Valid @RequestBody AdminRoleDTO dto) {
+        platformAuthService.adminAssignRole(id, dto);
+        return Result.success(null);
+    }
+
+    /**
+     * 当前平台管理员修改密码。
+     * @param adminAccountId 管理员账号ID（来自网关 X-User-Id）
+     * @param dto 修改密码入参
+     * @return 无业务数据的成功响应
+     */
+    @PutMapping("/password")
+    public Result<Void> changePassword(@RequestHeader("X-User-Id") Long adminAccountId,
+                                       @Valid @RequestBody ChangePasswordDTO dto) {
+        platformAuthService.changePassword(adminAccountId, dto);
+        return Result.success(null);
     }
 
     /**

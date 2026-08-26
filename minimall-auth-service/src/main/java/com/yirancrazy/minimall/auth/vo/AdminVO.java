@@ -18,4 +18,6 @@ public class AdminVO {
     private String nickname;
     private Integer status;
     private LocalDateTime createTime;
+    private String role;
+    private String contact;
 }

@@ -23,4 +23,10 @@ public class AdminCreateDTO {
 
     @Size(max = 64, message = "nickname length must be <= 64")
     private String nickname;
+
+    @Size(max = 64, message = "contact length must be <= 64")
+    private String contact;
+
+    @Size(max = 64, message = "roleCode length must be <= 64")
+    private String roleCode;
 }

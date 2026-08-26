@@ -29,7 +29,8 @@ public enum AuthCodeEnum implements BaseEnum {
     MERCHANT_EXISTS("14014", "MERCHANT_EXISTS", "商家账号已存在"),
     RESET_CODE_TOO_FREQUENT("14015", "RESET_CODE_TOO_FREQUENT", "验证码发送过于频繁"),
     VERIFY_CODE_ATTEMPT_EXCEEDED("14016", "VERIFY_CODE_ATTEMPT_EXCEEDED", "验证码错误次数过多，请重新获取"),
-    LOGIN_ATTEMPT_EXCEEDED("14017", "LOGIN_ATTEMPT_EXCEEDED", "登录失败次数过多，请稍后再试");
+    LOGIN_ATTEMPT_EXCEEDED("14017", "LOGIN_ATTEMPT_EXCEEDED", "登录失败次数过多，请稍后再试"),
+    ROLE_NOT_FOUND("14018", "ROLE_NOT_FOUND", "角色不存在");
 
     private final String code;
     private final String alias;

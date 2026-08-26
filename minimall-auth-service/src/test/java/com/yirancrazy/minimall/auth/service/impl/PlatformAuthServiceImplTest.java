@@ -6,6 +6,7 @@ import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
@@ -33,7 +34,9 @@ import com.yirancrazy.minimall.api.dto.auth.TokenVO;
 import com.yirancrazy.minimall.auth.constant.AuthCodeEnum;
 import com.yirancrazy.minimall.auth.dto.AdminCreateDTO;
 import com.yirancrazy.minimall.auth.dto.AdminPageDTO;
+import com.yirancrazy.minimall.auth.dto.AdminRoleDTO;
 import com.yirancrazy.minimall.auth.dto.AdminUpdateDTO;
+import com.yirancrazy.minimall.auth.dto.ChangePasswordDTO;
 import com.yirancrazy.minimall.auth.dto.LoginDTO;
 import com.yirancrazy.minimall.auth.entity.AuthRolePO;
 import com.yirancrazy.minimall.auth.entity.AuthUserPO;
@@ -332,5 +335,115 @@ class PlatformAuthServiceImplTest {
 
         BizException ex = assertThrows(BizException.class, () -> service.me("bad-token"));
         assertEquals(AuthCodeEnum.TOKEN_INVALID.getCode(), ex.getCode());
+    }
+
+    /**
+     * 验证 adminCreate 写入 contact 并按 roleCode 解析 roleId。
+     */
+    @Test
+    void adminCreate_sets_contact_and_resolves_role() {
+        when(authUserManager.getOne(any())).thenReturn(null);
+        AuthRolePO role = new AuthRolePO();
+        role.setId(7L);
+        role.setRoleCode("OPERATOR");
+        when(authRoleManager.getOne(any())).thenReturn(role);
+
+        AdminCreateDTO dto = new AdminCreateDTO();
+        dto.setAccount("op1");
+        dto.setPassword("pass1234");
+        dto.setContact("13800000000");
+        dto.setRoleCode("OPERATOR");
+
+        service.adminCreate(dto);
+
+        ArgumentCaptor<AuthUserPO> captor = ArgumentCaptor.forClass(AuthUserPO.class);
+        verify(authUserManager).save(captor.capture());
+        assertEquals("13800000000", captor.getValue().getContact());
+        assertEquals(7L, captor.getValue().getRoleId());
+    }
+
+    /**
+     * 验证分配角色成功更新 roleId。
+     */
+    @Test
+    void adminAssignRole_success_updates_roleId() {
+        AuthUserPO po = new AuthUserPO();
+        po.setId(5L);
+        po.setAccount("admin05");
+        po.setAccountType(3);
+        when(authUserManager.getById(5L)).thenReturn(po);
+        AuthRolePO role = new AuthRolePO();
+        role.setId(9L);
+        role.setRoleCode("OPERATOR");
+        when(authRoleManager.getOne(any())).thenReturn(role);
+
+        service.adminAssignRole(5L, adminRole("OPERATOR"));
+
+        assertEquals(9L, po.getRoleId());
+        verify(authUserManager).updateById(po);
+    }
+
+    /**
+     * 验证角色不存在时分配角色抛出 ROLE_NOT_FOUND。
+     */
+    @Test
+    void adminAssignRole_roleNotFound_throws() {
+        AuthUserPO po = new AuthUserPO();
+        po.setId(5L);
+        when(authUserManager.getById(5L)).thenReturn(po);
+        when(authRoleManager.getOne(any())).thenReturn(null);
+
+        assertThrows(BizException.class, () -> service.adminAssignRole(5L, adminRole("NOPE")));
+    }
+
+    /**
+     * 验证平台管理员修改密码成功并失效刷新令牌。
+     */
+    @Test
+    void changePassword_success_updates_and_invalidates_refresh() {
+        String salt = "testsalt";
+        AuthUserPO po = new AuthUserPO();
+        po.setId(5L);
+        po.setSalt(salt);
+        po.setPasswordHash(BCrypt.hashpw("oldpass" + salt, BCrypt.gensalt()));
+        when(authUserManager.getById(5L)).thenReturn(po);
+        when(redisTemplate.keys("refresh:5:*")).thenReturn(Set.of("refresh:5:abc"));
+
+        service.changePassword(5L, new ChangePasswordDTO("oldpass", "newpass123"));
+
+        verify(authUserManager).updateById(po);
+        verify(redisTemplate).delete(Set.of("refresh:5:abc"));
+    }
+
+    /**
+     * 验证平台管理员修改密码账号不存在时抛出 USER_NOT_FOUND。
+     */
+    @Test
+    void changePassword_accountNotFound_throws() {
+        when(authUserManager.getById(999L)).thenReturn(null);
+        assertThrows(BizException.class,
+            () -> service.changePassword(999L, new ChangePasswordDTO("old", "newpass123")));
+    }
+
+    /**
+     * 验证平台管理员修改密码旧密码错误时抛出 PWD_INVALID。
+     */
+    @Test
+    void changePassword_oldPwdInvalid_throws() {
+        String salt = "testsalt";
+        AuthUserPO po = new AuthUserPO();
+        po.setId(5L);
+        po.setSalt(salt);
+        po.setPasswordHash(BCrypt.hashpw("correctpass" + salt, BCrypt.gensalt()));
+        when(authUserManager.getById(5L)).thenReturn(po);
+
+        assertThrows(BizException.class,
+            () -> service.changePassword(5L, new ChangePasswordDTO("wrongpass", "newpass123")));
+    }
+
+    private AdminRoleDTO adminRole(String roleCode) {
+        AdminRoleDTO dto = new AdminRoleDTO();
+        dto.setRoleCode(roleCode);
+        return dto;
     }
 }

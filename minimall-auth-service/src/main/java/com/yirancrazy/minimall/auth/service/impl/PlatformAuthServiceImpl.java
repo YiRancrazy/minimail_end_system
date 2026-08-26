@@ -16,7 +16,9 @@ import com.yirancrazy.minimall.api.dto.auth.TokenVO;
 import com.yirancrazy.minimall.auth.constant.AuthCodeEnum;
 import com.yirancrazy.minimall.auth.dto.AdminCreateDTO;
 import com.yirancrazy.minimall.auth.dto.AdminPageDTO;
+import com.yirancrazy.minimall.auth.dto.AdminRoleDTO;
 import com.yirancrazy.minimall.auth.dto.AdminUpdateDTO;
+import com.yirancrazy.minimall.auth.dto.ChangePasswordDTO;
 import com.yirancrazy.minimall.auth.dto.LoginDTO;
 import com.yirancrazy.minimall.auth.entity.AuthRolePO;
 import com.yirancrazy.minimall.auth.entity.AuthTokenBlacklistPO;
@@ -134,11 +136,12 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
         po.setPasswordHash(BCrypt.hashpw(dto.getPassword() + salt, BCrypt.gensalt(BCRYPT_COST)));
         po.setSalt(salt);
         po.setAccountType(ACCOUNT_TYPE_PLATFORM);
-        po.setRoleId(DEFAULT_ROLE_ID_PLATFORM);
+        po.setRoleId(resolveRoleId(dto.getRoleCode()));
         po.setStatus(1);
         po.setNickname(dto.getNickname());
+        po.setContact(dto.getContact());
         authUserManager.save(po);
-        log.info("admin created, id={}, account={}", po.getId(), dto.getAccount());
+        log.info("admin created, id={}, account={}, roleId={}", po.getId(), po.getAccount(), po.getRoleId());
         return po.getId();
     }
 
@@ -162,7 +165,61 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
             po.getAccount(),
             po.getNickname(),
             po.getStatus(),
-            po.getCreateTime()));
+            po.getCreateTime(),
+            resolveRoleCode(po.getRoleId()),
+            po.getContact()));
+    }
+
+    /**
+     * 分配平台管理员角色，按角色编码解析角色ID并更新。
+     * @param id 管理员ID
+     * @param dto 角色分配入参
+     * @throws BizException 管理员或角色不存在时
+     */
+    @Override
+    public void adminAssignRole(Long id, AdminRoleDTO dto) {
+        AuthUserPO po = authUserManager.getById(id);
+        if (po == null) {
+            throw new BizException(AuthCodeEnum.USER_NOT_FOUND);
+        }
+        po.setRoleId(resolveRoleId(dto.getRoleCode()));
+        authUserManager.updateById(po);
+        log.info("admin role assigned, id={}, roleId={}", id, po.getRoleId());
+    }
+
+    /**
+     * 平台管理员修改密码，校验旧密码后设置新密码并失效已有刷新令牌。
+     * @param adminAccountId 管理员账号ID
+     * @param dto 修改密码入参
+     * @throws BizException 账号不存在或旧密码错误时
+     */
+    @Override
+    public void changePassword(Long adminAccountId, ChangePasswordDTO dto) {
+        AuthUserPO po = authUserManager.getById(adminAccountId);
+        if (po == null) {
+            throw new BizException(AuthCodeEnum.USER_NOT_FOUND);
+        }
+        if (!BCrypt.checkpw(dto.getOldPassword() + po.getSalt(), po.getPasswordHash())) {
+            throw new BizException(AuthCodeEnum.PWD_INVALID);
+        }
+        applyNewPassword(po, dto.getNewPassword());
+        invalidateRefreshTokens(adminAccountId);
+        log.info("platform admin password changed, accountId={}", adminAccountId);
+    }
+
+    private void applyNewPassword(AuthUserPO po, String newPassword) {
+        String salt = UUID.randomUUID().toString().replace("-", "");
+        String hash = BCrypt.hashpw(newPassword + salt, BCrypt.gensalt(BCRYPT_COST));
+        po.setPasswordHash(hash);
+        po.setSalt(salt);
+        authUserManager.updateById(po);
+    }
+
+    private void invalidateRefreshTokens(Long adminAccountId) {
+        var keys = redisTemplate.keys(REFRESH_KEY_PREFIX + adminAccountId + ":*");
+        if (keys != null && !keys.isEmpty()) {
+            redisTemplate.delete(keys);
+        }
     }
 
     /**
@@ -244,6 +301,18 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
         }
         AuthRolePO role = authRoleManager.getById(roleId);
         return role != null ? role.getRoleCode() : "PLATFORM";
+    }
+
+    private Long resolveRoleId(String roleCode) {
+        if (roleCode == null || roleCode.isBlank()) {
+            return DEFAULT_ROLE_ID_PLATFORM;
+        }
+        AuthRolePO role = authRoleManager.getOne(
+            Wrappers.lambdaQuery(AuthRolePO.class).eq(AuthRolePO::getRoleCode, roleCode));
+        if (role == null) {
+            throw new BizException(AuthCodeEnum.ROLE_NOT_FOUND);
+        }
+        return role.getId();
     }
 
     private TokenVO issueTokens(Long accountId, String account, Long roleId) {

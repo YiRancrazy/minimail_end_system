@@ -1,6 +1,8 @@
 package com.yirancrazy.minimall.notify.controller.v1;
 
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -120,6 +122,54 @@ public class PlatformNotifyControllerV1 {
     @RequirePermission(PermissionEnum.NOTIFY_BROADCAST)
     public Result<Void> publishAnnouncement(@Valid @RequestBody AnnouncementCreateDTO dto) {
         notifyService.publishAnnouncement(dto);
+        return Result.success(null);
+    }
+
+    /**
+     * 平台未读站内信数量。
+     * @param adminId 管理员ID（Header 注入）
+     * @return 未读数
+     */
+    @GetMapping("/messages/_count")
+    public Result<Long> unreadCount(@RequestHeader("X-User-Id") Long adminId) {
+        return Result.success(notifyService.unreadCount(
+            RecipientTypeEnum.PLATFORM.intCode(), adminId));
+    }
+
+    /**
+     * 平台标记单条站内信为已读。
+     * @param id 消息ID
+     * @param adminId 管理员ID
+     * @return 操作结果
+     */
+    @PostMapping("/messages/{id}/_read")
+    public Result<Void> markRead(@PathVariable Long id,
+                                 @RequestHeader("X-User-Id") Long adminId) {
+        notifyService.markRead(id, RecipientTypeEnum.PLATFORM.intCode(), adminId);
+        return Result.success(null);
+    }
+
+    /**
+     * 平台全部站内信标记为已读。
+     * @param adminId 管理员ID
+     * @return 操作结果
+     */
+    @PostMapping("/messages/_read-all")
+    public Result<Void> markAllRead(@RequestHeader("X-User-Id") Long adminId) {
+        notifyService.markAllRead(RecipientTypeEnum.PLATFORM.intCode(), adminId);
+        return Result.success(null);
+    }
+
+    /**
+     * 平台删除单条站内信。
+     * @param id 消息ID
+     * @param adminId 管理员ID
+     * @return 操作结果
+     */
+    @DeleteMapping("/messages/{id}")
+    public Result<Void> delete(@PathVariable Long id,
+                               @RequestHeader("X-User-Id") Long adminId) {
+        notifyService.delete(id, RecipientTypeEnum.PLATFORM.intCode(), adminId);
         return Result.success(null);
     }
 }

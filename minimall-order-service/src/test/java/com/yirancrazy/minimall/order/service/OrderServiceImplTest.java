@@ -118,6 +118,21 @@ public class OrderServiceImplTest {
     }
 
     /**
+     * 验证创建订单时同步落订单明细快照（含商品名），供商家列表/详情回显。
+     */
+    @Test
+    public void create_saves_order_item_snapshot() {
+        service.create(1L, 100L, 2);
+        org.mockito.ArgumentCaptor<OrderItemPO> captor =
+            org.mockito.ArgumentCaptor.forClass(OrderItemPO.class);
+        verify(orderItemManager).save(captor.capture());
+        OrderItemPO saved = captor.getValue();
+        assertEquals(Long.valueOf(100L), saved.getSkuId());
+        assertEquals("sku-100", saved.getSkuName());
+        assertEquals(Integer.valueOf(2), saved.getQuantity());
+    }
+
+    /**
      * 验证商品快照缺失时抛出 BizException。
      */
     @Test
@@ -1155,5 +1170,64 @@ public class OrderServiceImplTest {
         assertEquals("iPhone 15", vo.getSkuName());
         assertEquals("证据不足", vo.getRejectReason());
         assertEquals("REFUNDED", vo.getStatus());
+    }
+
+    /**
+     * 验证拆单订单（购物车结算）不落库 skuId/quantity 时，从 order_items 聚合全部商品数量与名称拼接。
+     */
+    @Test
+    public void merchantPageVO_fills_checkout_quantity_and_skuName_from_items() {
+        OrderPO po = buildOrder(90L, 1L, 10L, OrderStatusEnum.PAID.intCode());
+        po.setSkuId(null);
+        po.setQuantity(null);
+        when(manager.list(any(Wrapper.class))).thenReturn(java.util.Collections.singletonList(po));
+
+        OrderItemPO item1 = new OrderItemPO();
+        item1.setOrderId(90L);
+        item1.setSkuName("Redmi Note");
+        item1.setQuantity(2);
+        OrderItemPO item2 = new OrderItemPO();
+        item2.setOrderId(90L);
+        item2.setSkuName("iPhone 15");
+        item2.setQuantity(3);
+        when(orderItemManager.list(any(Wrapper.class))).thenReturn(java.util.List.of(item1, item2));
+
+        CursorPageVO<OrderVO> result = service.merchantPageVO(new OrderPageDTO());
+
+        OrderVO vo = result.getRecords().get(0);
+        assertEquals(Integer.valueOf(5), vo.getQuantity());
+        assertEquals("Redmi Note、iPhone 15", vo.getSkuName());
+    }
+
+    /**
+     * 验证商家端订单详情：归属校验通过时返回聚合后的数量与商品名。
+     */
+    @Test
+    public void merchantDetailVO_returns_enriched_order() {
+        OrderPO po = buildOrder(91L, 1L, 10L, OrderStatusEnum.PAID.intCode());
+        po.setSkuId(null);
+        po.setQuantity(null);
+        when(manager.getOne(any(Wrapper.class))).thenReturn(po);
+
+        OrderItemPO item = new OrderItemPO();
+        item.setOrderId(91L);
+        item.setSkuName("Redmi Note");
+        item.setQuantity(2);
+        when(orderItemManager.list(any(Wrapper.class))).thenReturn(java.util.Collections.singletonList(item));
+
+        OrderVO vo = service.merchantDetailVO(91L, 10L);
+
+        assertEquals(Integer.valueOf(2), vo.getQuantity());
+        assertEquals("Redmi Note", vo.getSkuName());
+    }
+
+    /**
+     * 验证商家端订单详情：订单不存在或不属于该商家时抛出 ORDER_NOT_FOUND。
+     */
+    @Test
+    public void merchantDetailVO_throws_when_order_not_found() {
+        when(manager.getOne(any(Wrapper.class))).thenReturn(null);
+
+        assertThrows(BizException.class, () -> service.merchantDetailVO(99L, 10L));
     }
 }

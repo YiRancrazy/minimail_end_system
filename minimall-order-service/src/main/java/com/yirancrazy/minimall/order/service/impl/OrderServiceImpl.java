@@ -141,6 +141,22 @@ public class OrderServiceImpl implements OrderService {
         po.setStatus(OrderStatusEnum.PENDING.intCode());
         orderManager.save(po);
 
+        // 落订单明细快照：商品名不依赖 goods 实时/在售状态，商家列表与详情据此回显
+        OrderItemPO itemPO = new OrderItemPO();
+        itemPO.setOrderId(po.getId());
+        itemPO.setSpuId(snapshot.getSpuId());
+        itemPO.setMerchantId(snapshot.getMerchantId());
+        itemPO.setSkuId(skuId);
+        itemPO.setSkuName(snapshot.getSkuName());
+        itemPO.setQuantity(quantity);
+        itemPO.setUnitPrice(snapshot.getPrice());
+        itemPO.setAmount(amount);
+        itemPO.setSubtotalAmount(amount);
+        itemPO.setDiscountAmount(BigDecimal.ZERO);
+        itemPO.setPayAmount(amount);
+        itemPO.setRefundStatus(REFUND_STATUS_NONE);
+        orderItemManager.save(itemPO);
+
         Long payId = payFeignClient.create(
             new PayCreateDTO(String.valueOf(po.getId()), userId, 0L, amount, null)).getData();
         if (payId == null || payId < 0) {
@@ -792,9 +808,65 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public CursorPageVO<OrderVO> merchantPageVO(OrderPageDTO dto) {
         CursorPageVO<OrderVO> result = page(dto).map(OrderVO::from);
+        fillItemSummary(result.getRecords());
         fillSkuName(result.getRecords());
         fillRejectReason(result.getRecords());
         return result;
+    }
+
+    /**
+     * 按订单明细聚合商品名与数量：商品名以下单快照为准（不依赖 goods 在售状态，多明细顿号拼接去重），
+     * 拆单订单 t_order 不落库 quantity 时按明细求和。
+     * @param vos 商家端订单 VO 列表
+     */
+    private void fillItemSummary(List<OrderVO> vos) {
+        List<Long> orderIds = vos.stream().map(OrderVO::getId).toList();
+        List<OrderItemPO> items = orderItemManager.list(
+            Wrappers.lambdaQuery(OrderItemPO.class).in(OrderItemPO::getOrderId, orderIds));
+        if (items == null || items.isEmpty()) {
+            return;
+        }
+        Map<Long, List<OrderItemPO>> byOrder = items.stream()
+            .collect(Collectors.groupingBy(OrderItemPO::getOrderId));
+        for (OrderVO vo : vos) {
+            List<OrderItemPO> orderItems = byOrder.getOrDefault(vo.getId(), Collections.emptyList());
+            if (orderItems.isEmpty()) {
+                continue;
+            }
+            String names = orderItems.stream()
+                .map(OrderItemPO::getSkuName).filter(Objects::nonNull)
+                .distinct().collect(Collectors.joining("、"));
+            if (!names.isEmpty()) {
+                vo.setSkuName(names);
+            }
+            if (vo.getQuantity() == null) {
+                vo.setQuantity(orderItems.stream()
+                    .map(OrderItemPO::getQuantity).filter(Objects::nonNull)
+                    .mapToInt(Integer::intValue).sum());
+            }
+        }
+    }
+
+    /**
+     * 商家端查询单个订单详情：按订单ID与商家ID定位，装配商品名、驳回原因与拆单聚合数据。
+     * @param orderId 订单ID
+     * @param merchantId 商家ID，来自可信 Header
+     * @return 订单 VO
+     * @throws BizException 订单不存在或不属于该商家时
+     */
+    @Override
+    public OrderVO merchantDetailVO(Long orderId, Long merchantId) {
+        OrderPO po = orderManager.getOne(Wrappers.lambdaQuery(OrderPO.class)
+            .eq(OrderPO::getId, orderId)
+            .eq(OrderPO::getMerchantId, merchantId));
+        if (po == null) {
+            throw new BizException(OrderCodeEnum.ORDER_NOT_FOUND);
+        }
+        OrderVO vo = OrderVO.from(po);
+        fillItemSummary(List.of(vo));
+        fillSkuName(List.of(vo));
+        fillRejectReason(List.of(vo));
+        return vo;
     }
 
     /**
@@ -810,6 +882,9 @@ public class OrderServiceImpl implements OrderService {
         Map<Long, SkuSnapshotDTO> snapshots =
             (result != null && result.getData() != null) ? result.getData() : Collections.emptyMap();
         for (OrderVO vo : vos) {
+            if (vo.getSkuName() != null) {
+                continue;
+            }
             SkuSnapshotDTO snap = snapshots.get(vo.getSkuId());
             if (snap != null) {
                 vo.setSkuName(snap.getSkuName());

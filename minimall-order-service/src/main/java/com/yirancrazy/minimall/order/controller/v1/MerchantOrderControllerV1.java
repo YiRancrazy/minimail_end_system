@@ -56,6 +56,18 @@ public class MerchantOrderControllerV1 {
     }
 
     /**
+     * 商家端查询单个订单详情，校验订单归属当前商家。
+     * @param orderId 订单ID
+     * @param merchantId 商家ID
+     * @return 订单 VO
+     */
+    @GetMapping("/{orderId}")
+    public Result<OrderVO> detail(@PathVariable Long orderId,
+                                  @RequestHeader("X-Merchant-Id") Long merchantId) {
+        return Result.success(orderService.merchantDetailVO(orderId, merchantId));
+    }
+
+    /**
      * 发货。
      * @param orderId    订单ID
      * @param merchantId 商户ID

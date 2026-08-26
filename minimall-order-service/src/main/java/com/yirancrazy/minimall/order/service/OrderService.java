@@ -165,6 +165,15 @@ public interface OrderService {
     CursorPageVO<OrderVO> merchantPageVO(OrderPageDTO dto);
 
     /**
+     * 商家端查询单个订单详情并装配展示字段，校验订单归属当前商家。
+     * @param orderId 订单ID
+     * @param merchantId 商家ID，来自可信 Header
+     * @return 订单 VO
+     * @throws com.yirancrazy.minimall.common.exception.BizException 订单不存在或不属于该商家时
+     */
+    OrderVO merchantDetailVO(Long orderId, Long merchantId);
+
+    /**
      * 商家审核退款，仅允许 REFUNDING 状态订单；approved=true 发起真实支付退款（状态由回调驱动到 REFUNDED），
      * false 回退到 refundFromStatus 并将驳回原因写入状态日志。
      * @param orderId 订单ID

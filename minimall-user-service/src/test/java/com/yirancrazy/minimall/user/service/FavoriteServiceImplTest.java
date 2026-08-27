@@ -12,6 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -25,6 +26,7 @@ import com.yirancrazy.minimall.api.feign.GoodsFeignClient;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.result.Result;
+import com.yirancrazy.minimall.common.util.MinioUtil;
 import com.yirancrazy.minimall.user.dto.FavoritePageDTO;
 import com.yirancrazy.minimall.user.entity.UserFavoritePO;
 import com.yirancrazy.minimall.user.manager.UserFavoriteManager;
@@ -48,13 +50,17 @@ public class FavoriteServiceImplTest {
 
     private UserFavoriteManager userFavoriteManager;
     private GoodsFeignClient goodsFeignClient;
+    private MinioUtil minioUtil;
     private FavoriteServiceImpl service;
 
     @BeforeEach
     void setUp() {
         userFavoriteManager = mock(UserFavoriteManager.class);
         goodsFeignClient = mock(GoodsFeignClient.class);
-        service = new FavoriteServiceImpl(userFavoriteManager, goodsFeignClient);
+        minioUtil = mock(MinioUtil.class);
+        // 默认按原值返回，等价真实 resolvePublicUrl 对完整 URL 的透传形为
+        lenient().when(minioUtil.resolvePublicUrl(any())).thenAnswer(inv -> inv.getArgument(0));
+        service = new FavoriteServiceImpl(userFavoriteManager, goodsFeignClient, minioUtil);
     }
 
     /**

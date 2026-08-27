@@ -33,6 +33,7 @@ import com.yirancrazy.minimall.common.event.EventBus;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.result.Result;
+import com.yirancrazy.minimall.common.util.MinioUtil;
 import com.yirancrazy.minimall.order.constant.OrderStatusEnum;
 import com.yirancrazy.minimall.order.constant.OrderStatusMachine;
 import com.yirancrazy.minimall.order.dto.OrderCheckoutItemDTO;
@@ -66,6 +67,7 @@ public class OrderServiceImplTest {
     private IdFeignClient idFeignClient;
     private EventBus eventBus;
     private OrderStatusMachine statusMachine;
+    private MinioUtil minioUtil;
     private OrderServiceImpl service;
 
     @BeforeEach
@@ -81,6 +83,7 @@ public class OrderServiceImplTest {
         idFeignClient = mock(IdFeignClient.class);
         eventBus = mock(EventBus.class);
         statusMachine = new OrderStatusMachine();
+        minioUtil = mock(MinioUtil.class);
         lenient().when(manager.updateById(any(OrderPO.class))).thenReturn(true);
         lenient().when(manager.removeById(any(Long.class))).thenReturn(true);
         doAnswer(inv -> {
@@ -107,7 +110,8 @@ public class OrderServiceImplTest {
         }).when(eventBus).publishInTx(any(), any(Runnable.class), any());
         service = new OrderServiceImpl(manager, orderItemManager, logisticsManager, statusLogManager,
             orderMapper, goodsFeignClient, stockFeignClient, payFeignClient, idFeignClient,
-            eventBus, statusMachine, new com.fasterxml.jackson.databind.ObjectMapper());
+            eventBus, statusMachine, new com.fasterxml.jackson.databind.ObjectMapper(),
+            minioUtil);
     }
 
     /**
@@ -134,6 +138,28 @@ public class OrderServiceImplTest {
         assertEquals(Long.valueOf(100L), saved.getSkuId());
         assertEquals("sku-100", saved.getSkuName());
         assertEquals(Integer.valueOf(2), saved.getQuantity());
+    }
+
+    /**
+     * 验证 listItemVO 将订单明细的商品图 objectKey 解析为可访问的预签名 URL。
+     */
+    @Test
+    public void listItemVO_resolves_sku_image_url() {
+        OrderItemPO item = new OrderItemPO();
+        item.setSpuId(1L);
+        item.setSkuId(100L);
+        item.setSkuName("耳机");
+        item.setSkuImageUrl("img-x.png");
+        item.setQuantity(1);
+        item.setUnitPrice(new java.math.BigDecimal("10.00"));
+        item.setAmount(new java.math.BigDecimal("10.00"));
+        when(orderItemManager.list(any(Wrapper.class))).thenReturn(List.of(item));
+        when(minioUtil.resolvePublicUrl("img-x.png")).thenReturn("http://minio/mall-files/img-x.png?token");
+
+        List<com.yirancrazy.minimall.order.vo.OrderItemVO> result = service.listItemVO(100L);
+
+        assertEquals(1, result.size());
+        assertEquals("http://minio/mall-files/img-x.png?token", result.get(0).getSkuImageUrl());
     }
 
     /**

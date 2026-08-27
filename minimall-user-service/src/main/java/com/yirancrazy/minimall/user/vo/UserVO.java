@@ -2,6 +2,7 @@ package com.yirancrazy.minimall.user.vo;
 
 import java.time.LocalDateTime;
 import lombok.Data;
+import com.yirancrazy.minimall.common.util.MinioUtil;
 import com.yirancrazy.minimall.common.util.SensitiveDataUtils;
 import com.yirancrazy.minimall.user.entity.UserPO;
 
@@ -29,13 +30,23 @@ public class UserVO {
      * @return 脱敏后的用户VO
      */
     public static UserVO from(UserPO po) {
+        return from(po, null);
+    }
+
+    /**
+     * 将 UserPO 转换为 UserVO，对手机号和邮箱进行脱敏，并将头像 objectKey 解析为可访问 URL。
+     * @param po 用户持久化对象
+     * @param minioUtil 对象存储工具，用于生成头像预签名 URL；为 null 时头像原样返回
+     * @return 脱敏后的用户VO
+     */
+    public static UserVO from(UserPO po, MinioUtil minioUtil) {
         UserVO vo = new UserVO();
         vo.setId(po.getId());
         vo.setUsername(po.getUsername());
         vo.setNickname(po.getNickname());
         vo.setPhone(SensitiveDataUtils.maskPhone(po.getPhone()));
         vo.setEmail(maskEmail(po.getEmail()));
-        vo.setAvatar(po.getAvatar());
+        vo.setAvatar(minioUtil == null ? po.getAvatar() : minioUtil.resolvePublicUrl(po.getAvatar()));
         vo.setGender(po.getGender());
         vo.setCreateTime(po.getCreateTime());
         return vo;

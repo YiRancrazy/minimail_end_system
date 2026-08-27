@@ -32,6 +32,7 @@ import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.common.util.CsvExporter;
 import com.yirancrazy.minimall.common.util.CursorUtils;
+import com.yirancrazy.minimall.common.util.MinioUtil;
 import com.yirancrazy.minimall.order.constant.OrderCodeEnum;
 import com.yirancrazy.minimall.order.constant.OrderStatusEnum;
 import com.yirancrazy.minimall.order.constant.OrderStatusMachine;
@@ -83,6 +84,7 @@ public class OrderServiceImpl implements OrderService {
     private final EventBus eventBus;
     private final OrderStatusMachine statusMachine;
     private final ObjectMapper objectMapper;
+    private final MinioUtil minioUtil;
 
     public OrderServiceImpl(OrderManager orderManager,
                             OrderItemManager orderItemManager,
@@ -95,7 +97,8 @@ public class OrderServiceImpl implements OrderService {
                             IdFeignClient idFeignClient,
                             EventBus eventBus,
                             OrderStatusMachine statusMachine,
-                            ObjectMapper objectMapper) {
+                            ObjectMapper objectMapper,
+                            MinioUtil minioUtil) {
         this.orderManager = orderManager;
         this.orderItemManager = orderItemManager;
         this.orderLogisticsManager = orderLogisticsManager;
@@ -108,6 +111,7 @@ public class OrderServiceImpl implements OrderService {
         this.eventBus = eventBus;
         this.statusMachine = statusMachine;
         this.objectMapper = objectMapper;
+        this.minioUtil = minioUtil;
     }
 
     /**
@@ -520,7 +524,7 @@ public class OrderServiceImpl implements OrderService {
     public List<OrderItemVO> listItemVO(Long orderId) {
         List<OrderItemPO> items = orderItemManager.list(
             Wrappers.lambdaQuery(OrderItemPO.class).eq(OrderItemPO::getOrderId, orderId));
-        return items.stream().map(OrderItemVO::from).collect(java.util.stream.Collectors.toList());
+        return items.stream().map(po -> OrderItemVO.from(po, minioUtil)).collect(java.util.stream.Collectors.toList());
     }
 
     /**

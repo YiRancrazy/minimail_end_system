@@ -5,6 +5,7 @@ import lombok.Data;
 import com.yirancrazy.minimall.api.dto.goods.SkuSnapshotDTO;
 import com.yirancrazy.minimall.api.dto.goods.SpuSnapshotDTO;
 import com.yirancrazy.minimall.cart.entity.CartItemPO;
+import com.yirancrazy.minimall.common.util.MinioUtil;
 
 /**
  * @Author: yirancrazy@gmail.com
@@ -35,6 +36,18 @@ public class CartItemVO {
      * @return 购物车项VO
      */
     public static CartItemVO from(CartItemPO po, SkuSnapshotDTO sku, SpuSnapshotDTO spu) {
+        return from(po, sku, spu, null);
+    }
+
+    /**
+     * 与三参版本一致，额外将主图 objectKey 解析为可访问 URL（minioUtil 为 null 时原样返回）。
+     * @param po 购物车条目
+     * @param sku SKU 快照，可为 null
+     * @param spu SPU 快照，可为 null
+     * @param minioUtil 对象存储工具，用于生成图片预签名 URL
+     * @return 购物车项VO
+     */
+    public static CartItemVO from(CartItemPO po, SkuSnapshotDTO sku, SpuSnapshotDTO spu, MinioUtil minioUtil) {
         CartItemVO vo = new CartItemVO();
         vo.setId(po.getId());
         vo.setSkuId(po.getSkuId());
@@ -48,7 +61,10 @@ public class CartItemVO {
         }
         if (spu != null) {
             vo.setTitle(spu.getTitle());
-            vo.setMainImage(spu.getMainImageUrl());
+            boolean needResolve = minioUtil != null;
+            vo.setMainImage(needResolve
+                ? minioUtil.resolvePublicUrl(spu.getMainImageUrl())
+                : spu.getMainImageUrl());
         }
         return vo;
     }

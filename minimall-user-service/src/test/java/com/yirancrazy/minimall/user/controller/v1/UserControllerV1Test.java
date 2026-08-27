@@ -22,6 +22,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yirancrazy.minimall.common.exception.GlobalExceptionHandler;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
+import com.yirancrazy.minimall.common.util.MinioUtil;
 import com.yirancrazy.minimall.user.dto.UserCreateDTO;
 import com.yirancrazy.minimall.user.dto.UserProfileDTO;
 import com.yirancrazy.minimall.user.dto.UserUpdateDTO;
@@ -38,12 +39,14 @@ class UserControllerV1Test {
 
     private MockMvc mockMvc;
     private UserService userService;
+    private MinioUtil minioUtil;
     private final ObjectMapper mapper = new ObjectMapper();
 
     @BeforeEach
     void setUp() {
         userService = mock(UserService.class);
-        mockMvc = MockMvcBuilders.standaloneSetup(new UserControllerV1(userService))
+        minioUtil = mock(MinioUtil.class);
+        mockMvc = MockMvcBuilders.standaloneSetup(new UserControllerV1(userService, minioUtil))
             .setControllerAdvice(new GlobalExceptionHandler())
             .build();
     }

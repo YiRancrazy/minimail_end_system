@@ -39,6 +39,7 @@ import com.yirancrazy.minimall.cart.vo.CartItemVO;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CommonCode;
 import com.yirancrazy.minimall.common.result.Result;
+import com.yirancrazy.minimall.common.util.MinioUtil;
 
 /**
  * CartServiceImpl 单元测试，覆盖查询、新增、删除、计数的正常、失败、边界路径。
@@ -55,6 +56,7 @@ public class CartServiceImplTest {
     private CartItemManager cartItemManager;
     private UserFeignClient userFeignClient;
     private GoodsFeignClient goodsFeignClient;
+    private MinioUtil minioUtil;
     private CartServiceImpl service;
 
     @BeforeEach
@@ -62,6 +64,7 @@ public class CartServiceImplTest {
         cartItemManager = mock(CartItemManager.class);
         userFeignClient = mock(UserFeignClient.class);
         goodsFeignClient = mock(GoodsFeignClient.class);
+        minioUtil = mock(MinioUtil.class);
         lenient().doAnswer(inv -> {
             CartItemPO p = inv.getArgument(0);
             if (p.getId() == null) {
@@ -69,7 +72,7 @@ public class CartServiceImplTest {
             }
             return true;
         }).when(cartItemManager).save(any(CartItemPO.class));
-        service = new CartServiceImpl(cartItemManager, userFeignClient, goodsFeignClient);
+        service = new CartServiceImpl(cartItemManager, userFeignClient, goodsFeignClient, minioUtil);
     }
 
     /**

@@ -40,6 +40,11 @@ seata:
   config:
     type: file
 minimall:
+  minio:
+    endpoint: ${MINIO_ENDPOINT:http://127.0.0.1:9000}
+    access-key: ${MINIO_ACCESS_KEY:minioadmin}
+    secret-key: ${MINIO_SECRET_KEY:minioadmin}
+    bucket: ${MINIO_BUCKET:mall-files}
   eventbus:
     rocketmq:
       enabled: false

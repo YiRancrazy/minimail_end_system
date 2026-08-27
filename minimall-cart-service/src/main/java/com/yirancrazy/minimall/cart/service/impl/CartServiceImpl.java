@@ -21,6 +21,7 @@ import com.yirancrazy.minimall.cart.vo.CartItemVO;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CommonCode;
 import com.yirancrazy.minimall.common.result.Result;
+import com.yirancrazy.minimall.common.util.MinioUtil;
 
 /**
  * @Author: yirancrazy@gmail.com
@@ -38,12 +39,14 @@ public class CartServiceImpl implements CartService {
     private final CartItemManager cartItemManager;
     private final UserFeignClient userFeignClient;
     private final GoodsFeignClient goodsFeignClient;
+    private final MinioUtil minioUtil;
 
     public CartServiceImpl(CartItemManager cartItemManager, UserFeignClient userFeignClient,
-                           GoodsFeignClient goodsFeignClient) {
+                           GoodsFeignClient goodsFeignClient, MinioUtil minioUtil) {
         this.cartItemManager = cartItemManager;
         this.userFeignClient = userFeignClient;
         this.goodsFeignClient = goodsFeignClient;
+        this.minioUtil = minioUtil;
     }
 
     /**
@@ -73,7 +76,7 @@ public class CartServiceImpl implements CartService {
             SpuSnapshotDTO spu = sku == null || sku.getSpuId() == null
                 ? null
                 : effectiveSpuMap.get(sku.getSpuId());
-            return CartItemVO.from(item, sku, spu);
+            return CartItemVO.from(item, sku, spu, minioUtil);
         }).toList();
     }
 

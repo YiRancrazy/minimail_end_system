@@ -13,6 +13,7 @@ import com.yirancrazy.minimall.api.feign.GoodsFeignClient;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.util.CursorUtils;
+import com.yirancrazy.minimall.common.util.MinioUtil;
 import com.yirancrazy.minimall.user.constant.UserCodeEnum;
 import com.yirancrazy.minimall.user.dto.FavoritePageDTO;
 import com.yirancrazy.minimall.user.entity.UserFavoritePO;
@@ -32,10 +33,13 @@ public class FavoriteServiceImpl implements FavoriteService {
 
     private final UserFavoriteManager userFavoriteManager;
     private final GoodsFeignClient goodsFeignClient;
+    private final MinioUtil minioUtil;
 
-    public FavoriteServiceImpl(UserFavoriteManager userFavoriteManager, GoodsFeignClient goodsFeignClient) {
+    public FavoriteServiceImpl(UserFavoriteManager userFavoriteManager, GoodsFeignClient goodsFeignClient,
+                               MinioUtil minioUtil) {
         this.userFavoriteManager = userFavoriteManager;
         this.goodsFeignClient = goodsFeignClient;
+        this.minioUtil = minioUtil;
     }
 
     /**
@@ -137,11 +141,11 @@ public class FavoriteServiceImpl implements FavoriteService {
             vo.setPrice(sku.getPrice());
         }
         if (spu != null) {
-            // SPU 标题用于在 SKU 名称缺失时回退展示商品名
+            // SPU 标题用于在 SKU 名称缺失时回退展示商品名；主图 objectKey 转可访问 URL
             if (vo.getSkuName() == null) {
                 vo.setSkuName(spu.getTitle());
             }
-            vo.setSkuImage(spu.getMainImageUrl());
+            vo.setSkuImage(minioUtil.resolvePublicUrl(spu.getMainImageUrl()));
         }
         return vo;
     }

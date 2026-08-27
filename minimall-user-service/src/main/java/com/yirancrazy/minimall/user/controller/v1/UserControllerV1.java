@@ -16,6 +16,7 @@ import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CommonCode;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.result.Result;
+import com.yirancrazy.minimall.common.util.MinioUtil;
 import com.yirancrazy.minimall.user.dto.UserCreateDTO;
 import com.yirancrazy.minimall.user.dto.UserPageDTO;
 import com.yirancrazy.minimall.user.dto.UserProfileDTO;
@@ -34,9 +35,11 @@ import com.yirancrazy.minimall.user.vo.UserVO;
 public class UserControllerV1 {
 
     private final UserService userService;
+    private final MinioUtil minioUtil;
 
-    public UserControllerV1(UserService userService) {
+    public UserControllerV1(UserService userService, MinioUtil minioUtil) {
         this.userService = userService;
+        this.minioUtil = minioUtil;
     }
 
     /**
@@ -49,7 +52,7 @@ public class UserControllerV1 {
     @GetMapping
     public Result<CursorPageVO<UserVO>> page(@Valid UserPageDTO dto, @RequestHeader("X-User-Role") String role) {
         requirePlatform(role);
-        return Result.success(userService.page(dto).map(UserVO::from));
+        return Result.success(userService.page(dto).map(po -> UserVO.from(po, minioUtil)));
     }
 
     /**
@@ -63,7 +66,7 @@ public class UserControllerV1 {
     @GetMapping("/{id}")
     public Result<UserVO> get(@PathVariable("id") Long id, @RequestHeader("X-User-Role") String role) {
         requirePlatform(role);
-        return Result.success(UserVO.from(userService.getById(id)));
+        return Result.success(UserVO.from(userService.getById(id), minioUtil));
     }
 
     /**
@@ -126,7 +129,7 @@ public class UserControllerV1 {
      */
     @GetMapping("/profile")
     public Result<UserVO> getProfile(@RequestHeader("X-User-Id") Long userId) {
-        return Result.success(UserVO.from(userService.getProfile(userId)));
+        return Result.success(UserVO.from(userService.getProfile(userId), minioUtil));
     }
 
     /**

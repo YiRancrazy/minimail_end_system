@@ -7,9 +7,12 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import com.yirancrazy.minimall.api.dto.goods.SkuSnapshotDTO;
 import com.yirancrazy.minimall.api.dto.goods.SpuSnapshotDTO;
 import com.yirancrazy.minimall.cart.entity.CartItemPO;
+import com.yirancrazy.minimall.common.util.MinioUtil;
 
 /**
  * @Author: yirancrazy@gmail.com
@@ -65,6 +68,25 @@ public class CartItemVOTest {
         assertNull(vo.getTitle());
         assertNull(vo.getPrice());
         assertNull(vo.getStock());
+    }
+
+    /**
+     * 验证四参版本传入 MinioUtil 时，主图 objectKey 被解析为可访问的预签名 URL。
+     */
+    @Test
+    public void from_withMinioUtil_resolvesMainImage() {
+        CartItemPO po = new CartItemPO();
+        po.setId(1L);
+        po.setSkuId(100L);
+        po.setQuantity(1);
+        po.setSelected(1);
+        SpuSnapshotDTO spu = new SpuSnapshotDTO(10L, "标题", "a1b2c3.png");
+        MinioUtil minioUtil = mock(MinioUtil.class);
+        when(minioUtil.resolvePublicUrl("a1b2c3.png")).thenReturn("http://minio/mall-files/a1b2c3.png?token");
+
+        CartItemVO vo = CartItemVO.from(po, null, spu, minioUtil);
+
+        assertEquals("http://minio/mall-files/a1b2c3.png?token", vo.getMainImage());
     }
 
     /**

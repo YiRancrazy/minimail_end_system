@@ -5,6 +5,9 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+import com.yirancrazy.minimall.common.util.MinioUtil;
 import com.yirancrazy.minimall.user.entity.UserPO;
 
 /**
@@ -14,6 +17,22 @@ import com.yirancrazy.minimall.user.entity.UserPO;
  * @DateTime: 2026/08/04
  **/
 public class UserVOTest {
+
+    /**
+     * 验证传入 MinioUtil 时，头像 objectKey 被解析为可访问的预签名 URL。
+     */
+    @Test
+    public void from_withMinioUtil_resolvesAvatar() {
+        UserPO po = new UserPO();
+        po.setId(1L);
+        po.setAvatar("a1b2c3.png");
+        MinioUtil minioUtil = mock(MinioUtil.class);
+        when(minioUtil.resolvePublicUrl("a1b2c3.png")).thenReturn("http://minio/mall-files/a1b2c3.png?token");
+
+        UserVO vo = UserVO.from(po, minioUtil);
+
+        assertEquals("http://minio/mall-files/a1b2c3.png?token", vo.getAvatar());
+    }
 
     /**
      * 验证 from 将所有非敏感字段正确映射。

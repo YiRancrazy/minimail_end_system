@@ -155,11 +155,14 @@ public class OrderServiceImplTest {
         item.setAmount(new java.math.BigDecimal("10.00"));
         when(orderItemManager.list(any(Wrapper.class))).thenReturn(List.of(item));
         when(minioUtil.resolvePublicUrl("img-x.png")).thenReturn("http://minio/mall-files/img-x.png?token");
+        when(goodsFeignClient.batchSpuSnapshot(any())).thenReturn(Result.success(
+            java.util.Map.of(1L, new com.yirancrazy.minimall.api.dto.goods.SpuSnapshotDTO(1L, "耳机Pro", null))));
 
         List<com.yirancrazy.minimall.order.vo.OrderItemVO> result = service.listItemVO(100L);
 
         assertEquals(1, result.size());
         assertEquals("http://minio/mall-files/img-x.png?token", result.get(0).getSkuImageUrl());
+        assertEquals("耳机Pro", result.get(0).getSpuName());
     }
 
     /**

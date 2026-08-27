@@ -18,6 +18,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.seata.spring.annotation.GlobalTransactional;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.api.dto.goods.SkuSnapshotDTO;
+import com.yirancrazy.minimall.api.dto.goods.SpuSnapshotDTO;
 import com.yirancrazy.minimall.api.dto.order.OrderPaidDTO;
 import com.yirancrazy.minimall.api.dto.pay.PayCreateDTO;
 import com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO;
@@ -538,7 +539,36 @@ public class OrderServiceImpl implements OrderService {
     public List<OrderItemVO> listItemVO(Long orderId) {
         List<OrderItemPO> items = orderItemManager.list(
             Wrappers.lambdaQuery(OrderItemPO.class).eq(OrderItemPO::getOrderId, orderId));
-        return items.stream().map(po -> OrderItemVO.from(po, minioUtil)).collect(java.util.stream.Collectors.toList());
+        if (items.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<OrderItemVO> vos = items.stream()
+            .map(po -> OrderItemVO.from(po, minioUtil))
+            .collect(java.util.stream.Collectors.toList());
+        fillSpuName(vos);
+        return vos;
+    }
+
+    /**
+     * 按 SPU ID 批量装配商品标题：标题非下单快照，出参实时从 goods 解析；
+     * goods 服务不可用或 SPU 缺失时保持 null，由前端回退显示 SKU 名，不阻断详情。
+     * @param vos 待填充的订单明细 VO 列表
+     */
+    private void fillSpuName(List<OrderItemVO> vos) {
+        List<Long> spuIds = vos.stream().map(OrderItemVO::getSpuId)
+            .filter(Objects::nonNull).distinct().collect(java.util.stream.Collectors.toList());
+        if (spuIds.isEmpty()) {
+            return;
+        }
+        Result<java.util.Map<Long, SpuSnapshotDTO>> result = goodsFeignClient.batchSpuSnapshot(spuIds);
+        java.util.Map<Long, SpuSnapshotDTO> snapshots =
+            (result != null && result.getData() != null) ? result.getData() : Collections.emptyMap();
+        for (OrderItemVO vo : vos) {
+            SpuSnapshotDTO snap = snapshots.get(vo.getSpuId());
+            if (snap != null) {
+                vo.setSpuName(snap.getTitle());
+            }
+        }
     }
 
     /**

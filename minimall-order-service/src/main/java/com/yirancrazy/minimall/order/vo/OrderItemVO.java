@@ -15,7 +15,9 @@ public class OrderItemVO {
 
     private Long spuId;
     private Long skuId;
-    /** 商品名称 */
+    /** 商品标题（SPU 标题，出参实时解析，非下单快照） */
+    private String spuName;
+    /** 商品名称（SKU 快照名） */
     private String skuName;
     /** 商品主图地址 */
     private String skuImageUrl;

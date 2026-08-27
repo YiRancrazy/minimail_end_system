@@ -24,6 +24,7 @@ import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.common.util.CursorUtils;
+import com.yirancrazy.minimall.common.util.MinioUtil;
 import com.yirancrazy.minimall.goods.constant.AuditDecisionEnum;
 import com.yirancrazy.minimall.goods.constant.SpuCodeEnum;
 import com.yirancrazy.minimall.goods.constant.SpuStatusEnum;
@@ -58,6 +59,7 @@ public class SpuServiceImpl implements SpuService {
     private final SpuSearchService spuSearchService;
     private final SkuManager skuManager;
     private final MerchantFeignClient merchantFeignClient;
+    private final MinioUtil minioUtil;
 
     /** 店铺营业中状态 alias，跨服务通过 MerchantFeignClient 快照透传 */
     private static final String SHOP_STATUS_ACTIVE = "ACTIVE";
@@ -66,12 +68,14 @@ public class SpuServiceImpl implements SpuService {
                           SpuAuditRecordManager spuAuditRecordManager,
                           SpuSearchService spuSearchService,
                           SkuManager skuManager,
-                          MerchantFeignClient merchantFeignClient) {
+                          MerchantFeignClient merchantFeignClient,
+                          MinioUtil minioUtil) {
         this.spuManager = spuManager;
         this.spuAuditRecordManager = spuAuditRecordManager;
         this.spuSearchService = spuSearchService;
         this.skuManager = skuManager;
         this.merchantFeignClient = merchantFeignClient;
+        this.minioUtil = minioUtil;
     }
 
     /**
@@ -188,10 +192,20 @@ public class SpuServiceImpl implements SpuService {
     @Override
     public SpuVO getDetail(Long id, Long merchantId) {
         SpuPO po = getById(id, merchantId);
-        SpuVO vo = SpuVO.from(po);
+        SpuVO vo = resolveMainImage(SpuVO.from(po));
         List<SkuPO> skus = skuManager.list(
             Wrappers.lambdaQuery(SkuPO.class).eq(SkuPO::getSpuId, id));
         vo.setSkus(skus.stream().map(SkuVO::from).collect(Collectors.toList()));
+        return vo;
+    }
+
+    /**
+     * 主图 objectKey 转为可访问 URL，商家端展示用，空值返回 null。
+     * @param vo 待处理的 SPU 视图
+     * @return 处理后的 SPU 视图
+     */
+    private SpuVO resolveMainImage(SpuVO vo) {
+        vo.setMainImageUrl(minioUtil.resolvePublicUrl(vo.getMainImageUrl()));
         return vo;
     }
 
@@ -215,7 +229,7 @@ public class SpuServiceImpl implements SpuService {
         Map<Long, List<SkuPO>> skuMap = batchSkus(records.stream()
             .map(SpuPO::getId).collect(Collectors.toList()));
         return CursorPageVO.of(records, limit, SpuPO::getId).map(po -> {
-            SpuVO vo = SpuVO.from(po);
+            SpuVO vo = resolveMainImage(SpuVO.from(po));
             vo.setSkus(skuMap.getOrDefault(po.getId(), Collections.emptyList()).stream()
                 .map(SkuVO::from).collect(Collectors.toList()));
             return vo;

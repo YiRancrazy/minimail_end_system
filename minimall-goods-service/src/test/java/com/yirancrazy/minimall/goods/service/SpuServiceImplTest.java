@@ -28,6 +28,7 @@ import com.yirancrazy.minimall.api.feign.MerchantFeignClient;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.result.Result;
+import com.yirancrazy.minimall.common.util.MinioUtil;
 import com.yirancrazy.minimall.goods.constant.AuditDecisionEnum;
 import com.yirancrazy.minimall.goods.constant.SpuStatusEnum;
 import com.yirancrazy.minimall.goods.dto.SkuItemDTO;
@@ -55,6 +56,7 @@ public class SpuServiceImplTest {
     private SpuSearchService spuSearchService;
     private SkuManager skuManager;
     private MerchantFeignClient merchantFeignClient;
+    private MinioUtil minioUtil;
     private SpuServiceImpl service;
 
     @BeforeEach
@@ -64,6 +66,7 @@ public class SpuServiceImplTest {
         spuSearchService = mock(SpuSearchService.class);
         skuManager = mock(SkuManager.class);
         merchantFeignClient = mock(MerchantFeignClient.class);
+        minioUtil = mock(MinioUtil.class);
         lenient().doAnswer(inv -> {
             SpuPO p = inv.getArgument(0);
             if (p.getId() == null) {
@@ -79,7 +82,7 @@ public class SpuServiceImplTest {
         lenient().when(merchantFeignClient.shopSnapshot(anyLong()))
             .thenReturn(Result.success(new ShopSnapshotDTO(1L, 10L, "shop-1", "ACTIVE")));
         service = new SpuServiceImpl(spuManager, spuAuditRecordManager,
-            spuSearchService, skuManager, merchantFeignClient);
+            spuSearchService, skuManager, merchantFeignClient, minioUtil);
     }
 
     /**

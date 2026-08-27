@@ -9,6 +9,7 @@ import com.yirancrazy.minimall.api.feign.UserFeignClient;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.result.Result;
+import com.yirancrazy.minimall.common.util.MinioUtil;
 import com.yirancrazy.minimall.platform.constant.PlatformCodeEnum;
 import com.yirancrazy.minimall.platform.dto.PlatformUserPageDTO;
 import com.yirancrazy.minimall.platform.service.PlatformUserService;
@@ -26,9 +27,11 @@ import com.yirancrazy.minimall.platform.vo.PlatformUserVO;
 public class PlatformUserServiceImpl implements PlatformUserService {
 
     private final UserFeignClient userFeignClient;
+    private final MinioUtil minioUtil;
 
-    public PlatformUserServiceImpl(UserFeignClient userFeignClient) {
+    public PlatformUserServiceImpl(UserFeignClient userFeignClient, MinioUtil minioUtil) {
         this.userFeignClient = userFeignClient;
+        this.minioUtil = minioUtil;
     }
 
     /**
@@ -68,12 +71,13 @@ public class PlatformUserServiceImpl implements PlatformUserService {
     }
 
     /**
-     * UserManageVO → PlatformUserVO 映射。
+     * UserManageVO → PlatformUserVO 映射，头像 objectKey 在出参边界解析为可访问 URL。
      * @param v 跨服务用户视图
      * @return 平台用户视图
      */
     private PlatformUserVO toPlatformVO(UserManageVO v) {
+        String avatarUrl = minioUtil.resolvePublicUrl(v.getAvatar());
         return new PlatformUserVO(v.getId(), v.getUsername(), v.getNickname(),
-                v.getAvatar(), v.getPhoneMasked(), v.getGender(), v.getCreateTime());
+                avatarUrl, v.getPhoneMasked(), v.getGender(), v.getCreateTime());
     }
 }

@@ -16,6 +16,7 @@ import com.yirancrazy.minimall.api.feign.UserFeignClient;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.result.Result;
+import com.yirancrazy.minimall.common.util.MinioUtil;
 import com.yirancrazy.minimall.platform.dto.PlatformUserPageDTO;
 
 /**
@@ -24,12 +25,14 @@ import com.yirancrazy.minimall.platform.dto.PlatformUserPageDTO;
 public class PlatformUserServiceImplTest {
 
     private UserFeignClient userFeignClient;
+    private MinioUtil minioUtil;
     private PlatformUserServiceImpl service;
 
     @BeforeEach
     void setUp() {
         userFeignClient = mock(UserFeignClient.class);
-        service = new PlatformUserServiceImpl(userFeignClient);
+        minioUtil = mock(MinioUtil.class);
+        service = new PlatformUserServiceImpl(userFeignClient, minioUtil);
     }
 
     /**

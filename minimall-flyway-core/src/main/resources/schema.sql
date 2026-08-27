@@ -182,24 +182,6 @@ CREATE TABLE IF NOT EXISTS t_merch_shop (
     INDEX idx_merch_shop_merchant (merchant_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='店铺表';
 
-CREATE TABLE IF NOT EXISTS t_merchant_withdraw (
-                                                   id              BIGINT          NOT NULL COMMENT '主键ID',
-                                                   merchant_id     BIGINT          NOT NULL COMMENT '商家ID',
-                                                   withdraw_no     VARCHAR(32)     NOT NULL COMMENT '提现单号',
-    amount          DECIMAL(12,2)   NOT NULL COMMENT '提现金额（元）',
-    status          TINYINT         NOT NULL COMMENT '状态：1=待审核 2=已通过 3=已拒绝 4=已打款',
-    reason          VARCHAR(255)    NULL COMMENT '审核原因/备注',
-    applied_at      DATETIME        NULL COMMENT '申请时间',
-    reviewed_at     DATETIME        NULL COMMENT '审核时间',
-    version         INT             NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
-    is_deleted      TINYINT         DEFAULT 0 COMMENT '是否删除：0=未删除 1=已删除（允许NULL）',
-    create_time     DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    update_time     DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
-    PRIMARY KEY (id),
-    UNIQUE KEY uk_withdraw_no (withdraw_no, is_deleted),
-    INDEX idx_merchant_id (merchant_id)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='商家提现记录表';
-
 -- ============================================================
 -- 商品域
 -- ============================================================

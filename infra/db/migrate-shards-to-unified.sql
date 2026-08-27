@@ -33,7 +33,6 @@ INSERT IGNORE INTO minimall_db.t_user_favorite          SELECT * FROM user_db.t_
 -- ============================================================
 INSERT IGNORE INTO minimall_db.t_merch_merchant         SELECT * FROM merchant_db.t_merch_merchant;
 INSERT IGNORE INTO minimall_db.t_merch_shop            SELECT * FROM merchant_db.t_merch_shop;
-INSERT IGNORE INTO minimall_db.t_merchant_withdraw      SELECT * FROM merchant_db.t_merchant_withdraw;
 
 -- ============================================================
 -- 商品域（原 goods_db，3 张表）

@@ -21,7 +21,7 @@ import com.yirancrazy.minimall.pay.vo.PayStatisticsVO;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: PlatformPayControllerV1 MockMvc 单元测试，验证平台端交易流水分页、资金统计、冻结与提现审核 HTTP 路由。
+ * @Description: PlatformPayControllerV1 MockMvc 单元测试，验证平台端交易流水分页、资金统计与冻结 HTTP 路由。
  * @Version: 1.0
  * @DateTime: 2026/08/05
  **/
@@ -69,29 +69,5 @@ class PlatformPayControllerV1Test {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.code").value("00000"));
         verify(service).freeze("P001");
-    }
-
-    /**
-     * 验证 GET /api/v1/platform/pay/withdrawals 返回提现游标分页结果。
-     */
-    @Test
-    void withdrawals_returns_cursor_result() throws Exception {
-        when(service.platformPageWithdraw(any(PayPageDTO.class)))
-            .thenReturn(new CursorPageVO<>(Collections.emptyList(), null, false, 20));
-        mockMvc.perform(get("/api/v1/platform/pay/withdrawals"))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.code").value("00000"));
-    }
-
-    /**
-     * 验证 POST /api/v1/platform/pay/withdrawals/{id}/review?approved=true 调用 service 审核提现。
-     */
-    @Test
-    void reviewWithdraw_invokes_service() throws Exception {
-        mockMvc.perform(post("/api/v1/platform/pay/withdrawals/1/review")
-                .param("approved", "true"))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.code").value("00000"));
-        verify(service).reviewWithdraw(1L, true, null);
     }
 }

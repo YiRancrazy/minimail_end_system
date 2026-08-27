@@ -17,11 +17,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
@@ -34,7 +31,6 @@ import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
-import com.yirancrazy.minimall.api.feign.IdFeignClient;
 import com.yirancrazy.minimall.api.feign.OrderFeignClient;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
@@ -42,15 +38,10 @@ import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.pay.dto.PayCallbackDTO;
 import com.yirancrazy.minimall.pay.dto.PayPageDTO;
 import com.yirancrazy.minimall.pay.dto.PayStatementDTO;
-import com.yirancrazy.minimall.pay.dto.WithdrawApplyDTO;
-import com.yirancrazy.minimall.pay.entity.MerchantWithdrawPO;
 import com.yirancrazy.minimall.pay.entity.PayRefundPO;
 import com.yirancrazy.minimall.pay.entity.PayTransactionPO;
-import com.yirancrazy.minimall.pay.gateway.AlipayGateway;
 import com.yirancrazy.minimall.pay.gateway.PayGateway;
-import com.yirancrazy.minimall.pay.manager.MerchantWithdrawManager;
 import com.yirancrazy.minimall.pay.manager.PayManager;
-import com.yirancrazy.minimall.pay.mapper.MerchantWithdrawMapper;
 import com.yirancrazy.minimall.pay.mapper.PayRefundMapper;
 import com.yirancrazy.minimall.pay.mapper.PayTransactionMapper;
 import com.yirancrazy.minimall.pay.service.impl.PayServiceImpl;
@@ -58,7 +49,6 @@ import com.yirancrazy.minimall.pay.vo.PayStatementVO;
 import com.yirancrazy.minimall.pay.vo.PayStatisticsVO;
 import com.yirancrazy.minimall.pay.vo.PaymentParamsVO;
 import com.yirancrazy.minimall.pay.vo.RefundVO;
-import com.yirancrazy.minimall.pay.vo.WithdrawVO;
 
 
 /**
@@ -74,9 +64,6 @@ public class PayServiceImplTest {
     private PayRefundMapper payRefundMapper;
     private PayTransactionMapper payTransactionMapper;
     private OrderFeignClient orderFeignClient;
-    private MerchantWithdrawManager merchantWithdrawManager;
-    private MerchantWithdrawMapper merchantWithdrawMapper;
-    private IdFeignClient idFeignClient;
     private PayServiceImpl service;
 
     @BeforeAll
@@ -96,7 +83,6 @@ public class PayServiceImplTest {
         orderFeignClient = mock(OrderFeignClient.class);
         lenient().when(orderFeignClient.merchantId(anyString()))
             .thenReturn(Result.success(null));
-        merchantWithdrawManager = mock(MerchantWithdrawManager.class);
         lenient().when(manager.updateById(any(PayTransactionPO.class))).thenReturn(true);
         lenient().when(payGateway.createPagePayment(anyString(), any(BigDecimal.class), anyString(), anyString()))
             .thenReturn("<form action=\"https://openapi-sandbox.dl.alipaydev.com/gateway.do\">mock</form>");
@@ -107,25 +93,8 @@ public class PayServiceImplTest {
             }
             return true;
         }).when(manager).save(any(PayTransactionPO.class));
-        lenient().when(merchantWithdrawManager.updateById(any(MerchantWithdrawPO.class))).thenReturn(true);
-        doAnswer(inv -> {
-            MerchantWithdrawPO p = inv.getArgument(0);
-            if (p.getId() == null) {
-                p.setId(System.nanoTime());
-            }
-            return true;
-        }).when(merchantWithdrawManager).save(any(MerchantWithdrawPO.class));
-        merchantWithdrawMapper = mock(MerchantWithdrawMapper.class);
-        idFeignClient = mock(IdFeignClient.class);
-        // 默认 Id 服务可用；默认可提现余额充足（100000），无关用例不受余额校验影响
-        lenient().when(idFeignClient.nextId(anyString())).thenReturn(Result.success(10001L));
-        lenient().when(payTransactionMapper.sumSettledAmount(anyLong())).thenReturn(new BigDecimal("100000.00"));
-        lenient().when(payRefundMapper.sumDeductAmount(anyLong())).thenReturn(new BigDecimal("0.00"));
-        lenient().when(merchantWithdrawMapper.sumInFlightAmount(anyLong())).thenReturn(new BigDecimal("0.00"));
-        lenient().when(merchantWithdrawMapper.updateStatusIf(anyLong(), anyInt(), anyInt(), any(), any()))
-            .thenReturn(1);
         service = new PayServiceImpl(manager, payGateway, payRefundMapper, payTransactionMapper,
-            orderFeignClient, merchantWithdrawManager, merchantWithdrawMapper, idFeignClient);
+            orderFeignClient);
     }
 
     /**
@@ -471,129 +440,6 @@ public class PayServiceImplTest {
         when(manager.list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class)))
             .thenReturn(new java.util.ArrayList<>());
         assertEquals(0, service.exportTransactions(new PayPageDTO()).size());
-    }
-
-    /**
-     * 验证 applyWithdraw 会持久化一条状态为 PENDING 的提现单并返回正确 VO。
-     */
-    @Test
-    public void applyWithdraw_persists_pending_record() {
-        WithdrawApplyDTO dto = new WithdrawApplyDTO(new BigDecimal("500.00"), "月度提现");
-        WithdrawVO vo = service.applyWithdraw(10L, dto);
-
-        assertNotNull(vo);
-        assertEquals(10L, vo.getMerchantId());
-        assertEquals(0, new BigDecimal("500.00").compareTo(vo.getAmount()));
-        assertEquals(1, vo.getStatus());
-        assertEquals("月度提现", vo.getReason());
-        assertNotNull(vo.getWithdrawNo());
-        assertNotNull(vo.getAppliedAt());
-
-        ArgumentCaptor<MerchantWithdrawPO> cap = ArgumentCaptor.forClass(MerchantWithdrawPO.class);
-        verify(merchantWithdrawManager).save(cap.capture());
-        assertEquals(1, cap.getValue().getStatus());
-        assertEquals(10L, cap.getValue().getMerchantId());
-    }
-
-    /**
-     * 验证 applyWithdraw 在可提现余额（已收款项 − 退款扣减 − 在途提现）不足时抛出 WITHDRAW_BALANCE_INSUFFICIENT 且不落单。
-     */
-    @Test
-    public void applyWithdraw_insufficient_balance_throws() {
-        when(payTransactionMapper.sumSettledAmount(10L)).thenReturn(new BigDecimal("100.00"));
-        when(payRefundMapper.sumDeductAmount(10L)).thenReturn(new BigDecimal("0.00"));
-        when(merchantWithdrawMapper.sumInFlightAmount(10L)).thenReturn(new BigDecimal("0.00"));
-
-        WithdrawApplyDTO dto = new WithdrawApplyDTO(new BigDecimal("500.00"), "超额提现");
-        BizException ex = assertThrows(BizException.class, () -> service.applyWithdraw(10L, dto));
-
-        assertEquals("40010", ex.getCode());
-        verify(merchantWithdrawManager, never()).save(any(MerchantWithdrawPO.class));
-    }
-
-    /**
-     * 验证 pageWithdraw 委托给 merchantWithdrawManager.list 并强制绑定 merchantId。
-     */
-    @Test
-    public void pageWithdraw_delegates_to_manager() {
-        PayPageDTO dto = new PayPageDTO();
-        List<MerchantWithdrawPO> mockRecords = new ArrayList<>();
-        when(merchantWithdrawManager.list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class)))
-            .thenReturn(mockRecords);
-
-        CursorPageVO<MerchantWithdrawPO> result = service.pageWithdraw(10L, dto);
-        assertNotNull(result);
-        verify(merchantWithdrawManager).list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class));
-    }
-
-    /**
-     * 验证 platformPageWithdraw 委托给 merchantWithdrawManager.list，不绑定 merchantId。
-     */
-    @Test
-    public void platformPageWithdraw_delegates_to_manager() {
-        PayPageDTO dto = new PayPageDTO();
-        List<MerchantWithdrawPO> mockRecords = new ArrayList<>();
-        when(merchantWithdrawManager.list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class)))
-            .thenReturn(mockRecords);
-
-        CursorPageVO<MerchantWithdrawPO> result = service.platformPageWithdraw(dto);
-        assertNotNull(result);
-        verify(merchantWithdrawManager).list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class));
-    }
-
-    /**
-     * 验证 reviewWithdraw 审核通过时条件更新（WHERE status=PENDING）置为 APPROVED 而非 PAID，PAID 留给打款回调驱动。
-     */
-    @Test
-    public void reviewWithdraw_approve_sets_approved() {
-        MerchantWithdrawPO rec = new MerchantWithdrawPO();
-        rec.setId(1L);
-        rec.setStatus(1);
-        when(merchantWithdrawManager.getById(any())).thenReturn(rec);
-
-        service.reviewWithdraw(1L, true, null);
-
-        verify(merchantWithdrawMapper).updateStatusIf(eq(1L), eq(1), eq(2), isNull(), any(LocalDateTime.class));
-    }
-
-    /**
-     * 验证 reviewWithdraw 审核驳回时条件更新置为 REJECTED 并记录原因。
-     */
-    @Test
-    public void reviewWithdraw_reject_sets_rejected() {
-        MerchantWithdrawPO rec = new MerchantWithdrawPO();
-        rec.setId(1L);
-        rec.setStatus(1);
-        when(merchantWithdrawManager.getById(any())).thenReturn(rec);
-
-        service.reviewWithdraw(1L, false, "材料不全");
-
-        verify(merchantWithdrawMapper).updateStatusIf(eq(1L), eq(1), eq(3), eq("材料不全"), any(LocalDateTime.class));
-    }
-
-    /**
-     * 验证 reviewWithdraw 条件更新影响 0 行（已 REJECTED/PAID 终态单被重复审核）时抛 WITHDRAW_STATUS_INVALID。
-     */
-    @Test
-    public void reviewWithdraw_rejects_when_not_pending() {
-        MerchantWithdrawPO rec = new MerchantWithdrawPO();
-        rec.setId(1L);
-        rec.setStatus(3); // 已驳回的终态单
-        when(merchantWithdrawManager.getById(any())).thenReturn(rec);
-        when(merchantWithdrawMapper.updateStatusIf(anyLong(), anyInt(), anyInt(), any(), any())).thenReturn(0);
-
-        BizException ex = assertThrows(BizException.class, () -> service.reviewWithdraw(1L, true, null));
-
-        assertEquals("40009", ex.getCode());
-    }
-
-    /**
-     * 验证 reviewWithdraw 在找不到提现单时抛出 WITHDRAW_NOT_FOUND 业务异常。
-     */
-    @Test
-    public void reviewWithdraw_missing_throws_biz() {
-        when(merchantWithdrawManager.getById(any())).thenReturn(null);
-        assertThrows(BizException.class, () -> service.reviewWithdraw(999L, true, null));
     }
 
     /**

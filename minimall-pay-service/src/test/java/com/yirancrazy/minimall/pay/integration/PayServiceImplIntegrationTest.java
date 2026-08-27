@@ -21,12 +21,9 @@ import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.pay.dto.PayCallbackDTO;
 import com.yirancrazy.minimall.pay.dto.PayPageDTO;
-import com.yirancrazy.minimall.pay.dto.WithdrawApplyDTO;
-import com.yirancrazy.minimall.pay.entity.MerchantWithdrawPO;
 import com.yirancrazy.minimall.pay.entity.PayTransactionPO;
 import com.yirancrazy.minimall.pay.gateway.AlipayGateway;
 import com.yirancrazy.minimall.pay.service.PayService;
-import com.yirancrazy.minimall.pay.vo.WithdrawVO;
 
 /**
  * @Author: yirancrazy@gmail.com
@@ -108,31 +105,6 @@ class PayServiceImplIntegrationTest {
     void createPayment_unsupported_channel_throws() {
         assertThrows(BizException.class,
             () -> payService.createPayment("ORD-INT-2", 100L, 200L, new BigDecimal("10.00"), 2));
-    }
-
-    /**
-     * 端到端：applyWithdraw 持久化一条 PENDING 提现单并能 pageWithdraw 拉回。
-     */
-    @Test
-    void applyWithdraw_then_pageWithdraw_returns_record() {
-        // 先造一笔已收款项（createPayment + 成功回调），否则可提现余额校验（0 < 1000）会拒绝申请
-        Long payId = payService.createPayment("ORD-INT-WD-1", 100L, 7L, new BigDecimal("2000.00"), null);
-        assertNotNull(payId);
-        PayTransactionPO payPo = payService.getByOrderNo("ORD-INT-WD-1");
-        payService.handleCallback(new PayCallbackDTO(payPo.getPaymentNo(), "TRADE-INT-1", true, "resp"));
-
-        WithdrawApplyDTO dto = new WithdrawApplyDTO(new BigDecimal("1000.00"), "INTEG");
-        WithdrawVO vo = payService.applyWithdraw(7L, dto);
-        assertNotNull(vo.getWithdrawNo());
-        assertEquals(7L, vo.getMerchantId());
-        assertEquals(1, vo.getStatus());
-
-        PayPageDTO page = new PayPageDTO();
-        page.setLimit(10);
-        CursorPageVO<MerchantWithdrawPO> result = payService.pageWithdraw(7L, page);
-        assertNotNull(result);
-        assertTrue(result.getRecords().size() >= 1);
-        assertEquals(7L, result.getRecords().get(0).getMerchantId());
     }
 
     /**

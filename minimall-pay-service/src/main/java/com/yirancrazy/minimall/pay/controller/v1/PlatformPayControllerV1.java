@@ -16,7 +16,6 @@ import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.common.util.CsvExporter;
 import com.yirancrazy.minimall.pay.dto.PayPageDTO;
 import com.yirancrazy.minimall.pay.dto.PayStatementDTO;
-import com.yirancrazy.minimall.pay.entity.MerchantWithdrawPO;
 import com.yirancrazy.minimall.pay.entity.PayTransactionPO;
 import com.yirancrazy.minimall.pay.service.PayService;
 import com.yirancrazy.minimall.pay.vo.PayStatementVO;
@@ -81,31 +80,6 @@ public class PlatformPayControllerV1 {
     @PostMapping("/{paymentNo}/freeze")
     public Result<Void> freeze(@PathVariable("paymentNo") String paymentNo) {
         payService.freeze(paymentNo);
-        return Result.success(null);
-    }
-
-    /**
-     * 平台提现记录游标分页查询。
-     * @param dto 游标分页查询入参
-     * @return 提现单游标分页结果
-     */
-    @GetMapping("/withdrawals")
-    public Result<CursorPageVO<MerchantWithdrawPO>> withdrawals(@Valid PayPageDTO dto) {
-        return Result.success(payService.platformPageWithdraw(dto));
-    }
-
-    /**
-     * 平台审核提现申请。
-     * @param withdrawId 提现单ID
-     * @param approved 是否通过
-     * @param reason 驳回原因，approved=false 时填写
-     * @return 操作结果
-     */
-    @PostMapping("/withdrawals/{withdrawId}/review")
-    public Result<Void> reviewWithdraw(@PathVariable("withdrawId") Long withdrawId,
-                                       @RequestParam boolean approved,
-                                       @RequestParam(required = false) String reason) {
-        payService.reviewWithdraw(withdrawId, approved, reason);
         return Result.success(null);
     }
 

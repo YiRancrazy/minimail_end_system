@@ -40,8 +40,7 @@ public class RouterConfig {
             .route("merchant-service", r -> r.path(
                 "/api/v1/merchant/merchants/**",
                 "/api/v1/merchant/shops/**",
-                "/api/v1/merchant/withdraws/**",
-                "/api/v1/platform/withdraws/**")
+                "/api/v1/platform/merchants/**")
                 .uri(HOST + ":8203"))
             .route("goods-service", r -> r.path(
                 "/api/v1/user/goods/**",
@@ -54,7 +53,8 @@ public class RouterConfig {
             .route("order-service", r -> r.path(
                 "/api/v1/user/orders/**",
                 "/api/v1/merchant/orders/**",
-                "/api/v1/platform/orders/**")
+                "/api/v1/platform/orders/**",
+                "/api/v1/merchant/refunds/**")
                 .uri(HOST + ":8206"))
             .route("pay-service", r -> r.path(
                 "/api/v1/user/pay/**",

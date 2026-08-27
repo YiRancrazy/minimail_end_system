@@ -9,7 +9,6 @@ import org.springframework.stereotype.Service;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO;
-import com.yirancrazy.minimall.api.feign.IdFeignClient;
 import com.yirancrazy.minimall.api.feign.OrderFeignClient;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
@@ -20,18 +19,13 @@ import com.yirancrazy.minimall.pay.constant.PayChannelEnum;
 import com.yirancrazy.minimall.pay.constant.PayCodeEnum;
 import com.yirancrazy.minimall.pay.constant.PayStatusEnum;
 import com.yirancrazy.minimall.pay.constant.RefundStatusEnum;
-import com.yirancrazy.minimall.pay.constant.WithdrawStatusEnum;
 import com.yirancrazy.minimall.pay.dto.PayCallbackDTO;
 import com.yirancrazy.minimall.pay.dto.PayPageDTO;
 import com.yirancrazy.minimall.pay.dto.PayStatementDTO;
-import com.yirancrazy.minimall.pay.dto.WithdrawApplyDTO;
-import com.yirancrazy.minimall.pay.entity.MerchantWithdrawPO;
 import com.yirancrazy.minimall.pay.entity.PayRefundPO;
 import com.yirancrazy.minimall.pay.entity.PayTransactionPO;
 import com.yirancrazy.minimall.pay.gateway.PayGateway;
-import com.yirancrazy.minimall.pay.manager.MerchantWithdrawManager;
 import com.yirancrazy.minimall.pay.manager.PayManager;
-import com.yirancrazy.minimall.pay.mapper.MerchantWithdrawMapper;
 import com.yirancrazy.minimall.pay.mapper.PayRefundMapper;
 import com.yirancrazy.minimall.pay.mapper.PayTransactionMapper;
 import com.yirancrazy.minimall.pay.service.PayService;
@@ -39,7 +33,6 @@ import com.yirancrazy.minimall.pay.vo.PayStatementVO;
 import com.yirancrazy.minimall.pay.vo.PayStatisticsVO;
 import com.yirancrazy.minimall.pay.vo.PaymentParamsVO;
 import com.yirancrazy.minimall.pay.vo.RefundVO;
-import com.yirancrazy.minimall.pay.vo.WithdrawVO;
 
 
 /**
@@ -53,8 +46,6 @@ import com.yirancrazy.minimall.pay.vo.WithdrawVO;
 public class PayServiceImpl implements PayService {
 
     private static final String PAYMENT_NO_PREFIX = "PAY";
-    private static final String WITHDRAW_NO_PREFIX = "WD";
-    private static final String WITHDRAW_BIZ_TAG = "WITHDRAW";
     private static final DateTimeFormatter EXPIRE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final int PAY_CALLBACK_RPC_BUFFER_SECONDS = 30;
     private static final int ORDER_PENDING_CODE = 1;
@@ -68,24 +59,15 @@ public class PayServiceImpl implements PayService {
     private final PayRefundMapper payRefundMapper;
     private final PayTransactionMapper payTransactionMapper;
     private final OrderFeignClient orderFeignClient;
-    private final MerchantWithdrawManager merchantWithdrawManager;
-    private final MerchantWithdrawMapper merchantWithdrawMapper;
-    private final IdFeignClient idFeignClient;
 
     public PayServiceImpl(PayManager payManager, PayGateway payGateway,
                           PayRefundMapper payRefundMapper, PayTransactionMapper payTransactionMapper,
-                          OrderFeignClient orderFeignClient,
-                          MerchantWithdrawManager merchantWithdrawManager,
-                          MerchantWithdrawMapper merchantWithdrawMapper,
-                          IdFeignClient idFeignClient) {
+                          OrderFeignClient orderFeignClient) {
         this.payManager = payManager;
         this.payGateway = payGateway;
         this.payRefundMapper = payRefundMapper;
         this.payTransactionMapper = payTransactionMapper;
         this.orderFeignClient = orderFeignClient;
-        this.merchantWithdrawManager = merchantWithdrawManager;
-        this.merchantWithdrawMapper = merchantWithdrawMapper;
-        this.idFeignClient = idFeignClient;
     }
 
     /**
@@ -474,137 +456,6 @@ public class PayServiceImpl implements PayService {
         po.setStatus(Integer.parseInt(PayStatusEnum.FROZEN.getCode()));
         payManager.updateById(po);
         log.info("payment frozen, paymentNo={}", paymentNo);
-    }
-
-    /**
-     * 商家提现申请：先校验可提现余额（已收款项 − 退款扣减 − 在途提现）充足，再生成提现单号并保存为 PENDING 状态。
-     * @param merchantId 商家ID，由可信 Header 注入
-     * @param dto 提现申请DTO
-     * @return 提现单VO
-     * @throws BizException 可提现余额不足时抛 WITHDRAW_BALANCE_INSUFFICIENT
-     */
-    @Override
-    public WithdrawVO applyWithdraw(Long merchantId, WithdrawApplyDTO dto) {
-        if (dto.getAmount().compareTo(sumAvailableBalance(merchantId)) > 0) {
-            throw new BizException(PayCodeEnum.WITHDRAW_BALANCE_INSUFFICIENT);
-        }
-        String withdrawNo = generateWithdrawNo();
-        LocalDateTime appliedAt = LocalDateTime.now();
-
-        MerchantWithdrawPO po = new MerchantWithdrawPO();
-        po.setMerchantId(merchantId);
-        po.setWithdrawNo(withdrawNo);
-        po.setAmount(dto.getAmount());
-        po.setStatus(Integer.parseInt(WithdrawStatusEnum.PENDING.getCode()));
-        po.setReason(dto.getReason());
-        po.setAppliedAt(appliedAt);
-        merchantWithdrawManager.save(po);
-
-        log.info("withdraw applied, withdrawNo={}, merchantId={}, amount={}",
-            withdrawNo, merchantId, dto.getAmount());
-        return new WithdrawVO(withdrawNo, merchantId, dto.getAmount(),
-            Integer.parseInt(WithdrawStatusEnum.PENDING.getCode()), dto.getReason(), appliedAt, null);
-    }
-
-    /**
-     * 计算商家可提现余额 = 已收款项合计（SUCCESS/REFUNDING/REFUNDED 流水）− 退款扣减（成功/在途）− 在途提现（PENDING/APPROVED）。
-     * REFUNDED 流水计入已收款项以与退款扣减相抵，保证全额退款场景余额不为负；FROZEN 等异常资金不开放提现。
-     * @param merchantId 商家ID
-     * @return 可提现余额
-     */
-    private BigDecimal sumAvailableBalance(Long merchantId) {
-        BigDecimal settled = payTransactionMapper.sumSettledAmount(merchantId);
-        BigDecimal refunded = payRefundMapper.sumDeductAmount(merchantId);
-        BigDecimal inFlight = merchantWithdrawMapper.sumInFlightAmount(merchantId);
-        return settled.subtract(refunded).subtract(inFlight);
-    }
-
-    /**
-     * 生成提现单号：优先取 Id 服务全局唯一 ID（业务标签 WITHDRAW），服务不可用/返回失败时回退时间戳+随机并 WARN。
-     * @return 提现单号，保证非空
-     */
-    private String generateWithdrawNo() {
-        try {
-            Result<Long> idResult = idFeignClient.nextId(WITHDRAW_BIZ_TAG);
-            if (idResult != null && "00000".equals(idResult.getCode()) && idResult.getData() != null) {
-                return WITHDRAW_NO_PREFIX + idResult.getData();
-            }
-        }
-        catch (Exception e) {
-            log.warn("id service unavailable, fallback to timestamp-based withdraw no", e);
-        }
-        return WITHDRAW_NO_PREFIX + System.currentTimeMillis() + (int)(Math.random() * 1000);
-    }
-
-    /**
-     * 商家提现记录游标分页查询，merchantId 强制绑定，支持按状态与时间范围过滤。
-     * @param merchantId 商家ID
-     * @param dto 游标分页查询入参
-     * @return 提现单游标分页结果
-     */
-    @Override
-    public CursorPageVO<MerchantWithdrawPO> pageWithdraw(Long merchantId, PayPageDTO dto) {
-        Long lastId = CursorUtils.decode(dto.getCursor());
-        int limit = dto.getLimit();
-        List<MerchantWithdrawPO> records = merchantWithdrawManager.list(
-            Wrappers.lambdaQuery(MerchantWithdrawPO.class)
-                .lt(lastId != null, MerchantWithdrawPO::getId, lastId)
-                .eq(MerchantWithdrawPO::getMerchantId, merchantId)
-                .eq(dto.getStatus() != null, MerchantWithdrawPO::getStatus, dto.getStatus())
-                .ge(dto.getStartTime() != null, MerchantWithdrawPO::getCreateTime, dto.getStartTime())
-                .le(dto.getEndTime() != null, MerchantWithdrawPO::getCreateTime, dto.getEndTime())
-                .orderByDesc(MerchantWithdrawPO::getId)
-                .last("LIMIT " + (limit + 1)));
-        return CursorPageVO.of(records, limit, MerchantWithdrawPO::getId);
-    }
-
-    /**
-     * 平台提现记录游标分页查询，不绑定 merchantId。
-     * @param dto 游标分页查询入参
-     * @return 提现单游标分页结果
-     */
-    @Override
-    public CursorPageVO<MerchantWithdrawPO> platformPageWithdraw(PayPageDTO dto) {
-        Long lastId = CursorUtils.decode(dto.getCursor());
-        int limit = dto.getLimit();
-        List<MerchantWithdrawPO> records = merchantWithdrawManager.list(
-            Wrappers.lambdaQuery(MerchantWithdrawPO.class)
-                .lt(lastId != null, MerchantWithdrawPO::getId, lastId)
-                .eq(dto.getStatus() != null, MerchantWithdrawPO::getStatus, dto.getStatus())
-                .ge(dto.getStartTime() != null, MerchantWithdrawPO::getCreateTime, dto.getStartTime())
-                .le(dto.getEndTime() != null, MerchantWithdrawPO::getCreateTime, dto.getEndTime())
-                .orderByDesc(MerchantWithdrawPO::getId)
-                .last("LIMIT " + (limit + 1)));
-        return CursorPageVO.of(records, limit, MerchantWithdrawPO::getId);
-    }
-
-    /**
-     * 平台审核提现申请：仅 PENDING 状态的单允许审核，通过置 APPROVED（等待打款）、驳回置 REJECTED 并记录原因。
-     * 审核通过不直接置 PAID——PAID 仅由打款链路接入后的打款回调驱动（当前无打款通道）；
-     * 条件更新（WHERE status=PENDING）保证已审核终态不被并发/重复审核翻转，影响 0 行抛 WITHDRAW_STATUS_INVALID。
-     * @param withdrawId 提现单ID
-     * @param approved 是否通过
-     * @param reason 驳回原因，approved=false 时填写
-     * @throws BizException 提现单不存在抛 WITHDRAW_NOT_FOUND；状态非 PENDING 抛 WITHDRAW_STATUS_INVALID
-     */
-    @Override
-    public void reviewWithdraw(Long withdrawId, boolean approved, String reason) {
-        MerchantWithdrawPO po = merchantWithdrawManager.getById(withdrawId);
-        if (po == null) {
-            throw new BizException(PayCodeEnum.WITHDRAW_NOT_FOUND);
-        }
-
-        int targetStatus = approved
-            ? Integer.parseInt(WithdrawStatusEnum.APPROVED.getCode())
-            : Integer.parseInt(WithdrawStatusEnum.REJECTED.getCode());
-
-        // 条件更新：仅 PENDING 可审核，已 REJECTED/PAID 终态单影响 0 行，防并发/重复审核翻转状态
-        int updated = merchantWithdrawMapper.updateStatusIf(withdrawId,
-            Integer.parseInt(WithdrawStatusEnum.PENDING.getCode()), targetStatus, reason, LocalDateTime.now());
-        if (updated == 0) {
-            throw new BizException(PayCodeEnum.WITHDRAW_STATUS_INVALID);
-        }
-        log.info("withdraw reviewed, withdrawId={}, approved={}", withdrawId, approved);
     }
 
     /**

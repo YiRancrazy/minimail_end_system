@@ -20,6 +20,8 @@ public class MerchantManageVO {
     private Long userId;
     private String merchantName;
     private String licenseNo;
+    /** 营业执照图片 objectKey，内部链路透传原始 key，由对浏览器出参方解析 */
+    private String licenseImageUrl;
     private Integer auditStatus;
     private String auditReason;
     private LocalDateTime auditAt;

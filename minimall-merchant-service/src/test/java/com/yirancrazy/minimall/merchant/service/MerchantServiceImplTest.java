@@ -13,6 +13,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import com.yirancrazy.minimall.common.exception.BizException;
+import com.yirancrazy.minimall.common.util.MinioUtil;
 import com.yirancrazy.minimall.merchant.constant.MerchantAuditStatusEnum;
 import com.yirancrazy.minimall.merchant.dto.QualificationSubmitDTO;
 import com.yirancrazy.minimall.merchant.entity.MerchantPO;
@@ -32,6 +33,7 @@ import com.yirancrazy.minimall.merchant.vo.MerchantQualificationVO;
 public class MerchantServiceImplTest {
 
     private MerchantManager manager;
+    private MinioUtil minioUtil;
     private MerchantServiceImpl service;
 
     @BeforeEach
@@ -45,7 +47,8 @@ public class MerchantServiceImplTest {
             return true;
         }).when(manager).save(any(MerchantPO.class));
         when(manager.updateById(any(MerchantPO.class))).thenReturn(true);
-        service = new MerchantServiceImpl(manager);
+        minioUtil = mock(MinioUtil.class);
+        service = new MerchantServiceImpl(manager, minioUtil);
     }
 
     /**
@@ -107,6 +110,26 @@ public class MerchantServiceImplTest {
         assertEquals("110101199001011234", po.getIdCardNoEnc());
         assertEquals("BZ123456", po.getBusinessLicenseNoEnc());
         assertEquals("6222000011112222", po.getBankAccountEnc());
+    }
+
+    /**
+     * 验证提交资质时持久化营业执照图 objectKey，出参时由 MinioUtil 解析为可访问 URL。
+     */
+    @Test
+    public void submit_persists_and_resolves_license_image() {
+        when(manager.getOne(any())).thenReturn(null);
+        when(minioUtil.resolvePublicUrl("lic/abc.png")).thenReturn("http://minio/mall-files/lic/abc.png?token");
+        QualificationSubmitDTO dto = new QualificationSubmitDTO();
+        dto.setMerchantName("测试商家");
+        dto.setLicenseNo("L123");
+        dto.setLicenseImageUrl("lic/abc.png");
+
+        com.yirancrazy.minimall.merchant.vo.MerchantQualificationVO vo = service.submitQualification(1L, dto);
+
+        org.mockito.ArgumentCaptor<MerchantPO> captor = org.mockito.ArgumentCaptor.forClass(MerchantPO.class);
+        verify(manager).save(captor.capture());
+        assertEquals("lic/abc.png", captor.getValue().getLicenseImageUrl());
+        assertEquals("http://minio/mall-files/lic/abc.png?token", vo.getLicenseImageUrl());
     }
 
     /**
@@ -188,6 +211,53 @@ public class MerchantServiceImplTest {
     public void audit_already_audited_throws() {
         when(manager.getById(1L)).thenReturn(buildPO(1L, 1L, 1));
         assertThrows(BizException.class, () -> service.audit(1L, true, null));
+    }
+
+    /**
+     * 验证驳回但不填原因时抛出 PARAM_INVALID，且不触发任何落库。
+     */
+    @Test
+    public void audit_reject_without_reason_throws() {
+        when(manager.getById(1L)).thenReturn(buildPO(1L, 1L, 0));
+        assertThrows(BizException.class, () -> service.audit(1L, false, null));
+        org.mockito.Mockito.verify(manager, org.mockito.Mockito.never())
+                .updateById(any(MerchantPO.class));
+    }
+
+    /**
+     * 验证审核状态为 null（脏数据）时不抛 NPE，而是拒绝审核。
+     */
+    @Test
+    public void audit_null_status_throws_already_audited() {
+        MerchantPO po = buildPO(1L, 1L, 0);
+        po.setAuditStatus(null);
+        when(manager.getById(1L)).thenReturn(po);
+        assertThrows(BizException.class, () -> service.audit(1L, true, null));
+    }
+
+    /**
+     * 验证并发/过期版本提交时 updateById 返回 false，审核必须显式失败而不能静默返回成功。
+     */
+    @Test
+    public void audit_update_conflict_throws_already_audited() {
+        MerchantPO po = buildPO(1L, 1L, 0);
+        when(manager.getById(1L)).thenReturn(po);
+        when(manager.updateById(any(MerchantPO.class))).thenReturn(false);
+        assertThrows(BizException.class, () -> service.audit(1L, true, null));
+    }
+
+    /**
+     * 验证审核通过时清理历史驳回原因。
+     */
+    @Test
+    public void audit_approve_clears_stale_reason() {
+        MerchantPO po = buildPO(1L, 1L, 0);
+        po.setAuditReason("历史驳回原因");
+        when(manager.getById(1L)).thenReturn(po);
+
+        service.audit(1L, true, null);
+        assertEquals(null, po.getAuditReason());
+        verify(manager).updateById(po);
     }
 
     /**

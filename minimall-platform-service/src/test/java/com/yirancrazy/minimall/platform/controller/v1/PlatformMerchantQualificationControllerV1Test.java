@@ -13,6 +13,7 @@ import com.yirancrazy.minimall.api.feign.MerchantFeignClient;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CommonCode;
 import com.yirancrazy.minimall.common.result.Result;
+import com.yirancrazy.minimall.common.util.MinioUtil;
 import com.yirancrazy.minimall.platform.dto.MerchantQualificationAuditDTO;
 
 /**
@@ -26,12 +27,13 @@ import com.yirancrazy.minimall.platform.dto.MerchantQualificationAuditDTO;
 class PlatformMerchantQualificationControllerV1Test {
 
     @Mock private MerchantFeignClient merchantFeignClient;
+    @Mock private MinioUtil minioUtil;
 
     private PlatformMerchantQualificationControllerV1 controller;
 
     @BeforeEach
     void setUp() {
-        controller = new PlatformMerchantQualificationControllerV1(merchantFeignClient);
+        controller = new PlatformMerchantQualificationControllerV1(merchantFeignClient, minioUtil);
     }
 
     @Test

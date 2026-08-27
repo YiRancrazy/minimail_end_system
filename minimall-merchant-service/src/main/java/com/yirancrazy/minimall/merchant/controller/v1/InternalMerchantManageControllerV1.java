@@ -86,7 +86,7 @@ public class InternalMerchantManageControllerV1 {
      */
     private MerchantManageVO toVO(MerchantPO p) {
         return new MerchantManageVO(p.getId(), p.getUserId(), p.getMerchantName(),
-                p.getLicenseNo(), p.getAuditStatus(), p.getAuditReason(),
+                p.getLicenseNo(), p.getLicenseImageUrl(), p.getAuditStatus(), p.getAuditReason(),
                 p.getAuditAt(), p.getCreateTime());
     }
 }

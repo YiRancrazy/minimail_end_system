@@ -37,7 +37,7 @@ public class PlatformMerchantServiceImplTest {
     @Test
     public void page_delegates_to_feign() {
         MerchantManageVO vo = new MerchantManageVO(1L, 100L, "shopA",
-                "L1", 1, null, null, null);
+                "L1", null, 1, null, null, null);
         when(merchantFeignClient.pageManage(any(InternalPageQuery.class)))
                 .thenReturn(Result.success(CursorPageVO.of(List.of(vo), 20, MerchantManageVO::getMerchantId)));
 
@@ -75,7 +75,7 @@ public class PlatformMerchantServiceImplTest {
     public void detail_returns_vo() {
         when(merchantFeignClient.detail(1L))
                 .thenReturn(Result.success(new MerchantManageVO(1L, 100L, "shopA",
-                        "L1", 1, null, null, null)));
+                        "L1", null, 1, null, null, null)));
 
         com.yirancrazy.minimall.platform.vo.PlatformMerchantVO vo = service.detail(1L);
         assertEquals("shopA", vo.getMerchantName());

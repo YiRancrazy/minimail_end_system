@@ -19,6 +19,8 @@ public class MerchantQualificationVO {
     private Long userId;
     private String merchantName;
     private String licenseNo;
+    /** 营业执照图片可访问 URL，objectKey 在出参边界由 MinioUtil 解析 */
+    private String licenseImageUrl;
     private Integer auditStatus;
     private String auditReason;
     private LocalDateTime auditAt;

@@ -22,6 +22,9 @@ public class QualificationSubmitDTO {
     @Size(max = 64, message = "licenseNo must be <= 64 chars")
     private String licenseNo;
 
+    @Size(max = 512, message = "licenseImageUrl must be <= 512 chars")
+    private String licenseImageUrl;
+
     @Size(max = 64, message = "legalPerson must be <= 64 chars")
     private String legalPerson;
 

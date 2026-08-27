@@ -21,6 +21,8 @@ public class MerchantPO extends BasePO {
     private Long userId;
     private String merchantName;
     private String licenseNo;
+    /** 营业执照图片 objectKey，出参时由 MinioUtil 解析为可访问 URL */
+    private String licenseImageUrl;
     private Integer auditStatus;
     private String auditReason;
     private LocalDateTime auditAt;

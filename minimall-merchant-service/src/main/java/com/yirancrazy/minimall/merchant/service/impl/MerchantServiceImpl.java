@@ -4,12 +4,15 @@ import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.common.exception.BizException;
+import com.yirancrazy.minimall.common.result.CommonCode;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.util.CursorUtils;
+import com.yirancrazy.minimall.common.util.MinioUtil;
 import com.yirancrazy.minimall.common.util.SensitiveDataUtils;
 import com.yirancrazy.minimall.merchant.constant.MerchantAuditStatusEnum;
 import com.yirancrazy.minimall.merchant.constant.MerchantCodeEnum;
@@ -33,9 +36,11 @@ import com.yirancrazy.minimall.merchant.vo.MerchantQualificationVO;
 public class MerchantServiceImpl implements MerchantService {
 
     private final MerchantManager merchantManager;
+    private final MinioUtil minioUtil;
 
-    public MerchantServiceImpl(MerchantManager merchantManager) {
+    public MerchantServiceImpl(MerchantManager merchantManager, MinioUtil minioUtil) {
         this.merchantManager = merchantManager;
+        this.minioUtil = minioUtil;
     }
 
     /**
@@ -53,6 +58,7 @@ public class MerchantServiceImpl implements MerchantService {
             po.setUserId(merchantId);
             po.setMerchantName(dto.getMerchantName());
             po.setLicenseNo(dto.getLicenseNo());
+            po.setLicenseImageUrl(dto.getLicenseImageUrl());
             applySensitiveFields(po, dto);
             po.setAuditStatus(Integer.parseInt(MerchantAuditStatusEnum.PENDING.getCode()));
             merchantManager.save(po);
@@ -60,6 +66,7 @@ public class MerchantServiceImpl implements MerchantService {
         else {
             po.setMerchantName(dto.getMerchantName());
             po.setLicenseNo(dto.getLicenseNo());
+            po.setLicenseImageUrl(dto.getLicenseImageUrl());
             applySensitiveFields(po, dto);
             po.setAuditStatus(Integer.parseInt(MerchantAuditStatusEnum.PENDING.getCode()));
             po.setAuditReason(null);
@@ -81,27 +88,38 @@ public class MerchantServiceImpl implements MerchantService {
     }
 
     /**
-     * 平台审核商家资质，仅允许 PENDING 状态审核；approved=true 置 APPROVED，false 置 REJECTED 并记录原因。
+     * 平台审核商家资质，仅允许 PENDING 状态审核；approved=true 置 APPROVED（同时清理历史驳回原因），
+     * false 置 REJECTED 并记录原因。依赖乐观锁（BasePO.version）保证并发下仅一次审核落库成功。
      * @param merchantId 商家主体ID
      * @param approved 是否通过
-     * @param reason 驳回原因
+     * @param reason 驳回原因，approved=false 时必填
+     * @throws BizException 商家不存在、非待审核状态或并发冲突时
      */
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public void audit(Long merchantId, boolean approved, String reason) {
+        if (!approved && (reason == null || reason.isBlank())) {
+            throw new BizException(CommonCode.PARAM_INVALID, "PARAM_INVALID", "驳回时原因不能为空");
+        }
         MerchantPO po = merchantManager.getById(merchantId);
         if (po == null) {
             throw new BizException(MerchantCodeEnum.MERCHANT_NOT_FOUND);
         }
-        if (!po.getAuditStatus().equals(Integer.parseInt(MerchantAuditStatusEnum.PENDING.getCode()))) {
+        // 非待审核状态（含脏数据 null）一律禁止审核，避免重复审核与并发场景下的状态覆盖
+        Integer current = po.getAuditStatus();
+        if (current == null || current != Integer.parseInt(MerchantAuditStatusEnum.PENDING.getCode())) {
             throw new BizException(MerchantCodeEnum.MERCHANT_ALREADY_AUDITED);
         }
         po.setAuditStatus(Integer.parseInt(
             approved ? MerchantAuditStatusEnum.APPROVED.getCode() : MerchantAuditStatusEnum.REJECTED.getCode()));
-        if (!approved) {
-            po.setAuditReason(reason);
-        }
+        // 通过时清理历史驳回原因，驳回时记录本次原因
+        po.setAuditReason(approved ? null : reason);
         po.setAuditAt(LocalDateTime.now());
-        merchantManager.updateById(po);
+        // 并发审核时第二个事务受乐观锁版本冲突影响受影响行数为 0，updateById 返回 false，必须显式失败而非静默成功
+        if (!merchantManager.updateById(po)) {
+            log.warn("merchant audit conflict, merchantId={}, approved={}", merchantId, approved);
+            throw new BizException(MerchantCodeEnum.MERCHANT_ALREADY_AUDITED);
+        }
         log.info("merchant audited, merchantId={}, approved={}", merchantId, approved);
     }
 
@@ -172,6 +190,7 @@ public class MerchantServiceImpl implements MerchantService {
         vo.setUserId(po.getUserId());
         vo.setMerchantName(po.getMerchantName());
         vo.setLicenseNo(po.getLicenseNo());
+        vo.setLicenseImageUrl(minioUtil.resolvePublicUrl(po.getLicenseImageUrl()));
         vo.setAuditStatus(po.getAuditStatus());
         vo.setAuditReason(po.getAuditReason());
         vo.setAuditAt(po.getAuditAt());

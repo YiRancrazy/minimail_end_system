@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
@@ -92,6 +93,39 @@ public class InternalMerchantManageControllerV1Test {
                 com.yirancrazy.minimall.merchant.constant.MerchantCodeEnum.MERCHANT_NOT_FOUND));
 
         assertThrows(BizException.class, () -> controller.detail(99L));
+    }
+
+    /**
+     * 验证审核通过委托 service 落库（逗号参数任意理由）。
+     */
+    @Test
+    public void audit_approved_delegates_to_service() {
+        controller.audit(1L, true, null);
+        verify(merchantService).audit(1L, true, null);
+    }
+
+    /**
+     * 验证驳回时 reason 为空在控制器层直接拒绝，不进入 service。
+     */
+    @Test
+    public void audit_reject_without_reason_throws_at_controller() {
+        assertThrows(BizException.class, () -> controller.audit(1L, false, "  "));
+        verify(merchantService, org.mockito.Mockito.never())
+                .audit(org.mockito.ArgumentMatchers.anyLong(),
+                        org.mockito.ArgumentMatchers.anyBoolean(),
+                        org.mockito.ArgumentMatchers.any());
+    }
+
+    /**
+     * 验证 service 审核失败（如并发冲突/已审核）时异常向调用方传播，不静默吞掉。
+     */
+    @Test
+    public void audit_conflict_propagates_from_service() {
+        org.mockito.Mockito.doThrow(new BizException(
+                com.yirancrazy.minimall.merchant.constant.MerchantCodeEnum.MERCHANT_ALREADY_AUDITED))
+            .when(merchantService).audit(1L, false, "原因");
+
+        assertThrows(BizException.class, () -> controller.audit(1L, false, "原因"));
     }
 
     private MerchantPO buildMerchant(Long merchantId, Long userId, String name) {

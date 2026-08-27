@@ -17,6 +17,7 @@ import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CommonCode;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.result.Result;
+import com.yirancrazy.minimall.common.util.MinioUtil;
 import com.yirancrazy.minimall.platform.dto.MerchantQualificationAuditDTO;
 import com.yirancrazy.minimall.platform.vo.MerchantQualificationVO;
 
@@ -34,6 +35,7 @@ import com.yirancrazy.minimall.platform.vo.MerchantQualificationVO;
 public class PlatformMerchantQualificationControllerV1 {
 
     private final MerchantFeignClient merchantFeignClient;
+    private final MinioUtil minioUtil;
 
     /**
      * 平台分页查询待审核商家资质。
@@ -70,6 +72,7 @@ public class PlatformMerchantQualificationControllerV1 {
         vo.setMerchantId(manage.getMerchantId());
         vo.setMerchantName(manage.getMerchantName());
         vo.setLicenseNo(manage.getLicenseNo());
+        vo.setLicenseImageUrl(minioUtil.resolvePublicUrl(manage.getLicenseImageUrl()));
         vo.setStatus(auditStatusName(manage.getAuditStatus()));
         vo.setRejectReason(manage.getAuditReason());
         vo.setSubmitTime(manage.getCreateTime());

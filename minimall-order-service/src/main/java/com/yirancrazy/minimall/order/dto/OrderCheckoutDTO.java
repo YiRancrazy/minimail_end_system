@@ -17,4 +17,8 @@ public class OrderCheckoutDTO {
     @NotEmpty(message = "结算商品列表不能为空")
     @Valid
     private List<OrderCheckoutItemDTO> items;
+
+    /** 收货人信息，序列化为快照落库；未传则不记录收货信息 */
+    @Valid
+    private ReceiverDTO receiver;
 }

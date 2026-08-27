@@ -72,7 +72,7 @@ public class UserOrderControllerV1 {
     @Idempotent
     public Result<Long> create(@RequestHeader("X-User-Id") Long userId,
                                @Valid @RequestBody OrderCreateDTO dto) {
-        return Result.success(orderService.create(userId, dto.getSkuId(), dto.getQuantity()));
+        return Result.success(orderService.create(userId, dto.getSkuId(), dto.getQuantity(), dto.getReceiver()));
     }
 
     /**
@@ -86,7 +86,7 @@ public class UserOrderControllerV1 {
     @Idempotent
     public Result<Long> checkout(@RequestHeader("X-User-Id") Long userId,
                                  @Valid @RequestBody OrderCheckoutDTO dto) {
-        return Result.success(orderService.checkout(userId, dto.getItems()));
+        return Result.success(orderService.checkout(userId, dto.getItems(), dto.getReceiver()));
     }
 
     /**

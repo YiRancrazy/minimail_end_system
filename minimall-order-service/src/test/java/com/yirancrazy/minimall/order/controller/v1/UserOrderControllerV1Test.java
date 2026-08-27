@@ -8,6 +8,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -82,7 +83,7 @@ class UserOrderControllerV1Test {
      */
     @Test
     void checkout_returns_created() throws Exception {
-        when(service.checkout(anyLong(), any())).thenReturn(100L);
+        when(service.checkout(anyLong(), any(), any())).thenReturn(100L);
         OrderCheckoutDTO dto = new OrderCheckoutDTO();
         dto.setItems(java.util.List.of(new OrderCheckoutItemDTO(1L, 2)));
         mockMvc.perform(post("/api/v1/user/orders/checkout")
@@ -91,7 +92,7 @@ class UserOrderControllerV1Test {
                 .content(mapper.writeValueAsString(dto)))
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.data").value(100));
-        verify(service).checkout(anyLong(), any());
+        verify(service).checkout(anyLong(), any(), any());
     }
 
     /**
@@ -99,15 +100,15 @@ class UserOrderControllerV1Test {
      */
     @Test
     void create_with_header_returns_created() throws Exception {
-        when(service.create(anyLong(), anyLong(), anyInt())).thenReturn(100L);
-        OrderCreateDTO dto = new OrderCreateDTO(100L, 2);
+        when(service.create(anyLong(), anyLong(), anyInt(), any())).thenReturn(100L);
+        OrderCreateDTO dto = new OrderCreateDTO(100L, 2, null);
         mockMvc.perform(post("/api/v1/user/orders")
                 .header("X-User-Id", 1L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(mapper.writeValueAsString(dto)))
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.data").value(100));
-        verify(service).create(1L, 100L, 2);
+        verify(service).create(eq(1L), eq(100L), eq(2), any());
     }
 
     /**

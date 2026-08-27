@@ -4,6 +4,7 @@ import java.util.List;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.order.dto.OrderCheckoutItemDTO;
 import com.yirancrazy.minimall.order.dto.OrderPageDTO;
+import com.yirancrazy.minimall.order.dto.ReceiverDTO;
 import com.yirancrazy.minimall.order.entity.OrderPO;
 import com.yirancrazy.minimall.order.vo.OrderItemVO;
 import com.yirancrazy.minimall.order.vo.OrderLogisticsVO;
@@ -23,12 +24,29 @@ public interface OrderService {
     Long create(Long userId, Long skuId, Integer quantity);
 
     /**
+     * 创建订单并携带收货人信息，序列化为快照落库。
+     * @param userId 用户ID
+     * @param receiver 收货人信息，可为 null（不记录收货信息）
+     * @return 订单ID
+     */
+    Long create(Long userId, Long skuId, Integer quantity, ReceiverDTO receiver);
+
+    /**
      * 多SKU结算下单：批量获取商品快照、锁库存、创建订单头与明细行、初始化支付流水。
      * @param userId 用户ID
      * @param items 结算明细列表
      * @return 订单ID
      */
     Long checkout(Long userId, List<OrderCheckoutItemDTO> items);
+
+    /**
+     * 多SKU结算下单并携带收货人信息，序列化为快照落库。
+     * @param userId 用户ID
+     * @param items 结算明细列表
+     * @param receiver 收货人信息，可为 null（不记录收货信息）
+     * @return 订单ID
+     */
+    Long checkout(Long userId, List<OrderCheckoutItemDTO> items, ReceiverDTO receiver);
 
     /**
      * 用户支付订单：校验订单归属后推进 PAID 并广播 OrderPaidDTO 事件。

@@ -1,5 +1,6 @@
 package com.yirancrazy.minimall.order.dto;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -24,4 +25,8 @@ public class OrderCreateDTO {
     @NotNull(message = "购买数量不能为空")
     @Min(value = 1, message = "购买数量至少为1")
     private Integer quantity;
+
+    /** 收货人信息，序列化为快照落库；未传则不记录收货信息 */
+    @Valid
+    private ReceiverDTO receiver;
 }

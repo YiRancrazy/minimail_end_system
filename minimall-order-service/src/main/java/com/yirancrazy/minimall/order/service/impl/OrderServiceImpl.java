@@ -38,6 +38,7 @@ import com.yirancrazy.minimall.order.constant.OrderStatusEnum;
 import com.yirancrazy.minimall.order.constant.OrderStatusMachine;
 import com.yirancrazy.minimall.order.dto.OrderCheckoutItemDTO;
 import com.yirancrazy.minimall.order.dto.OrderPageDTO;
+import com.yirancrazy.minimall.order.dto.ReceiverDTO;
 import com.yirancrazy.minimall.order.entity.OrderItemPO;
 import com.yirancrazy.minimall.order.entity.OrderLogisticsPO;
 import com.yirancrazy.minimall.order.entity.OrderPO;
@@ -122,8 +123,13 @@ public class OrderServiceImpl implements OrderService {
      * @return 订单ID
      */
     @Override
-    @GlobalTransactional
     public Long create(Long userId, Long skuId, Integer quantity) {
+        return create(userId, skuId, quantity, null);
+    }
+
+    @Override
+    @GlobalTransactional
+    public Long create(Long userId, Long skuId, Integer quantity, ReceiverDTO receiver) {
         SkuSnapshotDTO snapshot = goodsFeignClient.skuSnapshot(skuId).getData();
         if (snapshot == null || snapshot.getPrice() == null) {
             throw new BizException(OrderCodeEnum.ORDER_SKU_SNAPSHOT_MISSING);
@@ -146,6 +152,7 @@ public class OrderServiceImpl implements OrderService {
         po.setPayAmount(amount);
         po.setFreightAmount(BigDecimal.ZERO);
         po.setDiscountAmount(BigDecimal.ZERO);
+        po.setReceiverSnapshotJson(toReceiverSnapshotJson(receiver));
         po.setPayExpireAt(LocalDateTime.now().plusMinutes(PAY_EXPIRE_MINUTES));
         po.setStatus(OrderStatusEnum.PENDING.intCode());
         orderManager.save(po);
@@ -189,6 +196,12 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @GlobalTransactional
     public Long checkout(Long userId, List<OrderCheckoutItemDTO> items) {
+        return checkout(userId, items, null);
+    }
+
+    @Override
+    @GlobalTransactional
+    public Long checkout(Long userId, List<OrderCheckoutItemDTO> items, ReceiverDTO receiver) {
         if (items == null || items.isEmpty()) {
             throw new BizException(OrderCodeEnum.ORDER_ITEMS_EMPTY);
         }
@@ -251,6 +264,7 @@ public class OrderServiceImpl implements OrderService {
             po.setPayExpireAt(LocalDateTime.now().plusMinutes(PAY_EXPIRE_MINUTES));
             po.setStatus(OrderStatusEnum.PENDING.intCode());
             po.setOrderGroupNo(orderGroupNo);
+            po.setReceiverSnapshotJson(toReceiverSnapshotJson(receiver));
             orderManager.save(po);
 
             for (OrderItemPO itemPO : merchantItems) {
@@ -772,6 +786,15 @@ public class OrderServiceImpl implements OrderService {
             log.warn("serialize order snapshot failed", e);
             return null;
         }
+    }
+
+    /**
+     * 序列化收货人信息为快照 JSON：未传收货信息时返回 null，避免落空字符串。
+     * @param receiver 收货人信息
+     * @return 快照 JSON；receiver 为 null 时返回 null
+     */
+    private String toReceiverSnapshotJson(ReceiverDTO receiver) {
+        return receiver == null ? null : toSnapshotJson(receiver);
     }
 
     /**

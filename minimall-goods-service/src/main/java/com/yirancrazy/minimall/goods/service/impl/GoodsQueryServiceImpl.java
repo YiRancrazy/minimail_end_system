@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.util.CursorUtils;
+import com.yirancrazy.minimall.common.util.MinioUtil;
 import com.yirancrazy.minimall.goods.constant.SpuCodeEnum;
 import com.yirancrazy.minimall.goods.constant.SpuStatusEnum;
 import com.yirancrazy.minimall.goods.dto.GoodsPageDTO;
@@ -36,10 +37,21 @@ public class GoodsQueryServiceImpl implements GoodsQueryService {
 
     private final SpuManager spuManager;
     private final SkuManager skuManager;
+    private final MinioUtil minioUtil;
 
-    public GoodsQueryServiceImpl(SpuManager spuManager, SkuManager skuManager) {
+    public GoodsQueryServiceImpl(SpuManager spuManager, SkuManager skuManager, MinioUtil minioUtil) {
         this.spuManager = spuManager;
         this.skuManager = skuManager;
+        this.minioUtil = minioUtil;
+    }
+
+    /**
+     * 图片 objectKey 统一转可访问 URL，避免用户端拿到裸 objectKey 导致图片不可显示。
+     * @param objectKey MinIO 对象键
+     * @return 可访问的图片 URL；空值返回 null
+     */
+    private String resolveImageUrl(String objectKey) {
+        return minioUtil.resolvePublicUrl(objectKey);
     }
 
     /**
@@ -64,7 +76,7 @@ public class GoodsQueryServiceImpl implements GoodsQueryService {
             .map(SpuPO::getId).collect(Collectors.toList()));
         return CursorPageVO.of(records, limit, SpuPO::getId)
             .map(po -> new SpuListVO(po.getId(), po.getSpuNo(), po.getTitle(),
-                po.getSubtitle(), po.getMainImageUrl(), po.getMerchantId(),
+                po.getSubtitle(), resolveImageUrl(po.getMainImageUrl()), po.getMerchantId(),
                 minPriceMap.get(po.getId())));
     }
 
@@ -105,7 +117,7 @@ public class GoodsQueryServiceImpl implements GoodsQueryService {
         List<SkuVO> skus = listSkusInternal(spuId);
         log.info("goods detail queried, spuId={}, skuCount={}", spuId, skus.size());
         return new SpuDetailVO(po.getId(), po.getSpuNo(), po.getTitle(), po.getSubtitle(),
-            po.getMainImageUrl(), po.getMerchantId(), po.getCategoryId(),
+            resolveImageUrl(po.getMainImageUrl()), po.getMerchantId(), po.getCategoryId(),
             Boolean.TRUE, skus);
     }
 

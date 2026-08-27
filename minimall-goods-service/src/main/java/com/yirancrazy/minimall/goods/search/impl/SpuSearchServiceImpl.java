@@ -15,6 +15,7 @@ import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import co.elastic.clients.elasticsearch._types.query_dsl.RangeQuery;
 import co.elastic.clients.json.JsonData;
 import lombok.extern.slf4j.Slf4j;
+import com.yirancrazy.minimall.common.util.MinioUtil;
 import com.yirancrazy.minimall.goods.constant.SpuStatusEnum;
 import com.yirancrazy.minimall.goods.dto.SpuSearchDTO;
 import com.yirancrazy.minimall.goods.search.SpuDocument;
@@ -32,9 +33,11 @@ import com.yirancrazy.minimall.goods.vo.SpuSearchVO;
 public class SpuSearchServiceImpl implements SpuSearchService {
 
     private final ElasticsearchOperations elasticsearchOperations;
+    private final MinioUtil minioUtil;
 
-    public SpuSearchServiceImpl(ElasticsearchOperations elasticsearchOperations) {
+    public SpuSearchServiceImpl(ElasticsearchOperations elasticsearchOperations, MinioUtil minioUtil) {
         this.elasticsearchOperations = elasticsearchOperations;
+        this.minioUtil = minioUtil;
     }
 
     /**
@@ -126,7 +129,7 @@ public class SpuSearchServiceImpl implements SpuSearchService {
             doc.getTitle(),
             doc.getMinPrice(),
             doc.getMaxPrice(),
-            doc.getMainImage(),
+            minioUtil.resolvePublicUrl(doc.getMainImage()),
             doc.getMerchantId()
         );
     }

@@ -111,5 +111,21 @@ public class MinioUtil {
                 "生成下载预签名URL失败: " + e.getMessage());
         }
     }
+
+    /**
+     * 把对外展示的对象 key 解析为可访问 URL：空值返回 null，已存为完整 URL 的旧数据原样返回，
+     * 其余转预签名 URL。供各服务在把主图下发给前端时统一调用，避免裸 objectKey 导致图片不可显示。
+     * @param objectKey MinIO 对象键或已存在的完整 URL
+     * @return 可访问的图片 URL；空值返回 null
+     */
+    public String resolvePublicUrl(String objectKey) {
+        if (objectKey == null || objectKey.isBlank()) {
+            return null;
+        }
+        if (objectKey.startsWith("http://") || objectKey.startsWith("https://")) {
+            return objectKey;
+        }
+        return presignedGetUrl(objectKey);
+    }
 }
 

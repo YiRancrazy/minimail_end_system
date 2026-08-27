@@ -13,6 +13,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import com.yirancrazy.minimall.common.util.MinioUtil;
 import com.yirancrazy.minimall.goods.dto.SpuSearchDTO;
 import com.yirancrazy.minimall.goods.search.impl.SpuSearchServiceImpl;
 import com.yirancrazy.minimall.goods.vo.SpuSearchVO;
@@ -23,6 +24,7 @@ import com.yirancrazy.minimall.goods.vo.SpuSearchVO;
 public class SpuSearchServiceImplTest {
 
     private ElasticsearchOperations elasticsearchOperations;
+    private MinioUtil minioUtil;
     private SpuSearchServiceImpl service;
 
     @SuppressWarnings("unchecked")
@@ -37,7 +39,8 @@ public class SpuSearchServiceImplTest {
     @BeforeEach
     void setUp() {
         elasticsearchOperations = mock(ElasticsearchOperations.class);
-        service = new SpuSearchServiceImpl(elasticsearchOperations);
+        minioUtil = mock(MinioUtil.class);
+        service = new SpuSearchServiceImpl(elasticsearchOperations, minioUtil);
     }
 
     /**
@@ -120,6 +123,30 @@ public class SpuSearchServiceImplTest {
         List<SpuSearchVO> result = service.search(dto);
 
         assertEquals(0, result.size());
+    }
+
+    /**
+     * 验证 search 结果主图由裸 objectKey 转成可访问的预签名 URL。
+     */
+    @Test
+    public void search_resolves_main_image_to_presigned_url() {
+        SpuDocument doc = new SpuDocument();
+        doc.setSpuId(3L);
+        doc.setTitle("图片商品");
+        doc.setMainImage("img-abc.png");
+        when(minioUtil.resolvePublicUrl("img-abc.png")).thenReturn("http://minio/mall-files/img-abc.png?token");
+
+        SearchHits<SpuDocument> hits = buildHitsWithDoc(doc);
+        when(elasticsearchOperations.search(any(Query.class), eq(SpuDocument.class)))
+            .thenReturn(hits);
+
+        SpuSearchDTO dto = new SpuSearchDTO();
+        dto.setPageNo(1);
+        dto.setPageSize(10);
+
+        List<SpuSearchVO> result = service.search(dto);
+
+        assertEquals("http://minio/mall-files/img-abc.png?token", result.get(0).getMainImage());
     }
 
     /**

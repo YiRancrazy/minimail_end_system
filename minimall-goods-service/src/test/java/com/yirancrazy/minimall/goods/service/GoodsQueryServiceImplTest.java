@@ -17,6 +17,7 @@ import static org.mockito.Mockito.when;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
+import com.yirancrazy.minimall.common.util.MinioUtil;
 import com.yirancrazy.minimall.goods.constant.SpuStatusEnum;
 import com.yirancrazy.minimall.goods.dto.GoodsPageDTO;
 import com.yirancrazy.minimall.goods.entity.SkuPO;
@@ -34,13 +35,15 @@ public class GoodsQueryServiceImplTest {
 
     private SpuManager spuManager;
     private SkuManager skuManager;
+    private MinioUtil minioUtil;
     private GoodsQueryServiceImpl service;
 
     @BeforeEach
     void setUp() {
         spuManager = mock(SpuManager.class);
         skuManager = mock(SkuManager.class);
-        service = new GoodsQueryServiceImpl(spuManager, skuManager);
+        minioUtil = mock(MinioUtil.class);
+        service = new GoodsQueryServiceImpl(spuManager, skuManager, minioUtil);
     }
 
     /**
@@ -68,6 +71,26 @@ public class GoodsQueryServiceImplTest {
         assertEquals("手机", vo.getTitle());
         assertEquals(10L, vo.getMerchantId());
         assertNull(vo.getMinPrice());
+    }
+
+    /**
+     * 验证 pageOnSale 将裸 objectKey 主图转成预签名 URL，空主图返回 null。
+     */
+    @Test
+    public void pageOnSale_resolves_object_key_to_presigned_url() {
+        SpuPO po = new SpuPO();
+        po.setId(300L);
+        po.setSpuNo("SPU300");
+        po.setTitle("耳机");
+        po.setMainImageUrl("a1b2c3.png");
+        po.setMerchantId(10L);
+        when(spuManager.list(any(Wrapper.class))).thenReturn(List.of(po));
+        when(skuManager.list(any(Wrapper.class))).thenReturn(List.of());
+        when(minioUtil.resolvePublicUrl("a1b2c3.png")).thenReturn("http://minio/mall-files/a1b2c3.png?token");
+
+        var result = service.pageOnSale(new GoodsPageDTO());
+
+        assertEquals("http://minio/mall-files/a1b2c3.png?token", result.getRecords().get(0).getMainImageUrl());
     }
 
     /**

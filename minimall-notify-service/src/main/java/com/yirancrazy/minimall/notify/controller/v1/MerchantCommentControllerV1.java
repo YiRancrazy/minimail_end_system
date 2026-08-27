@@ -10,10 +10,12 @@ import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.result.Result;
+import com.yirancrazy.minimall.common.util.MinioUtil;
 import com.yirancrazy.minimall.notify.dto.CommentPageDTO;
 import com.yirancrazy.minimall.notify.dto.CommentReplyDTO;
 import com.yirancrazy.minimall.notify.entity.CommentPO;
 import com.yirancrazy.minimall.notify.service.CommentService;
+import com.yirancrazy.minimall.notify.vo.CommentVO;
 
 /**
  * @Author: yirancrazy@gmail.com
@@ -26,9 +28,11 @@ import com.yirancrazy.minimall.notify.service.CommentService;
 public class MerchantCommentControllerV1 {
 
     private final CommentService commentService;
+    private final MinioUtil minioUtil;
 
-    public MerchantCommentControllerV1(CommentService commentService) {
+    public MerchantCommentControllerV1(CommentService commentService, MinioUtil minioUtil) {
         this.commentService = commentService;
+        this.minioUtil = minioUtil;
     }
 
     /**
@@ -38,10 +42,10 @@ public class MerchantCommentControllerV1 {
      * @return 评价分页结果
      */
     @GetMapping
-    public Result<CursorPageVO<CommentPO>> page(@RequestHeader("X-Merchant-Id") Long merchantId,
+    public Result<CursorPageVO<CommentVO>> page(@RequestHeader("X-Merchant-Id") Long merchantId,
                                                 @Valid CommentPageDTO dto) {
         dto.setMerchantId(merchantId);
-        return Result.success(commentService.page(dto));
+        return Result.success(commentService.page(dto).map(po -> CommentVO.from(po, minioUtil)));
     }
 
     /**

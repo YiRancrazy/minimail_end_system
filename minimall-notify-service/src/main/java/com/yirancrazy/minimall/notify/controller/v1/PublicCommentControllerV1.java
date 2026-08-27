@@ -7,11 +7,12 @@ import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.result.Result;
+import com.yirancrazy.minimall.common.util.MinioUtil;
 import com.yirancrazy.minimall.notify.constant.CommentStatusEnum;
 import com.yirancrazy.minimall.notify.dto.CommentPageDTO;
-import com.yirancrazy.minimall.notify.entity.CommentPO;
 import com.yirancrazy.minimall.notify.service.CommentService;
 import com.yirancrazy.minimall.notify.vo.CommentStatsVO;
+import com.yirancrazy.minimall.notify.vo.CommentVO;
 
 /**
  * @Author: yirancrazy@gmail.com
@@ -24,9 +25,11 @@ import com.yirancrazy.minimall.notify.vo.CommentStatsVO;
 public class PublicCommentControllerV1 {
 
     private final CommentService commentService;
+    private final MinioUtil minioUtil;
 
-    public PublicCommentControllerV1(CommentService commentService) {
+    public PublicCommentControllerV1(CommentService commentService, MinioUtil minioUtil) {
         this.commentService = commentService;
+        this.minioUtil = minioUtil;
     }
 
     /**
@@ -36,11 +39,11 @@ public class PublicCommentControllerV1 {
      * @return 评价分页结果
      */
     @GetMapping("/{spuId}")
-    public Result<CursorPageVO<CommentPO>> pageBySpu(@PathVariable Long spuId,
+    public Result<CursorPageVO<CommentVO>> pageBySpu(@PathVariable Long spuId,
                                                      @Valid CommentPageDTO dto) {
         dto.setSpuId(spuId);
         dto.setStatus(CommentStatusEnum.NORMAL.intCode());
-        return Result.success(commentService.page(dto));
+        return Result.success(commentService.page(dto).map(po -> CommentVO.from(po, minioUtil)));
     }
 
     /**

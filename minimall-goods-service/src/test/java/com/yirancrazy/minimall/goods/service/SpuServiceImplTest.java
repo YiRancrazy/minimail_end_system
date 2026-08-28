@@ -25,6 +25,7 @@ import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.yirancrazy.minimall.api.dto.goods.SpuSnapshotDTO;
 import com.yirancrazy.minimall.api.dto.merchant.ShopSnapshotDTO;
 import com.yirancrazy.minimall.api.feign.MerchantFeignClient;
+import com.yirancrazy.minimall.api.feign.StockFeignClient;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.result.Result;
@@ -56,6 +57,7 @@ public class SpuServiceImplTest {
     private SpuSearchService spuSearchService;
     private SkuManager skuManager;
     private MerchantFeignClient merchantFeignClient;
+    private StockFeignClient stockFeignClient;
     private MinioUtil minioUtil;
     private SpuServiceImpl service;
 
@@ -66,6 +68,7 @@ public class SpuServiceImplTest {
         spuSearchService = mock(SpuSearchService.class);
         skuManager = mock(SkuManager.class);
         merchantFeignClient = mock(MerchantFeignClient.class);
+        stockFeignClient = mock(StockFeignClient.class);
         minioUtil = mock(MinioUtil.class);
         lenient().doAnswer(inv -> {
             SpuPO p = inv.getArgument(0);
@@ -82,7 +85,7 @@ public class SpuServiceImplTest {
         lenient().when(merchantFeignClient.shopSnapshot(anyLong()))
             .thenReturn(Result.success(new ShopSnapshotDTO(1L, 10L, "shop-1", "ACTIVE")));
         service = new SpuServiceImpl(spuManager, spuAuditRecordManager,
-            spuSearchService, skuManager, merchantFeignClient, minioUtil);
+            spuSearchService, skuManager, merchantFeignClient, stockFeignClient, minioUtil);
     }
 
     /**
@@ -422,6 +425,7 @@ public class SpuServiceImplTest {
         existing.setMerchantId(10L);
         existing.setTitle("old");
         existing.setStatus(SpuStatusEnum.ON_SALE.statusValue());
+        existing.setCreateTime(LocalDateTime.now());
         when(spuManager.getById(100L)).thenReturn(existing);
 
         SpuUpdateDTO dto = new SpuUpdateDTO();
@@ -535,6 +539,7 @@ public class SpuServiceImplTest {
         existing.setId(100L);
         existing.setMerchantId(10L);
         existing.setTitle("priced-spu");
+        existing.setCreateTime(LocalDateTime.now());
         when(spuManager.getById(100L)).thenReturn(existing);
 
         SkuPO low = new SkuPO();

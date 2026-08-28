@@ -170,6 +170,66 @@ public class StockServiceImplTest {
     }
 
     /**
+     * 验证 SKU 无库存记录时 initStock 按初始数量建档并绑定归属商家、记录初始流水。
+     */
+    @Test
+    public void initStock_creates_record_when_absent() {
+        when(manager.getOne(any())).thenReturn(null);
+
+        service.initStock(100L, 10L, 5);
+
+        ArgumentCaptor<StockPO> captor = ArgumentCaptor.forClass(StockPO.class);
+        verify(manager).save(captor.capture());
+        StockPO saved = captor.getValue();
+        assertEquals(100L, saved.getSkuId());
+        assertEquals(10L, saved.getMerchantId());
+        assertEquals(5L, saved.getAvailable());
+        assertEquals(0L, saved.getReserved());
+        verify(journalManager).save(any(StockJournalPO.class));
+    }
+
+    /**
+     * 验证库存记录已存在（如商家已入库）时 initStock 跳过建档，不覆盖真实库存。
+     */
+    @Test
+    public void initStock_skips_when_record_exists() {
+        StockPO existing = new StockPO();
+        existing.setId(1L);
+        existing.setSkuId(100L);
+        existing.setMerchantId(10L);
+        existing.setAvailable(99L);
+        when(manager.getOne(any())).thenReturn(existing);
+
+        service.initStock(100L, 10L, 5);
+
+        verify(manager, never()).save(any(StockPO.class));
+        verify(journalManager, never()).save(any(StockJournalPO.class));
+    }
+
+    /**
+     * 验证初始数量为 null 时按 0 建档且不产生流水。
+     */
+    @Test
+    public void initStock_null_quantity_defaults_zero() {
+        when(manager.getOne(any())).thenReturn(null);
+
+        service.initStock(100L, 10L, null);
+
+        ArgumentCaptor<StockPO> captor = ArgumentCaptor.forClass(StockPO.class);
+        verify(manager).save(captor.capture());
+        assertEquals(0L, captor.getValue().getAvailable());
+        verify(journalManager, never()).save(any(StockJournalPO.class));
+    }
+
+    /**
+     * 验证 SKU 标识为 null 时 initStock 抛出参数校验异常。
+     */
+    @Test
+    public void initStock_null_sku_throws() {
+        assertThrows(BizException.class, () -> service.initStock(null, 10L, 5));
+    }
+
+    /**
      * 验证查询存在的 SKU 库存返回正确的可用数量。
      */
     @Test

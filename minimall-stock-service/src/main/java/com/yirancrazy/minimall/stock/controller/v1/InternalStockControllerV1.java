@@ -5,6 +5,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
+import com.yirancrazy.minimall.api.dto.stock.StockInitDTO;
 import com.yirancrazy.minimall.api.dto.stock.StockReserveDTO;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.stock.service.StockService;
@@ -45,5 +46,16 @@ public class InternalStockControllerV1 {
     @PostMapping("/release")
     public Result<Boolean> release(@Valid @RequestBody StockReserveDTO dto) {
         return Result.success(stockService.release(dto.getSkuId(), dto.getQuantity()));
+    }
+
+    /**
+     * 商品服务创建 SKU 时联动初始化库存记录（幂等）。
+     * @param dto SKU 与初始库存入参
+     * @return 统一响应体
+     */
+    @PostMapping("/init")
+    public Result<Void> init(@Valid @RequestBody StockInitDTO dto) {
+        stockService.initStock(dto.getSkuId(), dto.getMerchantId(), dto.getInitialQuantity());
+        return Result.success();
     }
 }

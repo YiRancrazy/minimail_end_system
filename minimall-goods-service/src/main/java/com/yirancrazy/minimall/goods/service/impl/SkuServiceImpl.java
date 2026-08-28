@@ -10,9 +10,14 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.api.dto.goods.SkuSnapshotDTO;
+import com.yirancrazy.minimall.api.dto.stock.StockInitDTO;
+import com.yirancrazy.minimall.api.feign.StockFeignClient;
 import com.yirancrazy.minimall.common.exception.BizException;
+import com.yirancrazy.minimall.common.result.CommonCode;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
+import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.common.util.CursorUtils;
 import com.yirancrazy.minimall.goods.constant.SkuCodeEnum;
 import com.yirancrazy.minimall.goods.constant.SpuCodeEnum;
@@ -33,17 +38,21 @@ import com.yirancrazy.minimall.goods.service.SpuService;
  * @Version: 1.3
  * @DateTime: 2026/08/02
  */
+@Slf4j
 @Service
 public class SkuServiceImpl implements SkuService {
 
     private final SkuManager skuManager;
     private final SpuManager spuManager;
     private final SpuService spuService;
+    private final StockFeignClient stockFeignClient;
 
-    public SkuServiceImpl(SkuManager skuManager, SpuManager spuManager, SpuService spuService) {
+    public SkuServiceImpl(SkuManager skuManager, SpuManager spuManager, SpuService spuService,
+                          StockFeignClient stockFeignClient) {
         this.skuManager = skuManager;
         this.spuManager = spuManager;
         this.spuService = spuService;
+        this.stockFeignClient = stockFeignClient;
     }
 
     /**
@@ -106,9 +115,30 @@ public class SkuServiceImpl implements SkuService {
         sku.setPrice(dto.getPrice() != null ? dto.getPrice() : BigDecimal.ZERO);
         sku.setStock(dto.getStock() != null ? dto.getStock() : 0);
         skuManager.save(sku);
+        initStockBestEffort(sku, merchantId);
         // 新 SKU 可能改变父 SPU 价格区间，刷新 ES 镜像（失败不阻断主链路）
         spuService.refreshEsDocument(dto.getSpuId());
         return sku.getId();
+    }
+
+    /**
+     * 联动初始化 SKU 库存记录：stock-service 异常或降级时按 WARN 记录不阻断创建，
+     * 后续商家可手动入库兜底。
+     * @param sku 已落库的新建 SKU
+     * @param merchantId 商家ID，来自可信Header
+     */
+    private void initStockBestEffort(SkuPO sku, Long merchantId) {
+        try {
+            Result<Void> r = stockFeignClient.initStock(
+                new StockInitDTO(sku.getId(), merchantId, sku.getStock()));
+            if (r == null || !CommonCode.SUCCESS.equals(r.getCode())) {
+                log.warn("init stock failed, skuId={}, msg={}", sku.getId(),
+                    r == null ? "no response" : r.getMessage());
+            }
+        }
+        catch (Exception e) {
+            log.warn("init stock error, skuId={}", sku.getId(), e);
+        }
     }
 
     /**

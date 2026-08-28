@@ -114,6 +114,37 @@ public class StockServiceImpl implements StockService {
     }
 
     /**
+     * 商品服务创建 SKU 时联动建档：无库存记录则按初始数量创建并绑定归属商家，记录已存在
+     * （商家已入库/重复调用）则跳过，避免覆盖真实库存。库存服务不可用时由商品端降级处理。
+     * @param skuId SKU 标识
+     * @param merchantId 库存归属商家ID
+     * @param initialQuantity 初始可用数量，null 或负数按 0 处理
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void initStock(Long skuId, Long merchantId, Integer initialQuantity) {
+        if (skuId == null) {
+            throw new BizException(CommonCode.PARAM_INVALID, "SKU ID不能为空");
+        }
+        StockPO po = stockManager.getOne(
+            Wrappers.lambdaQuery(StockPO.class).eq(StockPO::getSkuId, skuId));
+        if (po != null) {
+            return;
+        }
+        long initQty = initialQuantity == null || initialQuantity < 0 ? 0L : initialQuantity.longValue();
+        po = new StockPO();
+        po.setSkuId(skuId);
+        po.setMerchantId(merchantId);
+        po.setAvailable(initQty);
+        po.setReserved(0L);
+        stockManager.save(po);
+        if (initQty > 0) {
+            recordJournal(skuId, initQty, StockJournalTypeEnum.ADJUST, "商品创建初始库存", null);
+        }
+        log.info("stock initialized, skuId={}, merchantId={}, initial={}", skuId, merchantId, initQty);
+    }
+
+    /**
      * 查询指定 SKU 的当前可用库存数量，库存记录不存在时返回 0 而非抛出异常。
      *
      * @param skuId SKU 标识

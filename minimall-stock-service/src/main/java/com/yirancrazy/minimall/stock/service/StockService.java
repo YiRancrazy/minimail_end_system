@@ -38,6 +38,14 @@ public interface StockService {
     boolean release(Long skuId, Integer quantity);
 
     /**
+     * 初始化SKU库存记录，商品服务创建SKU时联动调用，幂等。
+     * @param skuId SKU标识
+     * @param merchantId 库存归属商家ID
+     * @param initialQuantity 初始可用数量，null或负数按0处理
+     */
+    void initStock(Long skuId, Long merchantId, Integer initialQuantity);
+
+    /**
      * 查询可用库存。
      * @param skuId 商品SKU ID
      * @return 可用库存数量

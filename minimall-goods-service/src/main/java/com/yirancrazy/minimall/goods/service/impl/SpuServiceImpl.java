@@ -19,8 +19,11 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.api.dto.goods.SpuSnapshotDTO;
 import com.yirancrazy.minimall.api.dto.merchant.ShopSnapshotDTO;
+import com.yirancrazy.minimall.api.dto.stock.StockInitDTO;
 import com.yirancrazy.minimall.api.feign.MerchantFeignClient;
+import com.yirancrazy.minimall.api.feign.StockFeignClient;
 import com.yirancrazy.minimall.common.exception.BizException;
+import com.yirancrazy.minimall.common.result.CommonCode;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.common.util.CursorUtils;
@@ -59,6 +62,7 @@ public class SpuServiceImpl implements SpuService {
     private final SpuSearchService spuSearchService;
     private final SkuManager skuManager;
     private final MerchantFeignClient merchantFeignClient;
+    private final StockFeignClient stockFeignClient;
     private final MinioUtil minioUtil;
 
     /** 店铺营业中状态 alias，跨服务通过 MerchantFeignClient 快照透传 */
@@ -69,12 +73,14 @@ public class SpuServiceImpl implements SpuService {
                           SpuSearchService spuSearchService,
                           SkuManager skuManager,
                           MerchantFeignClient merchantFeignClient,
+                          StockFeignClient stockFeignClient,
                           MinioUtil minioUtil) {
         this.spuManager = spuManager;
         this.spuAuditRecordManager = spuAuditRecordManager;
         this.spuSearchService = spuSearchService;
         this.skuManager = skuManager;
         this.merchantFeignClient = merchantFeignClient;
+        this.stockFeignClient = stockFeignClient;
         this.minioUtil = minioUtil;
     }
 
@@ -181,6 +187,7 @@ public class SpuServiceImpl implements SpuService {
             return sku;
         }).collect(Collectors.toList());
         skuManager.saveBatch(skus);
+        skus.forEach(sku -> initStockBestEffort(sku, merchantId));
     }
 
     /**
@@ -336,6 +343,7 @@ public class SpuServiceImpl implements SpuService {
         }
         if (!toCreate.isEmpty()) {
             skuManager.saveBatch(toCreate);
+            toCreate.forEach(sku -> initStockBestEffort(sku, merchantId));
         }
         if (!toUpdate.isEmpty()) {
             skuManager.updateBatchById(toUpdate);
@@ -344,6 +352,26 @@ public class SpuServiceImpl implements SpuService {
             .filter(id -> id != null && !keepIds.contains(id)).collect(Collectors.toList());
         if (!toDelete.isEmpty()) {
             skuManager.removeByIds(toDelete);
+        }
+    }
+
+    /**
+     * 联动初始化 SKU 库存记录：商品创建只负责建档，stock-service 异常或降级时按 WARN 记录
+     * 不阻断主链路（与 ES 镜像同步一致的策略），后续商家可手动入库兜底。
+     * @param sku 已落库的新建 SKU
+     * @param merchantId 商家ID，来自可信Header
+     */
+    private void initStockBestEffort(SkuPO sku, Long merchantId) {
+        try {
+            Result<Void> r = stockFeignClient.initStock(
+                new StockInitDTO(sku.getId(), merchantId, sku.getStock()));
+            if (r == null || !CommonCode.SUCCESS.equals(r.getCode())) {
+                log.warn("init stock failed, skuId={}, msg={}", sku.getId(),
+                    r == null ? "no response" : r.getMessage());
+            }
+        }
+        catch (Exception e) {
+            log.warn("init stock error, skuId={}", sku.getId(), e);
         }
     }
 

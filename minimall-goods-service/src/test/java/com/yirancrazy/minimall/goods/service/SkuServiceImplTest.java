@@ -20,6 +20,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.yirancrazy.minimall.api.dto.goods.SkuSnapshotDTO;
+import com.yirancrazy.minimall.api.feign.StockFeignClient;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.goods.constant.SpuStatusEnum;
@@ -41,6 +42,7 @@ public class SkuServiceImplTest {
     private SkuManager skuManager;
     private SpuManager spuManager;
     private SpuService spuService;
+    private StockFeignClient stockFeignClient;
     private SkuServiceImpl service;
 
     @BeforeEach
@@ -48,6 +50,7 @@ public class SkuServiceImplTest {
         skuManager = mock(SkuManager.class);
         spuManager = mock(SpuManager.class);
         spuService = mock(SpuService.class);
+        stockFeignClient = mock(StockFeignClient.class);
         lenient().doAnswer(inv -> {
             SkuPO p = inv.getArgument(0);
             if (p.getId() == null) {
@@ -57,7 +60,7 @@ public class SkuServiceImplTest {
         }).when(skuManager).save(any(SkuPO.class));
         lenient().when(skuManager.updateById(any(SkuPO.class))).thenReturn(true);
         lenient().when(skuManager.removeById(100L)).thenReturn(true);
-        service = new SkuServiceImpl(skuManager, spuManager, spuService);
+        service = new SkuServiceImpl(skuManager, spuManager, spuService, stockFeignClient);
     }
 
     /**

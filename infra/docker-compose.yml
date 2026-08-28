@@ -58,6 +58,8 @@ services:
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
+      # 允许前端跨域读取图片（<img> 不受 CORS 限制，但 fetch/Canvas/type 匹配需要）
+      MINIO_API_CORS_ALLOW_ORIGIN: ${MINIO_CORS_ORIGIN:-*}
     ports: ["9000:9000", "9001:9001"]
     volumes:
       - minio-data:/data

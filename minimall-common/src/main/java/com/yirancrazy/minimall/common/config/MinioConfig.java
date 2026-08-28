@@ -30,6 +30,9 @@ public class MinioConfig {
     @Value("${minimall.minio.bucket:mall-files}")
     private String bucket;
 
+    @Value("${minimall.minio.public-endpoint:}")
+    private String publicEndpoint;
+
     /**
      * Build MinioClient bean for object storage operations.
      * @return MinioClient instance
@@ -48,7 +51,7 @@ public class MinioConfig {
      */
     @Bean
     public MinioUtil minioUtil() {
-        return new MinioUtil(minioClient(), bucket);
+        return new MinioUtil(minioClient(), bucket, publicEndpoint, accessKey, secretKey);
     }
 
     /**

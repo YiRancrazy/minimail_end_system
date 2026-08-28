@@ -1,0 +1,236 @@
+# 薄荷商城统一编排文件：中间件 + 12 个应用服务。
+# 用法：
+#   cp .env.example .env        # 按需修改密钥
+#   docker compose up -d --build
+# 仅 Gateway(8080) 对外暴露，业务服务只在内部网络通过服务名互访。
+
+# 应用服务通用环境变量（共享 YAML 锚点）
+x-app-env: &app-env
+  MYSQL_HOST: mysql
+  MYSQL_PORT: 3306
+  MYSQL_USER: root
+  MYSQL_PASSWORD: root
+  REDIS_HOST: redis
+  REDIS_PORT: 6379
+  NACOS_HOST: nacos
+  NACOS_PORT: 8848
+  ROCKETMQ_NAMESRV_ADDR: rocketmq-namesrv:9876
+  SEATA_HOST: seata-server
+  SEATA_PORT: 8091
+  ES_HOST: elasticsearch
+  ES_PORT: 9200
+  MINIO_ENDPOINT: http://minio:9000
+  # 客户端可达的 MinIO 地址（浏览器预签名 URL 使用）
+  MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT:-http://localhost:9000}
+  MINIO_ACCESS_KEY: minioadmin
+  MINIO_SECRET_KEY: minioadmin
+  # 安全密钥统一从 .env 注入并给默认值；生产必须覆盖
+  MINIMALL_JWT_SECRET: ${MINIMALL_JWT_SECRET:-minimall-dev-jwt-secret-key-change-me-0123456789}
+  MINIMALL_INTERNAL_TOKEN: ${MINIMALL_INTERNAL_TOKEN:-minimall-internal-token-dev}
+  MINIMALL_SECURITY_AES_KEY: ${MINIMALL_SECURITY_AES_KEY:-QUJDREVGR0hJSktMTU5PUFFSU1RVVldaWDEyMzQ1Ng==}
+
+services:
+  # ==================== 中间件 ====================
+  mysql:
+    image: mysql:8.0
+    container_name: minimall-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: minimall_db
+    ports: ["3306:3306"]
+    volumes:
+      - ./infra/db/init:/docker-entrypoint-initdb.d:ro
+      - mysql-data:/var/lib/mysql
+
+  nacos:
+    image: nacos/nacos-server:v2.3.2
+    container_name: minimall-nacos
+    environment:
+      MODE: standalone
+      JVM_XMS: 256m
+      JVM_XMX: 512m
+    ports: ["8848:8848"]
+
+  redis:
+    image: redis:7.2.4
+    container_name: minimall-redis
+    ports: ["6379:6379"]
+
+  rocketmq-namesrv:
+    image: apache/rocketmq:5.3.1
+    container_name: minimall-rocketmq-namesrv
+    command: sh mqnamesrv
+    environment:
+      JAVA_OPT_EXT: "-Xms256m -Xmx256m -Xmn128m"
+    ports: ["9876:9876"]
+
+  rocketmq-broker:
+    image: apache/rocketmq:5.3.1
+    container_name: minimall-rocketmq-broker
+    command: sh mqbroker -n rocketmq-namesrv:9876 --enable-proxy
+    depends_on: [rocketmq-namesrv]
+    environment:
+      JAVA_OPT_EXT: "-Xms512m -Xmx512m -Xmn256m"
+    ports: ["10909:10909", "10911:10911", "8081:8081"]
+
+  seata-server:
+    image: seata/seata-server:2.0.0
+    container_name: minimall-seata
+    environment:
+      SEATA_PORT: 8091
+      STORE_MODE: db
+      SEATA_IP: seata-server
+    depends_on: [mysql]
+    ports: ["8091:8091", "7091:7091"]
+
+  minio:
+    image: minio/minio:latest
+    container_name: minimall-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_API_CORS_ALLOW_ORIGIN: ${MINIO_CORS_ORIGIN:-*}
+    ports: ["9000:9000", "9001:9001"]
+    volumes:
+      - minio-data:/data
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: minimall-es
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms256m -Xmx256m
+    ports: ["9200:9200", "9300:9300"]
+    volumes:
+      - es-data:/usr/share/elasticsearch/data
+
+  # ==================== 应用服务 ====================
+  # 业务服务仅在内部网络，通过 Nacos 服务名互访，不做端口映射。
+
+  gateway:
+    build:
+      context: .
+      dockerfile: minimall-gateway/Dockerfile
+    container_name: minimall-gateway
+    restart: unless-stopped
+    depends_on: [nacos, redis]
+    environment:
+      NACOS_HOST: nacos
+      NACOS_PORT: 8848
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      MINIMALL_JWT_SECRET: ${MINIMALL_JWT_SECRET:-minimall-dev-jwt-secret-key-change-me-0123456789}
+      MINIMALL_INTERNAL_TOKEN: ${MINIMALL_INTERNAL_TOKEN:-minimall-internal-token-dev}
+    ports: ["8080:8080"]
+
+  auth:
+    build:
+      context: .
+      dockerfile: minimall-auth-service/Dockerfile
+    container_name: minimall-auth
+    restart: unless-stopped
+    depends_on: [nacos, mysql, redis]
+    environment: *app-env
+
+  user:
+    build:
+      context: .
+      dockerfile: minimall-user-service/Dockerfile
+    container_name: minimall-user
+    restart: unless-stopped
+    depends_on: [nacos, mysql, redis]
+    environment: *app-env
+
+  merchant:
+    build:
+      context: .
+      dockerfile: minimall-merchant-service/Dockerfile
+    container_name: minimall-merchant
+    restart: unless-stopped
+    depends_on: [nacos, mysql, redis]
+    environment: *app-env
+
+  goods:
+    build:
+      context: .
+      dockerfile: minimall-goods-service/Dockerfile
+    container_name: minimall-goods
+    restart: unless-stopped
+    depends_on: [nacos, mysql, redis, elasticsearch, minio]
+    environment: *app-env
+
+  cart:
+    build:
+      context: .
+      dockerfile: minimall-cart-service/Dockerfile
+    container_name: minimall-cart
+    restart: unless-stopped
+    depends_on: [nacos, mysql, redis]
+    environment: *app-env
+
+  order:
+    build:
+      context: .
+      dockerfile: minimall-order-service/Dockerfile
+    container_name: minimall-order
+    restart: unless-stopped
+    depends_on: [nacos, mysql, redis, seata-server, rocketmq-namesrv]
+    environment: *app-env
+
+  pay:
+    build:
+      context: .
+      dockerfile: minimall-pay-service/Dockerfile
+    container_name: minimall-pay
+    restart: unless-stopped
+    depends_on: [nacos, mysql, redis]
+    environment: *app-env
+
+  stock:
+    build:
+      context: .
+      dockerfile: minimall-stock-service/Dockerfile
+    container_name: minimall-stock
+    restart: unless-stopped
+    depends_on: [nacos, mysql, redis]
+    environment: *app-env
+
+  notify:
+    build:
+      context: .
+      dockerfile: minimall-notify-service/Dockerfile
+    container_name: minimall-notify
+    restart: unless-stopped
+    depends_on: [nacos, mysql, redis, rocketmq-namesrv]
+    environment: *app-env
+
+  platform:
+    build:
+      context: .
+      dockerfile: minimall-platform-service/Dockerfile
+    container_name: minimall-platform
+    restart: unless-stopped
+    depends_on: [nacos, mysql, redis]
+    environment: *app-env
+
+  id:
+    build:
+      context: .
+      dockerfile: minimall-id-service/Dockerfile
+    container_name: minimall-id
+    restart: unless-stopped
+    depends_on: [nacos, mysql]
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_USER: root
+      MYSQL_PASSWORD: root
+      NACOS_HOST: nacos
+      NACOS_PORT: 8848
+
+volumes:
+  mysql-data:
+  minio-data:
+  es-data:

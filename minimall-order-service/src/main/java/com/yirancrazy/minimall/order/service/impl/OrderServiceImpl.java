@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
@@ -890,23 +891,88 @@ public class OrderServiceImpl implements OrderService {
         }
         Map<Long, List<OrderItemPO>> byOrder = items.stream()
             .collect(Collectors.groupingBy(OrderItemPO::getOrderId));
+        Map<Long, String> spuTitles = fetchSpuTitles(byOrder);
         for (OrderVO vo : vos) {
             List<OrderItemPO> orderItems = byOrder.getOrDefault(vo.getId(), Collections.emptyList());
             if (orderItems.isEmpty()) {
                 continue;
-            }
-            String names = orderItems.stream()
-                .map(OrderItemPO::getSkuName).filter(Objects::nonNull)
-                .distinct().collect(Collectors.joining("、"));
-            if (!names.isEmpty()) {
-                vo.setSkuName(names);
             }
             if (vo.getQuantity() == null) {
                 vo.setQuantity(orderItems.stream()
                     .map(OrderItemPO::getQuantity).filter(Objects::nonNull)
                     .mapToInt(Integer::intValue).sum());
             }
+            vo.setSkuName(buildItemDisplay(orderItems, spuTitles));
         }
+    }
+
+    /**
+     * 批量拉取明细涉及的 SPU 标题：标题不出参实时解析，非下单快照；
+     * goods 不可用或缺失时返回空 map，展示侧降级为仅规格名。
+     * @param byOrder 按订单 ID 分组的明细列表
+     * @return spuId -> SPU 标题 的映射
+     */
+    private Map<Long, String> fetchSpuTitles(Map<Long, List<OrderItemPO>> byOrder) {
+        Set<Long> spuIds = byOrder.values().stream()
+            .flatMap(List::stream)
+            .map(OrderItemPO::getSpuId).filter(Objects::nonNull)
+            .collect(Collectors.toSet());
+        if (spuIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        Result<java.util.Map<Long, SpuSnapshotDTO>> result =
+            goodsFeignClient.batchSpuSnapshot(new ArrayList<>(spuIds));
+        if (result == null || result.getData() == null) {
+            return Collections.emptyMap();
+        }
+        java.util.Map<Long, String> titles = new HashMap<>();
+        result.getData().forEach((spuId, snap) -> {
+            if (snap != null && snap.getTitle() != null) {
+                titles.put(spuId, snap.getTitle());
+            }
+        });
+        return titles;
+    }
+
+    /**
+     * 拼接订单商品展示串：每条 "标题 | 规格名 * 数量"，最多两条，超出补省略号。
+     * 订单明细可能含多条同标题不同规格，逐条展示避免信息丢失；标题缺失时降级为 "规格名 * 数量"。
+     * @param orderItems 订单明细列表
+     * @param spuTitles spuId -> SPU 标题 映射
+     * @return 拼好的商品展示串
+     */
+    private String buildItemDisplay(List<OrderItemPO> orderItems, Map<Long, String> spuTitles) {
+        List<OrderItemPO> head = orderItems;
+        boolean truncated = false;
+        if (orderItems.size() > 2) {
+            head = orderItems.subList(0, 2);
+            truncated = true;
+        }
+        String joined = head.stream()
+            .map(item -> buildItemSegment(item, spuTitles))
+            .filter(Objects::nonNull)
+            .collect(Collectors.joining("、"));
+        return truncated ? joined + "…" : joined;
+    }
+
+    /**
+     * 拼接单条明细展示段 "标题 | 规格名 * 数量"，标题或规格缺失时按剩余字段降级，均缺失返回 null。
+     * @param item 订单明细
+     * @param spuTitles spuId -> SPU 标题 映射
+     * @return 单条展示段；无可展示内容时返回 null
+     */
+    private String buildItemSegment(OrderItemPO item, Map<Long, String> spuTitles) {
+        String title = item.getSpuId() == null ? null : spuTitles.get(item.getSpuId());
+        Integer qty = item.getQuantity();
+        String tail = item.getSkuName();
+        if (qty != null) {
+            tail = (tail == null ? "" : tail + " * ") + qty;
+        }
+        tail = (tail == null || tail.isEmpty()) ? null : tail;
+        if (title == null) {
+            return tail;
+        }
+        return tail == null ? title : title + " | " + tail;
     }
 
     /**

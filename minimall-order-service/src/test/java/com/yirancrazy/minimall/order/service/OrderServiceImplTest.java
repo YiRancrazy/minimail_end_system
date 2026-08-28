@@ -1277,19 +1277,29 @@ public class OrderServiceImplTest {
 
         OrderItemPO item1 = new OrderItemPO();
         item1.setOrderId(90L);
+        item1.setSpuId(1L);
         item1.setSkuName("Redmi Note");
         item1.setQuantity(2);
         OrderItemPO item2 = new OrderItemPO();
         item2.setOrderId(90L);
+        item2.setSpuId(2L);
         item2.setSkuName("iPhone 15");
         item2.setQuantity(3);
-        when(orderItemManager.list(any(Wrapper.class))).thenReturn(java.util.List.of(item1, item2));
+        OrderItemPO item3 = new OrderItemPO();
+        item3.setOrderId(90L);
+        item3.setSpuId(3L);
+        item3.setSkuName("Pixel 9");
+        item3.setQuantity(1);
+        when(orderItemManager.list(any(Wrapper.class))).thenReturn(java.util.List.of(item1, item2, item3));
+        when(goodsFeignClient.batchSpuSnapshot(any())).thenReturn(Result.success(
+            java.util.Map.of(1L, new com.yirancrazy.minimall.api.dto.goods.SpuSnapshotDTO(1L, "小米", null),
+                             2L, new com.yirancrazy.minimall.api.dto.goods.SpuSnapshotDTO(2L, "苹果", null))));
 
         CursorPageVO<OrderVO> result = service.merchantPageVO(new OrderPageDTO());
 
         OrderVO vo = result.getRecords().get(0);
-        assertEquals(Integer.valueOf(5), vo.getQuantity());
-        assertEquals("Redmi Note、iPhone 15", vo.getSkuName());
+        assertEquals(Integer.valueOf(6), vo.getQuantity());
+        assertEquals("小米 | Redmi Note * 2、苹果 | iPhone 15 * 3…", vo.getSkuName());
     }
 
     /**
@@ -1304,14 +1314,17 @@ public class OrderServiceImplTest {
 
         OrderItemPO item = new OrderItemPO();
         item.setOrderId(91L);
+        item.setSpuId(1L);
         item.setSkuName("Redmi Note");
         item.setQuantity(2);
         when(orderItemManager.list(any(Wrapper.class))).thenReturn(java.util.Collections.singletonList(item));
+        when(goodsFeignClient.batchSpuSnapshot(any())).thenReturn(Result.success(
+            java.util.Map.of(1L, new com.yirancrazy.minimall.api.dto.goods.SpuSnapshotDTO(1L, "小米", null))));
 
         OrderVO vo = service.merchantDetailVO(91L, 10L);
 
         assertEquals(Integer.valueOf(2), vo.getQuantity());
-        assertEquals("Redmi Note", vo.getSkuName());
+        assertEquals("小米 | Redmi Note * 2", vo.getSkuName());
     }
 
     /**

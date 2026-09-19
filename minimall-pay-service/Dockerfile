@@ -7,7 +7,7 @@
 FROM maven:3.9-eclipse-temurin-17 AS build
 WORKDIR /opt/build
 COPY . .
-RUN ./mvnw -B -pl minimall-pay-service -am clean package -DskipTests
+RUN chmod +x ./mvnw && ./mvnw -B -pl minimall-pay-service -am clean package -DskipTests
 
 # ---------- 运行阶段 ----------
 FROM eclipse-temurin:17-jre

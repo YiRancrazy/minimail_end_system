@@ -117,6 +117,7 @@ public class IdempotentAspect {
      * @return X-Idempotency-Key 值；非 Web 请求上下文时返回 null
      */
     private String resolveFromHeader() {
+        // 从 Spring 的当前线程请求上下文中，取出当前 HTTP 请求的属性对象，并强转为 Servlet 专用的 ServletRequestAttributes，以便获取请求头信息。
         ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
         if (attrs == null) {
             return null;

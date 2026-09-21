@@ -32,9 +32,11 @@ import com.yirancrazy.minimall.gateway.config.JwtVerifier;
 @Component
 public class AuthGlobalFilter implements GlobalFilter, Ordered {
 
+    // 提前编译JWT正则表达式，匹配标准的三段式JWT格式
     private static final Pattern JWT_PATTERN = Pattern.compile(
         "^[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$");
 
+    // 白名单
     private static final Set<String> WHITELIST = Set.of(
         "/api/v1/user/auth/login",
         "/api/v1/user/auth/register",
@@ -114,6 +116,7 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
             return handleInternal(exchange, chain);
         }
 
+        // 获取access_token
         String auth = exchange.getRequest().getHeaders().getFirst("Authorization");
         if (auth == null || !auth.startsWith("Bearer ")) {
             return reject(exchange, HttpStatus.UNAUTHORIZED, "missing token", "14003");
@@ -308,6 +311,7 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
         return exchange.mutate().request(builder.build()).build();
     }
 
+    // 拒绝请求并返回JSON错误响应
     private Mono<Void> reject(ServerWebExchange exchange, HttpStatus status, String reason, String code) {
         ServerHttpResponse res = exchange.getResponse();
         res.setStatusCode(status);

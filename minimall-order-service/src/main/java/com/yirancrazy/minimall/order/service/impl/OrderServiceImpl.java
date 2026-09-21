@@ -132,6 +132,8 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @GlobalTransactional
     public Long create(Long userId, Long skuId, Integer quantity, ReceiverDTO receiver) {
+
+        // 获取商品快照
         SkuSnapshotDTO snapshot = goodsFeignClient.skuSnapshot(skuId).getData();
         if (snapshot == null || snapshot.getPrice() == null) {
             throw new BizException(OrderCodeEnum.ORDER_SKU_SNAPSHOT_MISSING);
@@ -143,6 +145,7 @@ public class OrderServiceImpl implements OrderService {
             throw new BizException(OrderCodeEnum.STOCK_RESERVE_FAIL);
         }
 
+        // 创建订单
         OrderPO po = new OrderPO();
         po.setOrderNo(generateOrderNo());
         po.setOrderType(ORDER_TYPE_NORMAL);
@@ -175,6 +178,7 @@ public class OrderServiceImpl implements OrderService {
         itemPO.setRefundStatus(REFUND_STATUS_NONE);
         orderItemManager.save(itemPO);
 
+        // 创建支付流水：支付服务在 C 端无商户上下文，按订单归属商户收款
         Long payId = payFeignClient.create(
             new PayCreateDTO(String.valueOf(po.getId()), userId, 0L, amount, null)).getData();
         if (payId == null || payId < 0) {

@@ -590,6 +590,11 @@ public class StockServiceImpl implements StockService {
         log.info("stock corrected, skuId={}, from={}, to={}", skuId, oldAvailable, correctQuantity);
     }
 
+    /**
+     * 查询库存记录；不存在则抛错。
+     * @param skuId SKU标识
+     * @return 库存记录
+     */
     private StockPO getStock(Long skuId) {
         StockPO po = stockManager.getOne(
             Wrappers.lambdaQuery(StockPO.class).eq(StockPO::getSkuId, skuId));
@@ -600,10 +605,9 @@ public class StockServiceImpl implements StockService {
     }
 
     /**
-     * 查询库存记录；不存在则创建初始记录（可用 0）。仅用于商家调整/设阈值这类
-     * 允许"首次建立库存"的入口；订单预占等场景仍用 getStock 强制要求记录存在。
-     * ponytail: 简单 select-then-insert，商家手动操作低频，并发冲突概率可忽略；
-     * 若后续出现并发建记录冲突，再引入 skuId 唯一索引 + 冲突重查。
+     * 查询库存记录；不存在则创建初始记录（可用 0）。
+     * @param skuId SKU标识
+     * @return 库存记录
      */
     private StockPO getOrCreateStock(Long skuId) {
         StockPO po = stockManager.getOne(
@@ -621,7 +625,9 @@ public class StockServiceImpl implements StockService {
 
     /**
      * 商家视角获取库存记录：存在时校验归属，不存在时以该商家归属创建初始记录。
-     * 存量 merchant_id 为空的历史记录视为无归属，不允许商家认领（由运营脚本回填）。
+     * @param skuId SKU标识
+     * @param merchantId 商家ID
+     * @return 库存记录
      */
     private StockPO getOrCreateMerchantStock(Long skuId, Long merchantId) {
         StockPO po = stockManager.getOne(
@@ -642,6 +648,8 @@ public class StockServiceImpl implements StockService {
     /**
      * 校验库存归属：无归属（存量数据未回填）或归属商家与当前商家不一致时，
      * 统一按 SKU 不存在抛错，避免向越权商家泄露 SKU 存在性与归属信息。
+      * @param po 库存记录
+     * @param merchantId 商家ID
      */
     private void checkMerchantOwnership(StockPO po, Long merchantId) {
         if (po.getMerchantId() == null || !po.getMerchantId().equals(merchantId)) {
@@ -649,6 +657,14 @@ public class StockServiceImpl implements StockService {
         }
     }
 
+    /**
+     * 记录库存流水，便于追踪库存变动历史
+     * @param skuId SKU标识
+     * @param quantity 数量
+     * @param type 流水类型
+     * @param reason 流水原因
+     * @param orderNo 订单号
+     */
     private void recordJournal(Long skuId, Long quantity, StockJournalTypeEnum type,
                                String reason, String orderNo) {
         StockJournalPO journal = new StockJournalPO();
@@ -660,6 +676,10 @@ public class StockServiceImpl implements StockService {
         journalManager.save(journal);
     }
 
+    /**
+     * 库存预警检查：可用库存小于等于阈值时记录 WARN 日志，便于运维监控
+     * @param po 库存记录
+     */
     private void checkAlert(StockPO po) {
         if (po.getAlertThreshold() != null && po.getAvailable() <= po.getAlertThreshold()) {
             log.warn("stock alert, skuId={}, available={}, threshold={}",

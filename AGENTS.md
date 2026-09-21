@@ -1,10 +1,10 @@
-# CLAUDE.md
+# AGENTS.md
 
-薄荷商城（mini_mail_system）的项目级 AI 协作约定。本文件只记录**仓库事实、高频硬约束和已踩坑**；细节按任务从 `.dev/docs/` 加载。
+薄荷商城（mini_mail_system）的 Codex 项目级协作约定。本文件只记录**仓库事实、高频硬约束和已踩坑**；细节按任务从 `.dev/docs/` 加载。
 
 > **语言**：模型用中文思考并回复；代码与注释用英文；提交信息按本文第 3 节使用中文。
-> **规则优先级**：直接用户要求 > 本文件 > 按需加载的项目文档。发现冲突时先指出，不自行扩大修改范围。
-> **RTK**：Bash 命令由用户级 Hook 自动代理，禁止手动添加 `rtk` 前缀。读写文件优先用 `Read/Glob/Grep/Edit/Write`，禁止用 `cat/find/grep` 代替专用工具。
+> **规则优先级**：直接用户要求 > 本文件及更近目录的 `AGENTS.md` > 按需加载的项目文档。发现冲突时先指出，不自行扩大修改范围。
+> **RTK**：执行 shell 命令时优先使用 `rtk` 包装，例如 `rtk git status`、`rtk grep`、`rtk read`、`rtk test`；不支持的命令再直接执行。查找优先用 `rg` / `rg --files`，手动编辑使用 `apply_patch`。
 
 ---
 
@@ -62,7 +62,7 @@
 ./mvnw org.owasp:dependency-check-maven:check
 ```
 
-完成修改、跑测、构建或提交前，主动运行 `git status --short` 和 `git diff` 复核；不要等用户提醒。
+完成修改、跑测、构建或提交前，主动运行 `rtk git status --short` 和 `rtk git diff` 复核；不要等用户提醒。
 
 ---
 
@@ -222,7 +222,7 @@ docs(ai-guidelines): 更新提交规范
 
 - DB 密码、支付密钥、KMS 配置不得明文写入通用配置文件；prod 通过 Nacos 与 KMS 管理。
 - 本地使用 `application-dev.yml`，测试使用 `application-test.yml` + H2，不依赖 Docker。
-- 受保护配置的 deny 规则以 `.claude/settings.json` 为准；遇到拒绝不要绕过权限。
+- 受保护配置由当前 Codex sandbox / approval 规则限制；遇到拒绝不要绕过权限。
 - `/internal/**` 当前尚未完成可信边界隔离；不得把内部接口暴露给公网，也不得把路径白名单误当鉴权。
 - 金额统一使用 `BigDecimal`，禁止使用 `float` / `double`。
 - 单位为**元（CNY）**，数据库使用 `DECIMAL(12,2)`，精确到分（小数点后 2 位）
@@ -309,8 +309,8 @@ docs(ai-guidelines): 更新提交规范
 
 - 功能设计或创意发散先使用 `brainstorming` skill。
 - 修改本文件、增删硬约束或进行跨文件设计决策时使用 `grilling` skill。
-- 动手前先用 `Glob/Grep` 定位，只读必要文件；跨模块改动先梳理调用链。
+- 动手前先用 `rg` / `rg --files` 定位，只读必要文件；跨模块改动先梳理调用链。
 - 根因不明的 bug 先复现和定位，不凭猜测修补。
 - 不覆盖用户已有改动；发现工作区有无关变更时保留并明确说明。
 - 未经要求不创建额外文档、不扩大范围、不提交或推送。
-- 完成前必须复核 `git status --short` 与 `git diff`，如实报告未运行的测试或检查。
+- 完成前必须复核 `rtk git status --short` 与 `rtk git diff`，如实报告未运行的测试或检查。

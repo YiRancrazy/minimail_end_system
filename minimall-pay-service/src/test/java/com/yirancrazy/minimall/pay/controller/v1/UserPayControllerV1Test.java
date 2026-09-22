@@ -16,6 +16,7 @@ import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -32,7 +33,6 @@ import com.yirancrazy.minimall.pay.entity.PayTransactionPO;
 import com.yirancrazy.minimall.pay.gateway.PayGateway;
 import com.yirancrazy.minimall.pay.service.PayService;
 import com.yirancrazy.minimall.pay.vo.PaymentParamsVO;
-import com.yirancrazy.minimall.pay.vo.RefundVO;
 
 /**
  * @Author: yirancrazy@gmail.com
@@ -170,19 +170,19 @@ class UserPayControllerV1Test {
     }
 
     /**
-     * 验证 POST /api/v1/user/pay/refunds 调用 service 并返回退款 VO。
+     * 验证用户端直接退款入口已下线；未知路由经全局异常处理后返回系统错误。
      */
     @Test
-    void createRefund_returns_vo() throws Exception {
-        RefundVO vo = new RefundVO("R001", "P456", new BigDecimal("10.00"), 2);
-        when(service.createRefund(any())).thenReturn(vo);
+    void createRefund_endpoint_is_removed() throws Exception {
         RefundCreateDTO dto = new RefundCreateDTO(1L, new BigDecimal("10.00"), "damaged");
+
         mockMvc.perform(post("/api/v1/user/pay/refunds")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(mapper.writeValueAsString(dto)))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.data.refundNo").value("R001"));
-        verify(service).createRefund(any());
+            .andExpect(jsonPath("$.code").value("20000"));
+
+        verifyNoInteractions(service);
     }
 
     /**

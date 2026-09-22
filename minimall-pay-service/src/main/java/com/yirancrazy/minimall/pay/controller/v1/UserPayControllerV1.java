@@ -13,8 +13,6 @@ import org.springframework.web.bind.annotation.RestController;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
-import com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO;
-import com.yirancrazy.minimall.common.annotation.Idempotent;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.pay.dto.PayCallbackDTO;
@@ -23,11 +21,10 @@ import com.yirancrazy.minimall.pay.gateway.PayGateway;
 import com.yirancrazy.minimall.pay.service.PayService;
 import com.yirancrazy.minimall.pay.vo.PayTransactionVO;
 import com.yirancrazy.minimall.pay.vo.PaymentParamsVO;
-import com.yirancrazy.minimall.pay.vo.RefundVO;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 用户端支付控制器，提供创建支付流水、支付宝回调、退款、状态查询与支付参数获取。
+ * @Description: 用户端支付控制器，提供创建支付流水、支付宝回调、状态查询与支付参数获取；订单退款申请由订单服务处理。
  * @Version: 1.0
  * @DateTime: 2026/08/04
  **/
@@ -92,18 +89,6 @@ public class UserPayControllerV1 {
             log.error("callback verify failed", e);
             return "fail";
         }
-    }
-
-    /**
-     * 创建退款。
-     * @param dto 退款创建DTO
-     * @return 退款VO
-     */
-    @PostMapping("/refunds")
-    @Idempotent
-    public Result<RefundVO> createRefund(@Valid @RequestBody RefundCreateDTO dto) {
-        RefundVO vo = payService.createRefund(dto);
-        return Result.success(vo);
     }
 
     /**

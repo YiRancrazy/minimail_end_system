@@ -1,5 +1,8 @@
 server:
   port: 8210
+feign:
+  sentinel:
+    enabled: true
 spring:
   application:
     name: minimall-platform-service
@@ -9,6 +12,12 @@ spring:
     nacos:
       discovery:
         server-addr: ${NACOS_HOST:127.0.0.1}:${NACOS_PORT:8848}
+    openfeign:
+      client:
+        config:
+          default:
+            connect-timeout: 1000
+            read-timeout: 3000
   data:
     redis:
       host: ${REDIS_HOST:127.0.0.1}

@@ -1,5 +1,8 @@
 server:
   port: 8209
+feign:
+  sentinel:
+    enabled: true
 spring:
   application:
     name: minimall-notify-service
@@ -13,6 +16,12 @@ spring:
     nacos:
       discovery:
         server-addr: ${NACOS_HOST:127.0.0.1}:${NACOS_PORT:8848}
+    openfeign:
+      client:
+        config:
+          default:
+            connect-timeout: 1000
+            read-timeout: 3000
   datasource:
     url: jdbc:mysql://${MYSQL_HOST:127.0.0.1}:${MYSQL_PORT:3306}/minimall_db?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC&createDatabaseIfNotExist=true
     username: ${MYSQL_USER:root}

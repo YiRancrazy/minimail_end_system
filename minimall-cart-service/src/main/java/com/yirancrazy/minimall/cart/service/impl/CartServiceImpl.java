@@ -4,7 +4,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.api.dto.goods.SkuSnapshotDTO;
@@ -189,15 +188,13 @@ public class CartServiceImpl implements CartService {
     }
 
     /**
-     * 将指定购物车条目移入收藏夹：先调用收藏服务按 SKU 收藏，成功后按条目 ID 删除购物车项。
-     * 收藏与删除在同一事务内，删除失败整体回滚，避免"已收藏但条目残留"的重复收藏状态；
-     * 按条目 ID 精确删除，避免按 userId+skuId 批量删误伤并发加购的同 SKU 新条目。
+     * 将指定购物车条目移入收藏夹：先按 SKU 幂等收藏，全部成功后再删除购物车条目。
+     * 收藏端按 userId+skuId 幂等，部分失败时购物车保留，调用方可安全重试。
      *
      * @param userId 用户ID，来自网关X-User-Id可信头
      * @param itemIds 待移入收藏夹的购物车条目 ID 列表，不可为空且必须全部归属于该用户
      * @throws BizException 条目不存在/不属于该用户时抛 CART_ITEM_NOT_FOUND；收藏或删除失败时抛 MOVE_TO_FAVORITE_FAIL
      */
-    @Transactional(rollbackFor = Exception.class)
     @Override
     public void moveToFavorite(Long userId, List<Long> itemIds) {
         if (itemIds == null || itemIds.isEmpty()) {

@@ -526,6 +526,29 @@ public class CartServiceImplTest {
     }
 
     /**
+     * 验证多条目收藏部分失败时购物车完整保留，调用方可按幂等语义安全重试。
+     */
+    @Test
+    public void moveToFavorite_partial_failure_keeps_cart_and_allows_idempotent_retry() {
+        CartItemPO first = new CartItemPO();
+        first.setId(1L);
+        first.setUserId(7L);
+        first.setSkuId(100L);
+        CartItemPO second = new CartItemPO();
+        second.setId(2L);
+        second.setUserId(7L);
+        second.setSkuId(200L);
+        when(cartItemManager.list(any(Wrapper.class))).thenReturn(List.of(first, second));
+        when(userFeignClient.addFavorite(7L, 100L)).thenReturn(Result.success(null));
+        when(userFeignClient.addFavorite(7L, 200L))
+            .thenReturn(Result.fail(CommonCode.SYS_ERROR, "down"));
+
+        assertThrows(BizException.class, () -> service.moveToFavorite(7L, List.of(1L, 2L)));
+
+        verify(cartItemManager, never()).removeByIds(any());
+    }
+
+    /**
      * 验证 moveToFavorite 在删除失败时抛出 BizException（事务回滚信号），条目保持原状。
      */
     @Test

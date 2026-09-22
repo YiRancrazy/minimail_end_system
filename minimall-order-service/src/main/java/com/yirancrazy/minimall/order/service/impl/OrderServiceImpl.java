@@ -30,6 +30,7 @@ import com.yirancrazy.minimall.api.feign.PayFeignClient;
 import com.yirancrazy.minimall.api.feign.StockFeignClient;
 import com.yirancrazy.minimall.common.event.EventBus;
 import com.yirancrazy.minimall.common.exception.BizException;
+import com.yirancrazy.minimall.common.result.CommonCode;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.common.util.CsvExporter;
@@ -1237,10 +1238,13 @@ public class OrderServiceImpl implements OrderService {
         }
         // 审核通过才调支付网关真实退款，避免"先退钱后审核"；状态迁移由支付回调 handleRefundCallback 驱动
         BigDecimal refundAmt = po.getRefundAmount() != null ? po.getRefundAmount() : po.getAmount();
-        Boolean refunded = payFeignClient.refund(
-            new RefundCreateDTO(po.getPayId(), refundAmt, null)).getData();
-        if (refunded == null || !refunded) {
-            log.warn("pay refund failed, orderId={}", orderId);
+        Result<Boolean> refundResult = payFeignClient.refund(
+            new RefundCreateDTO(po.getPayId(), refundAmt, null));
+        if (refundResult == null
+            || !CommonCode.SUCCESS.equals(refundResult.getCode())
+            || !Boolean.TRUE.equals(refundResult.getData())) {
+            log.error("pay refund failed, orderId={}, payId={}", orderId, po.getPayId());
+            throw new BizException(OrderCodeEnum.ORDER_REFUND_FAIL);
         }
         log.info("refund approved by merchant, orderId={}, merchantId={}", orderId, merchantId);
     }

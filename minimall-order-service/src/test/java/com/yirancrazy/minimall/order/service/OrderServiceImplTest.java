@@ -785,6 +785,24 @@ public class OrderServiceImplTest {
     }
 
     /**
+     * 验证支付退款返回 false 时抛业务异常且订单保持 REFUNDING，便于商家重试。
+     */
+    @Test
+    public void reviewRefund_pay_returns_false_throws_and_keeps_refunding() {
+        OrderPO existing = buildOrder(100L, 1L, 10L, OrderStatusEnum.REFUNDING.intCode());
+        existing.setPayId(200L);
+        existing.setAmount(new BigDecimal("50.00"));
+        when(manager.getById(100L)).thenReturn(existing);
+        when(payFeignClient.refund(any())).thenReturn(Result.success(Boolean.FALSE));
+
+        BizException ex = assertThrows(BizException.class,
+            () -> service.reviewRefund(100L, true, 10L, "ok"));
+
+        assertEquals("50007", ex.getCode());
+        verify(manager, never()).updateById(any(OrderPO.class));
+    }
+
+    /**
      * 验证商家拒绝退款时状态回退到 refundFromStatus。
      */
     @Test

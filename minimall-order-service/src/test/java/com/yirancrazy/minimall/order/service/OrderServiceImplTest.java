@@ -6,6 +6,8 @@ import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.TransactionTemplate;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -30,6 +32,7 @@ import com.yirancrazy.minimall.api.feign.IdFeignClient;
 import com.yirancrazy.minimall.api.feign.PayFeignClient;
 import com.yirancrazy.minimall.api.feign.StockFeignClient;
 import com.yirancrazy.minimall.common.event.EventBus;
+import com.yirancrazy.minimall.common.event.OutboxStore;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.result.Result;
@@ -82,6 +85,8 @@ public class OrderServiceImplTest {
         payFeignClient = mock(PayFeignClient.class);
         idFeignClient = mock(IdFeignClient.class);
         eventBus = mock(EventBus.class);
+        OutboxStore outboxStore = mock(OutboxStore.class);
+        TransactionTemplate transactionTemplate = mock(TransactionTemplate.class);
         statusMachine = new OrderStatusMachine();
         minioUtil = mock(MinioUtil.class);
         lenient().when(manager.updateById(any(OrderPO.class))).thenReturn(true);
@@ -104,14 +109,20 @@ public class OrderServiceImplTest {
         lenient().when(payFeignClient.create(any())).thenReturn(Result.success(2001L));
         lenient().when(payFeignClient.refund(any())).thenReturn(Result.success(Boolean.TRUE));
         lenient().when(idFeignClient.nextId(any())).thenReturn(Result.success(10001L));
-        lenient().doAnswer(inv -> {
-            inv.getArgument(1, Runnable.class).run();
+        doAnswer(inv -> {
+            java.util.function.Consumer<TransactionStatus> action = inv.getArgument(0);
+            action.accept(mock(TransactionStatus.class));
             return null;
-        }).when(eventBus).publishInTx(any(), any(Runnable.class), any());
+        }).when(transactionTemplate).executeWithoutResult(any());
+        lenient().doAnswer(inv -> {
+            java.util.function.Consumer<String> tx = inv.getArgument(1);
+            tx.accept("tx-1");
+            return null;
+        }).when(eventBus).publishInTx(any(), any(java.util.function.Consumer.class), any());
         service = new OrderServiceImpl(manager, orderItemManager, logisticsManager, statusLogManager,
             orderMapper, goodsFeignClient, stockFeignClient, payFeignClient, idFeignClient,
-            eventBus, statusMachine, new com.fasterxml.jackson.databind.ObjectMapper(),
-            minioUtil);
+            eventBus, outboxStore, transactionTemplate, statusMachine,
+            new com.fasterxml.jackson.databind.ObjectMapper(), minioUtil);
     }
 
     /**

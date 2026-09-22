@@ -2,6 +2,7 @@ package com.yirancrazy.minimall.common.event;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import org.apache.rocketmq.client.exception.MQClientException;
 import org.apache.rocketmq.client.producer.LocalTransactionState;
@@ -61,12 +62,10 @@ public class RocketMqEventBus implements EventBus {
         producer.setTransactionListener(new TransactionListener() {
             @Override
             public LocalTransactionState executeLocalTransaction(Message msg, Object arg) {
-                Runnable localTx = (Runnable) arg;
+                @SuppressWarnings("unchecked")
+                Consumer<String> localTx = (Consumer<String>) arg;
                 try {
-                    localTx.run();
-                    if (outboxStore != null && msg.getTransactionId() != null) {
-                        outboxStore.recordCommit(msg.getTransactionId());
-                    }
+                    localTx.accept(msg.getTransactionId());
                     return LocalTransactionState.COMMIT_MESSAGE;
                 }
                 catch (Exception e) {
@@ -156,7 +155,7 @@ public class RocketMqEventBus implements EventBus {
      * @param localTx the local transaction executed after the half-message is staged
      */
     @Override
-    public void publishInTx(Object event, Runnable localTx) {
+    public void publishInTx(Object event, Consumer<String> localTx) {
         publishInTx(event, localTx, e -> Boolean.TRUE);
     }
 
@@ -169,7 +168,7 @@ public class RocketMqEventBus implements EventBus {
      * @param checker returns true to commit, false to roll back
      */
     @Override
-    public void publishInTx(Object event, Runnable localTx, Function<Object, Boolean> checker) {
+    public void publishInTx(Object event, Consumer<String> localTx, Function<Object, Boolean> checker) {
         if (producer == null) {
             log.warn("rocketmq producer not started; event {} dropped", event.getClass().getSimpleName());
             return;

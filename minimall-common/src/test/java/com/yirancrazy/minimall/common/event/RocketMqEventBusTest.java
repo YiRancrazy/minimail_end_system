@@ -2,6 +2,7 @@ package com.yirancrazy.minimall.common.event;
 
 import java.lang.reflect.Field;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 import org.apache.rocketmq.client.producer.LocalTransactionState;
 import org.apache.rocketmq.client.producer.TransactionMQProducer;
 import org.apache.rocketmq.client.producer.TransactionSendResult;
@@ -73,10 +74,32 @@ class RocketMqEventBusTest {
         RocketMqEventBus bus = new RocketMqEventBus("127.0.0.1:9876", "minimall-events");
         setProducer(bus, mockProducer);
 
-        bus.publishInTx(new DummyEvent("x"), () -> { }, e -> Boolean.TRUE);
+        bus.publishInTx(new DummyEvent("x"), tx -> { }, e -> Boolean.TRUE);
 
         assertTrue(getFieldMap(bus, "checkers").isEmpty());
         assertTrue(getFieldMap(bus, "tagTypes").isEmpty());
+    }
+
+    @Test
+    void publishInTx_passesTransactionIdToLocalTx() throws Exception {
+        TransactionMQProducer mockProducer = Mockito.mock(TransactionMQProducer.class);
+        TransactionSendResult result = new TransactionSendResult();
+        result.setLocalTransactionState(LocalTransactionState.COMMIT_MESSAGE);
+        AtomicReference<String> captured = new AtomicReference<>();
+        Mockito.when(mockProducer.sendMessageInTransaction(Mockito.any(), Mockito.any()))
+            .thenAnswer(inv -> {
+                Message msg = inv.getArgument(0);
+                msg.setTransactionId("tx-100");
+                java.util.function.Consumer<String> tx = inv.getArgument(1);
+                tx.accept("tx-100");
+                return result;
+            });
+        RocketMqEventBus bus = new RocketMqEventBus("127.0.0.1:9876", "minimall-events");
+        setProducer(bus, mockProducer);
+
+        bus.publishInTx(new DummyEvent("x"), captured::set, e -> Boolean.TRUE);
+
+        assertEquals("tx-100", captured.get());
     }
 
     private static void setProducer(RocketMqEventBus bus, TransactionMQProducer producer) throws Exception {

@@ -1,5 +1,6 @@
 package com.yirancrazy.minimall.common.event;
 
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
@@ -22,8 +23,8 @@ public interface EventBus {
      * @param event the domain event to publish
      * @param localTx the local transaction to execute before committing the message
      */
-    default void publishInTx(Object event, Runnable localTx) {
-        localTx.run();
+    default void publishInTx(Object event, Consumer<String> localTx) {
+        localTx.accept(null);
         publish(event);
     }
 
@@ -35,7 +36,7 @@ public interface EventBus {
      * @param localTx the local transaction to execute before committing the message
      * @param checker returns true if the local transaction committed, false to roll back
      */
-    default void publishInTx(Object event, Runnable localTx, Function<Object, Boolean> checker) {
+    default void publishInTx(Object event, Consumer<String> localTx, Function<Object, Boolean> checker) {
         publishInTx(event, localTx);
     }
 }

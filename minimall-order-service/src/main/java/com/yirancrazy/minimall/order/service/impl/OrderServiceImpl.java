@@ -13,6 +13,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionTemplate;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -29,6 +30,7 @@ import com.yirancrazy.minimall.api.feign.IdFeignClient;
 import com.yirancrazy.minimall.api.feign.PayFeignClient;
 import com.yirancrazy.minimall.api.feign.StockFeignClient;
 import com.yirancrazy.minimall.common.event.EventBus;
+import com.yirancrazy.minimall.common.event.OutboxStore;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CommonCode;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
@@ -86,6 +88,8 @@ public class OrderServiceImpl implements OrderService {
     private final PayFeignClient payFeignClient;
     private final IdFeignClient idFeignClient;
     private final EventBus eventBus;
+    private final OutboxStore outboxStore;
+    private final TransactionTemplate transactionTemplate;
     private final OrderStatusMachine statusMachine;
     private final ObjectMapper objectMapper;
     private final MinioUtil minioUtil;
@@ -100,6 +104,8 @@ public class OrderServiceImpl implements OrderService {
                             PayFeignClient payFeignClient,
                             IdFeignClient idFeignClient,
                             EventBus eventBus,
+                            OutboxStore outboxStore,
+                            TransactionTemplate transactionTemplate,
                             OrderStatusMachine statusMachine,
                             ObjectMapper objectMapper,
                             MinioUtil minioUtil) {
@@ -113,6 +119,8 @@ public class OrderServiceImpl implements OrderService {
         this.payFeignClient = payFeignClient;
         this.idFeignClient = idFeignClient;
         this.eventBus = eventBus;
+        this.outboxStore = outboxStore;
+        this.transactionTemplate = transactionTemplate;
         this.statusMachine = statusMachine;
         this.objectMapper = objectMapper;
         this.minioUtil = minioUtil;
@@ -330,9 +338,12 @@ public class OrderServiceImpl implements OrderService {
         Long orderId = po.getId();
         OrderPaidDTO event = new OrderPaidDTO(
             orderId, po.getUserId(), po.getAmount(), LocalDateTime.now().toString());
-        eventBus.publishInTx(event,
-            () -> transitStatus(orderId, OrderStatusEnum.PAID, "USER_PAY", null),
-            e -> isOrderPaid(orderId));
+        eventBus.publishInTx(event, txId -> transactionTemplate.executeWithoutResult(status -> {
+            transitStatus(orderId, OrderStatusEnum.PAID, "USER_PAY", null);
+            if (txId != null) {
+                outboxStore.recordCommit(txId);
+            }
+        }), e -> isOrderPaid(orderId));
         log.info("order paid, orderId={}", orderId);
     }
 

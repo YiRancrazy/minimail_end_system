@@ -121,6 +121,28 @@ class AuthGlobalFilterTest {
     }
 
     @Test
+    void merchant_token_cannot_access_user_path() {
+        ServerWebExchange ex = MockServerWebExchange.from(
+            MockServerHttpRequest.get("/api/v1/user/users/42")
+                .header("Authorization", "Bearer " + token("42", "MERCHANT")));
+
+        StepVerifier.create(filter.filter(ex, e -> Mono.empty())).verifyComplete();
+
+        assertEquals(HttpStatus.FORBIDDEN, ex.getResponse().getStatusCode());
+    }
+
+    @Test
+    void platform_token_cannot_access_merchant_path() {
+        ServerWebExchange ex = MockServerWebExchange.from(
+            MockServerHttpRequest.get("/api/v1/merchant/orders")
+                .header("Authorization", "Bearer " + token("9", "PLATFORM")));
+
+        StepVerifier.create(filter.filter(ex, e -> Mono.empty())).verifyComplete();
+
+        assertEquals(HttpStatus.FORBIDDEN, ex.getResponse().getStatusCode());
+    }
+
+    @Test
     void forged_identity_headers_are_cleared_and_replaced() {
         String token = buildToken("123", "USER", "jti-forged");
         when(redisTemplate.hasKey(anyString())).thenReturn(Mono.just(false));
@@ -257,6 +279,18 @@ class AuthGlobalFilterTest {
             .subject(subject)
             .claim("role", role)
             .claim("jti", jti)
+            .issuedAt(new Date())
+            .expiration(new Date(System.currentTimeMillis() + 3600_000))
+            .signWith(key)
+            .compact();
+    }
+
+    private String token(String subject, String role) {
+        SecretKey key = Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8));
+        return Jwts.builder()
+            .subject(subject)
+            .claim("role", role)
+            .claim("jti", "test-" + role)
             .issuedAt(new Date())
             .expiration(new Date(System.currentTimeMillis() + 3600_000))
             .signWith(key)

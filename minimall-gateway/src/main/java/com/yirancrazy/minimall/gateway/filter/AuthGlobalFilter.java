@@ -52,11 +52,10 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
     );
 
     private static final Map<String, Set<String>> ROLE_PATHS = Map.of(
-        "/api/v1/merchant", Set.of("MERCHANT", "PLATFORM"),
+        "/api/v1/user", Set.of("USER"),
+        "/api/v1/merchant", Set.of("MERCHANT"),
         "/api/v1/platform", Set.of("PLATFORM")
     );
-
-    private static final Set<String> ALL_ROLES = Set.of("USER", "MERCHANT", "PLATFORM");
 
     private static final String ROLE_MERCHANT = "MERCHANT";
 
@@ -282,7 +281,7 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
                 return entry.getValue().contains(role);
             }
         }
-        return ALL_ROLES.contains(role);
+        return false;
     }
 
     private ServerWebExchange mutateWithHeaders(ServerWebExchange exchange, Claims claims, String jti) {

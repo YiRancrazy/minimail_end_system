@@ -30,6 +30,8 @@ x-app-env: &app-env
   MINIMALL_JWT_SECRET: ${MINIMALL_JWT_SECRET:-minimall-dev-jwt-secret-key-change-me-0123456789}
   MINIMALL_INTERNAL_TOKEN: ${MINIMALL_INTERNAL_TOKEN:-minimall-internal-token-dev}
   MINIMALL_SECURITY_AES_KEY: ${MINIMALL_SECURITY_AES_KEY:-QUJDREVGR0hJSktMTU5PUFFSU1RVVldaWDEyMzQ1Ng==}
+  MINIMALL_EVENTBUS_ROCKETMQ_ENABLED: "true"
+  MINIMALL_SCHEDULE_ENABLED: "true"
 
 services:
   # ==================== 中间件（scripts/docker-compose.yaml 为准） ====================

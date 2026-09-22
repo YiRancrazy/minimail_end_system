@@ -47,7 +47,7 @@ minimall:
     notify-url: ${ALIPAY_NOTIFY_URL:https://mall.example.com/api/v1/user/pay/callback/alipay}
     return-url: ${ALIPAY_RETURN_URL:https://mall.example.com/pay/result}
   schedule:
-    enabled: false
+    enabled: ${MINIMALL_SCHEDULE_ENABLED:true}
     scan-callback-ms: 30000
 logging:
   level:

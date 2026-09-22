@@ -57,13 +57,14 @@ minimall:
     bucket: ${MINIO_BUCKET:mall-files}
   eventbus:
     rocketmq:
-      enabled: false
+      enabled: ${MINIMALL_EVENTBUS_ROCKETMQ_ENABLED:true}
       namesrv-addr: ${ROCKETMQ_NAMESRV_ADDR:127.0.0.1:9876}
       topic: minimall-events
   schedule:
-    enabled: false
+    enabled: ${MINIMALL_SCHEDULE_ENABLED:true}
     scan-expired-ms: 60000
     scan-auto-confirm-ms: 3600000
+    scan-stock-release-ms: 60000
   xxl-job:
     enabled: false
     admin-addresses: ${XXL_JOB_ADMIN:http://127.0.0.1:8080/xxl-job-admin}

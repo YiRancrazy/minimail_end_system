@@ -45,7 +45,7 @@ minimall:
     bucket: ${MINIO_BUCKET:mall-files}
   eventbus:
     rocketmq:
-      enabled: false
+      enabled: ${MINIMALL_EVENTBUS_ROCKETMQ_ENABLED:true}
       namesrv-addr: ${ROCKETMQ_NAMESRV_ADDR:127.0.0.1:9876}
       topic: minimall-events
       group: minimall-notify

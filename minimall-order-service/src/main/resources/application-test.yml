@@ -22,6 +22,11 @@ spring:
 minimall:
   security:
     aes-key: pwKs8yE75abt15VzzFRV6ynHoD4I/idpBDQ8sN92fLA=
+  eventbus:
+    rocketmq:
+      enabled: false
+  schedule:
+    enabled: false
 feign:
   sentinel:
     enabled: false

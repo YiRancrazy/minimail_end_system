@@ -91,25 +91,35 @@ public class StockServiceImpl implements StockService {
     }
 
     /**
-     * 释放指定 SKU 的预占库存：原子扣减预占数量并等额回补可用数量。库存记录不存在、
-     * 预占数量不足以释放或数量非法时直接返回 false，不抛出异常，保证回滚链路幂等安全。
+     * 按订单号幂等释放指定 SKU 的预占库存：同订单同 SKU 已释放过时直接返回 true，
+     * 否则原子扣减预占数量并回补可用数量。库存记录不存在、预占不足或数量非法时返回 false。
      *
-     * @param skuId    SKU 标识
+     * @param skuId SKU 标识
      * @param quantity 释放数量，必须 > 0
-     * @return 库存记录更新成功返回 true，否则返回 false
+     * @param orderNo 订单号；为空时退化为旧释放语义
+     * @return 已释放或本次释放成功返回 true，否则返回 false
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public boolean release(Long skuId, Integer quantity) {
+    public boolean release(Long skuId, Integer quantity, String orderNo) {
         if (quantity == null || quantity <= 0) {
             return false;
+        }
+        if (orderNo != null && !orderNo.isBlank()) {
+            long released = journalManager.count(Wrappers.lambdaQuery(StockJournalPO.class)
+                .eq(StockJournalPO::getOrderNo, orderNo)
+                .eq(StockJournalPO::getSkuId, skuId)
+                .eq(StockJournalPO::getType, StockJournalTypeEnum.RELEASE.intCode()));
+            if (released > 0) {
+                return true;
+            }
         }
         // 原子释放：未命中（记录不存在或预占不足）按失败处理
         if (stockMapper.restoreReserved(skuId, quantity.longValue()) <= 0) {
             return false;
         }
 
-        recordJournal(skuId, quantity.longValue(), StockJournalTypeEnum.RELEASE, null, null);
+        recordJournal(skuId, quantity.longValue(), StockJournalTypeEnum.RELEASE, null, orderNo);
         return true;
     }
 

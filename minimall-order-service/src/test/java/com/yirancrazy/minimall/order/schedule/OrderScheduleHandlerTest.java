@@ -61,6 +61,19 @@ public class OrderScheduleHandlerTest {
     }
 
     /**
+     * 验证库存释放补偿扫描获取锁成功后委托 OrderService.scanStockReleasePending。
+     */
+    @Test
+    public void scanStockReleasePending_delegates_to_service() {
+        setUpHandler();
+        when(orderService.scanStockReleasePending()).thenReturn(2);
+
+        handler.scanStockReleasePending();
+
+        verify(orderService, times(1)).scanStockReleasePending();
+    }
+
+    /**
      * 验证加锁失败（其他实例持有锁）时跳过扫描，不触发 service 调用。
      */
     @Test

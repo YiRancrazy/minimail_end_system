@@ -30,12 +30,23 @@ public interface StockService {
     boolean reserve(Long skuId, Integer quantity);
 
     /**
-     * 释放库存。
+     * 释放库存，不携带订单号时退化为旧释放语义。
      * @param skuId 商品SKU ID
      * @param quantity 释放数量
      * @return 释放是否成功
      */
-    boolean release(Long skuId, Integer quantity);
+    default boolean release(Long skuId, Integer quantity) {
+        return release(skuId, quantity, null);
+    }
+
+    /**
+     * 按订单号幂等释放库存。
+     * @param skuId SKU ID
+     * @param quantity 释放数量
+     * @param orderNo 订单号；为空时退化为旧释放语义
+     * @return 已释放或本次释放成功返回 true
+     */
+    boolean release(Long skuId, Integer quantity, String orderNo);
 
     /**
      * 初始化SKU库存记录，商品服务创建SKU时联动调用，幂等。

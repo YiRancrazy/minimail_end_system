@@ -41,6 +41,7 @@ import com.yirancrazy.minimall.common.util.MinioUtil;
 import com.yirancrazy.minimall.order.constant.OrderCodeEnum;
 import com.yirancrazy.minimall.order.constant.OrderStatusEnum;
 import com.yirancrazy.minimall.order.constant.OrderStatusMachine;
+import com.yirancrazy.minimall.order.constant.StockReleaseStatusEnum;
 import com.yirancrazy.minimall.order.dto.OrderCheckoutItemDTO;
 import com.yirancrazy.minimall.order.dto.OrderPageDTO;
 import com.yirancrazy.minimall.order.dto.ReceiverDTO;
@@ -379,8 +380,13 @@ public class OrderServiceImpl implements OrderService {
         if (!po.getUserId().equals(userId)) {
             throw new BizException(OrderCodeEnum.ORDER_NOT_FOUND);
         }
-        transitStatus(orderId, OrderStatusEnum.CANCELED, "USER_CANCEL", "USER_CANCEL");
-        releaseStockForOrder(po);
+        po.setStockReleaseStatus(StockReleaseStatusEnum.PENDING.intCode());
+        transition(po, OrderStatusEnum.CANCELED, "USER_CANCEL", "USER_CANCEL", null);
+        boolean released = releaseStockForOrder(po);
+        markStockReleaseResult(po, released);
+        if (!released) {
+            log.error("stock release pending, orderId={}", orderId);
+        }
         log.info("order cancelled, orderId={}, userId={}", orderId, userId);
     }
 
@@ -603,8 +609,13 @@ public class OrderServiceImpl implements OrderService {
         if (po.getMerchantId() == null || !po.getMerchantId().equals(merchantId)) {
             throw new BizException(OrderCodeEnum.ORDER_NOT_FOUND);
         }
-        transitStatus(orderId, OrderStatusEnum.CANCELED, "MERCHANT_CLOSE", "MERCHANT_CLOSE");
-        releaseStockForOrder(po);
+        po.setStockReleaseStatus(StockReleaseStatusEnum.PENDING.intCode());
+        transition(po, OrderStatusEnum.CANCELED, "MERCHANT_CLOSE", "MERCHANT_CLOSE", null);
+        boolean released = releaseStockForOrder(po);
+        markStockReleaseResult(po, released);
+        if (!released) {
+            log.error("stock release pending, orderId={}", orderId);
+        }
         log.info("order merchant-closed, orderId={}, merchantId={}", orderId, merchantId);
     }
 
@@ -636,8 +647,13 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public void platformClose(Long orderId) {
         OrderPO po = getOrder(orderId);
-        transitStatus(orderId, OrderStatusEnum.CANCELED, "PLATFORM_CLOSE", "PLATFORM_CLOSE");
-        releaseStockForOrder(po);
+        po.setStockReleaseStatus(StockReleaseStatusEnum.PENDING.intCode());
+        transition(po, OrderStatusEnum.CANCELED, "PLATFORM_CLOSE", "PLATFORM_CLOSE", null);
+        boolean released = releaseStockForOrder(po);
+        markStockReleaseResult(po, released);
+        if (!released) {
+            log.error("stock release pending, orderId={}", orderId);
+        }
         log.info("order platform-closed, orderId={}", orderId);
     }
 
@@ -668,26 +684,38 @@ public class OrderServiceImpl implements OrderService {
      * 释放订单库存：优先查询 order_item 明细逐条释放，无明细时回退到订单头的 skuId/quantity（兼容旧单SKU订单）。
      * @param po 订单实体
      */
-    private void releaseStockForOrder(OrderPO po) {
+    private boolean releaseStockForOrder(OrderPO po) {
         List<OrderItemPO> items = orderItemManager.list(
             Wrappers.lambdaQuery(OrderItemPO.class).eq(OrderItemPO::getOrderId, po.getId()));
         if (!items.isEmpty()) {
             for (OrderItemPO item : items) {
-                Boolean released = stockFeignClient.release(
-                    new StockReserveDTO(item.getSkuId(), item.getQuantity())).getData();
-                if (released == null || !released) {
-                    log.warn("stock release failed, orderId={}, skuId={}", po.getId(), item.getSkuId());
+                Result<Boolean> result = stockFeignClient.release(
+                    new StockReserveDTO(item.getSkuId(), item.getQuantity(), po.getOrderNo()));
+                if (result == null || !CommonCode.SUCCESS.equals(result.getCode())
+                    || !Boolean.TRUE.equals(result.getData())) {
+                    return false;
                 }
             }
-            return;
+            return true;
         }
         if (po.getSkuId() != null && po.getQuantity() != null) {
-            Boolean released = stockFeignClient.release(
-                new StockReserveDTO(po.getSkuId(), po.getQuantity())).getData();
-            if (released == null || !released) {
-                log.warn("stock release failed, orderId={}, skuId={}", po.getId(), po.getSkuId());
-            }
+            Result<Boolean> result = stockFeignClient.release(
+                new StockReserveDTO(po.getSkuId(), po.getQuantity(), po.getOrderNo()));
+            return result != null && CommonCode.SUCCESS.equals(result.getCode())
+                && Boolean.TRUE.equals(result.getData());
         }
+        return true;
+    }
+
+    /**
+     * 记录订单库存释放结果，成功置已释放，失败保持待释放供补偿扫描重试。
+     * @param po 订单实体
+     * @param released 本次是否已成功释放
+     */
+    private void markStockReleaseResult(OrderPO po, boolean released) {
+        po.setStockReleaseStatus((released
+            ? StockReleaseStatusEnum.RELEASED : StockReleaseStatusEnum.PENDING).intCode());
+        orderManager.updateById(po);
     }
 
     /**
@@ -1321,8 +1349,13 @@ public class OrderServiceImpl implements OrderService {
         int count = 0;
         for (OrderPO po : expired) {
             try {
-                transitStatus(po.getId(), OrderStatusEnum.CANCELED, "SYSTEM_TIMEOUT", "SYSTEM_TIMEOUT");
-                releaseStockForOrder(po);
+                po.setStockReleaseStatus(StockReleaseStatusEnum.PENDING.intCode());
+                transition(po, OrderStatusEnum.CANCELED, "SYSTEM_TIMEOUT", "SYSTEM_TIMEOUT", null);
+                boolean released = releaseStockForOrder(po);
+                markStockReleaseResult(po, released);
+                if (!released) {
+                    log.error("stock release pending, orderId={}", po.getId());
+                }
                 count++;
             }
             catch (Exception e) {
@@ -1331,6 +1364,30 @@ public class OrderServiceImpl implements OrderService {
         }
         if (count > 0) {
             log.info("scanExpiredOrders cancelled {} orders", count);
+        }
+        return count;
+    }
+
+    /**
+     * 扫描已取消且库存待释放订单，按订单号幂等重试释放。
+     * @return 本次成功释放订单数
+     */
+    @Override
+    public int scanStockReleasePending() {
+        List<OrderPO> pending = orderManager.list(Wrappers.lambdaQuery(OrderPO.class)
+            .eq(OrderPO::getStatus, OrderStatusEnum.CANCELED.intCode())
+            .eq(OrderPO::getStockReleaseStatus, StockReleaseStatusEnum.PENDING.intCode())
+            .orderByAsc(OrderPO::getId)
+            .last("LIMIT 100"));
+        int count = 0;
+        for (OrderPO po : pending) {
+            if (releaseStockForOrder(po)) {
+                markStockReleaseResult(po, true);
+                count++;
+            }
+            else {
+                log.error("stock release retry failed, orderId={}", po.getId());
+            }
         }
         return count;
     }

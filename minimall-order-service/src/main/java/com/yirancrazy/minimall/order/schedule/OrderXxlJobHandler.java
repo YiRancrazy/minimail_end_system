@@ -69,6 +69,25 @@ public class OrderXxlJobHandler {
     }
 
     /**
+     * 扫描已取消但库存待释放订单，由 XXL-Job 调度并复用同一分布式锁。
+     */
+    @XxlJob("scanStockReleasePending")
+    public void scanStockReleasePending() {
+        String lockKey = "order:schedule:scanStockReleasePending";
+        if (!tryLock(lockKey)) {
+            log.info("xxl-job scanStockReleasePending skipped, lock held by another instance");
+            return;
+        }
+        try {
+            int count = orderService.scanStockReleasePending();
+            log.info("xxl-job scanStockReleasePending, processed={}", count);
+        }
+        finally {
+            redisTemplate.delete(lockKey);
+        }
+    }
+
+    /**
      * Redis SETNX 加锁，防止多实例并发执行同一扫描任务。未做锁值与删除的原子比对：
      * 仅当单次扫描超过 TTL 60s 才可能误删他人锁，权衡加 Lua 的复杂度后维持简化实现。
      * @param key 锁键

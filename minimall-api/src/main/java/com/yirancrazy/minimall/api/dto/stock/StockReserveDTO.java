@@ -24,4 +24,15 @@ public class StockReserveDTO {
     @NotNull(message = "数量不能为空")
     @Min(value = 1, message = "数量至少为1")
     private Integer quantity;
+
+    private String orderNo;
+
+    /**
+     * 构造不携带订单号的兼容入参。
+     * @param skuId SKU ID
+     * @param quantity 数量
+     */
+    public StockReserveDTO(Long skuId, Integer quantity) {
+        this(skuId, quantity, null);
+    }
 }

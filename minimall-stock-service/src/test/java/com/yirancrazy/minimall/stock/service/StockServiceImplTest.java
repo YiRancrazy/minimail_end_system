@@ -13,6 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
@@ -137,6 +138,19 @@ public class StockServiceImplTest {
         assertEquals(true, ok);
         verify(stockMapper).restoreReserved(100L, 3L);
         verify(journalManager).save(any(StockJournalPO.class));
+    }
+
+    /**
+     * 验证同一订单重复释放按订单号幂等，不再重复回补库存。
+     */
+    @Test
+    public void release_same_order_is_idempotent() {
+        when(journalManager.count(any(Wrapper.class))).thenReturn(1L);
+
+        boolean ok = service.release(100L, 3, "O100");
+
+        assertTrue(ok);
+        verify(stockMapper, never()).restoreReserved(any(), anyLong());
     }
 
     /**

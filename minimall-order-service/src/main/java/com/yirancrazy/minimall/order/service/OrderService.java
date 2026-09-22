@@ -276,4 +276,10 @@ public interface OrderService {
      * @return 本次扫描处理的订单数
      */
     int scanAutoConfirm();
+
+    /**
+     * 扫描已取消且库存待释放订单，按订单号幂等重试释放。
+     * @return 本次成功释放订单数
+     */
+    int scanStockReleasePending();
 }

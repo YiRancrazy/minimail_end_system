@@ -39,6 +39,7 @@ import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.common.util.MinioUtil;
 import com.yirancrazy.minimall.order.constant.OrderStatusEnum;
 import com.yirancrazy.minimall.order.constant.OrderStatusMachine;
+import com.yirancrazy.minimall.order.constant.StockReleaseStatusEnum;
 import com.yirancrazy.minimall.order.dto.OrderCheckoutItemDTO;
 import com.yirancrazy.minimall.order.dto.OrderPageDTO;
 import com.yirancrazy.minimall.order.entity.OrderItemPO;
@@ -1177,6 +1178,26 @@ public class OrderServiceImplTest {
         when(manager.list(any(Wrapper.class))).thenReturn(java.util.Collections.emptyList());
 
         assertEquals(0, service.scanExpiredOrders());
+    }
+
+    /**
+     * 验证取消订单库存释放补偿扫描成功后标记已释放。
+     */
+    @Test
+    public void scanStockReleasePending_marks_released_after_success() {
+        OrderPO po = buildOrder(100L, 1L, OrderStatusEnum.CANCELED.intCode());
+        po.setOrderNo("O100");
+        po.setStockReleaseStatus(StockReleaseStatusEnum.PENDING.intCode());
+        po.setSkuId(100L);
+        po.setQuantity(2);
+        when(manager.list(any(Wrapper.class))).thenReturn(List.of(po));
+        when(stockFeignClient.release(any())).thenReturn(Result.success(Boolean.TRUE));
+
+        int count = service.scanStockReleasePending();
+
+        assertEquals(1, count);
+        assertEquals(StockReleaseStatusEnum.RELEASED.intCode(), po.getStockReleaseStatus());
+        verify(manager).updateById(po);
     }
 
     /**

@@ -31,4 +31,13 @@ public class PayScheduleHandler {
         int count = payService.scanPaidButOrderPending();
         log.debug("scanPaidButOrderPending tick, processed={}", count);
     }
+
+    /**
+     * 每 30 秒扫描一次退款成功但订单未收到成功回调的退款单，重试通知订单服务。
+     */
+    @Scheduled(fixedDelayString = "${minimall.schedule.scan-callback-ms:30000}")
+    public void scanUnnotifiedRefunds() {
+        int count = payService.scanUnnotifiedRefunds();
+        log.debug("scanUnnotifiedRefunds tick, processed={}", count);
+    }
 }

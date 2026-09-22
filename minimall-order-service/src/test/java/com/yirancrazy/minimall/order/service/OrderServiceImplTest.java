@@ -416,6 +416,19 @@ public class OrderServiceImplTest {
     }
 
     /**
+     * 验证订单已退款时重复退款回调直接幂等返回，不重复更新订单。
+     */
+    @Test
+    public void handleRefundCallback_ignores_already_refunded_order() {
+        OrderPO existing = buildOrder(100L, 7L, OrderStatusEnum.REFUNDED.intCode());
+        when(manager.getById(100L)).thenReturn(existing);
+
+        service.handleRefundCallback(100L, true);
+
+        verify(manager, never()).updateById(any(OrderPO.class));
+    }
+
+    /**
      * 验证查询订单状态返回正确的状态码。
      */
     @Test

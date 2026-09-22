@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO;
 import com.yirancrazy.minimall.api.feign.OrderFeignClient;
 import com.yirancrazy.minimall.common.exception.BizException;
+import com.yirancrazy.minimall.common.result.CommonCode;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.common.util.CsvExporter;
@@ -293,35 +294,54 @@ public class PayServiceImpl implements PayService {
                 paymentNo, payTx.getOrderNo());
         }
 
+        String refundTradeNo;
         try {
-            String refundTradeNo = payGateway.refund(paymentNo, refundNo, dto.getAmount(), dto.getReason());
-            refund.setStatus(Integer.parseInt(RefundStatusEnum.SUCCESS.getCode()));
-            refund.setRefundTradeNo(refundTradeNo);
-            refund.setNotifiedAt(LocalDateTime.now());
-            payRefundMapper.updateById(refund);
-
-            // 部分退款语义：累计退满支付金额才置 REFUNDED，未退满回到 SUCCESS 允许继续部分退款
-            BigDecimal totalRefunded = payRefundMapper.sumCommittedAmount(paymentNo);
-            int targetStatus = totalRefunded.compareTo(payTx.getAmount()) >= 0
-                ? Integer.parseInt(PayStatusEnum.REFUNDED.getCode()) : successCode;
-            payTransactionMapper.updateStatusIf(paymentNo, refundingCode, targetStatus);
-
-            if (orderId != null) {
-                orderFeignClient.refundCallback(orderId, true);
-            }
-            log.info("refund success, refundNo={}, paymentNo={}", refundNo, paymentNo);
+            refundTradeNo = payGateway.refund(paymentNo, refundNo, dto.getAmount(), dto.getReason());
         }
         catch (Exception e) {
             refund.setStatus(Integer.parseInt(RefundStatusEnum.FAILED.getCode()));
             payRefundMapper.updateById(refund);
             payTransactionMapper.updateStatusIf(paymentNo, refundingCode, successCode);
-            if (orderId != null) {
-                orderFeignClient.refundCallback(orderId, false);
-            }
+            log.error("refund gateway failed, refundNo={}, paymentNo={}", refundNo, paymentNo, e);
             throw new BizException(PayCodeEnum.REFUND_FAILED);
         }
 
+        refund.setStatus(Integer.parseInt(RefundStatusEnum.SUCCESS.getCode()));
+        refund.setRefundTradeNo(refundTradeNo);
+        refund.setNotifiedAt(null);
+        payRefundMapper.updateById(refund);
+
+        BigDecimal totalRefunded = payRefundMapper.sumCommittedAmount(paymentNo);
+        int targetStatus = totalRefunded.compareTo(payTx.getAmount()) >= 0
+            ? Integer.parseInt(PayStatusEnum.REFUNDED.getCode()) : successCode;
+        payTransactionMapper.updateStatusIf(paymentNo, refundingCode, targetStatus);
+
+        if (orderId != null) {
+            notifyOrderRefund(orderId, refund);
+        }
+        log.info("refund success, refundNo={}, paymentNo={}", refundNo, paymentNo);
         return new RefundVO(refundNo, paymentNo, dto.getAmount(), refund.getStatus());
+    }
+
+    /**
+     * 通知订单服务退款成功；通知失败仅记录日志，由退款通知补偿扫描重试。
+     * @param orderId 订单ID
+     * @param refund 退款单
+     */
+    private void notifyOrderRefund(Long orderId, PayRefundPO refund) {
+        try {
+            Result<Void> result = orderFeignClient.refundCallback(orderId, true);
+            if (result == null || !CommonCode.SUCCESS.equals(result.getCode())) {
+                throw new IllegalStateException("order refund callback rejected: "
+                    + (result == null ? "null" : result.getCode()));
+            }
+            refund.setNotifiedAt(LocalDateTime.now());
+            payRefundMapper.updateById(refund);
+        }
+        catch (Exception e) {
+            log.error("order refund callback failed, will retry, orderId={}, refundNo={}",
+                orderId, refund.getRefundNo(), e);
+        }
     }
 
     private String generateRefundNo() {
@@ -538,6 +558,44 @@ public class PayServiceImpl implements PayService {
         }
         if (count > 0) {
             log.info("scanPaidButOrderPending compensated {} payments", count);
+        }
+        return count;
+    }
+
+    /**
+     * 扫描退款成功但订单未收到成功回调的退款单，按批次重试通知。
+     * @return 成功通知数量
+     */
+    @Override
+    public int scanUnnotifiedRefunds() {
+        LocalDateTime windowStart = LocalDateTime.now().minusHours(SCAN_WINDOW_HOURS);
+        List<PayRefundPO> refunds = payRefundMapper.selectList(
+            Wrappers.<PayRefundPO>lambdaQuery()
+                .eq(PayRefundPO::getStatus, Integer.parseInt(RefundStatusEnum.SUCCESS.getCode()))
+                .isNull(PayRefundPO::getNotifiedAt)
+                .ge(PayRefundPO::getCreateTime, windowStart)
+                .orderByAsc(PayRefundPO::getId)
+                .last("LIMIT " + SCAN_BATCH_SIZE));
+        int count = 0;
+        for (PayRefundPO refund : refunds) {
+            PayTransactionPO payTx = payManager.getOne(Wrappers.<PayTransactionPO>lambdaQuery()
+                .eq(PayTransactionPO::getPaymentNo, refund.getPaymentNo())
+                .last("LIMIT 1"));
+            if (payTx == null) {
+                log.warn("scanUnnotifiedRefunds payment missing, refundNo={}", refund.getRefundNo());
+                continue;
+            }
+            Long orderId;
+            try {
+                orderId = Long.valueOf(payTx.getOrderNo());
+            }
+            catch (NumberFormatException e) {
+                continue;
+            }
+            notifyOrderRefund(orderId, refund);
+            if (refund.getNotifiedAt() != null) {
+                count++;
+            }
         }
         return count;
     }

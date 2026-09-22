@@ -19,6 +19,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
@@ -72,6 +73,7 @@ public class PayServiceImplTest {
         // 需预置 TableInfo 的 lambda 缓存，否则 wrapper.getSqlSegment() 抛 "can not find lambda cache"
         MybatisConfiguration configuration = new MybatisConfiguration();
         TableInfoHelper.initTableInfo(new MapperBuilderAssistant(configuration, ""), PayTransactionPO.class);
+        TableInfoHelper.initTableInfo(new MapperBuilderAssistant(configuration, ""), PayRefundPO.class);
     }
 
     @BeforeEach
@@ -655,7 +657,60 @@ public class PayServiceImplTest {
             new com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO(1L, new BigDecimal("50.00"), "reason");
         assertThrows(BizException.class, () -> service.createRefund(dto));
         verify(payTransactionMapper).updateStatusIf("PAY123", 5, 2); // 回滚抢占
-        verify(orderFeignClient).refundCallback(100L, false);
+        verify(orderFeignClient, never()).refundCallback(anyLong(), anyBoolean());
+    }
+
+    /**
+     * 验证退款网关成功后订单通知失败时，退款单保持成功且不回滚支付状态。
+     */
+    @Test
+    public void createRefund_gateway_success_order_callback_fails_keeps_success() {
+        PayTransactionPO payTx = new PayTransactionPO();
+        payTx.setId(1L);
+        payTx.setStatus(2);
+        payTx.setPaymentNo("PAY123");
+        payTx.setAmount(new BigDecimal("100.00"));
+        payTx.setOrderNo("100");
+        when(manager.getById(1L)).thenReturn(payTx);
+        when(payTransactionMapper.updateStatusIf("PAY123", 2, 5)).thenReturn(1);
+        when(payRefundMapper.sumCommittedAmount("PAY123")).thenReturn(new BigDecimal("0.00"));
+        when(payGateway.refund(anyString(), anyString(), any(BigDecimal.class), anyString()))
+            .thenReturn("REFUND_TRADE_123");
+        when(orderFeignClient.refundCallback(100L, true))
+            .thenThrow(new RuntimeException("order unavailable"));
+
+        RefundVO vo = service.createRefund(
+            new com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO(
+                1L, new BigDecimal("50.00"), "reason"));
+
+        assertEquals(1, vo.getStatus());
+        verify(payTransactionMapper).updateStatusIf("PAY123", 5, 2);
+        verify(payRefundMapper, never()).updateById(argThat((PayRefundPO r) -> r.getStatus() == 2));
+    }
+
+    /**
+     * 验证退款通知补偿扫描会重试未通知退款并标记 notifiedAt。
+     */
+    @Test
+    public void scanUnnotifiedRefunds_retries_and_marks_notified() {
+        PayRefundPO refund = new PayRefundPO();
+        refund.setRefundNo("R100");
+        refund.setPaymentNo("PAY123");
+        refund.setStatus(1);
+        refund.setCreateTime(LocalDateTime.now());
+        PayTransactionPO payTx = new PayTransactionPO();
+        payTx.setPaymentNo("PAY123");
+        payTx.setOrderNo("100");
+        when(payRefundMapper.selectList(any())).thenReturn(List.of(refund));
+        when(manager.getOne(any())).thenReturn(payTx);
+        when(orderFeignClient.refundCallback(100L, true)).thenReturn(Result.success(null));
+        when(payRefundMapper.updateById(refund)).thenReturn(1);
+
+        int count = service.scanUnnotifiedRefunds();
+
+        assertEquals(1, count);
+        assertNotNull(refund.getNotifiedAt());
+        verify(payRefundMapper).updateById(refund);
     }
 
     /**

@@ -443,6 +443,10 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public void handleRefundCallback(Long orderId, boolean success) {
         OrderPO po = getOrder(orderId);
+        if (po.getStatus() == OrderStatusEnum.REFUNDED.intCode()) {
+            log.info("refund callback ignored, order already refunded, orderId={}", orderId);
+            return;
+        }
         if (po.getStatus() != OrderStatusEnum.REFUNDING.intCode()) {
             // 商家已驳回或先行回调已推进状态：拒绝迟到回调，天然幂等
             throw new BizException(OrderCodeEnum.ORDER_STATUS_TRANSITION_INVALID);

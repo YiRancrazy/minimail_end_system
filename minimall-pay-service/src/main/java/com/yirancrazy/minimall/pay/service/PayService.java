@@ -107,4 +107,10 @@ public interface PayService {
      * @return 处理的流水数
      */
     int scanPaidButOrderPending();
+
+    /**
+     * 扫描退款成功但订单未收到成功回调的退款单，按批次重试通知。
+     * @return 成功通知数量
+     */
+    int scanUnnotifiedRefunds();
 }

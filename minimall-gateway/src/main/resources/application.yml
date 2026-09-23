@@ -19,6 +19,10 @@ spring:
     # between repo root (mvnw) and the module dir (IDE / java -jar).
     import: "optional:nacos:minimall-gateway-dev.yaml,optional:file:.env[.properties],optional:file:../.env[.properties],optional:file:../../.env[.properties]"
   cloud:
+    inetutils:
+      # Register a routable address (docker bridge or LAN); the default
+      # first-non-loopback pick can be 169.254.x.x, which peers cannot reach.
+      preferred-networks: ${MINIMALL_PREFERRED_NETWORKS:172.,192.168.,10.}
     nacos:
       discovery:
         # Use the dev host (Nacos + Redis + MySQL all live on localdev);

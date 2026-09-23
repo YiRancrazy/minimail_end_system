@@ -10,6 +10,10 @@ spring:
     locations: classpath:db/migration
     baseline-on-migrate: true
   cloud:
+    inetutils:
+      # Register a routable address (docker bridge or LAN); the default
+      # first-non-loopback pick can be 169.254.x.x, which peers cannot reach.
+      preferred-networks: ${MINIMALL_PREFERRED_NETWORKS:172.,192.168.,10.}
     nacos:
       discovery:
         server-addr: ${NACOS_HOST:127.0.0.1}:${NACOS_PORT:8848}

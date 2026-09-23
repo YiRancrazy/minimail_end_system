@@ -296,6 +296,17 @@ public class OrderServiceImplTest {
     }
 
     /**
+     * 验证退款中的订单不能通过取消接口绕过真实退款。
+     */
+    @Test
+    public void cancel_refunding_order_throws() {
+        OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.REFUNDING.intCode());
+        when(manager.getById(99L)).thenReturn(existing);
+
+        assertThrows(BizException.class, () -> service.cancel(99L, 1L));
+    }
+
+    /**
      * 验证发货成功后状态为 SHIPPED。
      */
     @Test
@@ -672,6 +683,17 @@ public class OrderServiceImplTest {
     }
 
     /**
+     * 验证平台关闭退款中订单被拒绝，避免绕过真实退款。
+     */
+    @Test
+    public void platformClose_refunding_throws() {
+        OrderPO existing = buildOrder(99L, 1L, 10L, OrderStatusEnum.REFUNDING.intCode());
+        when(manager.getById(99L)).thenReturn(existing);
+
+        assertThrows(BizException.class, () -> service.platformClose(99L));
+    }
+
+    /**
      * 验证 pendingCount 委托给 manager.count 并返回统计值。
      */
     @Test
@@ -935,17 +957,41 @@ public class OrderServiceImplTest {
     }
 
     /**
-     * 验证平台仲裁同意退款时状态推进为 REFUNDED。
+     * 验证平台仲裁同意退款时发起真实支付退款，订单状态等待支付回调推进。
      */
     @Test
-    public void arbitrateRefund_approved_transitions_to_refunded() {
+    public void arbitrateRefund_approved_submits_pay_refund() {
         OrderPO existing = buildOrder(99L, 1L, 10L, OrderStatusEnum.REFUNDING.intCode());
         existing.setRefundFromStatus(OrderStatusEnum.PAID.intCode());
+        existing.setPayId(2001L);
+        existing.setAmount(new BigDecimal("19.80"));
+        existing.setRefundAmount(new BigDecimal("5.00"));
         when(manager.getById(99L)).thenReturn(existing);
 
         service.arbitrateRefund(99L, true);
-        assertEquals(OrderStatusEnum.REFUNDED.intCode(), existing.getStatus());
-        verify(manager).updateById(existing);
+
+        assertEquals(OrderStatusEnum.REFUNDING.intCode(), existing.getStatus());
+        org.mockito.ArgumentCaptor<RefundCreateDTO> captor =
+            org.mockito.ArgumentCaptor.forClass(RefundCreateDTO.class);
+        verify(payFeignClient).refund(captor.capture());
+        assertEquals(2001L, captor.getValue().getPayId().longValue());
+        assertEquals(0, new BigDecimal("5.00").compareTo(captor.getValue().getAmount()));
+    }
+
+    /**
+     * 验证平台仲裁同意退款但支付退款失败时保持 REFUNDING 并抛出异常。
+     */
+    @Test
+    public void arbitrateRefund_approved_pay_failure_keeps_refunding() {
+        OrderPO existing = buildOrder(99L, 1L, 10L, OrderStatusEnum.REFUNDING.intCode());
+        existing.setRefundFromStatus(OrderStatusEnum.PAID.intCode());
+        existing.setPayId(2001L);
+        existing.setAmount(new BigDecimal("19.80"));
+        when(manager.getById(99L)).thenReturn(existing);
+        when(payFeignClient.refund(any())).thenReturn(Result.success(Boolean.FALSE));
+
+        assertThrows(BizException.class, () -> service.arbitrateRefund(99L, true));
+        assertEquals(OrderStatusEnum.REFUNDING.intCode(), existing.getStatus());
     }
 
     /**

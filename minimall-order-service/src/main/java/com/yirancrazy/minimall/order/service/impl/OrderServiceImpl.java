@@ -1289,20 +1289,13 @@ public class OrderServiceImpl implements OrderService {
             return;
         }
         // 审核通过才调支付网关真实退款，避免"先退钱后审核"；状态迁移由支付回调 handleRefundCallback 驱动
-        BigDecimal refundAmt = po.getRefundAmount() != null ? po.getRefundAmount() : po.getAmount();
-        Result<Boolean> refundResult = payFeignClient.refund(
-            new RefundCreateDTO(po.getPayId(), refundAmt, null));
-        if (refundResult == null
-            || !CommonCode.SUCCESS.equals(refundResult.getCode())
-            || !Boolean.TRUE.equals(refundResult.getData())) {
-            log.error("pay refund failed, orderId={}, payId={}", orderId, po.getPayId());
-            throw new BizException(OrderCodeEnum.ORDER_REFUND_FAIL);
-        }
+        requestPayRefund(po);
         log.info("refund approved by merchant, orderId={}, merchantId={}", orderId, merchantId);
     }
 
     /**
-     * 平台退款仲裁，校验 REFUNDING 状态；approved=true 推进 REFUNDED，false 回退到 refundFromStatus。
+     * 平台退款仲裁，校验 REFUNDING 状态；approved=true 发起真实支付退款并由回调推进 REFUNDED，
+     * false 回退到 refundFromStatus。
      * @param orderId 订单ID
      * @param approved 仲裁是否支持退款
      */
@@ -1313,12 +1306,28 @@ public class OrderServiceImpl implements OrderService {
             throw new BizException(OrderCodeEnum.ORDER_NOT_REFUNDING);
         }
         if (approved) {
-            transitStatus(orderId, OrderStatusEnum.REFUNDED, "PLATFORM_ARBITRATE", null);
-            log.info("refund arbitrated approved, orderId={}", orderId);
+            requestPayRefund(po);
+            log.info("refund arbitrated approved and submitted, orderId={}", orderId);
             return;
         }
         transitStatus(orderId, revertTarget(po), "PLATFORM_ARBITRATE_REJECT", null);
         log.info("refund arbitrated rejected, orderId={}", orderId);
+    }
+
+    /**
+     * 发起真实支付退款，失败时抛出 ORDER_REFUND_FAIL；订单状态由支付退款回调统一推进。
+     * @param po 退款中的订单
+     */
+    private void requestPayRefund(OrderPO po) {
+        BigDecimal refundAmt = po.getRefundAmount() != null ? po.getRefundAmount() : po.getAmount();
+        Result<Boolean> refundResult = payFeignClient.refund(
+            new RefundCreateDTO(po.getPayId(), refundAmt, null));
+        if (refundResult == null
+            || !CommonCode.SUCCESS.equals(refundResult.getCode())
+            || !Boolean.TRUE.equals(refundResult.getData())) {
+            log.error("pay refund failed, orderId={}, payId={}", po.getId(), po.getPayId());
+            throw new BizException(OrderCodeEnum.ORDER_REFUND_FAIL);
+        }
     }
 
     /**

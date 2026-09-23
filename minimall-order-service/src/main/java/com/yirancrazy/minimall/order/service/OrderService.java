@@ -206,7 +206,8 @@ public interface OrderService {
     void reviewRefund(Long orderId, boolean approved, Long merchantId, String reason);
 
     /**
-     * 平台退款仲裁，仅允许 REFUNDING 状态订单；approved=true 强制推进 REFUNDED，false 回退到 refundFromStatus。
+     * 平台退款仲裁，仅允许 REFUNDING 状态订单；approved=true 发起真实支付退款并由回调推进 REFUNDED，
+     * false 回退到 refundFromStatus。
      * @param orderId 订单ID
      * @param approved 仲裁是否支持退款
      */

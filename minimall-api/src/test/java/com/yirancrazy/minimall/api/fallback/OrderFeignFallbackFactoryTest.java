@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import com.yirancrazy.minimall.api.dto.order.OrderPaySnapshotDTO;
 import com.yirancrazy.minimall.api.feign.OrderFeignClient;
 import com.yirancrazy.minimall.common.result.CommonCode;
 import com.yirancrazy.minimall.common.result.Result;
@@ -29,6 +30,10 @@ class OrderFeignFallbackFactoryTest {
         Result<Long> merchantId = client.merchantId("ORDER1");
         assertEquals(CommonCode.SYS_ERROR, merchantId.getCode());
         assertNull(merchantId.getData());
+
+        Result<OrderPaySnapshotDTO> paySnapshot = client.paySnapshot("ORDER1");
+        assertEquals(CommonCode.SYS_ERROR, paySnapshot.getCode());
+        assertNull(paySnapshot.getData());
 
         Result<Void> pay = client.pay(1L);
         assertEquals(CommonCode.SYS_ERROR, pay.getCode());

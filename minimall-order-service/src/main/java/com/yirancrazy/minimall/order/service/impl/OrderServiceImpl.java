@@ -22,6 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.api.dto.goods.SkuSnapshotDTO;
 import com.yirancrazy.minimall.api.dto.goods.SpuSnapshotDTO;
 import com.yirancrazy.minimall.api.dto.order.OrderPaidDTO;
+import com.yirancrazy.minimall.api.dto.order.OrderPaySnapshotDTO;
 import com.yirancrazy.minimall.api.dto.pay.PayCreateDTO;
 import com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO;
 import com.yirancrazy.minimall.api.dto.stock.StockReserveDTO;
@@ -498,10 +499,41 @@ public class OrderServiceImpl implements OrderService {
      */
     @Override
     public Long resolveMerchantId(String ref) {
+        OrderPO po = findOrderByRef(ref);
+        return po == null ? null : po.getMerchantId();
+    }
+
+    /**
+     * 查询订单支付快照，供支付服务校验支付人、应付金额和订单状态。
+     * @param ref 订单标识（订单ID或业务单号）
+     * @return 订单支付快照
+     */
+    @Override
+    public OrderPaySnapshotDTO getPaySnapshot(String ref) {
+        OrderPO po = findOrderByRef(ref);
+        if (po == null) {
+            throw new BizException(OrderCodeEnum.ORDER_NOT_FOUND);
+        }
+        BigDecimal payAmount = po.getPayAmount() != null ? po.getPayAmount() : po.getAmount();
+        return new OrderPaySnapshotDTO(po.getId(), po.getOrderNo(), po.getUserId(), po.getMerchantId(),
+            payAmount, po.getStatus(), po.getPayId());
+    }
+
+    /**
+     * 按订单标识查找订单，先按业务单号匹配，数字标识再回退按主键匹配。
+     * @param ref 订单标识
+     * @return 订单实体；未找到返回 null
+     */
+    private OrderPO findOrderByRef(String ref) {
         if (ref == null || ref.isBlank()) {
             return null;
         }
-        OrderPO po = null;
+        OrderPO po = orderManager.getOne(Wrappers.lambdaQuery(OrderPO.class)
+            .eq(OrderPO::getOrderNo, ref)
+            .last("LIMIT 1"));
+        if (po != null) {
+            return po;
+        }
         if (ref.matches("\\d+")) {
             try {
                 po = orderManager.getById(Long.valueOf(ref));
@@ -510,12 +542,7 @@ public class OrderServiceImpl implements OrderService {
                 po = null;
             }
         }
-        if (po == null) {
-            po = orderManager.getOne(Wrappers.lambdaQuery(OrderPO.class)
-                .eq(OrderPO::getOrderNo, ref)
-                .last("LIMIT 1"));
-        }
-        return po == null ? null : po.getMerchantId();
+        return po;
     }
 
     /**

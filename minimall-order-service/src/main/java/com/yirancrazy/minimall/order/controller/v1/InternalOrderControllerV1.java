@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import com.yirancrazy.minimall.api.dto.order.OrderExportItemDTO;
+import com.yirancrazy.minimall.api.dto.order.OrderPaySnapshotDTO;
 import com.yirancrazy.minimall.api.dto.order.OrderStatisticsDTO;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.order.dto.OrderPageDTO;
@@ -54,6 +55,17 @@ public class InternalOrderControllerV1 {
     @GetMapping("/merchant/{ref}")
     public Result<Long> merchantId(@PathVariable String ref) {
         return Result.success(orderService.resolveMerchantId(ref));
+    }
+
+    /**
+     * 查询订单支付快照，供支付服务创建支付单前校验。
+     *
+     * @param ref 订单标识（订单ID或业务单号）
+     * @return 订单支付快照
+     */
+    @GetMapping("/pay-snapshot/{ref}")
+    public Result<OrderPaySnapshotDTO> paySnapshot(@PathVariable String ref) {
+        return Result.success(orderService.getPaySnapshot(ref));
     }
 
     /**

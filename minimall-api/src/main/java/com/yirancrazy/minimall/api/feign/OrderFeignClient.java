@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import com.yirancrazy.minimall.api.dto.order.OrderExportItemDTO;
+import com.yirancrazy.minimall.api.dto.order.OrderPaySnapshotDTO;
 import com.yirancrazy.minimall.api.dto.order.OrderStatisticsDTO;
 import com.yirancrazy.minimall.api.fallback.OrderFeignFallbackFactory;
 import com.yirancrazy.minimall.common.result.Result;
@@ -29,6 +30,14 @@ public interface OrderFeignClient {
      */
     @GetMapping("/internal/order/merchant/{ref}")
     Result<Long> merchantId(@PathVariable("ref") String ref);
+
+    /**
+     * 查询订单支付快照，供支付服务校验支付人、应付金额和订单状态。
+     * @param ref 订单标识（订单ID或业务单号）
+     * @return 订单支付快照；订单不存在时返回 null，服务不可达时 fallback 返回失败结果
+     */
+    @GetMapping("/internal/order/pay-snapshot/{ref}")
+    Result<OrderPaySnapshotDTO> paySnapshot(@PathVariable("ref") String ref);
 
     /**
      * 推进指定订单为已支付状态。

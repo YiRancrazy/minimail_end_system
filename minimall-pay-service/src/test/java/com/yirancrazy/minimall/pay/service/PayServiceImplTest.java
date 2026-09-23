@@ -32,6 +32,7 @@ import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
+import com.yirancrazy.minimall.api.dto.order.OrderPaySnapshotDTO;
 import com.yirancrazy.minimall.api.feign.OrderFeignClient;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
@@ -83,6 +84,22 @@ public class PayServiceImplTest {
         payRefundMapper = mock(PayRefundMapper.class);
         payTransactionMapper = mock(PayTransactionMapper.class);
         orderFeignClient = mock(OrderFeignClient.class);
+        lenient().when(orderFeignClient.paySnapshot(anyString())).thenAnswer(invocation -> {
+            String orderNo = invocation.getArgument(0);
+            if ("ORDER100".equals(orderNo)) {
+                return Result.success(snapshot(orderNo, 1L, 1L, "99.99", 1));
+            }
+            if ("ORDER200".equals(orderNo)) {
+                return Result.success(snapshot(orderNo, 2L, 3L, "50.00", 1));
+            }
+            if ("ORDER300".equals(orderNo)) {
+                return Result.success(snapshot(orderNo, 3L, null, "10.00", 1));
+            }
+            if ("ORDER400".equals(orderNo)) {
+                return Result.success(snapshot(orderNo, 4L, 42L, "10.00", 1));
+            }
+            return Result.success(null);
+        });
         lenient().when(orderFeignClient.merchantId(anyString()))
             .thenReturn(Result.success(null));
         lenient().when(manager.updateById(any(PayTransactionPO.class))).thenReturn(true);
@@ -111,6 +128,37 @@ public class PayServiceImplTest {
         assertEquals(1, cap.getValue().getStatus());
         assertEquals(0, new BigDecimal("99.99").compareTo(cap.getValue().getAmount()));
         verify(payGateway, never()).createPagePayment(anyString(), any(BigDecimal.class), anyString(), anyString());
+    }
+
+    /**
+     * 验证支付创建拒绝非订单归属用户。
+     */
+    @Test
+    public void createPayment_rejects_other_user() {
+        assertThrows(BizException.class,
+            () -> service.createPayment("ORDER100", 999L, 1L, new BigDecimal("99.99"), null));
+    }
+
+    /**
+     * 验证支付创建拒绝与订单应付金额不一致的请求。
+     */
+    @Test
+    public void createPayment_rejects_amount_mismatch() {
+        assertThrows(BizException.class,
+            () -> service.createPayment("ORDER100", 1L, 1L, new BigDecimal("0.01"), null));
+    }
+
+    /**
+     * 验证非待支付订单在无已成功支付流水时拒绝创建新支付。
+     */
+    @Test
+    public void createPayment_rejects_non_pending_order() {
+        when(orderFeignClient.paySnapshot("ORDER500"))
+            .thenReturn(Result.success(snapshot("ORDER500", 5L, 1L, "12.00", 2)));
+        when(manager.getOne(any())).thenReturn(null);
+
+        assertThrows(BizException.class,
+            () -> service.createPayment("ORDER500", 5L, 1L, new BigDecimal("12.00"), null));
     }
 
     /**
@@ -824,6 +872,12 @@ public class PayServiceImplTest {
         verify(manager).save(cap.capture());
         assertEquals(1, cap.getValue().getChannel());
         assertEquals(1, cap.getValue().getStatus());
+    }
+
+    private static OrderPaySnapshotDTO snapshot(String orderNo, Long userId, Long merchantId,
+                                                String amount, int status) {
+        return new OrderPaySnapshotDTO(1L, orderNo, userId, merchantId,
+            new BigDecimal(amount), status, null);
     }
 
     /**

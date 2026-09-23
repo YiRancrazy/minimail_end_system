@@ -1,6 +1,7 @@
 package com.yirancrazy.minimall.order.service;
 
 import java.util.List;
+import com.yirancrazy.minimall.api.dto.order.OrderPaySnapshotDTO;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.order.dto.OrderCheckoutItemDTO;
 import com.yirancrazy.minimall.order.dto.OrderPageDTO;
@@ -113,6 +114,14 @@ public interface OrderService {
      * @return 商户ID；订单不存在时返回 null
      */
     Long resolveMerchantId(String ref);
+
+    /**
+     * 查询订单支付快照，供支付服务校验支付人、应付金额和订单状态。
+     * @param ref 订单标识（订单ID或业务单号）
+     * @return 订单支付快照
+     * @throws com.yirancrazy.minimall.common.exception.BizException 订单不存在时
+     */
+    OrderPaySnapshotDTO getPaySnapshot(String ref);
 
     /**
      * 查询订单详情，校验归属，非本人订单抛出 ORDER_NOT_FOUND。

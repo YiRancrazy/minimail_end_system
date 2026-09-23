@@ -20,7 +20,9 @@ public enum PayCodeEnum implements BaseEnum {
     REFUND_FAILED("40004", "REFUND_FAILED", "Refund failed"),
     PAY_CHANNEL_UNSUPPORTED("40005", "PAY_CHANNEL_UNSUPPORTED", "Payment channel not supported"),
     REFUND_CONFLICT("40007", "REFUND_CONFLICT", "Payment state does not allow refund"),
-    REFUND_EXCEED("40008", "REFUND_EXCEED", "Total refund amount exceeds payment amount");
+    REFUND_EXCEED("40008", "REFUND_EXCEED", "Total refund amount exceeds payment amount"),
+    PAY_AMOUNT_MISMATCH("40009", "PAY_AMOUNT_MISMATCH", "支付金额与订单应付金额不一致"),
+    PAY_ORDER_STATUS_INVALID("40010", "PAY_ORDER_STATUS_INVALID", "订单状态不允许创建支付");
 
     private final String code;
     private final String alias;

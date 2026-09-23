@@ -5,6 +5,7 @@ import org.springframework.cloud.openfeign.FallbackFactory;
 import org.springframework.stereotype.Component;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.api.dto.order.OrderExportItemDTO;
+import com.yirancrazy.minimall.api.dto.order.OrderPaySnapshotDTO;
 import com.yirancrazy.minimall.api.dto.order.OrderStatisticsDTO;
 import com.yirancrazy.minimall.api.feign.OrderFeignClient;
 import com.yirancrazy.minimall.common.result.CommonCode;
@@ -31,6 +32,12 @@ public class OrderFeignFallbackFactory implements FallbackFactory<OrderFeignClie
             @Override
             public Result<Long> merchantId(String ref) {
                 log.warn("order merchant resolve fallback, ref={} skipped", ref);
+                return Result.fail(CommonCode.SYS_ERROR, "订单服务不可用");
+            }
+
+            @Override
+            public Result<OrderPaySnapshotDTO> paySnapshot(String ref) {
+                log.warn("order pay snapshot fallback, ref={} skipped", ref);
                 return Result.fail(CommonCode.SYS_ERROR, "订单服务不可用");
             }
 

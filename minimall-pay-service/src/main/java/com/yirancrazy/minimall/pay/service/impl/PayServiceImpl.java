@@ -8,6 +8,7 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.extern.slf4j.Slf4j;
+import com.yirancrazy.minimall.api.dto.order.OrderPaySnapshotDTO;
 import com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO;
 import com.yirancrazy.minimall.api.feign.OrderFeignClient;
 import com.yirancrazy.minimall.common.exception.BizException;
@@ -91,11 +92,10 @@ public class PayServiceImpl implements PayService {
             throw new BizException(PayCodeEnum.PAY_CHANNEL_UNSUPPORTED);
         }
 
-        // 商户上下文缺失（C 端支付无 X-Merchant-Id）时按订单归属解析，解析失败归属默认商户 0L
-        if (merchantId == null) {
-            merchantId = resolveMerchantId(orderNo);
-        }
-        merchantId = merchantId == null ? 0L : merchantId;
+        // 订单快照是支付归属、金额和状态校验的唯一可信来源，客户端 merchantId 不参与决策
+        OrderPaySnapshotDTO snapshot = loadPaySnapshot(orderNo);
+        validatePaymentRequest(snapshot, userId, amount);
+        merchantId = snapshot.getMerchantId() == null ? 0L : snapshot.getMerchantId();
 
         // 根据订单号查询已有支付交易记录，用于幂等判断
         PayTransactionPO existing = latestByOrderNo(orderNo);
@@ -115,6 +115,9 @@ public class PayServiceImpl implements PayService {
                 log.warn("payment expired pending, creating new one, paymentNo={}, orderNo={}, expireAt={}",
                     existing.getPaymentNo(), orderNo, existing.getExpireAt());
             }
+        }
+        if (snapshot.getStatus() == null || snapshot.getStatus() != ORDER_PENDING_CODE) {
+            throw new BizException(PayCodeEnum.PAY_ORDER_STATUS_INVALID);
         }
 
         // 生成支付流水号
@@ -375,18 +378,38 @@ public class PayServiceImpl implements PayService {
     }
 
     /**
-     * 按订单标识解析订单归属商户，order-service 不可达或订单不存在时返回 null。
-     * @param orderNo 订单标识（订单ID或业务单号）
-     * @return 商户ID或 null
+     * 查询订单支付快照；订单服务不可用或订单不存在时抛出支付异常。
+     * @param orderNo 订单标识
+     * @return 订单支付快照
      */
-    private Long resolveMerchantId(String orderNo) {
+    private OrderPaySnapshotDTO loadPaySnapshot(String orderNo) {
+        Result<OrderPaySnapshotDTO> result;
         try {
-            Result<Long> resp = orderFeignClient.merchantId(orderNo);
-            return resp == null ? null : resp.getData();
+            result = orderFeignClient.paySnapshot(orderNo);
         }
         catch (Exception e) {
-            log.warn("resolve order merchant failed, orderNo={}, fallback to default merchant", orderNo);
-            return null;
+            log.warn("load order pay snapshot failed, orderNo={}", orderNo, e);
+            throw new BizException(CommonCode.SYS_ERROR, "订单服务不可用");
+        }
+        if (result == null || !CommonCode.SUCCESS.equals(result.getCode()) || result.getData() == null) {
+            throw new BizException(PayCodeEnum.PAY_NOT_FOUND);
+        }
+        return result.getData();
+    }
+
+    /**
+     * 校验支付请求与订单快照一致：支付人、应付金额和订单状态必须匹配。
+     * @param snapshot 订单支付快照
+     * @param userId 当前支付用户ID
+     * @param amount 请求支付金额
+     */
+    private void validatePaymentRequest(OrderPaySnapshotDTO snapshot, Long userId, BigDecimal amount) {
+        if (snapshot.getUserId() == null || !snapshot.getUserId().equals(userId)) {
+            throw new BizException(PayCodeEnum.PAY_NOT_FOUND);
+        }
+        if (snapshot.getPayAmount() == null || amount == null
+            || snapshot.getPayAmount().compareTo(amount) != 0) {
+            throw new BizException(PayCodeEnum.PAY_AMOUNT_MISMATCH);
         }
     }
 

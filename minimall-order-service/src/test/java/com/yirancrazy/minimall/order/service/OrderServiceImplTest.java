@@ -26,6 +26,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.yirancrazy.minimall.api.dto.goods.SkuSnapshotDTO;
+import com.yirancrazy.minimall.api.dto.order.OrderPaySnapshotDTO;
 import com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO;
 import com.yirancrazy.minimall.api.feign.GoodsFeignClient;
 import com.yirancrazy.minimall.api.feign.IdFeignClient;
@@ -542,6 +543,39 @@ public class OrderServiceImplTest {
 
         assertNull(service.resolveMerchantId("NOPE"));
         assertNull(service.resolveMerchantId(null));
+    }
+
+    /**
+     * 验证 getPaySnapshot 返回支付校验所需的订单归属、金额和状态。
+     */
+    @Test
+    public void getPaySnapshot_returns_order_payment_fields() {
+        OrderPO existing = buildOrder(99L, 7L, 42L, OrderStatusEnum.PENDING.intCode());
+        existing.setOrderNo("OD99");
+        existing.setPayAmount(new BigDecimal("19.80"));
+        existing.setPayId(200L);
+        when(manager.getOne(any(Wrapper.class))).thenReturn(existing);
+
+        OrderPaySnapshotDTO snapshot = service.getPaySnapshot("OD99");
+
+        assertEquals(99L, snapshot.getOrderId());
+        assertEquals("OD99", snapshot.getOrderNo());
+        assertEquals(7L, snapshot.getUserId());
+        assertEquals(42L, snapshot.getMerchantId());
+        assertEquals(0, new BigDecimal("19.80").compareTo(snapshot.getPayAmount()));
+        assertEquals(OrderStatusEnum.PENDING.intCode(), snapshot.getStatus());
+        assertEquals(200L, snapshot.getPayId());
+    }
+
+    /**
+     * 验证 getPaySnapshot 在订单不存在时抛出 ORDER_NOT_FOUND。
+     */
+    @Test
+    public void getPaySnapshot_missing_throws() {
+        when(manager.getOne(any(Wrapper.class))).thenReturn(null);
+        when(manager.getById(any())).thenReturn(null);
+
+        assertThrows(BizException.class, () -> service.getPaySnapshot("NOPE"));
     }
 
     /**

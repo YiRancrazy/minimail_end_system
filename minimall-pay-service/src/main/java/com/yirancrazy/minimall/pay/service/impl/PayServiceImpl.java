@@ -210,6 +210,10 @@ public class PayServiceImpl implements PayService {
      * @param dto 回调DTO
      */
     private void applyCallbackSuccess(PayTransactionPO po, PayCallbackDTO dto) {
+        Result<Void> advanceResult = advanceOrder(po.getOrderNo());
+        if (advanceResult == null || !CommonCode.SUCCESS.equals(advanceResult.getCode())) {
+            throw new BizException(PayCodeEnum.PAY_ORDER_ADVANCE_FAILED);
+        }
         int status = po.getStatus();
         if (status == Integer.parseInt(PayStatusEnum.REFUNDING.getCode())
             || status == Integer.parseInt(PayStatusEnum.REFUNDED.getCode())
@@ -224,15 +228,27 @@ public class PayServiceImpl implements PayService {
         po.setChannelResponse(dto.getChannelResponse());
         po.setPaidAt(LocalDateTime.now());
         payManager.updateById(po);
+    }
 
-        // 订单标识可能为订单ID（内部下单路径）或业务单号（C 端直付路径），按数字与否分流推进订单
-        if (po.getOrderNo() != null) {
-            if (po.getOrderNo().matches("\\d+")) {
-                orderFeignClient.pay(Long.valueOf(po.getOrderNo()));
-            }
-            else {
-                orderFeignClient.payByOrderNo(po.getOrderNo());
-            }
+    /**
+     * 推进订单为已支付：数字订单标识走订单ID接口，业务单号走 orderNo 接口。
+     * @param orderNo 订单标识
+     * @return 订单推进结果；订单标识为空或服务不可用时返回失败
+     */
+    private Result<Void> advanceOrder(String orderNo) {
+        if (orderNo == null || orderNo.isBlank()) {
+            return Result.fail(PayCodeEnum.PAY_ORDER_ADVANCE_FAILED.getCode(),
+                PayCodeEnum.PAY_ORDER_ADVANCE_FAILED.getMessage());
+        }
+        try {
+            return orderNo.matches("\\d+")
+                ? orderFeignClient.pay(Long.valueOf(orderNo))
+                : orderFeignClient.payByOrderNo(orderNo);
+        }
+        catch (Exception e) {
+            log.warn("advance order failed, orderNo={}", orderNo, e);
+            return Result.fail(PayCodeEnum.PAY_ORDER_ADVANCE_FAILED.getCode(),
+                PayCodeEnum.PAY_ORDER_ADVANCE_FAILED.getMessage());
         }
     }
 
@@ -548,9 +564,9 @@ public class PayServiceImpl implements PayService {
     }
 
     /**
-     * 扫描支付成功但订单状态仍为 PENDING 的流水（paidAt 落在 [now-24h, now-30s) 时间窗内），主动调 Order RPC 兜底推进。
+     * 扫描支付成功但订单可能未推进的流水（paidAt 落在 [now-24h, now-30s) 时间窗内），主动调 Order RPC 兜底推进。
      * 按 id 升序每批 100 条游标推进（id > lastId），单次调用最多 10 批即返回，防止全表扫描随流水量增长拖垮数据库；
-     * 幂等由订单状态探测保证（订单已非 PENDING 则跳过），Feign 失败仅记 WARN 不阻断后续批次。
+     * 订单推进接口自身幂等，支持数字订单ID和非数字业务单号；Feign 失败仅记 WARN 不阻断后续批次。
      * @return 处理的流水数
      */
     @Override
@@ -573,24 +589,15 @@ public class PayServiceImpl implements PayService {
                 break;
             }
             for (PayTransactionPO po : paid) {
-                Long orderId;
                 try {
-                    orderId = Long.valueOf(po.getOrderNo());
-                }
-                catch (NumberFormatException e) {
-                    log.warn("scanPaidButOrderPending skip non-numeric orderNo, paymentNo={}", po.getPaymentNo());
-                    continue;
-                }
-                try {
-                    Integer orderStatus = orderFeignClient.status(orderId).getData();
-                    if (orderStatus != null && orderStatus == ORDER_PENDING_CODE) {
-                        orderFeignClient.pay(orderId);
+                    Result<Void> result = advanceOrder(po.getOrderNo());
+                    if (result != null && CommonCode.SUCCESS.equals(result.getCode())) {
                         count++;
                     }
                 }
                 catch (Exception e) {
-                    log.warn("scanPaidButOrderPending probe failed, paymentNo={}, orderId={}, err={}",
-                        po.getPaymentNo(), orderId, e.getMessage());
+                    log.warn("scanPaidButOrderPending advance failed, paymentNo={}, orderNo={}, err={}",
+                        po.getPaymentNo(), po.getOrderNo(), e.getMessage());
                 }
             }
             lastId = paid.get(paid.size() - 1).getId();

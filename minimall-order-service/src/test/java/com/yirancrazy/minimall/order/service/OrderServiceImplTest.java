@@ -228,14 +228,17 @@ public class OrderServiceImplTest {
     }
 
     /**
-     * 验证已支付订单不能再次支付（状态流转不合法）。
+     * 验证已支付订单重复推进时幂等返回，不重复写状态与副作用。
      */
     @Test
-    public void pay_already_paid_throws() {
+    public void pay_already_paid_is_idempotent() {
         OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.PAID.intCode());
         when(manager.getById(99L)).thenReturn(existing);
 
-        assertThrows(BizException.class, () -> service.pay(99L));
+        service.pay(99L);
+
+        assertEquals(OrderStatusEnum.PAID.intCode(), existing.getStatus());
+        verify(manager, never()).updateById(existing);
     }
 
     /**

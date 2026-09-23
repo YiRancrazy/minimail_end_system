@@ -14,6 +14,7 @@ import org.mockito.Mockito;
 import org.slf4j.MDC;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.yirancrazy.minimall.common.filter.TraceIdFilter;
 import com.yirancrazy.minimall.common.result.Result;
@@ -100,6 +101,25 @@ class RocketMqEventBusTest {
         bus.publishInTx(new DummyEvent("x"), captured::set, e -> Boolean.TRUE);
 
         assertEquals("tx-100", captured.get());
+    }
+
+    @Test
+    void publish_withoutProducer_throws() {
+        RocketMqEventBus bus = new RocketMqEventBus("127.0.0.1:9876", "minimall-events");
+
+        assertThrows(IllegalStateException.class, () -> bus.publish(new DummyEvent("x")));
+    }
+
+    @Test
+    void publishInTx_sendFailure_throws() throws Exception {
+        TransactionMQProducer mockProducer = Mockito.mock(TransactionMQProducer.class);
+        Mockito.when(mockProducer.sendMessageInTransaction(Mockito.any(), Mockito.any()))
+            .thenThrow(new RuntimeException("broker down"));
+        RocketMqEventBus bus = new RocketMqEventBus("127.0.0.1:9876", "minimall-events");
+        setProducer(bus, mockProducer);
+
+        assertThrows(IllegalStateException.class,
+            () -> bus.publishInTx(new DummyEvent("x"), tx -> { }, e -> Boolean.TRUE));
     }
 
     private static void setProducer(RocketMqEventBus bus, TransactionMQProducer producer) throws Exception {

@@ -104,6 +104,8 @@ public class PayServiceImplTest {
         });
         lenient().when(orderFeignClient.merchantId(anyString()))
             .thenReturn(Result.success(null));
+        lenient().when(orderFeignClient.pay(anyLong())).thenReturn(Result.success(null));
+        lenient().when(orderFeignClient.payByOrderNo(anyString())).thenReturn(Result.success(null));
         lenient().when(manager.updateById(any(PayTransactionPO.class))).thenReturn(true);
         lenient().when(payGateway.createPagePayment(anyString(), any(BigDecimal.class), anyString(), anyString()))
             .thenReturn("<form action=\"https://openapi-sandbox.dl.alipaydev.com/gateway.do\">mock</form>");
@@ -797,8 +799,6 @@ public class PayServiceImplTest {
         tx.setStatus(2);
         when(manager.list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class)))
             .thenReturn(java.util.List.of(tx));
-        when(orderFeignClient.status(100L)).thenReturn(com.yirancrazy.minimall.common.result.Result.success(1));
-
         int count = service.scanPaidButOrderPending();
 
         assertEquals(1, count);
@@ -806,29 +806,27 @@ public class PayServiceImplTest {
     }
 
     /**
-     * 验证 scanPaidButOrderPending 在订单已非 PENDING 时不调用 order.pay。
+     * 验证数字订单标识通过订单ID接口幂等推进。
      */
     @Test
-    public void scanPaidButOrderPending_skips_when_order_already_paid() {
+    public void scanPaidButOrderPending_advances_numeric_order() {
         PayTransactionPO tx = new PayTransactionPO();
         tx.setPaymentNo("PAY1");
         tx.setOrderNo("100");
         tx.setStatus(2);
         when(manager.list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class)))
             .thenReturn(java.util.List.of(tx));
-        when(orderFeignClient.status(100L)).thenReturn(com.yirancrazy.minimall.common.result.Result.success(2));
-
         int count = service.scanPaidButOrderPending();
 
-        assertEquals(0, count);
-        verify(orderFeignClient, never()).pay(any());
+        assertEquals(1, count);
+        verify(orderFeignClient).pay(100L);
     }
 
     /**
-     * 验证 scanPaidButOrderPending 在 orderNo 非数字时跳过该条继续处理。
+     * 验证 scanPaidButOrderPending 支持非数字业务单号。
      */
     @Test
-    public void scanPaidButOrderPending_skips_non_numeric_order_no() {
+    public void scanPaidButOrderPending_supports_non_numeric_order_no() {
         PayTransactionPO tx1 = new PayTransactionPO();
         tx1.setPaymentNo("PAY1");
         tx1.setOrderNo("NOT_AN_ID");
@@ -839,11 +837,10 @@ public class PayServiceImplTest {
         tx2.setStatus(2);
         when(manager.list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class)))
             .thenReturn(java.util.List.of(tx1, tx2));
-        when(orderFeignClient.status(200L)).thenReturn(com.yirancrazy.minimall.common.result.Result.success(1));
-
         int count = service.scanPaidButOrderPending();
 
-        assertEquals(1, count);
+        assertEquals(2, count);
+        verify(orderFeignClient).payByOrderNo("NOT_AN_ID");
         verify(orderFeignClient).pay(200L);
     }
 
@@ -945,6 +942,27 @@ public class PayServiceImplTest {
     }
 
     /**
+     * 验证订单推进失败时支付单保持 PENDING 并抛出异常，允许渠道重试回调。
+     */
+    @Test
+    public void handleCallback_order_advance_failure_keeps_pending() {
+        PayTransactionPO rec = new PayTransactionPO();
+        rec.setId(1L);
+        rec.setStatus(1);
+        rec.setOrderNo("100");
+        rec.setAmount(new BigDecimal("100.00"));
+        when(manager.getOne(any())).thenReturn(rec);
+        when(orderFeignClient.pay(100L)).thenThrow(new RuntimeException("order unavailable"));
+
+        PayCallbackDTO dto = new PayCallbackDTO("PAY123", "TRADE123", true, "response",
+            new BigDecimal("100.00"));
+
+        assertThrows(BizException.class, () -> service.handleCallback(dto));
+        assertEquals(1, rec.getStatus());
+        verify(manager, never()).updateById(rec);
+    }
+
+    /**
      * 验证 handleCallback 对已 SUCCESS 支付单的重复回调直接幂等返回，不重复推进订单。
      */
     @Test
@@ -1041,33 +1059,32 @@ public class PayServiceImplTest {
         tx2.setStatus(2);
         when(manager.list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class)))
             .thenReturn(java.util.List.of(tx1, tx2));
-        when(orderFeignClient.status(100L)).thenThrow(new RuntimeException("rpc down"));
-        when(orderFeignClient.status(200L)).thenReturn(com.yirancrazy.minimall.common.result.Result.success(1));
+        when(orderFeignClient.pay(100L)).thenThrow(new RuntimeException("rpc down"));
 
         int count = service.scanPaidButOrderPending();
 
         assertEquals(1, count);
+        verify(orderFeignClient).pay(100L);
         verify(orderFeignClient).pay(200L);
-        verify(orderFeignClient, never()).pay(100L);
     }
 
     /**
-     * 验证 scanPaidButOrderPending 在 feign.status 返 null 时跳过该条不调 order.pay。
+     * 验证订单推进失败时不计入补偿成功数。
      */
     @Test
-    public void scanPaidButOrderPending_probe_null_status_skips() {
+    public void scanPaidButOrderPending_advance_failure_skips_count() {
         PayTransactionPO tx = new PayTransactionPO();
         tx.setPaymentNo("PAY1");
         tx.setOrderNo("100");
         tx.setStatus(2);
         when(manager.list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class)))
             .thenReturn(java.util.List.of(tx));
-        when(orderFeignClient.status(100L)).thenReturn(com.yirancrazy.minimall.common.result.Result.success(null));
+        when(orderFeignClient.pay(100L)).thenReturn(Result.fail("40012", "advance failed"));
 
         int count = service.scanPaidButOrderPending();
 
         assertEquals(0, count);
-        verify(orderFeignClient, never()).pay(any());
+        verify(orderFeignClient).pay(100L);
     }
 
     /**
@@ -1091,9 +1108,6 @@ public class PayServiceImplTest {
         last.setOrderNo("101");
         last.setStatus(2);
         when(manager.list(any(Wrapper.class))).thenReturn(firstBatch).thenReturn(List.of(last));
-        // 订单状态统一返回非 PENDING，仅验证扫描/分批逻辑不触发订单推进
-        when(orderFeignClient.status(anyLong())).thenReturn(Result.success(2));
-
         service.scanPaidButOrderPending();
 
         ArgumentCaptor<Wrapper<PayTransactionPO>> captor = ArgumentCaptor.forClass(Wrapper.class);
@@ -1133,8 +1147,6 @@ public class PayServiceImplTest {
             fullBatch.add(tx);
         }
         when(manager.list(any(Wrapper.class))).thenReturn(fullBatch);
-        when(orderFeignClient.status(anyLong())).thenReturn(Result.success(2));
-
         service.scanPaidButOrderPending();
 
         verify(manager, times(10)).list(any(Wrapper.class));

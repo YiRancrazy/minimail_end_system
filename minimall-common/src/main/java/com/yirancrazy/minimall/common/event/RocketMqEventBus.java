@@ -109,8 +109,9 @@ public class RocketMqEventBus implements EventBus {
             log.info("rocketmq transaction producer started, namesrv={}, topic={}", namesrvAddr, topic);
         }
         catch (MQClientException e) {
-            log.warn("rocketmq producer start failed, publish will be no-op: {}", e.getMessage());
+            log.error("rocketmq producer start failed", e);
             producer = null;
+            throw new IllegalStateException("rocketmq producer start failed", e);
         }
     }
 
@@ -132,8 +133,7 @@ public class RocketMqEventBus implements EventBus {
     @Override
     public void publish(Object event) {
         if (producer == null) {
-            log.warn("rocketmq producer not started; event {} dropped", event.getClass().getSimpleName());
-            return;
+            throw new IllegalStateException("rocketmq producer not started");
         }
         try {
             Message msg = new Message(topic, MqEventJsonCodec.tagFor(event.getClass()),
@@ -143,7 +143,8 @@ public class RocketMqEventBus implements EventBus {
             log.debug("rocketmq send ok for {}", event.getClass().getSimpleName());
         }
         catch (Exception e) {
-            log.warn("rocketmq send failed for {}: {}", event.getClass().getSimpleName(), e.getMessage());
+            log.error("rocketmq send failed for {}", event.getClass().getSimpleName(), e);
+            throw new IllegalStateException("rocketmq send failed", e);
         }
     }
 
@@ -170,8 +171,7 @@ public class RocketMqEventBus implements EventBus {
     @Override
     public void publishInTx(Object event, Consumer<String> localTx, Function<Object, Boolean> checker) {
         if (producer == null) {
-            log.warn("rocketmq producer not started; event {} dropped", event.getClass().getSimpleName());
-            return;
+            throw new IllegalStateException("rocketmq producer not started");
         }
         String tag = MqEventJsonCodec.tagFor(event.getClass());
         checkers.put(tag, checker);
@@ -184,7 +184,8 @@ public class RocketMqEventBus implements EventBus {
                 r.getLocalTransactionState());
         }
         catch (Exception e) {
-            log.warn("rocketmq txn send failed for {}: {}", event.getClass().getSimpleName(), e.getMessage());
+            log.error("rocketmq txn send failed for {}", event.getClass().getSimpleName(), e);
+            throw new IllegalStateException("rocketmq txn send failed", e);
         }
         finally {
             // checker 仅在发送窗口期供 broker 回查事务状态，发送流程结束即移除，避免注册表无界增长

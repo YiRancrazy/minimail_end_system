@@ -82,6 +82,9 @@ public class OrderServiceImpl implements OrderService {
     private static final int REFUND_STATUS_NONE = 0;
     // 金额统一按“分”存储：两位小数，任何更高精度尾数一律拒绝而非静默进位
     private static final int AMOUNT_SCALE = 2;
+    // 扫描分批参数：单批 200 条、单轮最多 50 批，避免一次性全表加载导致 OOM 与长事务
+    private static final int SCAN_BATCH_SIZE = 200;
+    private static final int SCAN_MAX_BATCHES = 50;
 
     private final OrderManager orderManager;
     private final OrderItemManager orderItemManager;
@@ -1395,24 +1398,37 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public int scanExpiredOrders() {
         LocalDateTime expireThreshold = LocalDateTime.now().minusMinutes(PAY_EXPIRE_MINUTES);
-        List<OrderPO> expired = orderManager.list(Wrappers.lambdaQuery(OrderPO.class)
-            .eq(OrderPO::getStatus, OrderStatusEnum.PENDING.intCode())
-            .and(w -> w.isNull(OrderPO::getPayExpireAt).lt(OrderPO::getCreateTime, expireThreshold)
-                .or().lt(OrderPO::getPayExpireAt, expireThreshold)));
         int count = 0;
-        for (OrderPO po : expired) {
-            try {
-                po.setStockReleaseStatus(StockReleaseStatusEnum.PENDING.intCode());
-                transition(po, OrderStatusEnum.CANCELED, "SYSTEM_TIMEOUT", "SYSTEM_TIMEOUT", null);
-                boolean released = releaseStockForOrder(po);
-                markStockReleaseResult(po, released);
-                if (!released) {
-                    log.error("stock release pending, orderId={}", po.getId());
-                }
-                count++;
+        long lastId = 0L;
+        for (int batch = 0; batch < SCAN_MAX_BATCHES; batch++) {
+            List<OrderPO> expired = orderManager.list(Wrappers.lambdaQuery(OrderPO.class)
+                .eq(OrderPO::getStatus, OrderStatusEnum.PENDING.intCode())
+                .and(w -> w.isNull(OrderPO::getPayExpireAt).lt(OrderPO::getCreateTime, expireThreshold)
+                    .or().lt(OrderPO::getPayExpireAt, expireThreshold))
+                .gt(OrderPO::getId, lastId)
+                .orderByAsc(OrderPO::getId)
+                .last("LIMIT " + SCAN_BATCH_SIZE));
+            if (expired.isEmpty()) {
+                break;
             }
-            catch (Exception e) {
-                log.warn("scanExpiredOrders cancel failed, orderId={}, err={}", po.getId(), e.getMessage());
+            for (OrderPO po : expired) {
+                try {
+                    po.setStockReleaseStatus(StockReleaseStatusEnum.PENDING.intCode());
+                    transition(po, OrderStatusEnum.CANCELED, "SYSTEM_TIMEOUT", "SYSTEM_TIMEOUT", null);
+                    boolean released = releaseStockForOrder(po);
+                    markStockReleaseResult(po, released);
+                    if (!released) {
+                        log.error("stock release pending, orderId={}", po.getId());
+                    }
+                    count++;
+                }
+                catch (Exception e) {
+                    log.warn("scanExpiredOrders cancel failed, orderId={}, err={}", po.getId(), e.getMessage());
+                }
+            }
+            lastId = expired.get(expired.size() - 1).getId();
+            if (expired.size() < SCAN_BATCH_SIZE) {
+                break;
             }
         }
         if (count > 0) {
@@ -1430,8 +1446,9 @@ public class OrderServiceImpl implements OrderService {
         List<OrderPO> pending = orderManager.list(Wrappers.lambdaQuery(OrderPO.class)
             .eq(OrderPO::getStatus, OrderStatusEnum.CANCELED.intCode())
             .eq(OrderPO::getStockReleaseStatus, StockReleaseStatusEnum.PENDING.intCode())
+            .orderByAsc(OrderPO::getUpdateTime)
             .orderByAsc(OrderPO::getId)
-            .last("LIMIT 100"));
+            .last("LIMIT " + SCAN_BATCH_SIZE));
         int count = 0;
         for (OrderPO po : pending) {
             if (releaseStockForOrder(po)) {
@@ -1439,6 +1456,8 @@ public class OrderServiceImpl implements OrderService {
                 count++;
             }
             else {
+                // 失败时刷新 updateTime，让该订单排到队尾，避免故障单长期占据批次造成饥饿
+                markStockReleaseResult(po, false);
                 log.error("stock release retry failed, orderId={}", po.getId());
             }
         }
@@ -1452,17 +1471,30 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public int scanAutoConfirm() {
         LocalDateTime confirmThreshold = LocalDateTime.now().minusDays(AUTO_CONFIRM_DAYS);
-        List<OrderPO> overdue = orderManager.list(Wrappers.lambdaQuery(OrderPO.class)
-            .eq(OrderPO::getStatus, OrderStatusEnum.SHIPPED.intCode())
-            .lt(OrderPO::getShippedAt, confirmThreshold));
         int count = 0;
-        for (OrderPO po : overdue) {
-            try {
-                transitStatus(po.getId(), OrderStatusEnum.COMPLETED, "SYSTEM_AUTO_CONFIRM", null);
-                count++;
+        long lastId = 0L;
+        for (int batch = 0; batch < SCAN_MAX_BATCHES; batch++) {
+            List<OrderPO> overdue = orderManager.list(Wrappers.lambdaQuery(OrderPO.class)
+                .eq(OrderPO::getStatus, OrderStatusEnum.SHIPPED.intCode())
+                .lt(OrderPO::getShippedAt, confirmThreshold)
+                .gt(OrderPO::getId, lastId)
+                .orderByAsc(OrderPO::getId)
+                .last("LIMIT " + SCAN_BATCH_SIZE));
+            if (overdue.isEmpty()) {
+                break;
             }
-            catch (Exception e) {
-                log.warn("scanAutoConfirm confirm failed, orderId={}, err={}", po.getId(), e.getMessage());
+            for (OrderPO po : overdue) {
+                try {
+                    transitStatus(po.getId(), OrderStatusEnum.COMPLETED, "SYSTEM_AUTO_CONFIRM", null);
+                    count++;
+                }
+                catch (Exception e) {
+                    log.warn("scanAutoConfirm confirm failed, orderId={}, err={}", po.getId(), e.getMessage());
+                }
+            }
+            lastId = overdue.get(overdue.size() - 1).getId();
+            if (overdue.size() < SCAN_BATCH_SIZE) {
+                break;
             }
         }
         if (count > 0) {

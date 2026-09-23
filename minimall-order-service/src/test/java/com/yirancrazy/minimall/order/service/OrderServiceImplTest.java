@@ -1271,6 +1271,25 @@ public class OrderServiceImplTest {
     }
 
     /**
+     * 验证超时订单扫描按游标分批：单批满员后继续取下一批，避免一次性全表加载导致 OOM。
+     */
+    @Test
+    public void scanExpiredOrders_scans_in_cursor_batches() {
+        java.util.List<OrderPO> fullBatch = new java.util.ArrayList<>(200);
+        for (long id = 1L; id <= 200L; id++) {
+            OrderPO po = new OrderPO();
+            po.setId(id);
+            po.setStatus(OrderStatusEnum.PENDING.intCode());
+            fullBatch.add(po);
+        }
+        when(manager.list(any(Wrapper.class))).thenReturn(fullBatch, java.util.Collections.emptyList());
+
+        service.scanExpiredOrders();
+
+        verify(manager, times(2)).list(any(Wrapper.class));
+    }
+
+    /**
      * 验证取消订单库存释放补偿扫描成功后标记已释放。
      */
     @Test
@@ -1287,6 +1306,26 @@ public class OrderServiceImplTest {
 
         assertEquals(1, count);
         assertEquals(StockReleaseStatusEnum.RELEASED.intCode(), po.getStockReleaseStatus());
+        verify(manager).updateById(po);
+    }
+
+    /**
+     * 验证库存释放失败的订单被回写 PENDING（刷新 updateTime），使其排到队尾避免长期占用批次。
+     */
+    @Test
+    public void scanStockReleasePending_refreshes_failed_order() {
+        OrderPO po = buildOrder(100L, 1L, OrderStatusEnum.CANCELED.intCode());
+        po.setOrderNo("O100");
+        po.setStockReleaseStatus(StockReleaseStatusEnum.PENDING.intCode());
+        po.setSkuId(100L);
+        po.setQuantity(2);
+        when(manager.list(any(Wrapper.class))).thenReturn(List.of(po));
+        when(stockFeignClient.release(any())).thenReturn(Result.success(Boolean.FALSE));
+
+        int count = service.scanStockReleasePending();
+
+        assertEquals(0, count);
+        assertEquals(StockReleaseStatusEnum.PENDING.intCode(), po.getStockReleaseStatus());
         verify(manager).updateById(po);
     }
 

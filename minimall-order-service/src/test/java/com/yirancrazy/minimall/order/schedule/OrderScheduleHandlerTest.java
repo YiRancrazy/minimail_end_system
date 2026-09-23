@@ -2,11 +2,16 @@ package com.yirancrazy.minimall.order.schedule;
 
 import java.time.Duration;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.data.redis.core.script.RedisScript;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -86,5 +91,24 @@ public class OrderScheduleHandlerTest {
         handler.scanExpiredOrders();
 
         verify(orderService, times(0)).scanExpiredOrders();
+    }
+
+    /**
+     * 验证释放锁使用本实例持有者标识做原子比较删除，且锁 TTL 已覆盖分批扫描耗时。
+     */
+    @Test
+    public void scanExpiredOrders_releases_lock_with_holder_token() {
+        setUpHandler();
+        when(orderService.scanExpiredOrders()).thenReturn(1);
+        ArgumentCaptor<String> tokenCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<Duration> ttlCaptor = ArgumentCaptor.forClass(Duration.class);
+        when(redisTemplate.opsForValue().setIfAbsent(anyString(), tokenCaptor.capture(), ttlCaptor.capture()))
+            .thenReturn(true);
+
+        handler.scanExpiredOrders();
+
+        verify(redisTemplate).execute(any(RedisScript.class), anyList(), eq(tokenCaptor.getValue()));
+        assertTrue(ttlCaptor.getValue().compareTo(Duration.ofMinutes(1)) > 0,
+            "lock ttl must cover a batched scan");
     }
 }

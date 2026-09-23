@@ -412,7 +412,8 @@ CREATE TABLE IF NOT EXISTS t_stock_journal (
     created_at      DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
     updated_at      DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '更新时间',
     PRIMARY KEY (id),
-    INDEX idx_journal_sku_id (sku_id)
+    INDEX idx_journal_sku_id (sku_id),
+    UNIQUE KEY uk_stock_journal_release_idem (sku_id, order_no, type, is_deleted)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='库存流水表';
 
 CREATE TABLE IF NOT EXISTS t_stock_transfer (

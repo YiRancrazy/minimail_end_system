@@ -3,6 +3,7 @@ package com.yirancrazy.minimall.stock.service.impl;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -106,20 +107,25 @@ public class StockServiceImpl implements StockService {
             return false;
         }
         if (orderNo != null && !orderNo.isBlank()) {
-            long released = journalManager.count(Wrappers.lambdaQuery(StockJournalPO.class)
-                .eq(StockJournalPO::getOrderNo, orderNo)
-                .eq(StockJournalPO::getSkuId, skuId)
-                .eq(StockJournalPO::getType, StockJournalTypeEnum.RELEASE.intCode()));
-            if (released > 0) {
+            try {
+                recordJournal(skuId, quantity.longValue(), StockJournalTypeEnum.RELEASE, null, orderNo);
+            }
+            catch (DuplicateKeyException e) {
+                log.info("stock release already recorded, skuId={}, orderNo={}", skuId, orderNo);
                 return true;
             }
         }
         // 原子释放：未命中（记录不存在或预占不足）按失败处理
         if (stockMapper.restoreReserved(skuId, quantity.longValue()) <= 0) {
+            if (orderNo != null && !orderNo.isBlank()) {
+                throw new BizException(StockCodeEnum.STOCK_INSUFFICIENT);
+            }
             return false;
         }
 
-        recordJournal(skuId, quantity.longValue(), StockJournalTypeEnum.RELEASE, null, orderNo);
+        if (orderNo == null || orderNo.isBlank()) {
+            recordJournal(skuId, quantity.longValue(), StockJournalTypeEnum.RELEASE, null, orderNo);
+        }
         return true;
     }
 
@@ -199,7 +205,9 @@ public class StockServiceImpl implements StockService {
         }
         StockPO po = getOrCreateStock(skuId);
         po.setAlertThreshold(threshold);
-        stockManager.updateById(po);
+        if (!stockManager.updateById(po)) {
+            throw new BizException(StockCodeEnum.STOCK_CONCURRENT_UPDATE);
+        }
         log.info("threshold set, skuId={}, threshold={}", skuId, threshold);
     }
 
@@ -218,7 +226,9 @@ public class StockServiceImpl implements StockService {
         }
         StockPO po = getOrCreateMerchantStock(skuId, merchantId);
         po.setAlertThreshold(threshold);
-        stockManager.updateById(po);
+        if (!stockManager.updateById(po)) {
+            throw new BizException(StockCodeEnum.STOCK_CONCURRENT_UPDATE);
+        }
         log.info("threshold set, skuId={}, merchantId={}, threshold={}",
             skuId, merchantId, threshold);
     }
@@ -244,7 +254,7 @@ public class StockServiceImpl implements StockService {
         }
         po.setAvailable(po.getAvailable() + quantity);
         if (!stockManager.updateById(po)) {
-            throw new BizException(StockCodeEnum.STOCK_NOT_FOUND);
+            throw new BizException(StockCodeEnum.STOCK_CONCURRENT_UPDATE);
         }
 
         recordJournal(skuId, quantity, StockJournalTypeEnum.ADJUST, reason, null);
@@ -273,7 +283,7 @@ public class StockServiceImpl implements StockService {
         }
         po.setAvailable(po.getAvailable() + quantity);
         if (!stockManager.updateById(po)) {
-            throw new BizException(StockCodeEnum.STOCK_NOT_FOUND);
+            throw new BizException(StockCodeEnum.STOCK_CONCURRENT_UPDATE);
         }
 
         recordJournal(skuId, quantity, StockJournalTypeEnum.ADJUST, reason, null);
@@ -594,7 +604,9 @@ public class StockServiceImpl implements StockService {
         long oldAvailable = po.getAvailable();
         long delta = correctQuantity - oldAvailable;
         po.setAvailable(correctQuantity);
-        stockManager.updateById(po);
+        if (!stockManager.updateById(po)) {
+            throw new BizException(StockCodeEnum.STOCK_CONCURRENT_UPDATE);
+        }
 
         recordJournal(skuId, delta, StockJournalTypeEnum.CORRECT, reason, null);
         log.info("stock corrected, skuId={}, from={}, to={}", skuId, oldAvailable, correctQuantity);
@@ -683,7 +695,9 @@ public class StockServiceImpl implements StockService {
         journal.setType(type.intCode());
         journal.setReason(reason);
         journal.setOrderNo(orderNo);
-        journalManager.save(journal);
+        if (!journalManager.save(journal)) {
+            throw new BizException(StockCodeEnum.STOCK_JOURNAL_SAVE_FAIL);
+        }
     }
 
     /**

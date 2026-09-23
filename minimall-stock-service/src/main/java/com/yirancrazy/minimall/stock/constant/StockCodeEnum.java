@@ -15,6 +15,8 @@ import com.yirancrazy.minimall.common.base.BaseEnum;
 public enum StockCodeEnum implements BaseEnum {
     STOCK_NOT_FOUND("18001", "STOCK_NOT_FOUND", "SKU 库存不存在"),
     STOCK_INSUFFICIENT("18002", "STOCK_INSUFFICIENT", "库存不足"),
+    STOCK_CONCURRENT_UPDATE("18003", "STOCK_CONCURRENT_UPDATE", "库存并发更新冲突，请重试"),
+    STOCK_JOURNAL_SAVE_FAIL("18004", "STOCK_JOURNAL_SAVE_FAIL", "库存流水保存失败"),
     THRESHOLD_INVALID("60001", "THRESHOLD_INVALID", "Alert threshold must be >= 0"),
     ADJUST_QUANTITY_ZERO("60002", "ADJUST_QUANTITY_ZERO", "Adjust quantity cannot be zero"),
     STOCK_TRANSFER_SAME_SKU("60003", "STOCK_TRANSFER_SAME_SKU", "调出与调入SKU不能相同"),

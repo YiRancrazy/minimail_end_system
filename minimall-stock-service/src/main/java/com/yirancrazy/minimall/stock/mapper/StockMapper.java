@@ -34,7 +34,7 @@ public interface StockMapper extends BaseMapper<StockPO> {
      * @return 影响行数，0 表示库存不足或记录不存在
      */
     @Update("UPDATE t_stock SET available = available - #{qty}, "
-        + "reserved = reserved + #{qty}, update_time = NOW() "
+        + "reserved = reserved + #{qty}, version = version + 1, update_time = NOW() "
         + "WHERE sku_id = #{skuId} AND available >= #{qty}")
     int deductAvailable(@Param("skuId") Long skuId, @Param("qty") long qty);
 
@@ -45,7 +45,7 @@ public interface StockMapper extends BaseMapper<StockPO> {
      * @return 影响行数，0 表示预占不足或记录不存在
      */
     @Update("UPDATE t_stock SET available = available + #{qty}, "
-        + "reserved = reserved - #{qty}, update_time = NOW() "
+        + "reserved = reserved - #{qty}, version = version + 1, update_time = NOW() "
         + "WHERE sku_id = #{skuId} AND reserved >= #{qty}")
     int restoreReserved(@Param("skuId") Long skuId, @Param("qty") long qty);
 
@@ -56,6 +56,6 @@ public interface StockMapper extends BaseMapper<StockPO> {
      * @return 影响行数，0 表示记录不存在
      */
     @Update("UPDATE t_stock SET available = available + #{qty}, "
-        + "update_time = NOW() WHERE sku_id = #{skuId}")
+        + "version = version + 1, update_time = NOW() WHERE sku_id = #{skuId}")
     int increaseAvailable(@Param("skuId") Long skuId, @Param("qty") long qty);
 }

@@ -7,6 +7,7 @@ import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.dao.DuplicateKeyException;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -145,12 +146,24 @@ public class StockServiceImplTest {
      */
     @Test
     public void release_same_order_is_idempotent() {
-        when(journalManager.count(any(Wrapper.class))).thenReturn(1L);
+        when(journalManager.save(any(StockJournalPO.class)))
+            .thenThrow(new DuplicateKeyException("duplicate release"));
 
         boolean ok = service.release(100L, 3, "O100");
 
         assertTrue(ok);
         verify(stockMapper, never()).restoreReserved(any(), anyLong());
+    }
+
+    /**
+     * 验证带订单号的释放预占不足时抛出业务异常以触发流水插入回滚。
+     */
+    @Test
+    public void release_order_insufficient_throws() {
+        when(stockMapper.restoreReserved(100L, 5L)).thenReturn(0);
+
+        assertThrows(BizException.class, () -> service.release(100L, 5, "O100"));
+        verify(journalManager).save(any(StockJournalPO.class));
     }
 
     /**
@@ -574,6 +587,22 @@ public class StockServiceImplTest {
     }
 
     /**
+     * 验证调整库存遇乐观锁冲突时抛出并发更新异常。
+     */
+    @Test
+    public void adjustStock_concurrent_update_throws() {
+        StockPO s = new StockPO();
+        s.setId(1L);
+        s.setSkuId(100L);
+        s.setAvailable(10L);
+        s.setReserved(0L);
+        when(manager.getOne(any())).thenReturn(s);
+        when(manager.updateById(any(StockPO.class))).thenReturn(false);
+
+        assertThrows(BizException.class, () -> service.adjustStock(100L, 5L, "replenish"));
+    }
+
+    /**
      * 验证完成非PENDING状态的盘点任务时抛出 BizException。
      */
     @Test
@@ -700,6 +729,22 @@ public class StockServiceImplTest {
     public void correctStock_stock_not_found_throws() {
         when(manager.getOne(any())).thenReturn(null);
         assertThrows(BizException.class, () -> service.correctStock(999L, 10L, "test"));
+    }
+
+    /**
+     * 验证纠正库存遇乐观锁冲突时抛出并发更新异常。
+     */
+    @Test
+    public void correctStock_concurrent_update_throws() {
+        StockPO s = new StockPO();
+        s.setId(1L);
+        s.setSkuId(100L);
+        s.setAvailable(10L);
+        s.setReserved(0L);
+        when(manager.getOne(any())).thenReturn(s);
+        when(manager.updateById(any(StockPO.class))).thenReturn(false);
+
+        assertThrows(BizException.class, () -> service.correctStock(100L, 20L, "test"));
     }
 
     /**

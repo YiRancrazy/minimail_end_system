@@ -309,20 +309,6 @@ public class OrderServiceImpl implements OrderService {
     }
 
     /**
-     * 用户支付订单：校验订单归属后推进 PAID 并广播事件，归属不符抛出 ORDER_NOT_FOUND。
-     * @param orderId 订单ID
-     * @param userId 用户ID（归属校验，来自可信 Header）
-     */
-    @Override
-    public void pay(Long orderId, Long userId) {
-        OrderPO po = getOrder(orderId);
-        if (!po.getUserId().equals(userId)) {
-            throw new BizException(OrderCodeEnum.ORDER_NOT_FOUND);
-        }
-        doPay(po);
-    }
-
-    /**
      * 内部推进订单为已支付（支付服务回调/事务消息场景），不校验用户归属。
      * @param orderId 订单ID
      */

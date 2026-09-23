@@ -112,14 +112,12 @@ class UserOrderControllerV1Test {
     }
 
     /**
-     * 验证 POST /api/v1/user/orders/{id}/pay 带 X-User-Id 调用 service。
+     * 验证用户端不再暴露直接推进订单支付的入口。
      */
     @Test
-    void pay_invokes_service() throws Exception {
+    void pay_endpoint_removed() throws Exception {
         mockMvc.perform(post("/api/v1/user/orders/99/pay").header("X-User-Id", 1L))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.code").value("00000"));
-        verify(service).pay(99L, 1L);
+            .andExpect(status().isNotFound());
     }
 
     /**

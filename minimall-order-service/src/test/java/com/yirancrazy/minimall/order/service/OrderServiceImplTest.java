@@ -212,7 +212,7 @@ public class OrderServiceImplTest {
         OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.PENDING.intCode());
         when(manager.getById(99L)).thenReturn(existing);
 
-        service.pay(99L, 1L);
+        service.pay(99L);
         assertEquals(OrderStatusEnum.PAID.intCode(), existing.getStatus());
         verify(manager).updateById(existing);
     }
@@ -223,7 +223,7 @@ public class OrderServiceImplTest {
     @Test
     public void pay_missing_order_throws() {
         when(manager.getById(99L)).thenReturn(null);
-        assertThrows(BizException.class, () -> service.pay(99L, 1L));
+        assertThrows(BizException.class, () -> service.pay(99L));
     }
 
     /**
@@ -234,18 +234,7 @@ public class OrderServiceImplTest {
         OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.PAID.intCode());
         when(manager.getById(99L)).thenReturn(existing);
 
-        assertThrows(BizException.class, () -> service.pay(99L, 1L));
-    }
-
-    /**
-     * 验证非本人支付他人订单时抛出 ORDER_NOT_FOUND。
-     */
-    @Test
-    public void pay_wrong_user_throws() {
-        OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.PENDING.intCode());
-        when(manager.getById(99L)).thenReturn(existing);
-
-        assertThrows(BizException.class, () -> service.pay(99L, 999L));
+        assertThrows(BizException.class, () -> service.pay(99L));
     }
 
     /**
@@ -1249,7 +1238,7 @@ public class OrderServiceImplTest {
         OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.PENDING.intCode());
         when(manager.getById(99L)).thenReturn(existing);
 
-        service.pay(99L, 1L);
+        service.pay(99L);
 
         assertNotNull(existing.getPaidAt());
         verify(statusLogManager).save(any(OrderStatusLogPO.class));

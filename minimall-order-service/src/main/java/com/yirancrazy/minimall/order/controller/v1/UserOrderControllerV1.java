@@ -90,21 +90,6 @@ public class UserOrderControllerV1 {
     }
 
     /**
-     * 推进指定待支付订单的支付流程并返回处理结果。
-     *
-     * @param id 订单标识
-     * @param userId 用户ID，来自网关 X-User-Id 头
-     * @return 支付成功返回 true，订单状态不允许支付时返回 false
-     */
-    @PostMapping("/{id}/pay")
-    @Idempotent
-    public Result<Void> pay(@PathVariable("id") Long id,
-                            @RequestHeader("X-User-Id") Long userId) {
-        orderService.pay(id, userId);
-        return Result.success(null);
-    }
-
-    /**
      * 查询订单状态。
      * @param id 订单ID
      * @param userId 用户ID，来自网关 X-User-Id 头

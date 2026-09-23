@@ -24,7 +24,8 @@ public enum PayCodeEnum implements BaseEnum {
     PAY_AMOUNT_MISMATCH("40009", "PAY_AMOUNT_MISMATCH", "支付金额与订单应付金额不一致"),
     PAY_ORDER_STATUS_INVALID("40010", "PAY_ORDER_STATUS_INVALID", "订单状态不允许创建支付"),
     PAY_CREATE_CONFLICT("40011", "PAY_CREATE_CONFLICT", "支付单创建冲突，请稍后重试"),
-    PAY_ORDER_ADVANCE_FAILED("40012", "PAY_ORDER_ADVANCE_FAILED", "订单支付状态推进失败");
+    PAY_ORDER_ADVANCE_FAILED("40012", "PAY_ORDER_ADVANCE_FAILED", "订单支付状态推进失败"),
+    PAY_AMOUNT_SCALE_INVALID("40013", "PAY_AMOUNT_SCALE_INVALID", "金额最多支持两位小数");
 
     private final String code;
     private final String alias;

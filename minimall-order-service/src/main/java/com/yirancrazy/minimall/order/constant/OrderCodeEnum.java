@@ -25,7 +25,8 @@ public enum OrderCodeEnum implements BaseEnum {
     ORDER_NOT_REFUNDING("50004", "ORDER_NOT_REFUNDING", "订单非退款中状态"),
     ORDER_ITEMS_EMPTY("50005", "ORDER_ITEMS_EMPTY", "结算商品列表不能为空"),
     REFUND_AMOUNT_INVALID("50006", "REFUND_AMOUNT_INVALID", "退款金额非法"),
-    ORDER_REFUND_FAIL("50007", "ORDER_REFUND_FAIL", "订单退款失败");
+    ORDER_REFUND_FAIL("50007", "ORDER_REFUND_FAIL", "订单退款失败"),
+    ORDER_AMOUNT_SCALE_INVALID("50008", "ORDER_AMOUNT_SCALE_INVALID", "订单金额最多支持两位小数");
 
     private final String code;
     private final String alias;

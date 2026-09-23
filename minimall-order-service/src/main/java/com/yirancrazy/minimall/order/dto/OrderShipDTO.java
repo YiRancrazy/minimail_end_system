@@ -1,6 +1,7 @@
 package com.yirancrazy.minimall.order.dto;
 
 import java.math.BigDecimal;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import lombok.Data;
@@ -23,5 +24,6 @@ public class OrderShipDTO {
     private String trackingNo;
 
     /** 可选，运费；与金额计算无关，结算使用。 */
+    @Digits(integer = 10, fraction = 2, message = "运费最多10位整数且最多2位小数")
     private BigDecimal freight;
 }

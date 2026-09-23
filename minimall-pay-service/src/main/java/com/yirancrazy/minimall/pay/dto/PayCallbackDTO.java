@@ -1,6 +1,7 @@
 package com.yirancrazy.minimall.pay.dto;
 
 import java.math.BigDecimal;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -20,6 +21,7 @@ public class PayCallbackDTO {
     private String tradeNo;
     private boolean success;
     private String channelResponse;
+    @Digits(integer = 10, fraction = 2, message = "回调金额最多10位整数且最多2位小数")
     private BigDecimal totalAmount;
 
     public PayCallbackDTO(String paymentNo, String tradeNo, boolean success, String channelResponse) {

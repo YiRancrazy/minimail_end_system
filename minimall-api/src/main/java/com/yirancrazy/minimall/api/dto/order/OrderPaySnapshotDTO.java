@@ -1,6 +1,7 @@
 package com.yirancrazy.minimall.api.dto.order;
 
 import java.math.BigDecimal;
+import jakarta.validation.constraints.Digits;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -20,6 +21,7 @@ public class OrderPaySnapshotDTO {
     private String orderNo;
     private Long userId;
     private Long merchantId;
+    @Digits(integer = 10, fraction = 2, message = "payAmount must have at most 2 decimal places")
     private BigDecimal payAmount;
     private Integer status;
     private Long payId;

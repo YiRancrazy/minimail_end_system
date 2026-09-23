@@ -1,6 +1,7 @@
 package com.yirancrazy.minimall.goods.dto;
 
 import java.math.BigDecimal;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -24,6 +25,7 @@ public class SkuCreateDTO {
     private String skuName;
 
     @Min(value = 0, message = "price must be non-negative")
+    @Digits(integer = 10, fraction = 2, message = "price must have at most 2 decimal places")
     private BigDecimal price;
 
     @Min(value = 0, message = "stock must be non-negative")

@@ -1,6 +1,7 @@
 package com.yirancrazy.minimall.order.service.impl;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -79,6 +80,8 @@ public class OrderServiceImpl implements OrderService {
     private static final int AUTO_CONFIRM_DAYS = 15;
     private static final int ORDER_TYPE_NORMAL = 1;
     private static final int REFUND_STATUS_NONE = 0;
+    // 金额统一按“分”存储：两位小数，任何更高精度尾数一律拒绝而非静默进位
+    private static final int AMOUNT_SCALE = 2;
 
     private final OrderManager orderManager;
     private final OrderItemManager orderItemManager;
@@ -149,7 +152,7 @@ public class OrderServiceImpl implements OrderService {
         if (snapshot == null || snapshot.getPrice() == null) {
             throw new BizException(OrderCodeEnum.ORDER_SKU_SNAPSHOT_MISSING);
         }
-        BigDecimal amount = snapshot.getPrice().multiply(BigDecimal.valueOf(quantity));
+        BigDecimal amount = normalizeAmount(snapshot.getPrice().multiply(BigDecimal.valueOf(quantity)));
 
         Boolean reserved = stockFeignClient.reserve(new StockReserveDTO(skuId, quantity)).getData();
         if (reserved == null || !reserved) {
@@ -240,8 +243,8 @@ public class OrderServiceImpl implements OrderService {
                 throw new BizException(OrderCodeEnum.STOCK_RESERVE_FAIL);
             }
 
-            BigDecimal lineAmount = snapshot.getPrice()
-                .multiply(BigDecimal.valueOf(item.getQuantity()));
+            BigDecimal lineAmount = normalizeAmount(snapshot.getPrice()
+                .multiply(BigDecimal.valueOf(item.getQuantity())));
 
             OrderItemPO itemPO = new OrderItemPO();
             itemPO.setSkuId(item.getSkuId());
@@ -866,7 +869,12 @@ public class OrderServiceImpl implements OrderService {
         if (payAmount == null || refundAmt.compareTo(BigDecimal.ZERO) <= 0 || refundAmt.compareTo(payAmount) > 0) {
             throw new BizException(OrderCodeEnum.REFUND_AMOUNT_INVALID);
         }
-        return refundAmt;
+        try {
+            return refundAmt.setScale(AMOUNT_SCALE, RoundingMode.UNNECESSARY);
+        }
+        catch (ArithmeticException e) {
+            throw new BizException(OrderCodeEnum.REFUND_AMOUNT_INVALID);
+        }
     }
 
     /**
@@ -894,7 +902,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     /**
-     * 计算订单总金额，等于各订单行金额之和。精度 scale=2，RoundingMode.HALF_EVEN。
+     * 计算订单总金额，等于各订单行金额之和，统一为两位小数且不接受更高精度尾数。
      * @param itemPOs 订单行列表
      * @return 订单总金额
      */
@@ -903,7 +911,22 @@ public class OrderServiceImpl implements OrderService {
         for (OrderItemPO item : itemPOs) {
             total = total.add(item.getAmount());
         }
-        return total.setScale(2, java.math.RoundingMode.HALF_EVEN);
+        return normalizeAmount(total);
+    }
+
+    /**
+     * 统一金额精度：强制两位小数，存在更高精度尾数时拒绝而不是静默进位。
+     * @param amount 原始金额
+     * @return 两位小数金额
+     * @throws BizException 金额尾数超过两位时
+     */
+    private static BigDecimal normalizeAmount(BigDecimal amount) {
+        try {
+            return amount.setScale(AMOUNT_SCALE, RoundingMode.UNNECESSARY);
+        }
+        catch (ArithmeticException e) {
+            throw new BizException(OrderCodeEnum.ORDER_AMOUNT_SCALE_INVALID);
+        }
     }
 
     /**
@@ -1323,7 +1346,11 @@ public class OrderServiceImpl implements OrderService {
      * @param po 退款中的订单
      */
     private void requestPayRefund(OrderPO po) {
-        BigDecimal refundAmt = po.getRefundAmount() != null ? po.getRefundAmount() : po.getAmount();
+        BigDecimal refundAmount = po.getRefundAmount() != null ? po.getRefundAmount() : po.getAmount();
+        if (refundAmount == null) {
+            throw new BizException(OrderCodeEnum.REFUND_AMOUNT_INVALID);
+        }
+        BigDecimal refundAmt = normalizeAmount(refundAmount);
         Result<Boolean> refundResult = payFeignClient.refund(
             new RefundCreateDTO(po.getPayId(), refundAmt, null));
         if (refundResult == null

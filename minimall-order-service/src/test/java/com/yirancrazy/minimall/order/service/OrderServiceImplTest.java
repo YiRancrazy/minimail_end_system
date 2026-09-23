@@ -38,6 +38,7 @@ import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.common.util.MinioUtil;
+import com.yirancrazy.minimall.order.constant.OrderCodeEnum;
 import com.yirancrazy.minimall.order.constant.OrderStatusEnum;
 import com.yirancrazy.minimall.order.constant.OrderStatusMachine;
 import com.yirancrazy.minimall.order.constant.StockReleaseStatusEnum;
@@ -837,6 +838,7 @@ public class OrderServiceImplTest {
         OrderPO existing = buildOrder(99L, 1L, 10L, OrderStatusEnum.REFUNDING.intCode());
         existing.setRefundFromStatus(OrderStatusEnum.PAID.intCode());
         existing.setPayId(2001L);
+        existing.setAmount(new BigDecimal("19.80"));
         when(manager.getById(99L)).thenReturn(existing);
 
         service.reviewRefund(99L, true, 10L, null);
@@ -937,6 +939,22 @@ public class OrderServiceImplTest {
 
         assertThrows(BizException.class,
             () -> service.merchantInitiateRefund(99L, 10L, "20.00", "超额退款"));
+    }
+
+    /**
+     * 验证退款金额超过两位小数时按非法金额拒绝（REFUND_AMOUNT_INVALID），不做静默进位。
+     */
+    @Test
+    public void merchantInitiateRefund_rejects_more_than_two_decimals() {
+        OrderPO existing = buildOrder(99L, 1L, 10L, OrderStatusEnum.PAID.intCode());
+        existing.setPayAmount(new BigDecimal("19.80"));
+        when(manager.getById(99L)).thenReturn(existing);
+
+        BizException ex = assertThrows(BizException.class,
+            () -> service.merchantInitiateRefund(99L, 10L, "5.005", "精度非法"));
+
+        assertEquals(OrderCodeEnum.REFUND_AMOUNT_INVALID.getCode(), ex.getCode());
+        assertEquals(OrderStatusEnum.PAID.intCode(), existing.getStatus());
     }
 
     /**

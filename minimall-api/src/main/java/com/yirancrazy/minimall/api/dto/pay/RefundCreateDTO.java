@@ -2,6 +2,7 @@ package com.yirancrazy.minimall.api.dto.pay;
 
 import java.math.BigDecimal;
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -22,6 +23,7 @@ public class RefundCreateDTO {
 
     @NotNull(message = "amount cannot be null")
     @DecimalMin(value = "0.01", message = "amount must be at least 0.01")
+    @Digits(integer = 10, fraction = 2, message = "amount must have at most 2 decimal places")
     private BigDecimal amount;
 
     private String reason;

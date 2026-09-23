@@ -1,6 +1,7 @@
 package com.yirancrazy.minimall.pay.service.impl;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -52,6 +53,8 @@ public class PayServiceImpl implements PayService {
     private static final DateTimeFormatter EXPIRE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final int PAY_CALLBACK_RPC_BUFFER_SECONDS = 30;
     private static final int ORDER_PENDING_CODE = 1;
+    // 金额统一按“分”存储：两位小数，任何更高精度尾数一律拒绝而非静默进位
+    private static final int AMOUNT_SCALE = 2;
     // 对账补偿扫描分批参数：单批 100 条、单次最多 10 批，仅扫描近 24h 成功流水，限制单次调度扫描量与耗时
     private static final int SCAN_BATCH_SIZE = 100;
     private static final int SCAN_MAX_BATCHES = 10;
@@ -96,6 +99,7 @@ public class PayServiceImpl implements PayService {
         // 订单快照是支付归属、金额和状态校验的唯一可信来源，客户端 merchantId 不参与决策
         OrderPaySnapshotDTO snapshot = loadPaySnapshot(orderNo);
         validatePaymentRequest(snapshot, userId, amount);
+        amount = normalizeAmount(amount);
         merchantId = snapshot.getMerchantId() == null ? 0L : snapshot.getMerchantId();
 
         // 根据订单号查询已有支付交易记录，用于幂等判断
@@ -185,7 +189,7 @@ public class PayServiceImpl implements PayService {
         }
 
         // 金额校验：回调金额与库内支付单不符时冻结并告警，返回 success 避免支付宝重复投递
-        if (dto.getTotalAmount() != null && dto.getTotalAmount().compareTo(po.getAmount()) != 0) {
+        if (dto.getTotalAmount() != null && !matchesAmount(dto.getTotalAmount(), po.getAmount())) {
             po.setStatus(Integer.parseInt(PayStatusEnum.FROZEN.getCode()));
             po.setChannelResponse(dto.getChannelResponse());
             payManager.updateById(po);
@@ -276,6 +280,37 @@ public class PayServiceImpl implements PayService {
     }
 
     /**
+     * 统一金额精度：强制两位小数，存在更高精度尾数时拒绝而不是静默进位。
+     * @param amount 原始金额
+     * @return 两位小数金额
+     * @throws BizException 金额尾数超过两位时
+     */
+    private static BigDecimal normalizeAmount(BigDecimal amount) {
+        try {
+            return amount.setScale(AMOUNT_SCALE, RoundingMode.UNNECESSARY);
+        }
+        catch (ArithmeticException e) {
+            throw new BizException(PayCodeEnum.PAY_AMOUNT_SCALE_INVALID);
+        }
+    }
+
+    /**
+     * 判断回调金额是否与库内金额一致，回调金额存在超过两位小数的尾数时视为不一致。
+     * @param callbackAmount 回调金额
+     * @param storedAmount 库内金额
+     * @return true 表示金额一致
+     */
+    private static boolean matchesAmount(BigDecimal callbackAmount, BigDecimal storedAmount) {
+        try {
+            return callbackAmount.setScale(AMOUNT_SCALE, RoundingMode.UNNECESSARY)
+                .compareTo(storedAmount) == 0;
+        }
+        catch (ArithmeticException e) {
+            return false;
+        }
+    }
+
+    /**
      * 创建退款。先原子抢占支付单为 REFUNDING（并发退款影响 0 行直接拒绝），再校验累计退款上限，
      * 成功后通过 Feign 通知 order 服务推进退款状态；部分退款未退满时支付单回到 SUCCESS 允许继续退款。
      * @param dto 退款创建DTO
@@ -288,10 +323,11 @@ public class PayServiceImpl implements PayService {
         if (payTx == null) {
             throw new BizException(PayCodeEnum.PAY_NOT_FOUND);
         }
+        BigDecimal refundAmount = normalizeAmount(dto.getAmount());
         if (payTx.getStatus() != Integer.parseInt(PayStatusEnum.SUCCESS.getCode())) {
             throw new BizException(PayCodeEnum.PAY_NOT_SUCCESS);
         }
-        if (dto.getAmount().compareTo(payTx.getAmount()) > 0) {
+        if (refundAmount.compareTo(payTx.getAmount()) > 0) {
             throw new BizException(PayCodeEnum.REFUND_AMOUNT_EXCEED);
         }
 
@@ -307,7 +343,7 @@ public class PayServiceImpl implements PayService {
 
         // 累计校验：已占用退款（在途 + 成功）+ 本次金额不得超过支付金额，超限回滚抢占状态
         BigDecimal committedAmount = payRefundMapper.sumCommittedAmount(paymentNo);
-        if (dto.getAmount().add(committedAmount).compareTo(payTx.getAmount()) > 0) {
+        if (refundAmount.add(committedAmount).compareTo(payTx.getAmount()) > 0) {
             payTransactionMapper.updateStatusIf(paymentNo, refundingCode, successCode);
             throw new BizException(PayCodeEnum.REFUND_EXCEED);
         }
@@ -315,7 +351,7 @@ public class PayServiceImpl implements PayService {
         PayRefundPO refund = new PayRefundPO();
         refund.setRefundNo(refundNo);
         refund.setPaymentNo(paymentNo);
-        refund.setAmount(dto.getAmount());
+        refund.setAmount(refundAmount);
         refund.setReason(dto.getReason());
         refund.setStatus(Integer.parseInt(RefundStatusEnum.PENDING.getCode()));
         refund.setIdempotencyKey(UUID.randomUUID().toString());
@@ -334,7 +370,7 @@ public class PayServiceImpl implements PayService {
 
         String refundTradeNo;
         try {
-            refundTradeNo = payGateway.refund(paymentNo, refundNo, dto.getAmount(), dto.getReason());
+            refundTradeNo = payGateway.refund(paymentNo, refundNo, refundAmount, dto.getReason());
         }
         catch (Exception e) {
             refund.setStatus(Integer.parseInt(RefundStatusEnum.FAILED.getCode()));
@@ -358,7 +394,7 @@ public class PayServiceImpl implements PayService {
             notifyOrderRefund(orderId, refund);
         }
         log.info("refund success, refundNo={}, paymentNo={}", refundNo, paymentNo);
-        return new RefundVO(refundNo, paymentNo, dto.getAmount(), refund.getStatus());
+        return new RefundVO(refundNo, paymentNo, refundAmount, refund.getStatus());
     }
 
     /**

@@ -39,6 +39,7 @@ import com.yirancrazy.minimall.api.feign.OrderFeignClient;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.result.Result;
+import com.yirancrazy.minimall.pay.constant.PayCodeEnum;
 import com.yirancrazy.minimall.pay.dto.PayCallbackDTO;
 import com.yirancrazy.minimall.pay.dto.PayPageDTO;
 import com.yirancrazy.minimall.pay.dto.PayStatementDTO;
@@ -151,6 +152,31 @@ public class PayServiceImplTest {
     public void createPayment_rejects_amount_mismatch() {
         assertThrows(BizException.class,
             () -> service.createPayment("ORDER100", 1L, 1L, new BigDecimal("0.01"), null));
+    }
+
+    /**
+     * 验证落库支付金额统一为两位小数：尾数全为 0 的高精度金额被规范化为 scale=2。
+     */
+    @Test
+    public void createPayment_normalizes_amount_scale() {
+        service.createPayment("ORDER100", 1L, 1L, new BigDecimal("99.990"), null);
+
+        ArgumentCaptor<PayTransactionPO> cap = ArgumentCaptor.forClass(PayTransactionPO.class);
+        verify(manager).save(cap.capture());
+        assertEquals(2, cap.getValue().getAmount().scale());
+        assertEquals(0, new BigDecimal("99.99").compareTo(cap.getValue().getAmount()));
+    }
+
+    /**
+     * 验证创建支付拒绝超过两位小数的金额，避免按分存储时静默进位。
+     */
+    @Test
+    public void createPayment_rejects_more_than_two_decimals() {
+        BizException ex = assertThrows(BizException.class,
+            () -> service.createPayment("ORDER100", 1L, 1L, new BigDecimal("99.991"), null));
+
+        assertEquals(PayCodeEnum.PAY_AMOUNT_MISMATCH.getCode(), ex.getCode());
+        verify(manager, never()).save(any(PayTransactionPO.class));
     }
 
     /**
@@ -563,6 +589,27 @@ public class PayServiceImplTest {
         com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO dto =
             new com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO(1L, new BigDecimal("100.00"), "test");
         assertThrows(BizException.class, () -> service.createRefund(dto));
+    }
+
+    /**
+     * 验证 createRefund 拒绝超过两位小数的退款金额，避免按分存储时静默进位。
+     */
+    @Test
+    public void createRefund_rejects_more_than_two_decimals() {
+        PayTransactionPO payTx = new PayTransactionPO();
+        payTx.setId(1L);
+        payTx.setStatus(2); // SUCCESS
+        payTx.setPaymentNo("PAY123");
+        payTx.setAmount(new BigDecimal("50.00"));
+        payTx.setOrderNo("100");
+        when(manager.getById(1L)).thenReturn(payTx);
+
+        com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO dto =
+            new com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO(1L, new BigDecimal("10.005"), "test");
+
+        BizException ex = assertThrows(BizException.class, () -> service.createRefund(dto));
+        assertEquals(PayCodeEnum.PAY_AMOUNT_SCALE_INVALID.getCode(), ex.getCode());
+        verify(payGateway, never()).refund(anyString(), anyString(), any(BigDecimal.class), anyString());
     }
 
     /**

@@ -1,5 +1,6 @@
 package com.yirancrazy.minimall.auth.service.impl;
 
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
@@ -11,11 +12,13 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.security.crypto.bcrypt.BCrypt;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -192,8 +195,8 @@ class AuthServiceImplTest {
         when(claims.getSubject()).thenReturn("1");
         when(claims.get("jti", String.class)).thenReturn("abc");
         when(jwtUtil.parse("refresh-jwt")).thenReturn(claims);
-        // 直查索引键 refresh:1:abc 命中，不再 KEYS 全表扫描
-        when(valueOperations.get("refresh:1:abc")).thenReturn("refresh-jwt");
+        // 索引键 refresh:1:abc 命中且原子比较删除成功，才允许轮换
+        when(redisTemplate.execute(any(RedisScript.class), anyList(), any())).thenReturn(1L);
         when(tokenBlacklistManager.save(any())).thenReturn(true);
         when(jwtUtil.sign(anyLong(), anyString(), anyString(), anyLong(), anyString())).thenReturn("new-access");
         when(jwtUtil.sign(anyLong(), anyString(), anyString(), anyLong(), anyString(), anyLong()))
@@ -208,21 +211,21 @@ class AuthServiceImplTest {
 
         assertNotNull(vo.getAccessToken());
         assertNotNull(vo.getRefreshToken());
-        verify(valueOperations).get("refresh:1:abc");
-        verify(redisTemplate).delete("refresh:1:abc");
+        verify(redisTemplate).execute(any(RedisScript.class), eq(List.of("refresh:1:abc")), eq("refresh-jwt"));
         verify(tokenBlacklistManager).save(any());
     }
 
     @Test
-    void refreshToken_stored_value_mismatch_throws() {
+    void refreshToken_atomic_delete_lost_throws() {
         Claims claims = mock(Claims.class);
         when(claims.getSubject()).thenReturn("1");
         when(claims.get("jti", String.class)).thenReturn("abc");
         when(jwtUtil.parse("refresh-jwt")).thenReturn(claims);
-        // 索引键存在但值不匹配（旧 token 重放防御），视为无效
-        when(valueOperations.get("refresh:1:abc")).thenReturn("another-token");
+        // 比较并删除返回 0：键不存在或值不匹配（旧 token 重放），视为无效
+        when(redisTemplate.execute(any(RedisScript.class), anyList(), any())).thenReturn(0L);
 
         assertThrows(BizException.class, () -> authService.refreshToken("refresh-jwt"));
+        verify(jwtUtil, never()).sign(anyLong(), anyString(), anyString(), anyLong(), anyString());
     }
 
     @Test

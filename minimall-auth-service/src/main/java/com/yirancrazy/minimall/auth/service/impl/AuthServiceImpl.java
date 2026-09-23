@@ -1,10 +1,12 @@
 package com.yirancrazy.minimall.auth.service.impl;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.stereotype.Service;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
@@ -57,6 +59,10 @@ public class AuthServiceImpl implements AuthService {
     // 登录失败锁定窗口：10 分钟内累计 5 次失败后临时锁定
     private static final long LOGIN_FAIL_TTL_SECONDS = 600L;
     private static final long LOGIN_FAIL_THRESHOLD = 5L;
+    // 刷新令牌轮换必须原子：比较并删除成功者才能签发新令牌，否则并发重放会各自换出令牌
+    private static final RedisScript<Long> COMPARE_AND_DELETE_REFRESH = RedisScript.of(
+        "if redis.call('GET', KEYS[1]) == ARGV[1] then return redis.call('DEL', KEYS[1]) else return 0 end",
+        Long.class);
 
     private final AuthUserManager authUserManager;
     private final AuthRoleManager authRoleManager;
@@ -164,11 +170,10 @@ public class AuthServiceImpl implements AuthService {
         Long userId = Long.parseLong(c.getSubject());
         String jti = c.get("jti", String.class);
         String key = REFRESH_KEY_PREFIX + userId + ":" + jti;
-        String stored = redisTemplate.opsForValue().get(key);
-        if (stored == null || !refreshToken.equals(stored)) {
+        Long deleted = redisTemplate.execute(COMPARE_AND_DELETE_REFRESH, List.of(key), refreshToken);
+        if (deleted == null || deleted == 0L) {
             throw new BizException(AuthCodeEnum.REFRESH_TOKEN_INVALID);
         }
-        redisTemplate.delete(key);
         revokeToken(jti, userId, "refresh_rotated");
 
         AuthUserPO po = authUserManager.getById(userId);

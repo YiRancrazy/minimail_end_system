@@ -25,7 +25,7 @@ import com.yirancrazy.minimall.gateway.config.JwtVerifier;
 /**
  * @Author: yirancrazy@gmail.com
  * @Description: AuthGlobalFilter，网关全局安全过滤器，负责JWT鉴权、内部接口隔离、写接口幂等键校验和敏感接口防重放。
- * @Version: 2.0
+ * @Version: 2.1
  * @DateTime: 2026/08/04
  **/
 @Slf4j
@@ -51,10 +51,16 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
         "/actuator/health"
     );
 
+    // 匿名可读的前缀白名单：商品评价列表与统计供商品详情页未登录访问
+    private static final Set<String> WHITELIST_PREFIXES = Set.of(
+        "/api/v1/goods/comments"
+    );
+
     private static final Map<String, Set<String>> ROLE_PATHS = Map.of(
         "/api/v1/user", Set.of("USER"),
         "/api/v1/merchant", Set.of("MERCHANT"),
-        "/api/v1/platform", Set.of("PLATFORM")
+        "/api/v1/platform", Set.of("PLATFORM"),
+        "/api/v1/notify", Set.of("USER")
     );
 
     private static final String ROLE_MERCHANT = "MERCHANT";
@@ -106,7 +112,7 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
         String path = exchange.getRequest().getPath().value();
         String method = exchange.getRequest().getMethod().name();
 
-        if (WHITELIST.contains(path)) {
+        if (isWhitelisted(path)) {
             return chain.filter(exchange);
         }
 
@@ -279,6 +285,24 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
         for (Map.Entry<String, Set<String>> entry : ROLE_PATHS.entrySet()) {
             if (path.startsWith(entry.getKey())) {
                 return entry.getValue().contains(role);
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 判断路径是否无需认证：精确白名单命中，或落在匿名可读前缀下。
+     *
+     * @param path 请求路径
+     * @return true如果无需认证
+     */
+    private boolean isWhitelisted(String path) {
+        if (WHITELIST.contains(path)) {
+            return true;
+        }
+        for (String prefix : WHITELIST_PREFIXES) {
+            if (path.equals(prefix) || path.startsWith(prefix + "/")) {
+                return true;
             }
         }
         return false;

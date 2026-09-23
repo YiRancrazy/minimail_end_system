@@ -8,7 +8,7 @@ import org.springframework.context.annotation.Configuration;
 /**
  * @Author: yirancrazy@gmail.com
  * @Description: Router配置类，配置Router相关 Bean
- * @Version: 1.2
+ * @Version: 1.3
  * @DateTime: 2026/08/04
  */
 @Configuration
@@ -40,6 +40,11 @@ public class RouterConfig {
                 .uri("lb://minimall-goods-service"))
             .route("cart-service", r -> r.path("/api/v1/user/cart/**")
                 .uri("lb://minimall-cart-service"))
+            .route("platform-summary-service", r -> r.path(
+                "/api/v1/platform/orders/summary",
+                "/api/v1/platform/orders/export",
+                "/api/v1/platform/pay/reconciliation/export")
+                .uri("lb://minimall-platform-service"))
             .route("order-service", r -> r.path(
                 "/api/v1/user/orders/**",
                 "/api/v1/merchant/orders/**",
@@ -61,6 +66,8 @@ public class RouterConfig {
                 "/api/v1/merchant/notify/**",
                 "/api/v1/platform/notify/**",
                 "/api/v1/platform/complaints/**",
+                "/api/v1/user/preferences/**",
+                "/api/v1/user/complaints/**",
                 "/api/v1/user/comments/**",
                 "/api/v1/merchant/comments/**",
                 "/api/v1/platform/comments/**",

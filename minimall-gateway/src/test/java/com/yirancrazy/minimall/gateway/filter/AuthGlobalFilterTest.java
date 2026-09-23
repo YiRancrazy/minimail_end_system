@@ -17,6 +17,7 @@ import org.springframework.mock.web.server.MockServerWebExchange;
 import org.springframework.web.server.ServerWebExchange;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
@@ -69,6 +70,35 @@ class AuthGlobalFilterTest {
         StepVerifier.create(filter.filter(ex, e -> Mono.empty()))
             .verifyComplete();
         assertEquals(HttpStatus.UNAUTHORIZED, ex.getResponse().getStatusCode());
+    }
+
+    @Test
+    void anonymous_goods_comments_are_whitelisted() {
+        ServerWebExchange ex = MockServerWebExchange.from(
+            MockServerHttpRequest.get("/api/v1/goods/comments/1001"));
+        StepVerifier.create(filter.filter(ex, e -> Mono.empty())).verifyComplete();
+        assertNull(ex.getResponse().getStatusCode());
+    }
+
+    @Test
+    void user_token_can_reach_notify_endpoint() {
+        String token = buildToken("42", "USER", "jti-sse");
+        when(redisTemplate.hasKey(anyString())).thenReturn(Mono.just(false));
+
+        ServerWebExchange ex = MockServerWebExchange.from(
+            MockServerHttpRequest.get("/api/v1/notify/sse")
+                .header("Authorization", "Bearer " + token));
+        StepVerifier.create(filter.filter(ex, e -> Mono.empty())).verifyComplete();
+        assertEquals("42", ex.getRequest().getHeaders().getFirst("X-User-Id"));
+    }
+
+    @Test
+    void merchant_token_cannot_reach_notify_endpoint() {
+        ServerWebExchange ex = MockServerWebExchange.from(
+            MockServerHttpRequest.get("/api/v1/notify/sse")
+                .header("Authorization", "Bearer " + token("200", "MERCHANT")));
+        StepVerifier.create(filter.filter(ex, e -> Mono.empty())).verifyComplete();
+        assertEquals(HttpStatus.FORBIDDEN, ex.getResponse().getStatusCode());
     }
 
     @Test

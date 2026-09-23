@@ -9,21 +9,30 @@ import org.springframework.cloud.gateway.route.Route;
 import org.springframework.cloud.gateway.route.RouteLocator;
 import org.springframework.cloud.gateway.route.builder.RouteLocatorBuilder;
 import org.springframework.context.support.GenericApplicationContext;
+import org.springframework.mock.http.server.reactive.MockServerHttpRequest;
+import org.springframework.mock.web.server.MockServerWebExchange;
+import org.springframework.web.server.ServerWebExchange;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import reactor.core.publisher.Mono;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: RouterConfig 的单元测试类，校验网关路由走服务发现且不暴露内部 ID 服务。
- * @Version: 1.0
+ * @Description: RouterConfig 的单元测试类，校验网关路由走服务发现、路径归属正确且不暴露内部 ID 服务。
+ * @Version: 2.0
  * @DateTime: 2026/09/23
  **/
 class RouterConfigTest {
 
+    private static final int EXPECTED_ROUTES = 11;
+
     private GenericApplicationContext context;
 
     private RouteLocator routeLocator;
+
+    private List<Route> routes;
 
     @BeforeEach
     void setUp() {
@@ -31,6 +40,8 @@ class RouterConfigTest {
         context.registerBean(PathRoutePredicateFactory.class);
         context.refresh();
         routeLocator = new RouterConfig().routeLocator(new RouteLocatorBuilder(context));
+        routes = routeLocator.getRoutes().collectList().block();
+        assertNotNull(routes);
     }
 
     @AfterEach
@@ -40,19 +51,45 @@ class RouterConfigTest {
 
     @Test
     void routes_target_backends_through_service_discovery() {
-        List<Route> routes = routeLocator.getRoutes().collectList().block();
-        assertNotNull(routes);
-        assertEquals(10, routes.size());
+        assertEquals(EXPECTED_ROUTES, routes.size());
         for (Route route : routes) {
-            assertEquals("lb://minimall-" + route.getId(), route.getUri().toString(),
-                "route " + route.getId() + " must be load balanced");
+            assertTrue(route.getUri().toString().startsWith("lb://minimall-"),
+                "route " + route.getId() + " must be load balanced: " + route.getUri());
         }
     }
 
     @Test
     void internal_id_service_is_not_exposed() {
-        List<String> routeIds = routeLocator.getRoutes().map(Route::getId).collectList().block();
-        assertNotNull(routeIds);
-        assertFalse(routeIds.contains("id-service"), "internal id service must not be routed: " + routeIds);
+        assertFalse(routeIds().contains("id-service"), "internal id service must not be routed");
+    }
+
+    @Test
+    void notify_paths_covered_by_controller_mapping() {
+        assertEquals("notify-service", routeIdFor("/api/v1/goods/comments/1"));
+        assertEquals("notify-service", routeIdFor("/api/v1/user/preferences"));
+        assertEquals("notify-service", routeIdFor("/api/v1/user/complaints"));
+    }
+
+    @Test
+    void platform_summary_route_shadows_order_and_pay_routes() {
+        assertEquals("platform-summary-service", routeIdFor("/api/v1/platform/orders/summary"));
+        assertEquals("platform-summary-service", routeIdFor("/api/v1/platform/orders/export"));
+        assertEquals("platform-summary-service", routeIdFor("/api/v1/platform/pay/reconciliation/export"));
+        assertTrue(routeIds().indexOf("platform-summary-service") < routeIds().indexOf("order-service"),
+            "summary route must be matched before the broad order route");
+    }
+
+    private List<String> routeIds() {
+        return routes.stream().map(Route::getId).toList();
+    }
+
+    private String routeIdFor(String path) {
+        ServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.get(path));
+        for (Route route : routes) {
+            if (Boolean.TRUE.equals(Mono.from(route.getPredicate().apply(exchange)).block())) {
+                return route.getId();
+            }
+        }
+        return null;
     }
 }

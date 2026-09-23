@@ -34,7 +34,7 @@ class GatewayRouteContextTest {
     void context_assembles_route_locator() {
         List<Route> routes = routeLocator.getRoutes().collectList().block();
         assertNotNull(routes);
-        assertEquals(10, routes.size());
+        assertEquals(11, routes.size());
         assertTrue(routes.stream().allMatch(route -> route.getUri().getScheme().equals("lb")),
             "every route must be resolved by the load balancer: " + routes);
     }

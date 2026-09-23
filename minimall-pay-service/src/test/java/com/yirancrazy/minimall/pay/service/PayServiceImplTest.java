@@ -35,6 +35,7 @@ import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.yirancrazy.minimall.api.dto.order.OrderPaySnapshotDTO;
+import com.yirancrazy.minimall.api.feign.IdFeignClient;
 import com.yirancrazy.minimall.api.feign.OrderFeignClient;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
@@ -68,6 +69,7 @@ public class PayServiceImplTest {
     private PayGateway payGateway;
     private PayRefundMapper payRefundMapper;
     private PayTransactionMapper payTransactionMapper;
+    private IdFeignClient idFeignClient;
     private OrderFeignClient orderFeignClient;
     private PayServiceImpl service;
 
@@ -86,7 +88,9 @@ public class PayServiceImplTest {
         payGateway = mock(PayGateway.class);
         payRefundMapper = mock(PayRefundMapper.class);
         payTransactionMapper = mock(PayTransactionMapper.class);
+        idFeignClient = mock(IdFeignClient.class);
         orderFeignClient = mock(OrderFeignClient.class);
+        lenient().when(idFeignClient.nextId(anyString())).thenReturn(Result.success(90001L));
         lenient().when(orderFeignClient.paySnapshot(anyString())).thenAnswer(invocation -> {
             String orderNo = invocation.getArgument(0);
             if ("ORDER100".equals(orderNo)) {
@@ -118,7 +122,7 @@ public class PayServiceImplTest {
             return true;
         }).when(manager).save(any(PayTransactionPO.class));
         service = new PayServiceImpl(manager, payGateway, payRefundMapper, payTransactionMapper,
-            orderFeignClient);
+            idFeignClient, orderFeignClient);
     }
 
     /**
@@ -176,6 +180,20 @@ public class PayServiceImplTest {
             () -> service.createPayment("ORDER100", 1L, 1L, new BigDecimal("99.991"), null));
 
         assertEquals(PayCodeEnum.PAY_AMOUNT_MISMATCH.getCode(), ex.getCode());
+        verify(manager, never()).save(any(PayTransactionPO.class));
+    }
+
+    /**
+     * 验证 ID 服务不可用时创建支付直接失败，不回退时间戳+随机数生成支付单号。
+     */
+    @Test
+    public void createPayment_fails_when_id_service_unavailable() {
+        when(idFeignClient.nextId(anyString())).thenReturn(Result.fail("20000", "ID服务不可用"));
+
+        BizException ex = assertThrows(BizException.class,
+            () -> service.createPayment("ORDER100", 1L, 1L, new BigDecimal("99.99"), null));
+
+        assertEquals(PayCodeEnum.PAY_ID_GENERATE_FAIL.getCode(), ex.getCode());
         verify(manager, never()).save(any(PayTransactionPO.class));
     }
 
@@ -644,6 +662,28 @@ public class PayServiceImplTest {
 
         BizException ex = assertThrows(BizException.class, () -> service.createRefund(dto));
         assertEquals(PayCodeEnum.PAY_AMOUNT_SCALE_INVALID.getCode(), ex.getCode());
+        verify(payGateway, never()).refund(anyString(), anyString(), any(BigDecimal.class), anyString());
+    }
+
+    /**
+     * 验证 ID 服务不可用时创建退款直接失败，不回退时间戳+随机数生成退款单号。
+     */
+    @Test
+    public void createRefund_fails_when_id_service_unavailable() {
+        PayTransactionPO payTx = new PayTransactionPO();
+        payTx.setId(1L);
+        payTx.setStatus(2); // SUCCESS
+        payTx.setPaymentNo("PAY123");
+        payTx.setAmount(new BigDecimal("50.00"));
+        payTx.setOrderNo("100");
+        when(manager.getById(1L)).thenReturn(payTx);
+        when(idFeignClient.nextId(anyString())).thenReturn(null);
+
+        com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO dto =
+            new com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO(1L, new BigDecimal("10.00"), "test");
+
+        BizException ex = assertThrows(BizException.class, () -> service.createRefund(dto));
+        assertEquals(PayCodeEnum.PAY_ID_GENERATE_FAIL.getCode(), ex.getCode());
         verify(payGateway, never()).refund(anyString(), anyString(), any(BigDecimal.class), anyString());
     }
 

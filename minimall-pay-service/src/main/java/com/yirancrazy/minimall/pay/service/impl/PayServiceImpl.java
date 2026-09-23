@@ -12,6 +12,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.api.dto.order.OrderPaySnapshotDTO;
 import com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO;
+import com.yirancrazy.minimall.api.feign.IdFeignClient;
 import com.yirancrazy.minimall.api.feign.OrderFeignClient;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CommonCode;
@@ -64,15 +65,18 @@ public class PayServiceImpl implements PayService {
     private final PayGateway payGateway;
     private final PayRefundMapper payRefundMapper;
     private final PayTransactionMapper payTransactionMapper;
+    private final IdFeignClient idFeignClient;
     private final OrderFeignClient orderFeignClient;
 
     public PayServiceImpl(PayManager payManager, PayGateway payGateway,
                           PayRefundMapper payRefundMapper, PayTransactionMapper payTransactionMapper,
+                          IdFeignClient idFeignClient,
                           OrderFeignClient orderFeignClient) {
         this.payManager = payManager;
         this.payGateway = payGateway;
         this.payRefundMapper = payRefundMapper;
         this.payTransactionMapper = payTransactionMapper;
+        this.idFeignClient = idFeignClient;
         this.orderFeignClient = orderFeignClient;
     }
 
@@ -276,7 +280,7 @@ public class PayServiceImpl implements PayService {
     }
 
     private String generatePaymentNo() {
-        return PAYMENT_NO_PREFIX + System.currentTimeMillis() + (int)(Math.random() * 1000);
+        return PAYMENT_NO_PREFIX + requireGlobalId("PAY");
     }
 
     /**
@@ -419,7 +423,28 @@ public class PayServiceImpl implements PayService {
     }
 
     private String generateRefundNo() {
-        return "REFUND" + System.currentTimeMillis() + (int)(Math.random() * 1000);
+        return "REFUND" + requireGlobalId("REFUND");
+    }
+
+    /**
+     * 调用 ID 服务下发全局唯一 ID；不可用或返回失败时直接抛业务异常，
+     * 不回退时间戳+随机数，避免支付/退款单号碰撞。
+     * @param bizTag 业务标签
+     * @return 全局唯一 ID
+     * @throws BizException ID 服务不可用或返回失败时
+     */
+    private Long requireGlobalId(String bizTag) {
+        try {
+            Result<Long> result = idFeignClient.nextId(bizTag);
+            if (result != null && CommonCode.SUCCESS.equals(result.getCode()) && result.getData() != null) {
+                return result.getData();
+            }
+            log.error("id-service returned failure, bizTag={}, result={}", bizTag, result);
+        }
+        catch (Exception e) {
+            log.error("id-service nextId failed, bizTag={}", bizTag, e);
+        }
+        throw new BizException(PayCodeEnum.PAY_ID_GENERATE_FAIL);
     }
 
     /**

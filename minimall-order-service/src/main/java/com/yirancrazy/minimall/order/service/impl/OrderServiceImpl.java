@@ -229,7 +229,7 @@ public class OrderServiceImpl implements OrderService {
             throw new BizException(OrderCodeEnum.ORDER_ITEMS_EMPTY);
         }
 
-        String orderGroupNo = "OG" + System.currentTimeMillis() + (int)(Math.random() * 1000);
+        String orderGroupNo = generateOrderGroupNo();
         java.util.Map<Long, List<OrderItemPO>> itemsByMerchant = new java.util.LinkedHashMap<>();
 
         for (OrderCheckoutItemDTO item : items) {
@@ -829,29 +829,36 @@ public class OrderServiceImpl implements OrderService {
      * @return 业务单号
      */
     private String generateOrderNo() {
-        Long id = nextOrderId();
-        if (id != null) {
-            return "OD" + id;
-        }
-        log.warn("id-service unavailable, fallback to timestamp-based order no");
-        return "OD" + System.currentTimeMillis() + (int) (Math.random() * 1000);
+        return "OD" + requireGlobalId("ORDER");
     }
 
     /**
-     * 调用 Id 服务下发全局唯一 ID，服务异常或返回失败时返回 null。
-     * @return 全局唯一 ID，不可用时返回 null
+     * 生成订单组业务号（多商家拆单共享同一组号）。
+     * @return 订单组业务号
      */
-    private Long nextOrderId() {
+    private String generateOrderGroupNo() {
+        return "OG" + requireGlobalId("ORDER_GROUP");
+    }
+
+    /**
+     * 调用 ID 服务下发全局唯一 ID；不可用或返回失败时直接抛业务异常，
+     * 不回退时间戳+随机数，避免业务号碰撞导致订单/支付串号。
+     * @param bizTag 业务标签
+     * @return 全局唯一 ID
+     * @throws BizException ID 服务不可用或返回失败时
+     */
+    private Long requireGlobalId(String bizTag) {
         try {
-            Result<Long> result = idFeignClient.nextId("ORDER");
-            if (result != null && "00000".equals(result.getCode()) && result.getData() != null) {
+            Result<Long> result = idFeignClient.nextId(bizTag);
+            if (result != null && CommonCode.SUCCESS.equals(result.getCode()) && result.getData() != null) {
                 return result.getData();
             }
+            log.error("id-service returned failure, bizTag={}, result={}", bizTag, result);
         }
         catch (Exception e) {
-            log.warn("id-service nextId failed", e);
+            log.error("id-service nextId failed, bizTag={}", bizTag, e);
         }
-        return null;
+        throw new BizException(OrderCodeEnum.ORDER_ID_GENERATE_FAIL);
     }
 
     /**

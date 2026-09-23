@@ -19,6 +19,7 @@ import com.yirancrazy.minimall.api.feign.IdFeignClient;
 import com.yirancrazy.minimall.api.feign.OrderFeignClient;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
+import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.pay.dto.PayCallbackDTO;
 import com.yirancrazy.minimall.pay.dto.PayPageDTO;
 import com.yirancrazy.minimall.pay.entity.PayTransactionPO;
@@ -78,6 +79,7 @@ class PayServiceImplIntegrationTest {
 
     @BeforeEach
     void setUp() {
+        lenient().when(idFeignClient.nextId(anyString())).thenReturn(Result.success(80001L));
         lenient().when(alipayGateway.createPagePayment(anyString(), any(), anyString(), anyString()))
             .thenReturn("<form action=\"http://pay.url/test\"></form>");
         lenient().when(alipayGateway.refund(anyString(), anyString(), any(), anyString()))

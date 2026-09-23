@@ -15,6 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doAnswer;
@@ -1162,6 +1163,20 @@ public class OrderServiceImplTest {
     }
 
     /**
+     * 验证 ID 服务不可用时结算直接失败，不回退时间戳+随机数生成订单组号。
+     */
+    @Test
+    public void checkout_fails_when_id_service_unavailable() {
+        when(idFeignClient.nextId(anyString())).thenReturn(Result.fail("20000", "ID服务不可用"));
+        List<OrderCheckoutItemDTO> items = List.of(new OrderCheckoutItemDTO(100L, 1));
+
+        BizException ex = assertThrows(BizException.class, () -> service.checkout(1L, items));
+
+        assertEquals(OrderCodeEnum.ORDER_ID_GENERATE_FAIL.getCode(), ex.getCode());
+        verify(manager, never()).save(any(OrderPO.class));
+    }
+
+    /**
      * 验证结算时商品快照缺失抛出异常。
      */
     @Test
@@ -1368,6 +1383,19 @@ public class OrderServiceImplTest {
         assertEquals(0, new BigDecimal("19.80").compareTo(po.getTotalAmount()));
         assertEquals(0, new BigDecimal("19.80").compareTo(po.getPayAmount()));
         assertNotNull(po.getPayExpireAt());
+    }
+
+    /**
+     * 验证 ID 服务不可用时下单直接失败，不回退时间戳+随机数生成订单号。
+     */
+    @Test
+    public void create_fails_when_id_service_unavailable() {
+        when(idFeignClient.nextId(anyString())).thenReturn(null);
+
+        BizException ex = assertThrows(BizException.class, () -> service.create(1L, 100L, 2));
+
+        assertEquals(OrderCodeEnum.ORDER_ID_GENERATE_FAIL.getCode(), ex.getCode());
+        verify(manager, never()).save(any(OrderPO.class));
     }
 
     /**

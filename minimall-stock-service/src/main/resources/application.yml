@@ -31,3 +31,17 @@ spring:
   mvc:
     pathmatch:
       matching-strategy: ant_path_matcher
+seata:
+  enabled: true
+  application-id: minimall-stock-service
+  tx-service-group: default_tx_group
+  enable-auto-data-source-proxy: true
+  service:
+    vgroup-mapping:
+      default_tx_group: default
+    grouplist:
+      default: ${SEATA_HOST:127.0.0.1}:${SEATA_PORT:8091}
+  registry:
+    type: file
+  config:
+    type: file

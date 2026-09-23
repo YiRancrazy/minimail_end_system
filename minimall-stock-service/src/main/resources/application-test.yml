@@ -20,3 +20,5 @@ minimall:
 feign:
   sentinel:
     enabled: false
+seata:
+  enabled: false

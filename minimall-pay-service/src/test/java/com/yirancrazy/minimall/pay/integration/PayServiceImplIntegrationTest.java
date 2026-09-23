@@ -92,10 +92,20 @@ class PayServiceImplIntegrationTest {
         Long payId = payService.createPayment("ORD-INT-1", 100L, 200L, new BigDecimal("99.99"), null);
         assertNotNull(payId);
 
-        PayTransactionPO po = payService.getByOrderNo("ORD-INT-1");
+        PayTransactionPO po = payService.getByOrderNo("ORD-INT-1", 100L);
         assertNotNull(po);
         assertEquals(1, po.getStatus());
         assertEquals(0, new BigDecimal("99.99").compareTo(po.getAmount()));
+    }
+
+    /**
+     * 端到端：getByOrderNo 查询他人支付流水时按不存在处理。
+     */
+    @Test
+    void getByOrderNo_rejects_other_user() {
+        payService.createPayment("ORD-INT-OWNER", 100L, 200L, new BigDecimal("19.99"), null);
+
+        assertThrows(BizException.class, () -> payService.getByOrderNo("ORD-INT-OWNER", 999L));
     }
 
     /**
@@ -113,9 +123,10 @@ class PayServiceImplIntegrationTest {
     @Test
     void getPaymentParams_returns_persisted_fields() {
         payService.createPayment("ORD-INT-3", 1L, 2L, new BigDecimal("50.00"), null);
-        PayTransactionPO po = payService.getByOrderNo("ORD-INT-3");
+        PayTransactionPO po = payService.getByOrderNo("ORD-INT-3", 1L);
 
-        com.yirancrazy.minimall.pay.vo.PaymentParamsVO params = payService.getPaymentParams(po.getPaymentNo());
+        com.yirancrazy.minimall.pay.vo.PaymentParamsVO params =
+            payService.getPaymentParams(po.getPaymentNo(), 1L);
         assertNotNull(params);
         assertEquals(po.getPaymentNo(), params.getPaymentNo());
         assertEquals(0, new BigDecimal("50.00").compareTo(params.getAmount()));
@@ -127,6 +138,6 @@ class PayServiceImplIntegrationTest {
      */
     @Test
     void getByOrderNo_missing_throws_biz() {
-        assertThrows(BizException.class, () -> payService.getByOrderNo("ORD-INT-NOT-EXIST"));
+        assertThrows(BizException.class, () -> payService.getByOrderNo("ORD-INT-NOT-EXIST", 100L));
     }
 }

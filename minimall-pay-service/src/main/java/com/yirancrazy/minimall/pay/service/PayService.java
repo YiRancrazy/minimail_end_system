@@ -46,18 +46,20 @@ public interface PayService {
     RefundVO createRefund(RefundCreateDTO dto);
 
     /**
-     * 按订单号查询支付流水，不存在时抛出 PAY_NOT_FOUND。
+     * 按订单号查询支付流水，仅允许查询本人支付流水，不存在或非本人时抛出 PAY_NOT_FOUND。
      * @param orderNo 订单号
+     * @param userId 支付流水归属用户ID（来自可信 Header）
      * @return 支付流水实体
      */
-    PayTransactionPO getByOrderNo(String orderNo);
+    PayTransactionPO getByOrderNo(String orderNo, Long userId);
 
     /**
-     * 按支付单号查询支付参数，供前端调起渠道 SDK，不存在时抛出 PAY_NOT_FOUND。
+     * 按支付单号查询支付参数，供前端调起渠道 SDK，不存在或非本人时抛出 PAY_NOT_FOUND。
      * @param paymentNo 支付单号
+     * @param userId 支付流水归属用户ID（来自可信 Header）
      * @return 支付参数VO
      */
-    PaymentParamsVO getPaymentParams(String paymentNo);
+    PaymentParamsVO getPaymentParams(String paymentNo, Long userId);
 
     /**
      * 商家资金流水游标分页查询，merchantId 强制绑定，支持按状态与时间范围过滤。

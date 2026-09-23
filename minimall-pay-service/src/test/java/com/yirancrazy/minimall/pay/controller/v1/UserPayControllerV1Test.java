@@ -197,10 +197,22 @@ class UserPayControllerV1Test {
         po.setAmount(new BigDecimal("10.00"));
         po.setStatus(2);
         po.setChannel(1);
-        when(service.getByOrderNo("NO123")).thenReturn(po);
-        mockMvc.perform(get("/api/v1/user/pay/status/NO123"))
+        when(service.getByOrderNo("NO123", 1L)).thenReturn(po);
+        mockMvc.perform(get("/api/v1/user/pay/status/NO123").header("X-User-Id", "1"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.paymentNo").value("P001"));
+    }
+
+    /**
+     * 验证状态查询缺少可信身份头 X-User-Id 时拒绝请求，不落库查询他人支付流水。
+     */
+    @Test
+    void getStatus_without_user_header_rejected() throws Exception {
+        mockMvc.perform(get("/api/v1/user/pay/status/NO123"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.code").value("14003"));
+
+        verifyNoInteractions(service);
     }
 
     /**
@@ -210,9 +222,21 @@ class UserPayControllerV1Test {
     void getParams_returns_vo() throws Exception {
         PaymentParamsVO vo = new PaymentParamsVO();
         vo.setPaymentNo("P001");
-        when(service.getPaymentParams("P001")).thenReturn(vo);
-        mockMvc.perform(get("/api/v1/user/pay/params/P001"))
+        when(service.getPaymentParams("P001", 1L)).thenReturn(vo);
+        mockMvc.perform(get("/api/v1/user/pay/params/P001").header("X-User-Id", "1"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.paymentNo").value("P001"));
+    }
+
+    /**
+     * 验证支付参数查询缺少可信身份头 X-User-Id 时拒绝请求。
+     */
+    @Test
+    void getParams_without_user_header_rejected() throws Exception {
+        mockMvc.perform(get("/api/v1/user/pay/params/P001"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.code").value("14003"));
+
+        verifyNoInteractions(service);
     }
 }

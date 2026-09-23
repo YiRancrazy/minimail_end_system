@@ -428,12 +428,22 @@ public class PayServiceImpl implements PayService {
      * @return 支付流水实体
      */
     @Override
-    public PayTransactionPO getByOrderNo(String orderNo) {
+    public PayTransactionPO getByOrderNo(String orderNo, Long userId) {
         PayTransactionPO po = latestByOrderNo(orderNo);
-        if (po == null) {
+        if (po == null || !ownedBy(po, userId)) {
             throw new BizException(PayCodeEnum.PAY_NOT_FOUND);
         }
         return po;
+    }
+
+    /**
+     * 校验支付流水归属：userId 与库内归属不一致时按支付单不存在处理，避免泄露他人支付单存在性。
+     * @param po 支付流水实体
+     * @param userId 当前登录用户ID
+     * @return true 表示归属一致
+     */
+    private static boolean ownedBy(PayTransactionPO po, Long userId) {
+        return po.getUserId() != null && po.getUserId().equals(userId);
     }
 
     /**
@@ -491,10 +501,10 @@ public class PayServiceImpl implements PayService {
      * @return 支付参数VO
      */
     @Override
-    public PaymentParamsVO getPaymentParams(String paymentNo) {
+    public PaymentParamsVO getPaymentParams(String paymentNo, Long userId) {
         PayTransactionPO po = payManager.getOne(
             Wrappers.lambdaQuery(PayTransactionPO.class).eq(PayTransactionPO::getPaymentNo, paymentNo));
-        if (po == null) {
+        if (po == null || !ownedBy(po, userId)) {
             throw new BizException(PayCodeEnum.PAY_NOT_FOUND);
         }
         String payForm = payGateway.createPagePayment(

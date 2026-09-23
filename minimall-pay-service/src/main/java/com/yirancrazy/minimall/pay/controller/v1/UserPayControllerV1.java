@@ -97,21 +97,25 @@ public class UserPayControllerV1 {
     /**
      * 按订单号查询支付流水状态。
      * @param orderNo 订单号
+     * @param userId 当前登录用户ID（来自可信 Header）
      * @return 支付流水VO
      */
     @GetMapping("/status/{orderNo}")
-    public Result<PayTransactionVO> getStatus(@PathVariable("orderNo") String orderNo) {
-        return Result.success(PayTransactionVO.from(payService.getByOrderNo(orderNo)));
+    public Result<PayTransactionVO> getStatus(@PathVariable("orderNo") String orderNo,
+                                              @RequestHeader("X-User-Id") Long userId) {
+        return Result.success(PayTransactionVO.from(payService.getByOrderNo(orderNo, userId)));
     }
 
     /**
      * 按支付单号查询支付参数，供前端调起渠道 SDK。
      * @param paymentNo 支付单号
+     * @param userId 当前登录用户ID（来自可信 Header）
      * @return 支付参数VO
      */
     @GetMapping("/params/{paymentNo}")
-    public Result<PaymentParamsVO> getParams(@PathVariable("paymentNo") String paymentNo) {
-        return Result.success(payService.getPaymentParams(paymentNo));
+    public Result<PaymentParamsVO> getParams(@PathVariable("paymentNo") String paymentNo,
+                                             @RequestHeader("X-User-Id") Long userId) {
+        return Result.success(payService.getPaymentParams(paymentNo, userId));
     }
 
     /**

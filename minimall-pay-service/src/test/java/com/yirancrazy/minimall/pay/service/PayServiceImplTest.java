@@ -366,9 +366,10 @@ public class PayServiceImplTest {
         PayTransactionPO rec = new PayTransactionPO();
         rec.setId(1L);
         rec.setOrderNo("ORDER100");
+        rec.setUserId(1L);
         when(manager.getOne(any())).thenReturn(rec);
 
-        PayTransactionPO result = service.getByOrderNo("ORDER100");
+        PayTransactionPO result = service.getByOrderNo("ORDER100", 1L);
         assertEquals(1L, result.getId());
         assertEquals("ORDER100", result.getOrderNo());
     }
@@ -379,7 +380,22 @@ public class PayServiceImplTest {
     @Test
     public void getByOrderNo_missing_throws_biz() {
         when(manager.getOne(any())).thenReturn(null);
-        assertThrows(BizException.class, () -> service.getByOrderNo("ORDER999"));
+        assertThrows(BizException.class, () -> service.getByOrderNo("ORDER999", 1L));
+    }
+
+    /**
+     * 验证 getByOrderNo 在查询他人支付流水时按不存在处理，不泄露他人支付单。
+     */
+    @Test
+    public void getByOrderNo_rejects_other_user() {
+        PayTransactionPO rec = new PayTransactionPO();
+        rec.setId(1L);
+        rec.setOrderNo("ORDER100");
+        rec.setUserId(1L);
+        when(manager.getOne(any())).thenReturn(rec);
+
+        BizException ex = assertThrows(BizException.class, () -> service.getByOrderNo("ORDER100", 999L));
+        assertEquals(PayCodeEnum.PAY_NOT_FOUND.getCode(), ex.getCode());
     }
 
     /**
@@ -390,13 +406,14 @@ public class PayServiceImplTest {
         PayTransactionPO rec = new PayTransactionPO();
         rec.setPaymentNo("PAY123");
         rec.setOrderNo("ORDER100");
+        rec.setUserId(1L);
         rec.setAmount(new BigDecimal("99.99"));
         rec.setCurrency("CNY");
         rec.setChannel(1);
         rec.setExpireAt(LocalDateTime.now().plusMinutes(15));
         when(manager.getOne(any())).thenReturn(rec);
 
-        PaymentParamsVO vo = service.getPaymentParams("PAY123");
+        PaymentParamsVO vo = service.getPaymentParams("PAY123", 1L);
         assertEquals("PAY123", vo.getPaymentNo());
         assertEquals("ORDER100", vo.getOrderNo());
         assertEquals(0, new BigDecimal("99.99").compareTo(vo.getAmount()));
@@ -413,13 +430,14 @@ public class PayServiceImplTest {
         PayTransactionPO rec = new PayTransactionPO();
         rec.setPaymentNo("PAY123");
         rec.setOrderNo("ORDER100");
+        rec.setUserId(1L);
         rec.setAmount(new BigDecimal("99.99"));
         rec.setExpireAt(LocalDateTime.now().plusMinutes(15));
         when(manager.getOne(any())).thenReturn(rec);
         when(payGateway.createPagePayment(anyString(), any(BigDecimal.class), anyString(), anyString()))
             .thenThrow(new RuntimeException("alipay down"));
 
-        assertThrows(RuntimeException.class, () -> service.getPaymentParams("PAY123"));
+        assertThrows(RuntimeException.class, () -> service.getPaymentParams("PAY123", 1L));
     }
 
     /**
@@ -428,7 +446,24 @@ public class PayServiceImplTest {
     @Test
     public void getPaymentParams_missing_throws_biz() {
         when(manager.getOne(any())).thenReturn(null);
-        assertThrows(BizException.class, () -> service.getPaymentParams("PAY999"));
+        assertThrows(BizException.class, () -> service.getPaymentParams("PAY999", 1L));
+    }
+
+    /**
+     * 验证 getPaymentParams 在查询他人支付单时按不存在处理，不返回支付参数。
+     */
+    @Test
+    public void getPaymentParams_rejects_other_user() {
+        PayTransactionPO rec = new PayTransactionPO();
+        rec.setPaymentNo("PAY123");
+        rec.setUserId(1L);
+        when(manager.getOne(any())).thenReturn(rec);
+
+        BizException ex = assertThrows(BizException.class,
+            () -> service.getPaymentParams("PAY123", 999L));
+        assertEquals(PayCodeEnum.PAY_NOT_FOUND.getCode(), ex.getCode());
+        verify(payGateway, never())
+            .createPagePayment(anyString(), any(BigDecimal.class), anyString(), anyString());
     }
 
     /**

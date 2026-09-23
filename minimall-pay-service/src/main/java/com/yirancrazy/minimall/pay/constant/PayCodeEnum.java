@@ -22,7 +22,8 @@ public enum PayCodeEnum implements BaseEnum {
     REFUND_CONFLICT("40007", "REFUND_CONFLICT", "Payment state does not allow refund"),
     REFUND_EXCEED("40008", "REFUND_EXCEED", "Total refund amount exceeds payment amount"),
     PAY_AMOUNT_MISMATCH("40009", "PAY_AMOUNT_MISMATCH", "支付金额与订单应付金额不一致"),
-    PAY_ORDER_STATUS_INVALID("40010", "PAY_ORDER_STATUS_INVALID", "订单状态不允许创建支付");
+    PAY_ORDER_STATUS_INVALID("40010", "PAY_ORDER_STATUS_INVALID", "订单状态不允许创建支付"),
+    PAY_CREATE_CONFLICT("40011", "PAY_CREATE_CONFLICT", "支付单创建冲突，请稍后重试");
 
     private final String code;
     private final String alias;

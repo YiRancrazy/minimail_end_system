@@ -10,9 +10,11 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.dao.DuplicateKeyException;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -127,6 +129,7 @@ public class PayServiceImplTest {
         verify(manager).save(cap.capture());
         assertEquals(1, cap.getValue().getStatus());
         assertEquals(0, new BigDecimal("99.99").compareTo(cap.getValue().getAmount()));
+        assertEquals("ORDER100", cap.getValue().getActiveOrderNo());
         verify(payGateway, never()).createPagePayment(anyString(), any(BigDecimal.class), anyString(), anyString());
     }
 
@@ -196,8 +199,30 @@ public class PayServiceImplTest {
 
         assertNotNull(id);
         assertNotEquals(99L, id.longValue());
+        assertEquals(4, existing.getStatus());
+        assertNull(existing.getActiveOrderNo());
+        verify(manager).updateById(existing);
         verify(manager).save(any(PayTransactionPO.class));
         verify(payGateway, never()).createPagePayment(anyString(), any(BigDecimal.class), anyString(), anyString());
+    }
+
+    /**
+     * 验证活跃订单唯一键冲突时返回已存在的活跃支付单。
+     */
+    @Test
+    public void createPayment_duplicate_active_key_reuses_existing() {
+        PayTransactionPO active = new PayTransactionPO();
+        active.setId(88L);
+        active.setOrderNo("ORDER100");
+        active.setPaymentNo("PAY-ACTIVE");
+        active.setStatus(1);
+        when(manager.getOne(any())).thenReturn(null, active);
+        when(manager.save(any(PayTransactionPO.class)))
+            .thenThrow(new DuplicateKeyException("duplicate active order"));
+
+        Long id = service.createPayment("ORDER100", 1L, 1L, new BigDecimal("99.99"), null);
+
+        assertEquals(88L, id.longValue());
     }
 
     /**

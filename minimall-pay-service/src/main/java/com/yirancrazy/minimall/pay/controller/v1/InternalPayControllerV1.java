@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -46,6 +47,7 @@ public class InternalPayControllerV1 {
      * @return 支付单标识
      */
     @PostMapping("/create")
+    @Idempotent(key = "#dto.orderNo", expire = 30, unit = TimeUnit.SECONDS)
     public Result<Long> create(@Valid @RequestBody PayCreateDTO dto) {
         Long paymentId = payService.createPayment(
             dto.getOrderNo(), dto.getUserId(), dto.getMerchantId(), dto.getAmount(), dto.getChannel());

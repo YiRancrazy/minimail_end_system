@@ -458,6 +458,7 @@ CREATE TABLE IF NOT EXISTS t_pay_transaction (
                                                  payment_no          VARCHAR(32)     NOT NULL COMMENT '支付流水号（唯一）',
     trade_no            VARCHAR(64)     DEFAULT NULL COMMENT '第三方交易号',
     order_no            VARCHAR(32)     NOT NULL COMMENT '关联订单号',
+    active_order_no     VARCHAR(32)     NULL COMMENT '活跃支付订单唯一键',
     user_id             BIGINT UNSIGNED NOT NULL COMMENT '付款用户ID',
     merchant_id         BIGINT UNSIGNED NOT NULL COMMENT '收款商家ID',
     amount              DECIMAL(12,2)   NOT NULL COMMENT '支付金额(元)',
@@ -474,6 +475,7 @@ CREATE TABLE IF NOT EXISTS t_pay_transaction (
     update_time         DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '更新时间',
     PRIMARY KEY (id),
     UNIQUE KEY uk_pay_transaction_payment_no (payment_no, is_deleted),
+    UNIQUE KEY uk_pay_transaction_active_order (active_order_no, is_deleted),
     INDEX idx_pay_transaction_order_no (order_no),
     INDEX idx_pay_transaction_user_id (user_id),
     INDEX idx_pay_transaction_merchant_id (merchant_id)

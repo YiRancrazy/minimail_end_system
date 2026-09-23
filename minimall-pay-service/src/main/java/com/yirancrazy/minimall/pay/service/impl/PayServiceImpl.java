@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.extern.slf4j.Slf4j;
@@ -114,6 +115,9 @@ public class PayServiceImpl implements PayService {
             if (status == Integer.parseInt(PayStatusEnum.PENDING.getCode())) {
                 log.warn("payment expired pending, creating new one, paymentNo={}, orderNo={}, expireAt={}",
                     existing.getPaymentNo(), orderNo, existing.getExpireAt());
+                existing.setStatus(Integer.parseInt(PayStatusEnum.CLOSED.getCode()));
+                existing.setActiveOrderNo(null);
+                payManager.updateById(existing);
             }
         }
         if (snapshot.getStatus() == null || snapshot.getStatus() != ORDER_PENDING_CODE) {
@@ -130,6 +134,7 @@ public class PayServiceImpl implements PayService {
         PayTransactionPO po = new PayTransactionPO();
         po.setPaymentNo(paymentNo);
         po.setOrderNo(orderNo);
+        po.setActiveOrderNo(orderNo);
         po.setUserId(userId);
         po.setMerchantId(merchantId);
         po.setAmount(amount);
@@ -139,8 +144,21 @@ public class PayServiceImpl implements PayService {
         po.setExpireAt(expireAt);
         po.setIdempotencyKey(UUID.randomUUID().toString());
 
-        // 保存支付交易记录到数据库
-        payManager.save(po);
+        try {
+            payManager.save(po);
+        }
+        catch (DuplicateKeyException e) {
+            // 活跃订单唯一键兜底并发创建：返回已存在的活跃支付单，避免同订单多张可支付流水
+            PayTransactionPO active = latestByOrderNo(orderNo);
+            if (active != null && active.getStatus() != null
+                && active.getStatus() != Integer.parseInt(PayStatusEnum.FAILED.getCode())
+                && active.getStatus() != Integer.parseInt(PayStatusEnum.CLOSED.getCode())) {
+                log.warn("duplicate active payment create, reuse existing, orderNo={}, paymentNo={}",
+                    orderNo, active.getPaymentNo());
+                return active.getId();
+            }
+            throw new BizException(PayCodeEnum.PAY_CREATE_CONFLICT);
+        }
 
         // 收银台表单由 getPaymentParams 重新生成，此处不做同步外部调用，避免支付宝不可达时阻塞下单请求
         log.info("payment created, paymentNo={}, orderNo={}, channel={}", paymentNo, orderNo, channelCode);
@@ -232,6 +250,7 @@ public class PayServiceImpl implements PayService {
             return;
         }
         po.setStatus(Integer.parseInt(PayStatusEnum.FAILED.getCode()));
+        po.setActiveOrderNo(null);
         po.setChannelResponse(dto.getChannelResponse());
         payManager.updateById(po);
     }

@@ -3,6 +3,7 @@ package com.yirancrazy.minimall.pay.controller.v1;
 import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
+import com.yirancrazy.minimall.common.annotation.Idempotent;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.pay.dto.PayCallbackDTO;
@@ -43,11 +45,12 @@ public class UserPayControllerV1 {
 
     /**
      * 创建支付流水，channel 为空时默认 ALIPAY。
-     * 同订单待支付/已成功流水由 service 层复用（防重复扣款），失败/关闭流水允许重新创建，故不加 @Idempotent。
+     * 同订单 30 秒内重复创建由订单号幂等键拦截，service 层再复用待支付/已成功流水（防重复扣款）。
      * @param dto 支付流水创建DTO
      * @return 支付流水ID
      */
     @PostMapping("/create")
+    @Idempotent(key = "#dto.orderNo", expire = 30, unit = TimeUnit.SECONDS)
     public Result<Long> create(@Valid @RequestBody PayCreateDTO dto,
                                @RequestHeader("X-User-Id") Long userId,
                                @RequestHeader(value = "X-Merchant-Id", required = false) Long merchantId) {

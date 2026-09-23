@@ -23,6 +23,7 @@ public class PayTransactionPO extends BasePO {
     private String paymentNo;
     private String tradeNo;
     private String orderNo;
+    private String activeOrderNo;
     private Long userId;
     private Long merchantId;
     private BigDecimal amount;

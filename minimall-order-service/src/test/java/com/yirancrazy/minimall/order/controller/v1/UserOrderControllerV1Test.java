@@ -2,9 +2,11 @@ package com.yirancrazy.minimall.order.controller.v1;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -50,9 +52,27 @@ class UserOrderControllerV1Test {
     void page_returns_cursor_result() throws Exception {
         when(service.page(any(OrderPageDTO.class)))
             .thenReturn(new CursorPageVO<>(java.util.Collections.emptyList(), null, false, 20));
-        mockMvc.perform(get("/api/v1/user/orders"))
+        mockMvc.perform(get("/api/v1/user/orders").header("X-User-Id", 7L))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.code").value("00000"));
+    }
+
+    /**
+     * 验证用户订单分页强制绑定当前登录用户，忽略客户端传入的 userId。
+     */
+    @Test
+    void page_overrides_client_user_id() throws Exception {
+        when(service.page(any(OrderPageDTO.class)))
+            .thenReturn(new CursorPageVO<>(java.util.Collections.emptyList(), null, false, 20));
+
+        mockMvc.perform(get("/api/v1/user/orders")
+                .header("X-User-Id", 7L)
+                .param("userId", "999"))
+            .andExpect(status().isOk());
+
+        ArgumentCaptor<OrderPageDTO> captor = ArgumentCaptor.forClass(OrderPageDTO.class);
+        verify(service).page(captor.capture());
+        assertEquals(7L, captor.getValue().getUserId());
     }
 
     /**

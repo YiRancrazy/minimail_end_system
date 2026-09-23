@@ -41,12 +41,15 @@ public class UserOrderControllerV1 {
     }
 
     /**
-     * 游标分页查询订单列表，支持按用户/商家/状态过滤。
+     * 游标分页查询当前用户订单列表，用户ID以网关注入的 X-User-Id 为准。
+     * @param userId 当前用户ID，来自网关 X-User-Id 头
      * @param dto 游标分页查询入参
      * @return 订单游标分页结果
      */
     @GetMapping
-    public Result<CursorPageVO<OrderVO>> page(@Valid OrderPageDTO dto) {
+    public Result<CursorPageVO<OrderVO>> page(@RequestHeader("X-User-Id") Long userId,
+                                              @Valid OrderPageDTO dto) {
+        dto.setUserId(userId);
         return Result.success(orderService.page(dto).map(OrderVO::from));
     }
 

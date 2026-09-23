@@ -11,3 +11,7 @@ spring:
 logging:
   level:
     com.yirancrazy.minimall: DEBUG
+minimall:
+  id:
+    datacenter-id: 1
+    worker-id: 1

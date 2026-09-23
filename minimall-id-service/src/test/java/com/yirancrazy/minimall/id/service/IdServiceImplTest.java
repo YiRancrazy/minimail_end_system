@@ -2,6 +2,7 @@ package com.yirancrazy.minimall.id.service;
 
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.yirancrazy.minimall.id.service.impl.IdServiceImpl;
 
@@ -15,7 +16,7 @@ public class IdServiceImplTest {
      */
     @Test
     public void nextId_returns_positive_value() {
-        IdServiceImpl service = new IdServiceImpl();
+        IdServiceImpl service = new IdServiceImpl("1", "1");
         long id = service.nextId("ORDER");
         assertTrue(id > 0L);
     }
@@ -25,7 +26,7 @@ public class IdServiceImplTest {
      */
     @Test
     public void nextId_returns_increasing_values() {
-        IdServiceImpl service = new IdServiceImpl();
+        IdServiceImpl service = new IdServiceImpl("1", "1");
         long a = service.nextId("ORDER");
         long b = service.nextId("ORDER");
         long c = service.nextId("ORDER");
@@ -38,7 +39,7 @@ public class IdServiceImplTest {
      */
     @Test
     public void nextId_ignores_bizTag_and_keeps_increasing() {
-        IdServiceImpl service = new IdServiceImpl();
+        IdServiceImpl service = new IdServiceImpl("1", "1");
         long a = service.nextId("ORDER");
         long b = service.nextId("USER");
         long c = service.nextId("PAY");
@@ -53,7 +54,7 @@ public class IdServiceImplTest {
      */
     @Test
     public void nextId_handles_null_bizTag() {
-        IdServiceImpl service = new IdServiceImpl();
+        IdServiceImpl service = new IdServiceImpl("1", "1");
         long id = service.nextId(null);
         assertTrue(id > 0L);
     }
@@ -63,11 +64,29 @@ public class IdServiceImplTest {
      */
     @Test
     public void nextId_consecutive_calls_distinct_and_positive() {
-        IdServiceImpl service = new IdServiceImpl();
+        IdServiceImpl service = new IdServiceImpl("1", "1");
         long a = service.nextId("ORDER");
         long b = service.nextId("ORDER");
         assertTrue(a > 0L);
         assertTrue(b > 0L);
         assertNotEquals(a, b);
+    }
+
+    /**
+     * 验证节点编号缺失时构造失败。
+     */
+    @Test
+    public void constructor_missing_node_id_throws() {
+        assertThrows(IllegalStateException.class, () -> new IdServiceImpl("", "1"));
+        assertThrows(IllegalStateException.class, () -> new IdServiceImpl("1", ""));
+    }
+
+    /**
+     * 验证节点编号越界时构造失败。
+     */
+    @Test
+    public void constructor_out_of_range_node_id_throws() {
+        assertThrows(IllegalArgumentException.class, () -> new IdServiceImpl("32", "1"));
+        assertThrows(IllegalArgumentException.class, () -> new IdServiceImpl("1", "32"));
     }
 }

@@ -19,7 +19,7 @@ import com.yirancrazy.minimall.notify.constant.NotifyCodeEnum;
 /**
  * @Author: yirancrazy@gmail.com
  * @Description: SseHub，提供 SSE 长连接订阅与实时推送能力
- * @Version: 1.2
+ * @Version: 1.3
  * @DateTime: 2026/08/16
  */
 @Slf4j
@@ -47,7 +47,7 @@ public class SseHub {
             log.warn("sse connection limit exceeded, userId={}, max={}", userId, MAX_CONNECTIONS_PER_USER);
             throw new BizException(NotifyCodeEnum.NOTIFY_SSE_LIMIT);
         }
-        SseEmitter emitter = new SseEmitter(0L);
+        SseEmitter emitter = createEmitter();
         emitters.computeIfAbsent(userId, k -> new CopyOnWriteArraySet<>()).add(emitter);
         emitter.onCompletion(() -> remove(userId, emitter));
         emitter.onTimeout(() -> {
@@ -58,10 +58,22 @@ public class SseHub {
         try {
             emitter.send(SseEmitter.event().name("ready").data("connected"));
         }
-        // ready 事件尽力而为：未绑定 response（如单测直调）或连接已关闭时忽略失败，不影响注册
-        catch (Exception ignored) {
+        catch (Exception e) {
+            // ready 事件失败说明连接不可用：回滚注册并释放配额，避免僵尸连接长期占用连接数
+            log.warn("sse ready event failed, rollback registration, userId={}", userId, e);
+            remove(userId, emitter);
+            emitter.completeWithError(e);
+            throw new BizException(NotifyCodeEnum.NOTIFY_SSE_CONNECT_FAILED);
         }
         return emitter;
+    }
+
+    /**
+     * 创建 SSE 连接对象，单测可覆写该方法注入可控 emitter。
+     * @return 新的 SSE 连接
+     */
+    SseEmitter createEmitter() {
+        return new SseEmitter(0L);
     }
 
     /**
@@ -79,7 +91,9 @@ public class SseHub {
             try {
                 e.send(SseEmitter.event().name("notify").data(payload));
             }
-            catch (IOException ex) {
+            catch (IOException | RuntimeException ex) {
+                // 连接已断开或 emitter 已完成：任意发送异常都移除连接并释放配额
+                log.debug("sse send failed, connection removed, userId={}", userId, ex);
                 remove(userId, e);
             }
         }

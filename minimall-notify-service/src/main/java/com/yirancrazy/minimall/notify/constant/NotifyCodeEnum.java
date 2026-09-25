@@ -31,7 +31,8 @@ public enum NotifyCodeEnum implements BaseEnum {
     PREFERENCE_CATEGORY_INVALID("19201", "PREFERENCE_CATEGORY_INVALID", "通知类别非法"),
     PREFERENCE_CHANNEL_INVALID("19202", "PREFERENCE_CHANNEL_INVALID", "通知渠道非法"),
     NOTIFY_SSE_FORBIDDEN("19301", "NOTIFY_SSE_FORBIDDEN", "无权订阅该用户的通知"),
-    NOTIFY_SSE_LIMIT("19302", "NOTIFY_SSE_LIMIT", "通知连接数已达上限");
+    NOTIFY_SSE_LIMIT("19302", "NOTIFY_SSE_LIMIT", "通知连接数已达上限"),
+    NOTIFY_SSE_CONNECT_FAILED("19303", "NOTIFY_SSE_CONNECT_FAILED", "建立通知连接失败，请稍后重试");
 
     private final String code;
     private final String alias;

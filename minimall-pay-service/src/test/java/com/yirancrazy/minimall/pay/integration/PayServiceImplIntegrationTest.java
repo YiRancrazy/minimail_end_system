@@ -22,6 +22,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import com.yirancrazy.minimall.api.dto.order.OrderPaySnapshotDTO;
+import com.yirancrazy.minimall.api.dto.order.RefundCallbackDTO;
 import com.yirancrazy.minimall.api.feign.IdFeignClient;
 import com.yirancrazy.minimall.api.feign.OrderFeignClient;
 import com.yirancrazy.minimall.common.exception.BizException;
@@ -36,6 +37,7 @@ import com.yirancrazy.minimall.pay.manager.PayManager;
 import com.yirancrazy.minimall.pay.mapper.PayRefundMapper;
 import com.yirancrazy.minimall.pay.mapper.PayTransactionMapper;
 import com.yirancrazy.minimall.pay.service.PayService;
+import com.yirancrazy.minimall.pay.vo.PayStatisticsVO;
 
 /**
  * @Author: yirancrazy@gmail.com
@@ -128,6 +130,10 @@ class PayServiceImplIntegrationTest {
             if ("ORD-INT-SCAN".equals(orderNo)) {
                 return Result.success(new OrderPaySnapshotDTO(
                     5L, orderNo, 100L, 200L, new BigDecimal("10.00"), 1, null));
+            }
+            if ("ORD-INT-STATS".equals(orderNo)) {
+                return Result.success(new OrderPaySnapshotDTO(
+                    6L, orderNo, 100L, 77777L, new BigDecimal("100.00"), 1, null));
             }
             return Result.success(null);
         });
@@ -233,7 +239,8 @@ class PayServiceImplIntegrationTest {
         payRefundMapper.insert(refund);
         lenient().when(alipayGateway.queryRefund(payTx.getPaymentNo(), "REFUND-INT-PENDING"))
             .thenReturn(com.yirancrazy.minimall.pay.gateway.PayGateway.RefundQueryStatus.SUCCESS);
-        lenient().when(orderFeignClient.refundCallback(5L, true)).thenReturn(Result.success(null));
+        lenient().when(orderFeignClient.refundCallback(any(RefundCallbackDTO.class)))
+            .thenReturn(Result.success(null));
 
         assertEquals(1, payService.scanPendingRefunds());
         assertEquals(1, payRefundMapper.findByRefundRequestNo("REFUND-INT-REQ").getStatus());
@@ -241,5 +248,38 @@ class PayServiceImplIntegrationTest {
         verify(alipayGateway, times(1)).queryRefund(payTx.getPaymentNo(), "REFUND-INT-PENDING");
         verify(alipayGateway, never()).refund(
             anyString(), anyString(), any(BigDecimal.class), anyString());
+    }
+
+    /**
+     * 资金统计按退款流水聚合，包含两笔未把支付单置为 REFUNDED 的部分退款。
+     */
+    @Test
+    void statistics_includesMultiplePartialRefunds() {
+        Long payId = payService.createPayment(
+            "ORD-INT-STATS", 100L, 77777L, new BigDecimal("100.00"), null);
+        PayTransactionPO payTx = payManager.getById(payId);
+        payTx.setStatus(2);
+        payManager.updateById(payTx);
+
+        payRefundMapper.insert(successfulRefund("REFUND-STATS-1", "REQ-STATS-1",
+            payTx.getPaymentNo(), "30.00"));
+        payRefundMapper.insert(successfulRefund("REFUND-STATS-2", "REQ-STATS-2",
+            payTx.getPaymentNo(), "20.00"));
+
+        PayStatisticsVO statistics = payTransactionMapper.statistics(77777L, null, null);
+
+        assertEquals(0, new BigDecimal("100.00").compareTo(statistics.getTotalAmount()));
+        assertEquals(0, new BigDecimal("50.00").compareTo(statistics.getRefundAmount()));
+    }
+
+    private PayRefundPO successfulRefund(String refundNo, String requestNo,
+                                         String paymentNo, String amount) {
+        PayRefundPO refund = new PayRefundPO();
+        refund.setRefundNo(refundNo);
+        refund.setRefundRequestNo(requestNo);
+        refund.setPaymentNo(paymentNo);
+        refund.setAmount(new BigDecimal(amount));
+        refund.setStatus(1);
+        return refund;
     }
 }

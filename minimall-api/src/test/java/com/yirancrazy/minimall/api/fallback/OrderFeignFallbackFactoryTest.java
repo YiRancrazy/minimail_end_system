@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import com.yirancrazy.minimall.api.dto.order.OrderPaySnapshotDTO;
+import com.yirancrazy.minimall.api.dto.order.RefundCallbackDTO;
 import com.yirancrazy.minimall.api.feign.OrderFeignClient;
 import com.yirancrazy.minimall.common.result.CommonCode;
 import com.yirancrazy.minimall.common.result.Result;
@@ -43,7 +44,7 @@ class OrderFeignFallbackFactoryTest {
         assertEquals(CommonCode.SYS_ERROR, payByOrderNo.getCode());
         assertNull(payByOrderNo.getData());
 
-        Result<Void> refundCallback = client.refundCallback(1L, true);
+        Result<Void> refundCallback = client.refundCallback(new RefundCallbackDTO());
         assertEquals(CommonCode.SYS_ERROR, refundCallback.getCode());
         assertNull(refundCallback.getData());
     }

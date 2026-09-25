@@ -268,6 +268,7 @@ CREATE TABLE IF NOT EXISTS t_order (
     quantity                INT             NULL COMMENT '总数量（冗余）',
     amount                  DECIMAL(12,2)   DEFAULT 0 COMMENT '商品总额（原价）',
     refund_amount           DECIMAL(12,2)   NULL COMMENT '实际退款金额（元），部分退款时记录',
+    total_refunded_amount   DECIMAL(12,2)   NOT NULL DEFAULT 0 COMMENT '累计已退款金额（元）',
     refund_request_no       VARCHAR(64)     NULL COMMENT '退款请求幂等键',
     total_amount            DECIMAL(12,2)   NOT NULL DEFAULT 0 COMMENT '应付总额（含运费）',
     pay_amount              DECIMAL(12,2)   NOT NULL DEFAULT 0 COMMENT '实付金额',

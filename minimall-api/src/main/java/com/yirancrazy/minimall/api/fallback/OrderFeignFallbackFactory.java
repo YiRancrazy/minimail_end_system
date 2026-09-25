@@ -8,6 +8,7 @@ import com.yirancrazy.minimall.api.dto.order.OrderCommentEligibilityDTO;
 import com.yirancrazy.minimall.api.dto.order.OrderExportItemDTO;
 import com.yirancrazy.minimall.api.dto.order.OrderPaySnapshotDTO;
 import com.yirancrazy.minimall.api.dto.order.OrderStatisticsDTO;
+import com.yirancrazy.minimall.api.dto.order.RefundCallbackDTO;
 import com.yirancrazy.minimall.api.feign.OrderFeignClient;
 import com.yirancrazy.minimall.common.result.CommonCode;
 import com.yirancrazy.minimall.common.result.Result;
@@ -55,8 +56,9 @@ public class OrderFeignFallbackFactory implements FallbackFactory<OrderFeignClie
             }
 
             @Override
-            public Result<Void> refundCallback(Long id, boolean success) {
-                log.warn("order refund-callback fallback, orderId={}, success={} skipped", id, success);
+            public Result<Void> refundCallback(RefundCallbackDTO dto) {
+                log.warn("order refund-callback fallback, orderId={} skipped",
+                    dto == null ? null : dto.getOrderId());
                 return Result.fail(CommonCode.SYS_ERROR, "订单服务不可用");
             }
 

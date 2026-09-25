@@ -26,6 +26,7 @@ import com.yirancrazy.minimall.api.dto.goods.SpuSnapshotDTO;
 import com.yirancrazy.minimall.api.dto.order.OrderCommentEligibilityDTO;
 import com.yirancrazy.minimall.api.dto.order.OrderPaidDTO;
 import com.yirancrazy.minimall.api.dto.order.OrderPaySnapshotDTO;
+import com.yirancrazy.minimall.api.dto.order.RefundCallbackDTO;
 import com.yirancrazy.minimall.api.dto.pay.PayCreateDTO;
 import com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO;
 import com.yirancrazy.minimall.api.dto.stock.StockReserveDTO;
@@ -483,23 +484,56 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public void handleRefundCallback(Long orderId, boolean success) {
-        OrderPO po = getOrder(orderId);
-        if (po.getStatus() == OrderStatusEnum.REFUNDED.intCode()) {
-            log.info("refund callback ignored, order already refunded, orderId={}", orderId);
-            return;
+    public void handleRefundCallback(RefundCallbackDTO dto) {
+        if (dto == null || dto.getOrderId() == null || dto.getRefundedAmount() == null
+            || dto.getTotalRefundedAmount() == null) {
+            throw new BizException(OrderCodeEnum.REFUND_AMOUNT_INVALID);
         }
-        if (po.getStatus() != OrderStatusEnum.REFUNDING.intCode()) {
-            // 商家已驳回或先行回调已推进状态：拒绝迟到回调，天然幂等
+        OrderPO po = getOrder(dto.getOrderId());
+        if (po.getPayId() != null && dto.getPayId() != null && !po.getPayId().equals(dto.getPayId())) {
+            throw new BizException(OrderCodeEnum.ORDER_NOT_FOUND);
+        }
+        if (po.getRefundRequestNo() != null && !po.getRefundRequestNo().isBlank()
+            && dto.getRefundRequestNo() != null
+            && !po.getRefundRequestNo().equals(dto.getRefundRequestNo())) {
             throw new BizException(OrderCodeEnum.ORDER_STATUS_TRANSITION_INVALID);
         }
-        if (success) {
-            transitStatus(orderId, OrderStatusEnum.REFUNDED, "PAY_REFUND_CALLBACK", null);
-            log.info("order refunded, orderId={}", orderId);
+
+        BigDecimal refundedAmount = normalizeAmount(dto.getRefundedAmount());
+        BigDecimal totalRefunded = normalizeAmount(dto.getTotalRefundedAmount());
+        BigDecimal currentRefunded = po.getTotalRefundedAmount() == null
+            ? BigDecimal.ZERO : po.getTotalRefundedAmount();
+        if (totalRefunded.compareTo(currentRefunded) <= 0) {
+            log.info("refund callback ignored, cumulative amount unchanged, orderId={}, total={}",
+                dto.getOrderId(), currentRefunded);
+            return;
+        }
+        if (refundedAmount.compareTo(BigDecimal.ZERO) <= 0
+            || totalRefunded.compareTo(currentRefunded.add(refundedAmount)) != 0) {
+            throw new BizException(OrderCodeEnum.REFUND_AMOUNT_INVALID);
+        }
+        BigDecimal payable = po.getPayAmount() != null ? po.getPayAmount() : po.getAmount();
+        if (payable == null || totalRefunded.compareTo(payable) > 0) {
+            throw new BizException(OrderCodeEnum.REFUND_AMOUNT_INVALID);
+        }
+        if (po.getStatus() != OrderStatusEnum.REFUNDING.intCode()) {
+            throw new BizException(OrderCodeEnum.ORDER_STATUS_TRANSITION_INVALID);
+        }
+
+        po.setTotalRefundedAmount(totalRefunded);
+        boolean fullyRefunded = Boolean.TRUE.equals(dto.getFullyRefunded())
+            || totalRefunded.compareTo(payable) >= 0;
+        if (fullyRefunded) {
+            transition(po, OrderStatusEnum.REFUNDED, "PAY_REFUND_CALLBACK", null, null);
+            log.info("order fully refunded, orderId={}, totalRefunded={}", po.getId(), totalRefunded);
         }
         else {
-            transitStatus(orderId, revertTarget(po), "PAY_REFUND_CALLBACK_FAIL", null);
-            log.info("order refund failed, reverted, orderId={}", orderId);
+            // Partial refund returns to the prior state and clears this round's request key.
+            po.setRefundAmount(null);
+            po.setRefundRequestNo(null);
+            transition(po, revertTarget(po), "PAY_REFUND_CALLBACK_PARTIAL", null, null);
+            log.info("order partially refunded, orderId={}, totalRefunded={}",
+                po.getId(), totalRefunded);
         }
     }
 
@@ -946,7 +980,13 @@ public class OrderServiceImpl implements OrderService {
             throw new BizException(OrderCodeEnum.REFUND_AMOUNT_INVALID);
         }
         BigDecimal payAmount = po.getPayAmount() != null ? po.getPayAmount() : po.getAmount();
-        if (payAmount == null || refundAmt.compareTo(BigDecimal.ZERO) <= 0 || refundAmt.compareTo(payAmount) > 0) {
+        BigDecimal totalRefunded = po.getTotalRefundedAmount() == null
+            ? BigDecimal.ZERO : po.getTotalRefundedAmount();
+        BigDecimal remainingAmount = payAmount == null
+            ? null : payAmount.subtract(totalRefunded);
+        if (payAmount == null || refundAmt.compareTo(BigDecimal.ZERO) <= 0
+            || remainingAmount.compareTo(BigDecimal.ZERO) <= 0
+            || refundAmt.compareTo(remainingAmount) > 0) {
             throw new BizException(OrderCodeEnum.REFUND_AMOUNT_INVALID);
         }
         try {

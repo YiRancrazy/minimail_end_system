@@ -3,6 +3,7 @@ package com.yirancrazy.minimall.order.service;
 import java.util.List;
 import com.yirancrazy.minimall.api.dto.order.OrderCommentEligibilityDTO;
 import com.yirancrazy.minimall.api.dto.order.OrderPaySnapshotDTO;
+import com.yirancrazy.minimall.api.dto.order.RefundCallbackDTO;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.order.dto.OrderCheckoutItemDTO;
 import com.yirancrazy.minimall.order.dto.OrderPageDTO;
@@ -98,12 +99,10 @@ public interface OrderService {
                                 String refundRequestNo);
 
     /**
-     * 接收支付服务退款结果回调：仅 REFUNDING 状态可受理（否则抛状态流转异常，天然幂等）；
-     * success 推进 REFUNDED，失败回退到 refundFromStatus。
-     * @param orderId 订单ID
-     * @param success 退款是否成功
+     * 接收支付服务退款结果回调，按累计退款金额决定部分退款回退或全额退款终态。
+     * @param dto 退款结果回调
      */
-    void handleRefundCallback(Long orderId, boolean success);
+    void handleRefundCallback(RefundCallbackDTO dto);
 
     /**
      * 校验订单评价资格：订单存在、归属该用户、包含该 SPU 且处于已购买状态，并返回订单快照商家ID。

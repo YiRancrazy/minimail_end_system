@@ -20,7 +20,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -39,6 +38,7 @@ import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.yirancrazy.minimall.api.dto.order.OrderPaySnapshotDTO;
+import com.yirancrazy.minimall.api.dto.order.RefundCallbackDTO;
 import com.yirancrazy.minimall.api.feign.IdFeignClient;
 import com.yirancrazy.minimall.api.feign.OrderFeignClient;
 import com.yirancrazy.minimall.common.exception.BizException;
@@ -119,6 +119,8 @@ public class PayServiceImplTest {
             .thenReturn(Result.success(null));
         lenient().when(orderFeignClient.pay(anyLong())).thenReturn(Result.success(null));
         lenient().when(orderFeignClient.payByOrderNo(anyString())).thenReturn(Result.success(null));
+        lenient().when(orderFeignClient.refundCallback(any(RefundCallbackDTO.class)))
+            .thenReturn(Result.success(null));
         lenient().when(manager.updateById(any(PayTransactionPO.class))).thenReturn(true);
         lenient().when(payGateway.createPagePayment(anyString(), any(BigDecimal.class), anyString(), anyString()))
             .thenReturn("<form action=\"https://openapi-sandbox.dl.alipaydev.com/gateway.do\">mock</form>");
@@ -784,7 +786,11 @@ public class PayServiceImplTest {
         assertNotNull(vo.getRefundNo());
         assertEquals("PAY123", vo.getPaymentNo());
         assertEquals(0, new BigDecimal("50.00").compareTo(vo.getAmount()));
-        verify(orderFeignClient).refundCallback(100L, true);
+        ArgumentCaptor<RefundCallbackDTO> callback =
+            ArgumentCaptor.forClass(RefundCallbackDTO.class);
+        verify(orderFeignClient).refundCallback(callback.capture());
+        assertEquals(0, new BigDecimal("50.00").compareTo(callback.getValue().getTotalRefundedAmount()));
+        assertEquals(false, callback.getValue().getFullyRefunded());
     }
 
     /**
@@ -886,7 +892,11 @@ public class PayServiceImplTest {
         assertEquals(1, cap.getValue().getStatus()); // 成功后 SUCCESS
         assertEquals("REFUND-REQ-1", cap.getValue().getRefundRequestNo());
         verify(payTransactionMapper).updateStatusIf("PAY123", 5, 2); // 未退满回 SUCCESS
-        verify(orderFeignClient).refundCallback(100L, true);
+        ArgumentCaptor<RefundCallbackDTO> callback =
+            ArgumentCaptor.forClass(RefundCallbackDTO.class);
+        verify(orderFeignClient).refundCallback(callback.capture());
+        assertEquals("REFUND-REQ-1", callback.getValue().getRefundRequestNo());
+        assertEquals(false, callback.getValue().getFullyRefunded());
     }
 
     /**
@@ -911,7 +921,7 @@ public class PayServiceImplTest {
         verify(manager, never()).getById(anyLong());
         verify(payTransactionMapper, never()).updateStatusIf(anyString(), anyInt(), anyInt());
         verify(payGateway, never()).refund(anyString(), anyString(), any(BigDecimal.class), anyString());
-        verify(orderFeignClient, never()).refundCallback(anyLong(), anyBoolean());
+        verify(orderFeignClient, never()).refundCallback(any(RefundCallbackDTO.class));
     }
 
     /**
@@ -982,7 +992,7 @@ public class PayServiceImplTest {
         verify(payRefundMapper, never()).updateStatusIf(
             anyString(), anyInt(), anyInt(), anyString());
         verify(payTransactionMapper, never()).updateStatusIf("PAY123", 5, 2);
-        verify(orderFeignClient, never()).refundCallback(anyLong(), anyBoolean());
+        verify(orderFeignClient, never()).refundCallback(any(RefundCallbackDTO.class));
     }
 
     /**
@@ -1018,7 +1028,10 @@ public class PayServiceImplTest {
         verify(payGateway, never()).refund(
             anyString(), anyString(), any(BigDecimal.class), anyString());
         verify(payTransactionMapper).updateStatusIf("PAY123", 5, 2);
-        verify(orderFeignClient).refundCallback(100L, true);
+        ArgumentCaptor<RefundCallbackDTO> callback =
+            ArgumentCaptor.forClass(RefundCallbackDTO.class);
+        verify(orderFeignClient).refundCallback(callback.capture());
+        assertEquals(false, callback.getValue().getFullyRefunded());
     }
 
     /**
@@ -1047,7 +1060,10 @@ public class PayServiceImplTest {
         service.createRefund(dto);
 
         verify(payTransactionMapper).updateStatusIf("PAY123", 5, 6); // 累计退满置 REFUNDED
-        verify(orderFeignClient).refundCallback(100L, true);
+        ArgumentCaptor<RefundCallbackDTO> callback =
+            ArgumentCaptor.forClass(RefundCallbackDTO.class);
+        verify(orderFeignClient).refundCallback(callback.capture());
+        assertEquals(true, callback.getValue().getFullyRefunded());
     }
 
     /**
@@ -1070,7 +1086,7 @@ public class PayServiceImplTest {
             anyString(), eq(0), eq(1), anyString())).thenReturn(1);
         when(payGateway.refund(anyString(), anyString(), any(BigDecimal.class), anyString()))
             .thenReturn("REFUND_TRADE_123");
-        when(orderFeignClient.refundCallback(100L, true))
+        when(orderFeignClient.refundCallback(any(RefundCallbackDTO.class)))
             .thenThrow(new RuntimeException("order unavailable"));
 
         RefundVO vo = service.createRefund(
@@ -1093,11 +1109,15 @@ public class PayServiceImplTest {
         refund.setStatus(1);
         refund.setCreateTime(LocalDateTime.now());
         PayTransactionPO payTx = new PayTransactionPO();
+        payTx.setId(1L);
         payTx.setPaymentNo("PAY123");
+        payTx.setAmount(new BigDecimal("100.00"));
         payTx.setOrderNo("100");
         when(payRefundMapper.selectList(any())).thenReturn(List.of(refund));
         when(manager.getOne(any())).thenReturn(payTx);
-        when(orderFeignClient.refundCallback(100L, true)).thenReturn(Result.success(null));
+        when(payRefundMapper.sumCommittedAmount("PAY123")).thenReturn(new BigDecimal("50.00"));
+        when(orderFeignClient.refundCallback(any(RefundCallbackDTO.class)))
+            .thenReturn(Result.success(null));
         when(payRefundMapper.updateById(refund)).thenReturn(1);
 
         int count = service.scanUnnotifiedRefunds();
@@ -1363,7 +1383,7 @@ public class PayServiceImplTest {
 
         assertNotNull(vo);
         verify(payGateway).refund(anyString(), anyString(), any(BigDecimal.class), anyString());
-        verify(orderFeignClient, never()).refundCallback(anyLong(), anyBoolean());
+        verify(orderFeignClient, never()).refundCallback(any(RefundCallbackDTO.class));
         verify(payTransactionMapper).updateStatusIf("PAY123", 5, 2); // 未退满回 SUCCESS
     }
 

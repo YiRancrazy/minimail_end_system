@@ -30,6 +30,7 @@ import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.yirancrazy.minimall.api.dto.goods.SkuSnapshotDTO;
 import com.yirancrazy.minimall.api.dto.order.OrderCommentEligibilityDTO;
 import com.yirancrazy.minimall.api.dto.order.OrderPaySnapshotDTO;
+import com.yirancrazy.minimall.api.dto.order.RefundCallbackDTO;
 import com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO;
 import com.yirancrazy.minimall.api.feign.GoodsFeignClient;
 import com.yirancrazy.minimall.api.feign.IdFeignClient;
@@ -415,67 +416,84 @@ public class OrderServiceImplTest {
     }
 
     /**
-     * 验证退款回调成功后状态为 REFUNDED。
+     * 验证退清回调将订单推进为 REFUNDED 并记录累计退款金额。
      */
     @Test
-    public void refundCallback_success_transitions_to_refunded() {
+    public void refundCallback_full_refund_transitions_to_refunded() {
         OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.REFUNDING.intCode());
         existing.setRefundFromStatus(OrderStatusEnum.PAID.intCode());
+        existing.setPayAmount(new BigDecimal("100.00"));
         when(manager.getById(99L)).thenReturn(existing);
 
-        service.handleRefundCallback(99L, true);
+        service.handleRefundCallback(refundCallback(99L, "100.00", "100.00", true));
+
         assertEquals(OrderStatusEnum.REFUNDED.intCode(), existing.getStatus());
+        assertEquals(0, new BigDecimal("100.00").compareTo(existing.getTotalRefundedAmount()));
     }
 
     /**
-     * 验证退款回调失败后回退到原状态。
+     * 验证部分退款回到退款前状态并清空本轮申请键，允许继续退款。
      */
     @Test
-    public void refundCallback_failure_reverts_status() {
+    public void refundCallback_partial_refund_reverts_and_allows_next_request() {
+        OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.REFUNDING.intCode());
+        existing.setRefundFromStatus(OrderStatusEnum.SHIPPED.intCode());
+        existing.setPayAmount(new BigDecimal("100.00"));
+        existing.setRefundAmount(new BigDecimal("50.00"));
+        existing.setRefundRequestNo("REFUND-REQ-1");
+        when(manager.getById(99L)).thenReturn(existing);
+
+        service.handleRefundCallback(refundCallback(99L, "50.00", "50.00", false));
+
+        assertEquals(OrderStatusEnum.SHIPPED.intCode(), existing.getStatus());
+        assertEquals(0, new BigDecimal("50.00").compareTo(existing.getTotalRefundedAmount()));
+        assertNull(existing.getRefundAmount());
+        assertNull(existing.getRefundRequestNo());
+    }
+
+    /**
+     * 验证两笔部分退款累计退清后订单进入 REFUNDED。
+     */
+    @Test
+    public void refundCallback_second_partial_refund_finishes_order() {
         OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.REFUNDING.intCode());
         existing.setRefundFromStatus(OrderStatusEnum.PAID.intCode());
+        existing.setPayAmount(new BigDecimal("100.00"));
+        existing.setTotalRefundedAmount(new BigDecimal("50.00"));
         when(manager.getById(99L)).thenReturn(existing);
 
-        service.handleRefundCallback(99L, false);
-        assertEquals(OrderStatusEnum.PAID.intCode(), existing.getStatus());
+        service.handleRefundCallback(refundCallback(99L, "50.00", "100.00", true));
+
+        assertEquals(OrderStatusEnum.REFUNDED.intCode(), existing.getStatus());
+        assertEquals(0, new BigDecimal("100.00").compareTo(existing.getTotalRefundedAmount()));
     }
 
     /**
-     * 验证退款回调失败且无原状态时默认回退到 PAID。
+     * 验证重复退款回调按累计金额幂等返回，不重复更新订单。
      */
     @Test
-    public void refundCallback_failure_no_from_status_defaults_to_paid() {
-        OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.REFUNDING.intCode());
-        existing.setRefundFromStatus(null);
-        when(manager.getById(99L)).thenReturn(existing);
+    public void handleRefundCallback_ignores_duplicate_cumulative_amount() {
+        OrderPO existing = buildOrder(100L, 7L, OrderStatusEnum.REFUNDED.intCode());
+        existing.setPayAmount(new BigDecimal("100.00"));
+        existing.setTotalRefundedAmount(new BigDecimal("100.00"));
+        when(manager.getById(100L)).thenReturn(existing);
 
-        service.handleRefundCallback(99L, false);
-        assertEquals(OrderStatusEnum.PAID.intCode(), existing.getStatus());
+        service.handleRefundCallback(refundCallback(100L, "50.00", "100.00", true));
+
+        verify(manager, never()).updateById(any(OrderPO.class));
     }
 
     /**
-     * 验证非 REFUNDING 状态的订单收到退款回调时抛出状态流转异常（拒绝迟到回调，天然幂等）。
+     * 验证非退款中订单收到新增退款回调时拒绝更新。
      */
     @Test
     public void handleRefundCallback_rejects_state_other_than_refunding() {
         OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.PAID.intCode());
+        existing.setPayAmount(new BigDecimal("100.00"));
         when(manager.getById(99L)).thenReturn(existing);
 
-        assertThrows(BizException.class, () -> service.handleRefundCallback(99L, true));
-        assertThrows(BizException.class, () -> service.handleRefundCallback(99L, false));
-    }
-
-    /**
-     * 验证订单已退款时重复退款回调直接幂等返回，不重复更新订单。
-     */
-    @Test
-    public void handleRefundCallback_ignores_already_refunded_order() {
-        OrderPO existing = buildOrder(100L, 7L, OrderStatusEnum.REFUNDED.intCode());
-        when(manager.getById(100L)).thenReturn(existing);
-
-        service.handleRefundCallback(100L, true);
-
-        verify(manager, never()).updateById(any(OrderPO.class));
+        assertThrows(BizException.class,
+            () -> service.handleRefundCallback(refundCallback(99L, "50.00", "50.00", false)));
     }
 
     /**
@@ -1567,6 +1585,12 @@ public class OrderServiceImplTest {
         OrderPO po = buildOrder(id, userId, status);
         po.setMerchantId(merchantId);
         return po;
+    }
+
+    private RefundCallbackDTO refundCallback(Long orderId, String refundedAmount,
+                                             String totalRefundedAmount, boolean fullyRefunded) {
+        return new RefundCallbackDTO(orderId, 1L, new BigDecimal(refundedAmount),
+            new BigDecimal(totalRefundedAmount), fullyRefunded, "REFUND-REQ-1");
     }
 
     /**

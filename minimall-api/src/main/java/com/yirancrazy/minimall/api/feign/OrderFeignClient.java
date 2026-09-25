@@ -5,11 +5,13 @@ import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import com.yirancrazy.minimall.api.dto.order.OrderCommentEligibilityDTO;
 import com.yirancrazy.minimall.api.dto.order.OrderExportItemDTO;
 import com.yirancrazy.minimall.api.dto.order.OrderPaySnapshotDTO;
 import com.yirancrazy.minimall.api.dto.order.OrderStatisticsDTO;
+import com.yirancrazy.minimall.api.dto.order.RefundCallbackDTO;
 import com.yirancrazy.minimall.api.fallback.OrderFeignFallbackFactory;
 import com.yirancrazy.minimall.common.result.Result;
 
@@ -55,12 +57,12 @@ public interface OrderFeignClient {
     Result<Void> payByOrderNo(@PathVariable("orderNo") String orderNo);
 
     /**
-     * Notify the order service of a refund result so it can advance status.
-     * @param id the order id
-     * @param success whether the refund succeeded
+     * Notify the order service of the cumulative refund result.
+     * @param dto refund callback payload
+     * @return refund callback result
      */
-    @PostMapping("/internal/order/refund-callback/{id}")
-    Result<Void> refundCallback(@PathVariable("id") Long id, @RequestParam("success") boolean success);
+    @PostMapping("/internal/order/refund-callback")
+    Result<Void> refundCallback(@RequestBody RefundCallbackDTO dto);
 
     /**
      * 全平台订单统计（订单总数/总金额/退款金额/各状态计数），供平台经营报表使用。

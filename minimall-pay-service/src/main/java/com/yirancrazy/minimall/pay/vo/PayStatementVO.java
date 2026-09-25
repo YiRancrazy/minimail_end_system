@@ -26,10 +26,10 @@ public class PayStatementVO {
     /** 已支付金额 */
     private BigDecimal paidAmount;
 
-    /** 已退款笔数（status=6/REFUNDED） */
+    /** 已发生退款的支付单笔数（含部分退款） */
     private Long refundedCount;
 
-    /** 已退款金额 */
+    /** 累计成功退款金额（含部分退款） */
     private BigDecimal refundedAmount;
 
     /** 已冻结笔数（status=7/FROZEN） */

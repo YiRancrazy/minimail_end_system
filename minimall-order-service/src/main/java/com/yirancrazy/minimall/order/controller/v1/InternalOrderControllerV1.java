@@ -7,13 +7,16 @@ import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import jakarta.validation.Valid;
 import com.yirancrazy.minimall.api.dto.order.OrderCommentEligibilityDTO;
 import com.yirancrazy.minimall.api.dto.order.OrderExportItemDTO;
 import com.yirancrazy.minimall.api.dto.order.OrderPaySnapshotDTO;
 import com.yirancrazy.minimall.api.dto.order.OrderStatisticsDTO;
+import com.yirancrazy.minimall.api.dto.order.RefundCallbackDTO;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.order.dto.OrderPageDTO;
 import com.yirancrazy.minimall.order.entity.OrderPO;
@@ -111,13 +114,12 @@ public class InternalOrderControllerV1 {
     /**
      * 接收支付服务退款结果回调，推进订单退款状态。
      *
-     * @param id 订单标识
-     * @param success 退款是否成功
+     * @param dto 退款结果
      * @return 空响应体
      */
-    @PostMapping("/refund-callback/{id}")
-    public Result<Void> refundCallback(@PathVariable Long id, @RequestParam boolean success) {
-        orderService.handleRefundCallback(id, success);
+    @PostMapping("/refund-callback")
+    public Result<Void> refundCallback(@Valid @RequestBody RefundCallbackDTO dto) {
+        orderService.handleRefundCallback(dto);
         return Result.success(null);
     }
 

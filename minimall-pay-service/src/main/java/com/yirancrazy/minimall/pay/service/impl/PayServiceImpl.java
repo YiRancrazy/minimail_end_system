@@ -14,6 +14,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.api.dto.order.OrderPaySnapshotDTO;
+import com.yirancrazy.minimall.api.dto.order.RefundCallbackDTO;
 import com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO;
 import com.yirancrazy.minimall.api.feign.IdFeignClient;
 import com.yirancrazy.minimall.api.feign.OrderFeignClient;
@@ -479,9 +480,11 @@ public class PayServiceImpl implements PayService {
         PayTransactionPO payTx = payManager.getOne(Wrappers.<PayTransactionPO>lambdaQuery()
             .eq(PayTransactionPO::getPaymentNo, refund.getPaymentNo())
             .last("LIMIT 1"));
+        BigDecimal totalRefunded = payRefundMapper.sumCommittedAmount(refund.getPaymentNo());
+        boolean fullyRefunded = false;
         if (payTx != null && payTx.getAmount() != null) {
-            BigDecimal totalRefunded = payRefundMapper.sumCommittedAmount(refund.getPaymentNo());
-            int targetStatus = totalRefunded.compareTo(payTx.getAmount()) >= 0
+            fullyRefunded = totalRefunded.compareTo(payTx.getAmount()) >= 0;
+            int targetStatus = fullyRefunded
                 ? Integer.parseInt(PayStatusEnum.REFUNDED.getCode())
                 : Integer.parseInt(PayStatusEnum.SUCCESS.getCode());
             payTransactionMapper.updateStatusIf(
@@ -504,7 +507,7 @@ public class PayServiceImpl implements PayService {
         refund.setRefundTradeNo(refundTradeNo);
         Long orderId = resolveOrderId(payTx);
         if (orderId != null) {
-            notifyOrderRefund(orderId, refund);
+            notifyOrderRefund(orderId, payTx, refund, totalRefunded, fullyRefunded);
         }
         log.info("refund success, refundNo={}, paymentNo={}",
             refund.getRefundNo(), refund.getPaymentNo());
@@ -569,11 +572,18 @@ public class PayServiceImpl implements PayService {
     /**
      * 通知订单服务退款成功；通知失败仅记录日志，由退款通知补偿扫描重试。
      * @param orderId 订单ID
+     * @param payTx 支付流水
      * @param refund 退款单
+     * @param totalRefunded 累计退款金额
+     * @param fullyRefunded 是否已退清
      */
-    private void notifyOrderRefund(Long orderId, PayRefundPO refund) {
+    private void notifyOrderRefund(Long orderId, PayTransactionPO payTx, PayRefundPO refund,
+                                   BigDecimal totalRefunded, boolean fullyRefunded) {
         try {
-            Result<Void> result = orderFeignClient.refundCallback(orderId, true);
+            RefundCallbackDTO dto = new RefundCallbackDTO(
+                orderId, payTx.getId(), refund.getAmount(), totalRefunded,
+                fullyRefunded, refund.getRefundRequestNo());
+            Result<Void> result = orderFeignClient.refundCallback(dto);
             if (result == null || !CommonCode.SUCCESS.equals(result.getCode())) {
                 throw new IllegalStateException("order refund callback rejected: "
                     + (result == null ? "null" : result.getCode()));
@@ -913,7 +923,10 @@ public class PayServiceImpl implements PayService {
             catch (NumberFormatException e) {
                 continue;
             }
-            notifyOrderRefund(orderId, refund);
+            BigDecimal totalRefunded = payRefundMapper.sumCommittedAmount(refund.getPaymentNo());
+            boolean fullyRefunded = payTx.getAmount() != null
+                && totalRefunded.compareTo(payTx.getAmount()) >= 0;
+            notifyOrderRefund(orderId, payTx, refund, totalRefunded, fullyRefunded);
             if (refund.getNotifiedAt() != null) {
                 count++;
             }

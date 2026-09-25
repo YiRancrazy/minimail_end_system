@@ -4,12 +4,13 @@ import org.springframework.cloud.gateway.route.RouteLocator;
 import org.springframework.cloud.gateway.route.builder.RouteLocatorBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 
 /**
  * @Author: yirancrazy@gmail.com
  * @Description: Router配置类，配置Router相关 Bean
- * @Version: 1.3
- * @DateTime: 2026/08/04
+ * @Version: 1.4
+ * @DateTime: 2026/09/25
  */
 @Configuration
 public class RouterConfig {
@@ -41,9 +42,10 @@ public class RouterConfig {
             .route("cart-service", r -> r.path("/api/v1/user/cart/**")
                 .uri("lb://minimall-cart-service"))
             .route("platform-summary-service", r -> r.path(
-                "/api/v1/platform/orders/summary",
                 "/api/v1/platform/orders/export",
                 "/api/v1/platform/pay/reconciliation/export")
+                .and()
+                .method(HttpMethod.POST)
                 .uri("lb://minimall-platform-service"))
             .route("order-service", r -> r.path(
                 "/api/v1/user/orders/**",

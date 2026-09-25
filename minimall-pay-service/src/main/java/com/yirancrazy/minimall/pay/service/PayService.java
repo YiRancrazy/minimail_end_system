@@ -115,4 +115,10 @@ public interface PayService {
      * @return 成功通知数量
      */
     int scanUnnotifiedRefunds();
+
+    /**
+     * 扫描 PENDING 退款并查询渠道结果，补齐进程中断或本地更新失败后的退款状态。
+     * @return 本次完成恢复的退款数量
+     */
+    int scanPendingRefunds();
 }

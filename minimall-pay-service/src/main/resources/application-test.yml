@@ -22,6 +22,7 @@ minimall:
       enabled: false
   schedule:
     enabled: false
+    scan-refund-ms: 30000
 feign:
   sentinel:
     enabled: false

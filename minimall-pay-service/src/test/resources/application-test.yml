@@ -31,6 +31,7 @@ minimall:
   schedule:
     enabled: false
     scan-callback-ms: 30000
+    scan-refund-ms: 30000
   security:
     aes-key: pwKs8yE75abt15VzzFRV6ynHoD4I/idpBDQ8sN92fLA=
 

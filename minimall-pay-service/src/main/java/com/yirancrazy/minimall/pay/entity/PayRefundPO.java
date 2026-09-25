@@ -27,4 +27,6 @@ public class PayRefundPO extends BasePO {
     private Integer status;
     private LocalDateTime notifiedAt;
     private String idempotencyKey;
+    private Integer retryCount;
+    private LocalDateTime nextRetryAt;
 }

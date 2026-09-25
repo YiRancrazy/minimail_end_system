@@ -7,14 +7,19 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.test.context.ActiveProfiles;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import com.yirancrazy.minimall.api.dto.order.OrderPaySnapshotDTO;
 import com.yirancrazy.minimall.api.feign.IdFeignClient;
@@ -24,8 +29,12 @@ import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.pay.dto.PayCallbackDTO;
 import com.yirancrazy.minimall.pay.dto.PayPageDTO;
+import com.yirancrazy.minimall.pay.entity.PayRefundPO;
 import com.yirancrazy.minimall.pay.entity.PayTransactionPO;
 import com.yirancrazy.minimall.pay.gateway.AlipayGateway;
+import com.yirancrazy.minimall.pay.manager.PayManager;
+import com.yirancrazy.minimall.pay.mapper.PayRefundMapper;
+import com.yirancrazy.minimall.pay.mapper.PayTransactionMapper;
 import com.yirancrazy.minimall.pay.service.PayService;
 
 /**
@@ -51,6 +60,15 @@ class PayServiceImplIntegrationTest {
 
     @MockBean
     private IdFeignClient idFeignClient;
+
+    @SpyBean
+    private PayTransactionMapper payTransactionMapper;
+
+    @Autowired
+    private PayRefundMapper payRefundMapper;
+
+    @Autowired
+    private PayManager payManager;
 
     /**
      * 测试上下文：注册 MetaObjectHandler 解决 BasePO.isDeleted 自动填充。
@@ -102,6 +120,14 @@ class PayServiceImplIntegrationTest {
             if ("ORD-INT-3".equals(orderNo)) {
                 return Result.success(new OrderPaySnapshotDTO(
                     3L, orderNo, 1L, 2L, new BigDecimal("50.00"), 1, null));
+            }
+            if ("ORD-INT-ROLLBACK".equals(orderNo)) {
+                return Result.success(new OrderPaySnapshotDTO(
+                    4L, orderNo, 100L, 200L, new BigDecimal("10.00"), 1, null));
+            }
+            if ("ORD-INT-SCAN".equals(orderNo)) {
+                return Result.success(new OrderPaySnapshotDTO(
+                    5L, orderNo, 100L, 200L, new BigDecimal("10.00"), 1, null));
             }
             return Result.success(null);
         });
@@ -162,5 +188,58 @@ class PayServiceImplIntegrationTest {
     @Test
     void getByOrderNo_missing_throws_biz() {
         assertThrows(BizException.class, () -> payService.getByOrderNo("ORD-INT-NOT-EXIST", 100L));
+    }
+
+    /**
+     * 端到端：支付单抢占抛异常时，已插入的 PENDING 退款和支付状态在同一事务内回滚。
+     */
+    @Test
+    void createRefund_rollsBackPendingWhenStatusClaimFails() {
+        Long payId = payService.createPayment(
+            "ORD-INT-ROLLBACK", 100L, 200L, new BigDecimal("10.00"), null);
+        PayTransactionPO payTx = payManager.getById(payId);
+        payTx.setStatus(2);
+        payManager.updateById(payTx);
+        doThrow(new IllegalStateException("status claim failed"))
+            .when(payTransactionMapper).updateStatusIf(payTx.getPaymentNo(), 2, 5);
+
+        assertThrows(IllegalStateException.class, () -> payService.createRefund(
+            new com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO(
+                payId, new BigDecimal("10.00"), "rollback", "REFUND-ROLLBACK")));
+
+        assertNull(payRefundMapper.findByRefundRequestNo("REFUND-ROLLBACK"));
+        assertEquals(2, payManager.getById(payId).getStatus());
+    }
+
+    /**
+     * 端到端：PENDING 退款经渠道查询补成 SUCCESS，重复扫描不会再次调用渠道。
+     */
+    @Test
+    void scanPendingRefunds_reconcilesExternalSuccessOnce() {
+        Long payId = payService.createPayment(
+            "ORD-INT-SCAN", 100L, 200L, new BigDecimal("10.00"), null);
+        PayTransactionPO payTx = payManager.getById(payId);
+        payTx.setStatus(5);
+        payManager.updateById(payTx);
+
+        PayRefundPO refund = new PayRefundPO();
+        refund.setRefundNo("REFUND-INT-PENDING");
+        refund.setRefundRequestNo("REFUND-INT-REQ");
+        refund.setPaymentNo(payTx.getPaymentNo());
+        refund.setAmount(new BigDecimal("10.00"));
+        refund.setStatus(0);
+        refund.setRetryCount(0);
+        refund.setNextRetryAt(java.time.LocalDateTime.now().minusSeconds(1));
+        payRefundMapper.insert(refund);
+        lenient().when(alipayGateway.queryRefund(payTx.getPaymentNo(), "REFUND-INT-PENDING"))
+            .thenReturn(com.yirancrazy.minimall.pay.gateway.PayGateway.RefundQueryStatus.SUCCESS);
+        lenient().when(orderFeignClient.refundCallback(5L, true)).thenReturn(Result.success(null));
+
+        assertEquals(1, payService.scanPendingRefunds());
+        assertEquals(1, payRefundMapper.findByRefundRequestNo("REFUND-INT-REQ").getStatus());
+        assertEquals(0, payService.scanPendingRefunds());
+        verify(alipayGateway, times(1)).queryRefund(payTx.getPaymentNo(), "REFUND-INT-PENDING");
+        verify(alipayGateway, never()).refund(
+            anyString(), anyString(), any(BigDecimal.class), anyString());
     }
 }

@@ -494,6 +494,8 @@ CREATE TABLE IF NOT EXISTS t_pay_refund (
     status              TINYINT         NOT NULL DEFAULT 0 COMMENT '状态：0=待退款 1=已退款 2=失败',
     notified_at         DATETIME(3)     DEFAULT NULL COMMENT '退款通知时间',
     idempotency_key     VARCHAR(64)     DEFAULT NULL COMMENT '幂等键',
+    retry_count         INT             NOT NULL DEFAULT 0 COMMENT '退款补偿重试次数',
+    next_retry_at       DATETIME(3)     DEFAULT NULL COMMENT '下次退款补偿时间',
     version             INT             NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
     is_deleted          TINYINT         DEFAULT 0 COMMENT '是否删除：0=未删除 1=已删除（允许NULL）',
     create_time         DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
@@ -501,7 +503,8 @@ CREATE TABLE IF NOT EXISTS t_pay_refund (
     PRIMARY KEY (id),
     UNIQUE KEY uk_pay_refund_refund_no (refund_no, is_deleted),
     UNIQUE KEY uk_pay_refund_request_no (refund_request_no, is_deleted),
-    INDEX idx_pay_refund_payment_no (payment_no)
+    INDEX idx_pay_refund_payment_no (payment_no),
+    INDEX idx_pay_refund_status_retry (status, next_retry_at, is_deleted)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='退款流水表';
 
 -- ============================================================

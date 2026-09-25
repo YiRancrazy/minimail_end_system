@@ -13,6 +13,16 @@ import java.util.Map;
 public interface PayGateway {
 
     /**
+     * 退款渠道查询结果。
+     */
+    enum RefundQueryStatus {
+        SUCCESS,
+        PENDING,
+        NOT_FOUND,
+        FAILED
+    }
+
+    /**
      * 创建电脑网站支付单（alipay.trade.page.pay）。
      * @param paymentNo 支付单号，作为 out_trade_no
      * @param amount 支付金额，单位元，必须大于 0
@@ -37,4 +47,12 @@ public interface PayGateway {
      * Refund payment
      */
     String refund(String paymentNo, String refundNo, BigDecimal amount, String reason);
+
+    /**
+     * 按原商户退款请求号查询退款结果，用于异常恢复与补偿。
+     * @param paymentNo 原支付商户订单号
+     * @param refundNo 原退款请求号，作为 out_request_no
+     * @return 退款查询状态；渠道不可用或返回无法识别时为 FAILED
+     */
+    RefundQueryStatus queryRefund(String paymentNo, String refundNo);
 }

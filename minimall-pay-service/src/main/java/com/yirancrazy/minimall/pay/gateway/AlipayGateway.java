@@ -7,9 +7,11 @@ import com.alibaba.fastjson.JSONObject;
 import com.alipay.api.AlipayApiException;
 import com.alipay.api.AlipayClient;
 import com.alipay.api.internal.util.AlipaySignature;
+import com.alipay.api.request.AlipayTradeFastpayRefundQueryRequest;
 import com.alipay.api.request.AlipayTradePagePayRequest;
 import com.alipay.api.request.AlipayTradeQueryRequest;
 import com.alipay.api.request.AlipayTradeRefundRequest;
+import com.alipay.api.response.AlipayTradeFastpayRefundQueryResponse;
 import com.alipay.api.response.AlipayTradeQueryResponse;
 import com.alipay.api.response.AlipayTradeRefundResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -143,5 +145,53 @@ public class AlipayGateway implements PayGateway {
             log.error("refund failed, paymentNo={}, refundNo={}", paymentNo, refundNo, e);
             throw new RuntimeException("Alipay refund failed", e);
         }
+    }
+
+    /**
+     * 按原退款请求号查询支付宝退款结果。
+     * @param paymentNo 原支付商户订单号
+     * @param refundNo 原退款请求号，作为 out_request_no
+     * @return 退款查询状态；查询异常或无法识别时返回 FAILED
+     */
+    @Override
+    public RefundQueryStatus queryRefund(String paymentNo, String refundNo) {
+        if (paymentNo == null || paymentNo.isBlank() || refundNo == null || refundNo.isBlank()) {
+            return RefundQueryStatus.FAILED;
+        }
+        AlipayTradeFastpayRefundQueryRequest request = new AlipayTradeFastpayRefundQueryRequest();
+        JSONObject bizContent = new JSONObject();
+        bizContent.put("out_trade_no", paymentNo);
+        bizContent.put("out_request_no", refundNo);
+        request.setBizContent(bizContent.toJSONString());
+        try {
+            AlipayTradeFastpayRefundQueryResponse response = alipayClient.execute(request);
+            if (response.isSuccess()) {
+                String refundAmount = response.getRefundAmount();
+                if (refundAmount == null || refundAmount.isBlank()) {
+                    return RefundQueryStatus.NOT_FOUND;
+                }
+                if ("REFUND_SUCCESS".equals(response.getRefundStatus())
+                    || response.getGmtRefundPay() != null) {
+                    return RefundQueryStatus.SUCCESS;
+                }
+                return RefundQueryStatus.PENDING;
+            }
+            if (isRefundNotFound(response.getSubCode())) {
+                return RefundQueryStatus.NOT_FOUND;
+            }
+            log.warn("query refund failed, paymentNo={}, refundNo={}, subCode={}, subMsg={}",
+                paymentNo, refundNo, response.getSubCode(), response.getSubMsg());
+            return RefundQueryStatus.FAILED;
+        }
+        catch (AlipayApiException e) {
+            log.error("query refund failed, paymentNo={}, refundNo={}", paymentNo, refundNo, e);
+            return RefundQueryStatus.FAILED;
+        }
+    }
+
+    private static boolean isRefundNotFound(String subCode) {
+        return "ACQ.TRADE_NOT_EXIST".equals(subCode)
+            || "ACQ.REFUND_NOT_EXIST".equals(subCode)
+            || "TRADE_NOT_EXIST".equals(subCode);
     }
 }

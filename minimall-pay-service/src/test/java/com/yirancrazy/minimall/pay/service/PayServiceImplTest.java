@@ -11,6 +11,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.dao.DuplicateKeyException;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.SimpleTransactionStatus;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -23,6 +25,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
@@ -72,6 +75,7 @@ public class PayServiceImplTest {
     private PayTransactionMapper payTransactionMapper;
     private IdFeignClient idFeignClient;
     private OrderFeignClient orderFeignClient;
+    private PlatformTransactionManager transactionManager;
     private PayServiceImpl service;
 
     @BeforeAll
@@ -91,6 +95,9 @@ public class PayServiceImplTest {
         payTransactionMapper = mock(PayTransactionMapper.class);
         idFeignClient = mock(IdFeignClient.class);
         orderFeignClient = mock(OrderFeignClient.class);
+        transactionManager = mock(PlatformTransactionManager.class);
+        lenient().when(transactionManager.getTransaction(any()))
+            .thenReturn(new SimpleTransactionStatus());
         lenient().when(idFeignClient.nextId(anyString())).thenReturn(Result.success(90001L));
         lenient().when(orderFeignClient.paySnapshot(anyString())).thenAnswer(invocation -> {
             String orderNo = invocation.getArgument(0);
@@ -123,7 +130,7 @@ public class PayServiceImplTest {
             return true;
         }).when(manager).save(any(PayTransactionPO.class));
         service = new PayServiceImpl(manager, payGateway, payRefundMapper, payTransactionMapper,
-            idFeignClient, orderFeignClient);
+            idFeignClient, orderFeignClient, transactionManager);
     }
 
     /**
@@ -760,8 +767,12 @@ public class PayServiceImplTest {
         payTx.setAmount(new BigDecimal("100.00"));
         payTx.setOrderNo("100");
         when(manager.getById(1L)).thenReturn(payTx);
+        when(manager.getOne(any())).thenReturn(payTx);
         when(payTransactionMapper.updateStatusIf("PAY123", 2, 5)).thenReturn(1);
-        when(payRefundMapper.sumCommittedAmount("PAY123")).thenReturn(new BigDecimal("0.00"));
+        when(payRefundMapper.sumCommittedAmount("PAY123"))
+            .thenReturn(new BigDecimal("0.00"), new BigDecimal("50.00"));
+        when(payRefundMapper.updateStatusIf(
+            anyString(), eq(0), eq(1), anyString())).thenReturn(1);
         when(payGateway.refund(anyString(), anyString(), any(BigDecimal.class), anyString()))
             .thenReturn("REFUND_TRADE_123");
 
@@ -790,13 +801,15 @@ public class PayServiceImplTest {
         payTx.setOrderNo("100");
         when(manager.getById(1L)).thenReturn(payTx);
         when(payTransactionMapper.updateStatusIf("PAY123", 2, 5)).thenReturn(0);
+        when(payRefundMapper.sumCommittedAmount("PAY123")).thenReturn(new BigDecimal("0.00"));
 
         com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO dto =
             new com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO(1L, new BigDecimal("50.00"), "test");
         BizException ex = assertThrows(BizException.class, () -> service.createRefund(dto));
 
         assertEquals("40007", ex.getCode());
-        verify(payRefundMapper, never()).insert(any(PayRefundPO.class));
+        verify(payRefundMapper).insert(any(PayRefundPO.class));
+        verify(transactionManager).rollback(any());
         verify(payGateway, never()).refund(anyString(), anyString(), any(BigDecimal.class), anyString());
         verifyNoInteractions(orderFeignClient);
     }
@@ -821,8 +834,9 @@ public class PayServiceImplTest {
         BizException ex = assertThrows(BizException.class, () -> service.createRefund(dto));
 
         assertEquals("40008", ex.getCode());
-        verify(payTransactionMapper).updateStatusIf("PAY123", 5, 2); // 回滚抢占
         verify(payRefundMapper, never()).insert(any(PayRefundPO.class));
+        verify(payTransactionMapper, never()).updateStatusIf("PAY123", 5, 2);
+        verify(transactionManager).rollback(any());
         verify(payGateway, never()).refund(anyString(), anyString(), any(BigDecimal.class), anyString());
         verifyNoInteractions(orderFeignClient);
     }
@@ -840,8 +854,12 @@ public class PayServiceImplTest {
         payTx.setAmount(new BigDecimal("100.00"));
         payTx.setOrderNo("100");
         when(manager.getById(1L)).thenReturn(payTx);
+        when(manager.getOne(any())).thenReturn(payTx);
         when(payTransactionMapper.updateStatusIf("PAY123", 2, 5)).thenReturn(1);
-        when(payRefundMapper.sumCommittedAmount("PAY123")).thenReturn(new BigDecimal("0.00"));
+        when(payRefundMapper.sumCommittedAmount("PAY123"))
+            .thenReturn(new BigDecimal("0.00"), new BigDecimal("50.00"));
+        when(payRefundMapper.updateStatusIf(
+            "REFUND90001", 0, 1, "REFUND_TRADE_123")).thenReturn(1);
         when(payGateway.refund(anyString(), anyString(), any(BigDecimal.class), anyString()))
             .thenReturn("REFUND_TRADE_123");
 
@@ -863,7 +881,8 @@ public class PayServiceImplTest {
         verify(payRefundMapper).insert(cap.capture());
         assertEquals("PAY123", cap.getValue().getPaymentNo());
         assertEquals(0, insertStatusSnapshot[0]); // 落库时为 PENDING
-        verify(payRefundMapper).updateById(cap.getValue());
+        verify(payRefundMapper).updateStatusIf(
+            "REFUND90001", 0, 1, "REFUND_TRADE_123");
         assertEquals(1, cap.getValue().getStatus()); // 成功后 SUCCESS
         assertEquals("REFUND-REQ-1", cap.getValue().getRefundRequestNo());
         verify(payTransactionMapper).updateStatusIf("PAY123", 5, 2); // 未退满回 SUCCESS
@@ -896,6 +915,113 @@ public class PayServiceImplTest {
     }
 
     /**
+     * 验证同一请求号遇到 PENDING 退款时，使用原退款单号查询并恢复，不生成新的外部退款号。
+     */
+    @Test
+    public void createRefund_recovers_existing_pending_request() {
+        PayRefundPO existing = new PayRefundPO();
+        existing.setRefundNo("REFUND-STABLE");
+        existing.setRefundRequestNo("REFUND-REQ-1");
+        existing.setPaymentNo("PAY123");
+        existing.setAmount(new BigDecimal("50.00"));
+        existing.setReason("reason");
+        existing.setStatus(0);
+        when(payRefundMapper.findByRefundRequestNo("REFUND-REQ-1")).thenReturn(existing);
+
+        PayTransactionPO payTx = new PayTransactionPO();
+        payTx.setId(1L);
+        payTx.setStatus(2);
+        payTx.setPaymentNo("PAY123");
+        payTx.setAmount(new BigDecimal("100.00"));
+        payTx.setOrderNo("100");
+        when(manager.getById(1L)).thenReturn(payTx);
+        when(manager.getOne(any())).thenReturn(payTx);
+        when(payGateway.queryRefund("PAY123", "REFUND-STABLE"))
+            .thenReturn(PayGateway.RefundQueryStatus.NOT_FOUND);
+        when(payGateway.refund("PAY123", "REFUND-STABLE", new BigDecimal("50.00"), "reason"))
+            .thenReturn("REFUND_TRADE_123");
+        when(payRefundMapper.sumCommittedAmount("PAY123")).thenReturn(new BigDecimal("50.00"));
+        when(payRefundMapper.updateStatusIf(
+            eq("REFUND-STABLE"), eq(0), eq(1), any())).thenReturn(1);
+
+        RefundVO result = service.createRefund(
+            new com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO(
+                1L, new BigDecimal("50.00"), "reason", "REFUND-REQ-1"));
+
+        assertEquals("REFUND-STABLE", result.getRefundNo());
+        assertEquals(1, result.getStatus());
+        verify(payGateway).refund("PAY123", "REFUND-STABLE", new BigDecimal("50.00"), "reason");
+        verify(payTransactionMapper).updateStatusIf("PAY123", 5, 2);
+    }
+
+    /**
+     * 验证渠道异常时本地退款保持 PENDING 且支付单保持 REFUNDING，等待补偿扫描恢复。
+     */
+    @Test
+    public void createRefund_gateway_exception_keeps_pending_for_retry() {
+        PayTransactionPO payTx = new PayTransactionPO();
+        payTx.setId(1L);
+        payTx.setStatus(2);
+        payTx.setPaymentNo("PAY123");
+        payTx.setAmount(new BigDecimal("100.00"));
+        payTx.setOrderNo("100");
+        when(manager.getById(1L)).thenReturn(payTx);
+        when(payTransactionMapper.updateStatusIf("PAY123", 2, 5)).thenReturn(1);
+        when(payRefundMapper.sumCommittedAmount("PAY123")).thenReturn(new BigDecimal("50.00"));
+        when(payGateway.refund(anyString(), anyString(), any(BigDecimal.class), anyString()))
+            .thenThrow(new RuntimeException("gateway timeout"));
+
+        ArgumentCaptor<PayRefundPO> refundCaptor = ArgumentCaptor.forClass(PayRefundPO.class);
+        when(payRefundMapper.insert(refundCaptor.capture())).thenReturn(1);
+
+        assertThrows(BizException.class, () -> service.createRefund(
+            new com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO(
+                1L, new BigDecimal("50.00"), "reason", "REFUND-REQ-1")));
+
+        assertEquals(0, refundCaptor.getValue().getStatus());
+        verify(payRefundMapper, never()).updateStatusIf(
+            anyString(), anyInt(), anyInt(), anyString());
+        verify(payTransactionMapper, never()).updateStatusIf("PAY123", 5, 2);
+        verify(orderFeignClient, never()).refundCallback(anyLong(), anyBoolean());
+    }
+
+    /**
+     * 验证补偿扫描先查询渠道，已退款成功时只补写本地状态，不重复发起退款。
+     */
+    @Test
+    public void scanPendingRefunds_completes_refund_found_in_gateway() {
+        PayRefundPO pending = new PayRefundPO();
+        pending.setRefundNo("REFUND-STABLE");
+        pending.setPaymentNo("PAY123");
+        pending.setAmount(new BigDecimal("50.00"));
+        pending.setStatus(0);
+        pending.setNextRetryAt(LocalDateTime.now().minusSeconds(1));
+        when(payRefundMapper.selectPendingRefunds(any(LocalDateTime.class), eq(100)))
+            .thenReturn(List.of(pending));
+        when(payRefundMapper.claimPendingRefund(
+            eq("REFUND-STABLE"), any(LocalDateTime.class), any(LocalDateTime.class))).thenReturn(1);
+
+        PayTransactionPO payTx = new PayTransactionPO();
+        payTx.setPaymentNo("PAY123");
+        payTx.setAmount(new BigDecimal("100.00"));
+        payTx.setOrderNo("100");
+        when(manager.getOne(any())).thenReturn(payTx);
+        when(payGateway.queryRefund("PAY123", "REFUND-STABLE"))
+            .thenReturn(PayGateway.RefundQueryStatus.SUCCESS);
+        when(payRefundMapper.sumCommittedAmount("PAY123")).thenReturn(new BigDecimal("50.00"));
+        when(payRefundMapper.updateStatusIf(
+            eq("REFUND-STABLE"), eq(0), eq(1), any())).thenReturn(1);
+
+        int count = service.scanPendingRefunds();
+
+        assertEquals(1, count);
+        verify(payGateway, never()).refund(
+            anyString(), anyString(), any(BigDecimal.class), anyString());
+        verify(payTransactionMapper).updateStatusIf("PAY123", 5, 2);
+        verify(orderFeignClient).refundCallback(100L, true);
+    }
+
+    /**
      * 验证 createRefund 累计退满支付金额时支付单置 REFUNDED（部分退款终态语义）。
      */
     @Test
@@ -907,9 +1033,12 @@ public class PayServiceImplTest {
         payTx.setAmount(new BigDecimal("100.00"));
         payTx.setOrderNo("100");
         when(manager.getById(1L)).thenReturn(payTx);
+        when(manager.getOne(any())).thenReturn(payTx);
         when(payTransactionMapper.updateStatusIf("PAY123", 2, 5)).thenReturn(1);
         when(payRefundMapper.sumCommittedAmount("PAY123"))
             .thenReturn(new BigDecimal("0.00")).thenReturn(new BigDecimal("100.00"));
+        when(payRefundMapper.updateStatusIf(
+            anyString(), eq(0), eq(1), anyString())).thenReturn(1);
         when(payGateway.refund(anyString(), anyString(), any(BigDecimal.class), anyString()))
             .thenReturn("REFUND_TRADE_123");
 
@@ -919,30 +1048,6 @@ public class PayServiceImplTest {
 
         verify(payTransactionMapper).updateStatusIf("PAY123", 5, 6); // 累计退满置 REFUNDED
         verify(orderFeignClient).refundCallback(100L, true);
-    }
-
-    /**
-     * 验证 createRefund 退款网关异常时退款记录置 FAILED、回滚抢占状态并抛出 REFUND_FAILED。
-     */
-    @Test
-    public void createRefund_gateway_exception_throws() {
-        PayTransactionPO payTx = new PayTransactionPO();
-        payTx.setId(1L);
-        payTx.setStatus(2); // SUCCESS
-        payTx.setPaymentNo("PAY123");
-        payTx.setAmount(new BigDecimal("100.00"));
-        payTx.setOrderNo("100");
-        when(manager.getById(1L)).thenReturn(payTx);
-        when(payTransactionMapper.updateStatusIf("PAY123", 2, 5)).thenReturn(1);
-        when(payRefundMapper.sumCommittedAmount("PAY123")).thenReturn(new BigDecimal("0.00"));
-        when(payGateway.refund(anyString(), anyString(), any(BigDecimal.class), anyString()))
-            .thenThrow(new RuntimeException("gateway down"));
-
-        com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO dto =
-            new com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO(1L, new BigDecimal("50.00"), "reason");
-        assertThrows(BizException.class, () -> service.createRefund(dto));
-        verify(payTransactionMapper).updateStatusIf("PAY123", 5, 2); // 回滚抢占
-        verify(orderFeignClient, never()).refundCallback(anyLong(), anyBoolean());
     }
 
     /**
@@ -957,8 +1062,12 @@ public class PayServiceImplTest {
         payTx.setAmount(new BigDecimal("100.00"));
         payTx.setOrderNo("100");
         when(manager.getById(1L)).thenReturn(payTx);
+        when(manager.getOne(any())).thenReturn(payTx);
         when(payTransactionMapper.updateStatusIf("PAY123", 2, 5)).thenReturn(1);
-        when(payRefundMapper.sumCommittedAmount("PAY123")).thenReturn(new BigDecimal("0.00"));
+        when(payRefundMapper.sumCommittedAmount("PAY123"))
+            .thenReturn(new BigDecimal("0.00"), new BigDecimal("50.00"));
+        when(payRefundMapper.updateStatusIf(
+            anyString(), eq(0), eq(1), anyString())).thenReturn(1);
         when(payGateway.refund(anyString(), anyString(), any(BigDecimal.class), anyString()))
             .thenReturn("REFUND_TRADE_123");
         when(orderFeignClient.refundCallback(100L, true))
@@ -1240,8 +1349,12 @@ public class PayServiceImplTest {
         payTx.setAmount(new BigDecimal("100.00"));
         payTx.setOrderNo("OD20260814001");
         when(manager.getById(1L)).thenReturn(payTx);
+        when(manager.getOne(any())).thenReturn(payTx);
         when(payTransactionMapper.updateStatusIf("PAY123", 2, 5)).thenReturn(1);
-        when(payRefundMapper.sumCommittedAmount("PAY123")).thenReturn(new BigDecimal("0.00"));
+        when(payRefundMapper.sumCommittedAmount("PAY123"))
+            .thenReturn(new BigDecimal("0.00"), new BigDecimal("50.00"));
+        when(payRefundMapper.updateStatusIf(
+            anyString(), eq(0), eq(1), anyString())).thenReturn(1);
         when(payGateway.refund(anyString(), anyString(), any(BigDecimal.class), anyString()))
             .thenReturn("REFUND_TRADE_123");
 

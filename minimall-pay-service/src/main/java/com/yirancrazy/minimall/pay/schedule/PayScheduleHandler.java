@@ -40,4 +40,13 @@ public class PayScheduleHandler {
         int count = payService.scanUnnotifiedRefunds();
         log.debug("scanUnnotifiedRefunds tick, processed={}", count);
     }
+
+    /**
+     * 每 30 秒扫描一次 PENDING 退款，查询渠道并恢复中断的退款流程。
+     */
+    @Scheduled(fixedDelayString = "${minimall.schedule.scan-refund-ms:30000}")
+    public void scanPendingRefunds() {
+        int count = payService.scanPendingRefunds();
+        log.debug("scanPendingRefunds tick, processed={}", count);
+    }
 }

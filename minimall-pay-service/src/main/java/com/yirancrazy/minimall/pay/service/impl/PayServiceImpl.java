@@ -8,6 +8,9 @@ import java.util.List;
 import java.util.UUID;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionTemplate;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.api.dto.order.OrderPaySnapshotDTO;
@@ -60,6 +63,8 @@ public class PayServiceImpl implements PayService {
     private static final int SCAN_BATCH_SIZE = 100;
     private static final int SCAN_MAX_BATCHES = 10;
     private static final long SCAN_WINDOW_HOURS = 24L;
+    private static final long REFUND_RETRY_DELAY_SECONDS = 30L;
+    private static final long REFUND_PROCESSING_LEASE_SECONDS = 60L;
 
     private final PayManager payManager;
     private final PayGateway payGateway;
@@ -67,17 +72,21 @@ public class PayServiceImpl implements PayService {
     private final PayTransactionMapper payTransactionMapper;
     private final IdFeignClient idFeignClient;
     private final OrderFeignClient orderFeignClient;
+    private final TransactionTemplate transactionTemplate;
 
     public PayServiceImpl(PayManager payManager, PayGateway payGateway,
                           PayRefundMapper payRefundMapper, PayTransactionMapper payTransactionMapper,
                           IdFeignClient idFeignClient,
-                          OrderFeignClient orderFeignClient) {
+                          OrderFeignClient orderFeignClient,
+                          PlatformTransactionManager transactionManager) {
         this.payManager = payManager;
         this.payGateway = payGateway;
         this.payRefundMapper = payRefundMapper;
         this.payTransactionMapper = payTransactionMapper;
         this.idFeignClient = idFeignClient;
         this.orderFeignClient = orderFeignClient;
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
+        this.transactionTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     }
 
     /**
@@ -315,25 +324,29 @@ public class PayServiceImpl implements PayService {
     }
 
     /**
-     * 创建退款。先原子抢占支付单为 REFUNDING（并发退款影响 0 行直接拒绝），再校验累计退款上限，
-     * 成功后通过 Feign 通知 order 服务推进退款状态；部分退款未退满时支付单回到 SUCCESS 允许继续退款。
+     * 创建退款。本地事务先落 PENDING 退款记录并抢占支付单，提交后再调用渠道；
+     * 渠道结果未知时保持 PENDING 和 REFUNDING，由补偿扫描使用同一 out_request_no 恢复。
      * @param dto 退款创建DTO
      * @return 退款VO
      */
     @Override
     public RefundVO createRefund(RefundCreateDTO dto) {
         PayRefundPO existingRefund = findByRefundRequestNo(dto.getRefundRequestNo());
-        if (existingRefund != null) {
+        if (existingRefund != null && isFinalRefundStatus(existingRefund.getStatus())) {
             log.info("refund request reused, requestNo={}, refundNo={}, status={}",
                 dto.getRefundRequestNo(), existingRefund.getRefundNo(), existingRefund.getStatus());
             return toRefundVO(existingRefund);
         }
-        PayTransactionPO payTx = payManager.getById(dto.getPayId());
 
+        PayTransactionPO payTx = payManager.getById(dto.getPayId());
         if (payTx == null) {
             throw new BizException(PayCodeEnum.PAY_NOT_FOUND);
         }
         BigDecimal refundAmount = normalizeAmount(dto.getAmount());
+        if (existingRefund != null) {
+            validateExistingRefund(existingRefund, payTx, refundAmount);
+            return recoverPendingRefund(existingRefund);
+        }
         if (payTx.getStatus() != Integer.parseInt(PayStatusEnum.SUCCESS.getCode())) {
             throw new BizException(PayCodeEnum.PAY_NOT_SUCCESS);
         }
@@ -346,84 +359,199 @@ public class PayServiceImpl implements PayService {
         if (refundRequestNo == null || refundRequestNo.isBlank()) {
             refundRequestNo = refundNo;
         }
-        String paymentNo = payTx.getPaymentNo();
-        int successCode = Integer.parseInt(PayStatusEnum.SUCCESS.getCode());
-        int refundingCode = Integer.parseInt(PayStatusEnum.REFUNDING.getCode());
-
-        // 原子抢占：仅当支付单仍为 SUCCESS 时置为 REFUNDING，并发退款第二个请求影响 0 行直接拒绝，杜绝双重退款
-        if (payTransactionMapper.updateStatusIf(paymentNo, successCode, refundingCode) == 0) {
+        try {
+            existingRefund = reserveRefund(
+                payTx, refundAmount, dto.getReason(), refundNo, refundRequestNo);
+        }
+        catch (DuplicateKeyException e) {
             existingRefund = findByRefundRequestNo(refundRequestNo);
-            if (existingRefund != null) {
-                return toRefundVO(existingRefund);
+            if (existingRefund == null) {
+                throw e;
+            }
+            validateExistingRefund(existingRefund, payTx, refundAmount);
+            return recoverPendingRefund(existingRefund);
+        }
+        if (existingRefund == null) {
+            throw new BizException(PayCodeEnum.REFUND_FAILED);
+        }
+        return submitRefund(existingRefund);
+    }
+
+    /**
+     * 在独立事务中先落 PENDING 退款，再原子抢占支付单并校验累计退款金额。
+     * @param payTx 支付流水
+     * @param refundAmount 本次退款金额
+     * @param reason 退款原因
+     * @param refundNo 退款单号，同时作为渠道 out_request_no
+     * @param refundRequestNo 退款请求幂等键
+     * @return 已提交的 PENDING 退款记录
+     */
+    private PayRefundPO reserveRefund(PayTransactionPO payTx, BigDecimal refundAmount, String reason,
+                                      String refundNo, String refundRequestNo) {
+        return transactionTemplate.execute(status -> {
+            BigDecimal committedAmount = payRefundMapper.sumCommittedAmount(payTx.getPaymentNo());
+            if (committedAmount.add(refundAmount).compareTo(payTx.getAmount()) > 0) {
+                throw new BizException(PayCodeEnum.REFUND_EXCEED);
+            }
+
+            PayRefundPO refund = new PayRefundPO();
+            refund.setRefundNo(refundNo);
+            refund.setRefundRequestNo(refundRequestNo);
+            refund.setPaymentNo(payTx.getPaymentNo());
+            refund.setAmount(refundAmount);
+            refund.setReason(reason);
+            refund.setStatus(Integer.parseInt(RefundStatusEnum.PENDING.getCode()));
+            refund.setIdempotencyKey(UUID.randomUUID().toString());
+            refund.setRetryCount(0);
+            refund.setNextRetryAt(LocalDateTime.now().plusSeconds(REFUND_RETRY_DELAY_SECONDS));
+            payRefundMapper.insert(refund);
+
+            int successCode = Integer.parseInt(PayStatusEnum.SUCCESS.getCode());
+            int refundingCode = Integer.parseInt(PayStatusEnum.REFUNDING.getCode());
+            if (payTransactionMapper.updateStatusIf(
+                payTx.getPaymentNo(), successCode, refundingCode) == 0) {
+                throw new BizException(PayCodeEnum.REFUND_CONFLICT);
+            }
+            return refund;
+        });
+    }
+
+    /**
+     * 发起首次外部退款；渠道异常时保留 PENDING 和 REFUNDING，等待补偿扫描恢复。
+     * @param refund PENDING 退款记录
+     * @return 退款结果
+     */
+    private RefundVO submitRefund(PayRefundPO refund) {
+        try {
+            String refundTradeNo = payGateway.refund(
+                refund.getPaymentNo(), refund.getRefundNo(), refund.getAmount(), refund.getReason());
+            return completeRefund(refund, refundTradeNo);
+        }
+        catch (Exception e) {
+            scheduleRefundRetry(refund);
+            log.error("refund gateway failed, refundNo={}, paymentNo={}",
+                refund.getRefundNo(), refund.getPaymentNo(), e);
+            throw new BizException(PayCodeEnum.REFUND_FAILED);
+        }
+    }
+
+    /**
+     * 恢复 PENDING 退款。先按同一 out_request_no 查询渠道；未受理时才重新发起。
+     * @param refund PENDING 退款记录
+     * @return 退款结果；渠道结果未知时抛出 REFUND_FAILED
+     */
+    private RefundVO recoverPendingRefund(PayRefundPO refund) {
+        PayGateway.RefundQueryStatus queryStatus;
+        try {
+            queryStatus = payGateway.queryRefund(refund.getPaymentNo(), refund.getRefundNo());
+        }
+        catch (Exception e) {
+            scheduleRefundRetry(refund);
+            log.error("query refund failed, refundNo={}, paymentNo={}",
+                refund.getRefundNo(), refund.getPaymentNo(), e);
+            throw new BizException(PayCodeEnum.REFUND_FAILED);
+        }
+        if (queryStatus == PayGateway.RefundQueryStatus.SUCCESS) {
+            try {
+                return completeRefund(refund, refund.getRefundTradeNo());
+            }
+            catch (Exception e) {
+                scheduleRefundRetry(refund);
+                throw new BizException(PayCodeEnum.REFUND_FAILED);
+            }
+        }
+        if (queryStatus == PayGateway.RefundQueryStatus.NOT_FOUND) {
+            return submitRefund(refund);
+        }
+        scheduleRefundRetry(refund);
+        log.warn("refund query pending, refundNo={}, paymentNo={}, status={}",
+            refund.getRefundNo(), refund.getPaymentNo(), queryStatus);
+        throw new BizException(PayCodeEnum.REFUND_FAILED);
+    }
+
+    /**
+     * 将渠道已成功的退款写回本地终态，并推进支付单和订单通知状态。
+     * @param refund PENDING 退款记录
+     * @param refundTradeNo 渠道退款交易号
+     * @return 退款结果
+     */
+    private RefundVO completeRefund(PayRefundPO refund, String refundTradeNo) {
+        PayTransactionPO payTx = payManager.getOne(Wrappers.<PayTransactionPO>lambdaQuery()
+            .eq(PayTransactionPO::getPaymentNo, refund.getPaymentNo())
+            .last("LIMIT 1"));
+        if (payTx != null && payTx.getAmount() != null) {
+            BigDecimal totalRefunded = payRefundMapper.sumCommittedAmount(refund.getPaymentNo());
+            int targetStatus = totalRefunded.compareTo(payTx.getAmount()) >= 0
+                ? Integer.parseInt(PayStatusEnum.REFUNDED.getCode())
+                : Integer.parseInt(PayStatusEnum.SUCCESS.getCode());
+            payTransactionMapper.updateStatusIf(
+                refund.getPaymentNo(), Integer.parseInt(PayStatusEnum.REFUNDING.getCode()), targetStatus);
+        }
+
+        int updated = payRefundMapper.updateStatusIf(
+            refund.getRefundNo(), Integer.parseInt(RefundStatusEnum.PENDING.getCode()),
+            Integer.parseInt(RefundStatusEnum.SUCCESS.getCode()), refundTradeNo);
+        if (updated == 0) {
+            PayRefundPO current = findByRefundRequestNo(refund.getRefundRequestNo());
+            if (current != null
+                && current.getStatus() == Integer.parseInt(RefundStatusEnum.SUCCESS.getCode())) {
+                return toRefundVO(current);
             }
             throw new BizException(PayCodeEnum.REFUND_CONFLICT);
         }
 
-        // 累计校验：已占用退款（在途 + 成功）+ 本次金额不得超过支付金额，超限回滚抢占状态
-        BigDecimal committedAmount = payRefundMapper.sumCommittedAmount(paymentNo);
-        if (refundAmount.add(committedAmount).compareTo(payTx.getAmount()) > 0) {
-            payTransactionMapper.updateStatusIf(paymentNo, refundingCode, successCode);
-            throw new BizException(PayCodeEnum.REFUND_EXCEED);
-        }
-
-        PayRefundPO refund = new PayRefundPO();
-        refund.setRefundNo(refundNo);
-        refund.setRefundRequestNo(refundRequestNo);
-        refund.setPaymentNo(paymentNo);
-        refund.setAmount(refundAmount);
-        refund.setReason(dto.getReason());
-        refund.setStatus(Integer.parseInt(RefundStatusEnum.PENDING.getCode()));
-        refund.setIdempotencyKey(UUID.randomUUID().toString());
-        try {
-            payRefundMapper.insert(refund);
-        }
-        catch (DuplicateKeyException e) {
-            existingRefund = findByRefundRequestNo(refundRequestNo);
-            if (existingRefund != null) {
-                payTransactionMapper.updateStatusIf(paymentNo, refundingCode, successCode);
-                return toRefundVO(existingRefund);
-            }
-            throw e;
-        }
-
-        // C 端直付订单号可能为非数字业务单号，OrderFeignClient 仅有按订单ID的退款回调，
-        // 无法推进时记 WARN 跳过订单推进，避免 NumberFormatException 导致退款中断
-        Long orderId = null;
-        try {
-            orderId = Long.valueOf(payTx.getOrderNo());
-        }
-        catch (NumberFormatException e) {
-            log.warn("refund skip order advance for non-numeric orderNo, paymentNo={}, orderNo={}",
-                paymentNo, payTx.getOrderNo());
-        }
-
-        String refundTradeNo;
-        try {
-            refundTradeNo = payGateway.refund(paymentNo, refundNo, refundAmount, dto.getReason());
-        }
-        catch (Exception e) {
-            refund.setStatus(Integer.parseInt(RefundStatusEnum.FAILED.getCode()));
-            payRefundMapper.updateById(refund);
-            payTransactionMapper.updateStatusIf(paymentNo, refundingCode, successCode);
-            log.error("refund gateway failed, refundNo={}, paymentNo={}", refundNo, paymentNo, e);
-            throw new BizException(PayCodeEnum.REFUND_FAILED);
-        }
-
         refund.setStatus(Integer.parseInt(RefundStatusEnum.SUCCESS.getCode()));
         refund.setRefundTradeNo(refundTradeNo);
-        refund.setNotifiedAt(null);
-        payRefundMapper.updateById(refund);
-
-        BigDecimal totalRefunded = payRefundMapper.sumCommittedAmount(paymentNo);
-        int targetStatus = totalRefunded.compareTo(payTx.getAmount()) >= 0
-            ? Integer.parseInt(PayStatusEnum.REFUNDED.getCode()) : successCode;
-        payTransactionMapper.updateStatusIf(paymentNo, refundingCode, targetStatus);
-
+        Long orderId = resolveOrderId(payTx);
         if (orderId != null) {
             notifyOrderRefund(orderId, refund);
         }
-        log.info("refund success, refundNo={}, paymentNo={}", refundNo, paymentNo);
+        log.info("refund success, refundNo={}, paymentNo={}",
+            refund.getRefundNo(), refund.getPaymentNo());
         return toRefundVO(refund);
+    }
+
+    /**
+     * 安排 PENDING 退款下一次补偿时间，数据库更新失败时保留原租约等待下一轮扫描。
+     * @param refund PENDING 退款记录
+     */
+    private void scheduleRefundRetry(PayRefundPO refund) {
+        LocalDateTime nextRetryAt = LocalDateTime.now().plusSeconds(REFUND_RETRY_DELAY_SECONDS);
+        refund.setNextRetryAt(nextRetryAt);
+        int retryCount = refund.getRetryCount() == null ? 0 : refund.getRetryCount();
+        refund.setRetryCount(retryCount + 1);
+        try {
+            payRefundMapper.scheduleRefundRetry(refund.getRefundNo(), nextRetryAt);
+        }
+        catch (Exception e) {
+            log.error("schedule refund retry failed, refundNo={}", refund.getRefundNo(), e);
+        }
+    }
+
+    private static Long resolveOrderId(PayTransactionPO payTx) {
+        if (payTx == null || payTx.getOrderNo() == null) {
+            return null;
+        }
+        try {
+            return Long.valueOf(payTx.getOrderNo());
+        }
+        catch (NumberFormatException e) {
+            log.warn("refund skip order advance for non-numeric orderNo, paymentNo={}, orderNo={}",
+                payTx.getPaymentNo(), payTx.getOrderNo());
+            return null;
+        }
+    }
+
+    private static boolean isFinalRefundStatus(Integer status) {
+        return status != null && status != Integer.parseInt(RefundStatusEnum.PENDING.getCode());
+    }
+
+    private static void validateExistingRefund(PayRefundPO refund, PayTransactionPO payTx,
+                                               BigDecimal refundAmount) {
+        if (!payTx.getPaymentNo().equals(refund.getPaymentNo())
+            || refund.getAmount().compareTo(refundAmount) != 0) {
+            throw new BizException(PayCodeEnum.REFUND_CONFLICT);
+        }
     }
 
     private PayRefundPO findByRefundRequestNo(String refundRequestNo) {
@@ -715,6 +843,42 @@ public class PayServiceImpl implements PayService {
         }
         if (count > 0) {
             log.info("scanPaidButOrderPending compensated {} payments", count);
+        }
+        return count;
+    }
+
+    /**
+     * 扫描 PENDING 退款并查询渠道结果，使用原 out_request_no 恢复中断的退款流程。
+     * @return 本次完成恢复的退款数量
+     */
+    @Override
+    public int scanPendingRefunds() {
+        LocalDateTime now = LocalDateTime.now();
+        List<PayRefundPO> refunds = payRefundMapper.selectPendingRefunds(now, SCAN_BATCH_SIZE);
+        int count = 0;
+        for (PayRefundPO refund : refunds) {
+            LocalDateTime leaseUntil = now.plusSeconds(REFUND_PROCESSING_LEASE_SECONDS);
+            if (payRefundMapper.claimPendingRefund(refund.getRefundNo(), now, leaseUntil) == 0) {
+                continue;
+            }
+            try {
+                RefundVO result = recoverPendingRefund(refund);
+                if (result != null
+                    && result.getStatus() == Integer.parseInt(RefundStatusEnum.SUCCESS.getCode())) {
+                    count++;
+                }
+            }
+            catch (BizException e) {
+                log.warn("scanPendingRefunds retry scheduled, refundNo={}, code={}",
+                    refund.getRefundNo(), e.getCode());
+            }
+            catch (Exception e) {
+                scheduleRefundRetry(refund);
+                log.error("scanPendingRefunds recover failed, refundNo={}", refund.getRefundNo(), e);
+            }
+        }
+        if (count > 0) {
+            log.info("scanPendingRefunds compensated {} refunds", count);
         }
         return count;
     }

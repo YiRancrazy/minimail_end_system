@@ -569,7 +569,8 @@ CREATE TABLE IF NOT EXISTS t_notify_comment (
     INDEX idx_spu (spu_id, status),
     INDEX idx_notify_comment_user (user_id),
     INDEX idx_merchant (merchant_id),
-    INDEX idx_notify_comment_order (order_no)
+    INDEX idx_notify_comment_order (order_no),
+    UNIQUE KEY uk_notify_comment_order_spu_user (order_no, spu_id, user_id, is_deleted)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='商品评价表';
 
 CREATE TABLE IF NOT EXISTS t_notify_preference (

@@ -8,10 +8,13 @@ import java.util.Map;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.springframework.dao.DuplicateKeyException;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -20,9 +23,13 @@ import static org.mockito.Mockito.when;
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
+import com.yirancrazy.minimall.api.dto.order.OrderCommentEligibilityDTO;
+import com.yirancrazy.minimall.api.feign.OrderFeignClient;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
+import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.notify.constant.CommentStatusEnum;
+import com.yirancrazy.minimall.notify.constant.NotifyCodeEnum;
 import com.yirancrazy.minimall.notify.dto.CommentCreateDTO;
 import com.yirancrazy.minimall.notify.dto.CommentPageDTO;
 import com.yirancrazy.minimall.notify.entity.CommentPO;
@@ -36,6 +43,7 @@ import com.yirancrazy.minimall.notify.vo.CommentStatsVO;
 public class CommentServiceImplTest {
 
     private CommentManager commentManager;
+    private OrderFeignClient orderFeignClient;
     private CommentServiceImpl service;
 
     @BeforeEach
@@ -54,11 +62,14 @@ public class CommentServiceImplTest {
             return true;
         }).when(commentManager).save(any(CommentPO.class));
         lenient().when(commentManager.updateById(any(CommentPO.class))).thenReturn(true);
-        service = new CommentServiceImpl(commentManager);
+        orderFeignClient = mock(OrderFeignClient.class);
+        lenient().when(orderFeignClient.commentEligibility(anyString(), any(), any()))
+            .thenReturn(Result.success(new OrderCommentEligibilityDTO(true, 1L, 7L, 11L, 4)));
+        service = new CommentServiceImpl(commentManager, orderFeignClient);
     }
 
     /**
-     * 验证 create 正常提交评价：rating/content 落库，merchantId 取自 DTO。
+     * 验证 create 正常提交评价：rating/content 落库，merchantId 以订单快照为准而非前端传入。
      */
     @Test
     public void create_persists_with_dto_fields() {
@@ -68,7 +79,7 @@ public class CommentServiceImplTest {
         CommentCreateDTO dto = new CommentCreateDTO();
         dto.setOrderNo("O001");
         dto.setSpuId(100L);
-        dto.setMerchantId(11L);
+        dto.setMerchantId(99L);
         dto.setRating(5);
         dto.setContent("好评");
         dto.setImages("a.jpg,b.jpg");
@@ -77,7 +88,9 @@ public class CommentServiceImplTest {
         Long id = service.create(7L, dto);
 
         assertNotNull(id);
-        verify(commentManager).save(any(CommentPO.class));
+        ArgumentCaptor<CommentPO> captor = ArgumentCaptor.forClass(CommentPO.class);
+        verify(commentManager).save(captor.capture());
+        assertEquals(11L, captor.getValue().getMerchantId());
     }
 
     /**
@@ -111,12 +124,78 @@ public class CommentServiceImplTest {
         CommentCreateDTO dto = new CommentCreateDTO();
         dto.setOrderNo("O002");
         dto.setSpuId(200L);
+        dto.setMerchantId(88L);
         dto.setRating(3);
         dto.setContent("ok");
+        when(orderFeignClient.commentEligibility(anyString(), any(), any()))
+            .thenReturn(Result.success(new OrderCommentEligibilityDTO(true, 1L, 7L, null, 4)));
 
         service.create(7L, dto);
 
-        verify(commentManager).save(any(CommentPO.class));
+        ArgumentCaptor<CommentPO> captor = ArgumentCaptor.forClass(CommentPO.class);
+        verify(commentManager).save(captor.capture());
+        assertEquals(0L, captor.getValue().getMerchantId());
+    }
+
+    /**
+     * 验证订单不满足购买条件（未购买/非本人订单/商品不匹配）时拒绝评价。
+     */
+    @Test
+    public void create_rejects_when_order_not_eligible() {
+        when(orderFeignClient.commentEligibility(anyString(), any(), any()))
+            .thenReturn(Result.success(new OrderCommentEligibilityDTO(false, 1L, 7L, 11L, 1)));
+
+        CommentCreateDTO dto = new CommentCreateDTO();
+        dto.setOrderNo("O003");
+        dto.setSpuId(300L);
+        dto.setRating(5);
+        dto.setContent("伪造评价");
+
+        BizException ex = assertThrows(BizException.class, () -> service.create(7L, dto));
+
+        assertEquals(NotifyCodeEnum.COMMENT_ORDER_NOT_PURCHASED.getCode(), ex.getCode());
+        verify(commentManager, never()).save(any(CommentPO.class));
+    }
+
+    /**
+     * 验证订单服务不可用时评价失败关闭，不落库伪造评价。
+     */
+    @Test
+    public void create_rejects_when_order_service_unavailable() {
+        when(orderFeignClient.commentEligibility(anyString(), any(), any()))
+            .thenReturn(Result.fail("20000", "订单服务不可用"));
+
+        CommentCreateDTO dto = new CommentCreateDTO();
+        dto.setOrderNo("O004");
+        dto.setSpuId(400L);
+        dto.setRating(5);
+        dto.setContent("降级评价");
+
+        BizException ex = assertThrows(BizException.class, () -> service.create(7L, dto));
+
+        assertEquals(NotifyCodeEnum.COMMENT_ORDER_SERVICE_UNAVAILABLE.getCode(), ex.getCode());
+        verify(commentManager, never()).save(any(CommentPO.class));
+    }
+
+    /**
+     * 验证并发重复提交时唯一索引报错被转为明确的已评价业务异常。
+     */
+    @Test
+    public void create_rejects_duplicate_rejected_by_unique_index() {
+        when(commentManager.getOne(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class)))
+                .thenReturn(null);
+        when(commentManager.save(any(CommentPO.class)))
+            .thenThrow(new DuplicateKeyException("uk_notify_comment_order_spu_user"));
+
+        CommentCreateDTO dto = new CommentCreateDTO();
+        dto.setOrderNo("O005");
+        dto.setSpuId(500L);
+        dto.setRating(5);
+        dto.setContent("并发评价");
+
+        BizException ex = assertThrows(BizException.class, () -> service.create(7L, dto));
+
+        assertEquals(NotifyCodeEnum.COMMENT_ALREADY_EXISTS.getCode(), ex.getCode());
     }
 
     /**

@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import com.yirancrazy.minimall.api.dto.order.OrderCommentEligibilityDTO;
 import com.yirancrazy.minimall.api.dto.order.OrderExportItemDTO;
 import com.yirancrazy.minimall.api.dto.order.OrderPaySnapshotDTO;
 import com.yirancrazy.minimall.api.dto.order.OrderStatisticsDTO;
@@ -67,6 +68,18 @@ public interface OrderFeignClient {
      */
     @GetMapping("/internal/order/statistics")
     Result<OrderStatisticsDTO> statistics();
+
+    /**
+     * 校验订单评价资格：订单归属、订单包含该 SPU、订单处于已购买状态。
+     * @param orderNo 订单号
+     * @param userId 评价用户ID
+     * @param spuId 商品SPU ID
+     * @return 评价资格快照；订单不存在或不可评价时 eligible=false，服务不可达时 fallback 返回 SYS_ERROR 失败结果
+     */
+    @GetMapping("/internal/order/comment-eligibility")
+    Result<OrderCommentEligibilityDTO> commentEligibility(@RequestParam("orderNo") String orderNo,
+                                                          @RequestParam("userId") Long userId,
+                                                          @RequestParam("spuId") Long spuId);
 
     /**
      * 全平台订单导出列表，按创建时间倒序，服务端限制最大导出行数。

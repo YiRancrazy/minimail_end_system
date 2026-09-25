@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import com.yirancrazy.minimall.api.dto.order.OrderCommentEligibilityDTO;
 import com.yirancrazy.minimall.api.dto.order.OrderExportItemDTO;
 import com.yirancrazy.minimall.api.dto.order.OrderPaySnapshotDTO;
 import com.yirancrazy.minimall.api.dto.order.OrderStatisticsDTO;
@@ -66,6 +67,21 @@ public class InternalOrderControllerV1 {
     @GetMapping("/pay-snapshot/{ref}")
     public Result<OrderPaySnapshotDTO> paySnapshot(@PathVariable String ref) {
         return Result.success(orderService.getPaySnapshot(ref));
+    }
+
+    /**
+     * 校验订单评价资格，供评价服务创建评价前校验用户、订单、商品与购买状态，并回传订单快照商家ID。
+     * Internal: 仅内网调用，禁止 Gateway 暴露。
+     * @param orderNo 订单号
+     * @param userId 评价用户ID
+     * @param spuId 商品SPU ID
+     * @return 评价资格快照
+     */
+    @GetMapping("/comment-eligibility")
+    public Result<OrderCommentEligibilityDTO> commentEligibility(@RequestParam("orderNo") String orderNo,
+                                                                 @RequestParam("userId") Long userId,
+                                                                 @RequestParam("spuId") Long spuId) {
+        return Result.success(orderService.commentEligibility(orderNo, userId, spuId));
     }
 
     /**

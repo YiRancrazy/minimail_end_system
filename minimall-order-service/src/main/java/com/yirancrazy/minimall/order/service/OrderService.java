@@ -1,6 +1,7 @@
 package com.yirancrazy.minimall.order.service;
 
 import java.util.List;
+import com.yirancrazy.minimall.api.dto.order.OrderCommentEligibilityDTO;
 import com.yirancrazy.minimall.api.dto.order.OrderPaySnapshotDTO;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.order.dto.OrderCheckoutItemDTO;
@@ -92,6 +93,15 @@ public interface OrderService {
      * @param success 退款是否成功
      */
     void handleRefundCallback(Long orderId, boolean success);
+
+    /**
+     * 校验订单评价资格：订单存在、归属该用户、包含该 SPU 且处于已购买状态，并返回订单快照商家ID。
+     * @param orderNo 订单号
+     * @param userId 评价用户ID
+     * @param spuId 商品SPU ID
+     * @return 评价资格快照；任何条件不满足时 eligible=false
+     */
+    OrderCommentEligibilityDTO commentEligibility(String orderNo, Long userId, Long spuId);
 
     /**
      * 查询订单状态，校验归属，非本人订单抛出 ORDER_NOT_FOUND。

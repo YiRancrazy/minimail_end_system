@@ -22,6 +22,7 @@ import io.seata.spring.annotation.GlobalTransactional;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.api.dto.goods.SkuSnapshotDTO;
 import com.yirancrazy.minimall.api.dto.goods.SpuSnapshotDTO;
+import com.yirancrazy.minimall.api.dto.order.OrderCommentEligibilityDTO;
 import com.yirancrazy.minimall.api.dto.order.OrderPaidDTO;
 import com.yirancrazy.minimall.api.dto.order.OrderPaySnapshotDTO;
 import com.yirancrazy.minimall.api.dto.pay.PayCreateDTO;
@@ -85,6 +86,11 @@ public class OrderServiceImpl implements OrderService {
     // 扫描分批参数：单批 200 条、单轮最多 50 批，避免一次性全表加载导致 OOM 与长事务
     private static final int SCAN_BATCH_SIZE = 200;
     private static final int SCAN_MAX_BATCHES = 50;
+    // 可评价订单状态：仅已支付、已发货、已完成三种购买态允许评价
+    private static final Set<Integer> PURCHASED_STATUS_CODES = Set.of(
+        OrderStatusEnum.PAID.intCode(),
+        OrderStatusEnum.SHIPPED.intCode(),
+        OrderStatusEnum.COMPLETED.intCode());
 
     private final OrderManager orderManager;
     private final OrderItemManager orderItemManager;
@@ -527,6 +533,49 @@ public class OrderServiceImpl implements OrderService {
         BigDecimal payAmount = po.getPayAmount() != null ? po.getPayAmount() : po.getAmount();
         return new OrderPaySnapshotDTO(po.getId(), po.getOrderNo(), po.getUserId(), po.getMerchantId(),
             payAmount, po.getStatus(), po.getPayId());
+    }
+
+    /**
+     * 校验订单评价资格：订单存在、归属该用户、包含该 SPU 且处于已购买状态（PAID/SHIPPED/COMPLETED），
+     * 返回订单快照中的商家ID，避免评价落库使用前端传入的 merchantId。
+     * @param orderNo 订单号
+     * @param userId 评价用户ID
+     * @param spuId 商品SPU ID
+     * @return 评价资格快照；任何条件不满足时 eligible=false
+     */
+    @Override
+    public OrderCommentEligibilityDTO commentEligibility(String orderNo, Long userId, Long spuId) {
+        OrderCommentEligibilityDTO notEligible = new OrderCommentEligibilityDTO(false, null, userId, null, null);
+        if (orderNo == null || orderNo.isBlank() || userId == null || spuId == null) {
+            return notEligible;
+        }
+        OrderPO po = findOrderByRef(orderNo);
+        if (po == null || !userId.equals(po.getUserId())) {
+            return notEligible;
+        }
+        if (!PURCHASED_STATUS_CODES.contains(po.getStatus())) {
+            return eligibilityOf(po, false, po.getMerchantId());
+        }
+        OrderItemPO matched = orderItemManager.getOne(Wrappers.lambdaQuery(OrderItemPO.class)
+            .eq(OrderItemPO::getOrderId, po.getId())
+            .eq(OrderItemPO::getSpuId, spuId)
+            .last("LIMIT 1"));
+        if (matched == null) {
+            return eligibilityOf(po, false, po.getMerchantId());
+        }
+        Long merchantId = matched.getMerchantId() != null ? matched.getMerchantId() : po.getMerchantId();
+        return eligibilityOf(po, true, merchantId);
+    }
+
+    /**
+     * 组装订单评价资格快照。
+     * @param po 订单实体
+     * @param eligible 是否具备评价资格
+     * @param merchantId 订单快照商家ID
+     * @return 评价资格快照
+     */
+    private OrderCommentEligibilityDTO eligibilityOf(OrderPO po, boolean eligible, Long merchantId) {
+        return new OrderCommentEligibilityDTO(eligible, po.getId(), po.getUserId(), merchantId, po.getStatus());
     }
 
     /**

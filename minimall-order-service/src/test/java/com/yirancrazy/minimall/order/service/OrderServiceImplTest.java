@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionTemplate;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -27,6 +28,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.yirancrazy.minimall.api.dto.goods.SkuSnapshotDTO;
+import com.yirancrazy.minimall.api.dto.order.OrderCommentEligibilityDTO;
 import com.yirancrazy.minimall.api.dto.order.OrderPaySnapshotDTO;
 import com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO;
 import com.yirancrazy.minimall.api.feign.GoodsFeignClient;
@@ -1174,6 +1176,73 @@ public class OrderServiceImplTest {
 
         assertEquals(OrderCodeEnum.ORDER_ID_GENERATE_FAIL.getCode(), ex.getCode());
         verify(manager, never()).save(any(OrderPO.class));
+    }
+
+    /**
+     * 验证评价资格校验命中订单商品且处于购买态时返回订单明细快照中的商家ID。
+     */
+    @Test
+    public void commentEligibility_eligible_uses_item_merchant_snapshot() {
+        OrderPO po = buildOrder(99L, 7L, OrderStatusEnum.COMPLETED.intCode());
+        po.setOrderNo("OD99");
+        po.setMerchantId(10L);
+        when(manager.getOne(any(Wrapper.class))).thenReturn(po);
+        OrderItemPO item = new OrderItemPO();
+        item.setOrderId(99L);
+        item.setSpuId(500L);
+        item.setMerchantId(77L);
+        when(orderItemManager.getOne(any(Wrapper.class))).thenReturn(item);
+
+        OrderCommentEligibilityDTO dto = service.commentEligibility("OD99", 7L, 500L);
+
+        assertTrue(dto.isEligible());
+        assertEquals(77L, dto.getMerchantId());
+        assertEquals(99L, dto.getOrderId());
+    }
+
+    /**
+     * 验证订单归属不属于评价人时评价资格为 false。
+     */
+    @Test
+    public void commentEligibility_rejects_other_user_order() {
+        OrderPO po = buildOrder(99L, 7L, OrderStatusEnum.PAID.intCode());
+        po.setOrderNo("OD99");
+        when(manager.getOne(any(Wrapper.class))).thenReturn(po);
+
+        OrderCommentEligibilityDTO dto = service.commentEligibility("OD99", 999L, 500L);
+
+        assertFalse(dto.isEligible());
+        verify(orderItemManager, never()).getOne(any(Wrapper.class));
+    }
+
+    /**
+     * 验证未支付订单不可评价，且不查询订单明细。
+     */
+    @Test
+    public void commentEligibility_rejects_unpaid_order() {
+        OrderPO po = buildOrder(99L, 7L, OrderStatusEnum.PENDING.intCode());
+        po.setOrderNo("OD99");
+        when(manager.getOne(any(Wrapper.class))).thenReturn(po);
+
+        OrderCommentEligibilityDTO dto = service.commentEligibility("OD99", 7L, 500L);
+
+        assertFalse(dto.isEligible());
+        verify(orderItemManager, never()).getOne(any(Wrapper.class));
+    }
+
+    /**
+     * 验证订单未包含该 SPU 时评价资格为 false。
+     */
+    @Test
+    public void commentEligibility_rejects_spu_not_in_order() {
+        OrderPO po = buildOrder(99L, 7L, OrderStatusEnum.SHIPPED.intCode());
+        po.setOrderNo("OD99");
+        when(manager.getOne(any(Wrapper.class))).thenReturn(po);
+        when(orderItemManager.getOne(any(Wrapper.class))).thenReturn(null);
+
+        OrderCommentEligibilityDTO dto = service.commentEligibility("OD99", 7L, 500L);
+
+        assertFalse(dto.isEligible());
     }
 
     /**

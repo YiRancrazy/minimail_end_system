@@ -5,13 +5,18 @@ import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.extern.slf4j.Slf4j;
+import com.yirancrazy.minimall.api.dto.order.OrderCommentEligibilityDTO;
+import com.yirancrazy.minimall.api.feign.OrderFeignClient;
 import com.yirancrazy.minimall.common.exception.BizException;
+import com.yirancrazy.minimall.common.result.CommonCode;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
+import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.common.util.CursorUtils;
 import com.yirancrazy.minimall.notify.constant.CommentStatusEnum;
 import com.yirancrazy.minimall.notify.constant.NotifyCodeEnum;
@@ -33,14 +38,16 @@ import com.yirancrazy.minimall.notify.vo.CommentStatsVO;
 public class CommentServiceImpl implements CommentService {
 
     private final CommentManager commentManager;
+    private final OrderFeignClient orderFeignClient;
 
-    public CommentServiceImpl(CommentManager commentManager) {
+    public CommentServiceImpl(CommentManager commentManager, OrderFeignClient orderFeignClient) {
         this.commentManager = commentManager;
+        this.orderFeignClient = orderFeignClient;
     }
 
     /**
-     * 用户提交评价：使用 userId 覆盖 DTO 中的评价人；merchantId 缺失时置 0（避免 null 列）；
-     * 同一订单同一商品仅允许一条评价，通过 orderNo+spuId+userId 唯一约束保证。
+     * 用户提交评价：先调用订单服务校验订单归属、商品命中与购买状态，merchantId 取订单快照；
+     * 同一订单同一商品仅允许一条评价，服务端预检 + orderNo+spuId+userId 唯一索引双重保证。
      * @param userId 评价用户ID
      * @param dto 创建入参
      * @return 新评价ID
@@ -48,25 +55,64 @@ public class CommentServiceImpl implements CommentService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long create(Long userId, CommentCreateDTO dto) {
+        OrderCommentEligibilityDTO eligibility = loadEligibility(userId, dto);
+        if (!eligibility.isEligible()) {
+            log.warn("comment rejected, order not eligible, userId={}, orderNo={}, spuId={}",
+                userId, dto.getOrderNo(), dto.getSpuId());
+            throw new BizException(NotifyCodeEnum.COMMENT_ORDER_NOT_PURCHASED);
+        }
         CommentPO existing = findExisting(userId, dto.getOrderNo(), dto.getSpuId());
         if (existing != null) {
-            throw new BizException(NotifyCodeEnum.COMMENT_NO_PERMISSION);
+            throw new BizException(NotifyCodeEnum.COMMENT_ALREADY_EXISTS);
         }
         CommentPO po = new CommentPO();
         po.setOrderNo(dto.getOrderNo());
         po.setSpuId(dto.getSpuId());
         po.setSkuId(dto.getSkuId());
         po.setUserId(userId);
-        po.setMerchantId(dto.getMerchantId() == null ? 0L : dto.getMerchantId());
+        // 商家归属以订单快照为准，忽略前端传入的 merchantId，避免评价挂到其他商家
+        po.setMerchantId(eligibility.getMerchantId() == null ? 0L : eligibility.getMerchantId());
         po.setRating(dto.getRating());
         po.setContent(dto.getContent());
         po.setImages(dto.getImages());
         po.setAnonymous(dto.getAnonymous() == null ? 0 : dto.getAnonymous());
         po.setStatus(CommentStatusEnum.NORMAL.intCode());
-        commentManager.save(po);
+        try {
+            commentManager.save(po);
+        }
+        catch (DuplicateKeyException e) {
+            // 唯一索引兜底：并发重复提交时仅一条落库，其余转为明确业务错误
+            log.warn("duplicate comment rejected by unique index, userId={}, orderNo={}, spuId={}",
+                userId, dto.getOrderNo(), dto.getSpuId());
+            throw new BizException(NotifyCodeEnum.COMMENT_ALREADY_EXISTS);
+        }
         log.info("comment created, id={}, userId={}, spuId={}, orderNo={}",
                 po.getId(), userId, dto.getSpuId(), dto.getOrderNo());
         return po.getId();
+    }
+
+    /**
+     * 调用订单服务校验评价资格，订单服务不可用时失败关闭，避免伪造评价落库。
+     * @param userId 评价用户ID
+     * @param dto 创建入参
+     * @return 评价资格快照
+     * @throws BizException 订单服务不可用或返回失败时
+     */
+    private OrderCommentEligibilityDTO loadEligibility(Long userId, CommentCreateDTO dto) {
+        Result<OrderCommentEligibilityDTO> result;
+        try {
+            result = orderFeignClient.commentEligibility(dto.getOrderNo(), userId, dto.getSpuId());
+        }
+        catch (Exception e) {
+            log.error("order comment eligibility call failed, orderNo={}, userId={}",
+                dto.getOrderNo(), userId, e);
+            throw new BizException(NotifyCodeEnum.COMMENT_ORDER_SERVICE_UNAVAILABLE);
+        }
+        if (result == null || !CommonCode.SUCCESS.equals(result.getCode()) || result.getData() == null) {
+            log.warn("order comment eligibility unavailable, orderNo={}, result={}", dto.getOrderNo(), result);
+            throw new BizException(NotifyCodeEnum.COMMENT_ORDER_SERVICE_UNAVAILABLE);
+        }
+        return result.getData();
     }
 
     /**

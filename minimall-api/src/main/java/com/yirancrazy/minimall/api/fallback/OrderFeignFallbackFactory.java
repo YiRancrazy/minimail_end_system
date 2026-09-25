@@ -4,6 +4,7 @@ import java.util.List;
 import org.springframework.cloud.openfeign.FallbackFactory;
 import org.springframework.stereotype.Component;
 import lombok.extern.slf4j.Slf4j;
+import com.yirancrazy.minimall.api.dto.order.OrderCommentEligibilityDTO;
 import com.yirancrazy.minimall.api.dto.order.OrderExportItemDTO;
 import com.yirancrazy.minimall.api.dto.order.OrderPaySnapshotDTO;
 import com.yirancrazy.minimall.api.dto.order.OrderStatisticsDTO;
@@ -63,6 +64,12 @@ public class OrderFeignFallbackFactory implements FallbackFactory<OrderFeignClie
             public Result<OrderStatisticsDTO> statistics() {
                 log.warn("order statistics fallback, return empty statistics");
                 return Result.success(new OrderStatisticsDTO());
+            }
+
+            @Override
+            public Result<OrderCommentEligibilityDTO> commentEligibility(String orderNo, Long userId, Long spuId) {
+                log.warn("order comment eligibility fallback, orderNo={} rejected", orderNo);
+                return Result.fail(CommonCode.SYS_ERROR, "订单服务不可用");
             }
 
             @Override

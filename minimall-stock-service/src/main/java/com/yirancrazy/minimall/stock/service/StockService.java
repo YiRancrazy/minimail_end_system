@@ -1,6 +1,7 @@
 package com.yirancrazy.minimall.stock.service;
 
 import java.util.List;
+import com.yirancrazy.minimall.api.dto.stock.StockReserveDTO;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.stock.dto.StockCountTaskCompleteDTO;
 import com.yirancrazy.minimall.stock.dto.StockCountTaskCreateDTO;
@@ -28,6 +29,13 @@ public interface StockService {
      * @return 预占是否成功
      */
     boolean reserve(Long skuId, Integer quantity);
+
+    /**
+     * 批量预占库存，重复 SKU 先合并数量，任一项失败时整批回滚。
+     * @param items 预占明细，最多100个SKU
+     * @return true 表示整批预占成功
+     */
+    boolean reserveBatch(List<StockReserveDTO> items);
 
     /**
      * 释放库存，不携带订单号时退化为旧释放语义。

@@ -44,4 +44,24 @@ class InternalStockControllerV1Test {
 
         verify(stockService).adjustStock(99L, 5L, "spu edit", 1001L);
     }
+
+    /**
+     * 验证批量预占入口透传 SKU 明细并返回成功。
+     */
+    @Test
+    void reserveBatch_passes_items_to_service() throws Exception {
+        mockMvc.perform(post("/internal/stock/reserve-batch")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"items\":[{\"skuId\":99,\"quantity\":2},"
+                    + "{\"skuId\":100,\"quantity\":3}]}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.code").value("00000"));
+
+        verify(stockService).reserveBatch(org.mockito.ArgumentMatchers.argThat(items ->
+            items.size() == 2
+                && items.get(0).getSkuId() == 99L
+                && items.get(0).getQuantity() == 2
+                && items.get(1).getSkuId() == 100L
+                && items.get(1).getQuantity() == 3));
+    }
 }

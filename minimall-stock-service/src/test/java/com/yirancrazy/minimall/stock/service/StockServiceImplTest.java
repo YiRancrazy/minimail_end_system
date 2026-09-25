@@ -19,11 +19,13 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
+import com.yirancrazy.minimall.api.dto.stock.StockReserveDTO;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.stock.constant.StockCountTaskStatusEnum;
@@ -126,6 +128,69 @@ public class StockServiceImplTest {
         assertThrows(BizException.class, () -> service.reserve(100L, null));
         assertThrows(BizException.class, () -> service.reserve(100L, 0));
         assertThrows(BizException.class, () -> service.reserve(100L, -1));
+    }
+
+    /**
+     * 验证批量预占先合并重复 SKU，再按合并数量原子扣减一次。
+     */
+    @Test
+    public void reserveBatch_merges_duplicate_skus() {
+        StockPO stock = new StockPO();
+        stock.setId(1L);
+        stock.setSkuId(100L);
+        stock.setAvailable(10L);
+        stock.setReserved(0L);
+        when(manager.getOne(any())).thenReturn(stock);
+        when(stockMapper.deductAvailable(100L, 5L)).thenReturn(1);
+
+        boolean ok = service.reserveBatch(List.of(
+            new StockReserveDTO(100L, 2),
+            new StockReserveDTO(100L, 3)));
+
+        assertTrue(ok);
+        verify(stockMapper).deductAvailable(100L, 5L);
+        verify(journalManager, times(1)).save(any(StockJournalPO.class));
+    }
+
+    /**
+     * 验证批量预占任一 SKU 库存不足时抛出异常，事务层回滚此前扣减。
+     */
+    @Test
+    public void reserveBatch_any_insufficient_throws() {
+        StockPO first = new StockPO();
+        first.setId(1L);
+        first.setSkuId(100L);
+        first.setAvailable(10L);
+        first.setReserved(0L);
+        StockPO second = new StockPO();
+        second.setId(2L);
+        second.setSkuId(200L);
+        second.setAvailable(0L);
+        second.setReserved(0L);
+        when(manager.getOne(any())).thenReturn(first, second);
+        when(stockMapper.deductAvailable(100L, 1L)).thenReturn(1);
+        when(stockMapper.deductAvailable(200L, 1L)).thenReturn(0);
+
+        assertThrows(BizException.class, () -> service.reserveBatch(List.of(
+            new StockReserveDTO(100L, 1),
+            new StockReserveDTO(200L, 1))));
+
+        verify(stockMapper).deductAvailable(100L, 1L);
+        verify(stockMapper).deductAvailable(200L, 1L);
+    }
+
+    /**
+     * 验证批量预占超过100个SKU时拒绝且不触发库存扣减。
+     */
+    @Test
+    public void reserveBatch_rejects_more_than_100_skus() {
+        List<StockReserveDTO> items = new ArrayList<>(101);
+        for (long skuId = 1L; skuId <= 101L; skuId++) {
+            items.add(new StockReserveDTO(skuId, 1));
+        }
+
+        assertThrows(BizException.class, () -> service.reserveBatch(items));
+        verify(stockMapper, never()).deductAvailable(anyLong(), anyLong());
     }
 
     /**

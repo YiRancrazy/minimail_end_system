@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
 import com.yirancrazy.minimall.api.dto.stock.StockAdjustDTO;
+import com.yirancrazy.minimall.api.dto.stock.StockBatchReserveDTO;
 import com.yirancrazy.minimall.api.dto.stock.StockInitDTO;
 import com.yirancrazy.minimall.api.dto.stock.StockReserveDTO;
 import com.yirancrazy.minimall.common.result.Result;
@@ -36,6 +37,16 @@ public class InternalStockControllerV1 {
     @PostMapping("/reserve")
     public Result<Boolean> reserve(@Valid @RequestBody StockReserveDTO dto) {
         return Result.success(stockService.reserve(dto.getSkuId(), dto.getQuantity()));
+    }
+
+    /**
+     * 批量预占多个 SKU 的库存，任一失败整批回滚。
+     * @param dto 批量预占入参
+     * @return 统一响应体，数据为整批预占是否成功
+     */
+    @PostMapping("/reserve-batch")
+    public Result<Boolean> reserveBatch(@Valid @RequestBody StockBatchReserveDTO dto) {
+        return Result.success(stockService.reserveBatch(dto.getItems()));
     }
 
     /**

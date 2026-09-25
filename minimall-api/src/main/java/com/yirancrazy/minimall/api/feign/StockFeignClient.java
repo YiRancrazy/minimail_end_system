@@ -4,6 +4,7 @@ import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import com.yirancrazy.minimall.api.dto.stock.StockAdjustDTO;
+import com.yirancrazy.minimall.api.dto.stock.StockBatchReserveDTO;
 import com.yirancrazy.minimall.api.dto.stock.StockInitDTO;
 import com.yirancrazy.minimall.api.dto.stock.StockReserveDTO;
 import com.yirancrazy.minimall.api.fallback.StockFeignFallbackFactory;
@@ -19,6 +20,14 @@ import com.yirancrazy.minimall.common.result.Result;
 public interface StockFeignClient {
     @PostMapping("/internal/stock/reserve")
     Result<Boolean> reserve(@RequestBody StockReserveDTO dto);
+
+    /**
+     * 批量预占库存，stock-service 在同一事务内处理全部 SKU。
+     * @param dto 批量预占请求
+     * @return true 表示整批预占成功
+     */
+    @PostMapping("/internal/stock/reserve-batch")
+    Result<Boolean> reserveBatch(@RequestBody StockBatchReserveDTO dto);
 
     /**
      * Release previously reserved stock for a SKU.

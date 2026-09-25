@@ -8,6 +8,7 @@ import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -29,6 +30,7 @@ import com.yirancrazy.minimall.api.dto.order.OrderPaySnapshotDTO;
 import com.yirancrazy.minimall.api.dto.order.RefundCallbackDTO;
 import com.yirancrazy.minimall.api.dto.pay.PayCreateDTO;
 import com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO;
+import com.yirancrazy.minimall.api.dto.stock.StockBatchReserveDTO;
 import com.yirancrazy.minimall.api.dto.stock.StockReserveDTO;
 import com.yirancrazy.minimall.api.feign.GoodsFeignClient;
 import com.yirancrazy.minimall.api.feign.IdFeignClient;
@@ -83,6 +85,7 @@ public class OrderServiceImpl implements OrderService {
     private static final int AUTO_CONFIRM_DAYS = 15;
     private static final int ORDER_TYPE_NORMAL = 1;
     private static final int REFUND_STATUS_NONE = 0;
+    private static final int MAX_CHECKOUT_SKU_COUNT = 100;
     // 金额统一按“分”存储：两位小数，任何更高精度尾数一律拒绝而非静默进位
     private static final int AMOUNT_SCALE = 2;
     // 扫描分批参数：单批 200 条、单轮最多 50 批，避免一次性全表加载导致 OOM 与长事务
@@ -233,36 +236,33 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @GlobalTransactional
     public Long checkout(Long userId, List<OrderCheckoutItemDTO> items, ReceiverDTO receiver) {
-        if (items == null || items.isEmpty()) {
-            throw new BizException(OrderCodeEnum.ORDER_ITEMS_EMPTY);
-        }
+        Map<Long, Integer> quantityBySku = mergeCheckoutItems(items);
+        List<Long> skuIds = new ArrayList<>(quantityBySku.keySet());
+        Map<Long, SkuSnapshotDTO> snapshots = loadCheckoutSnapshots(skuIds);
+        reserveCheckoutStock(quantityBySku);
 
         String orderGroupNo = generateOrderGroupNo();
-        java.util.Map<Long, List<OrderItemPO>> itemsByMerchant = new java.util.LinkedHashMap<>();
-
-        for (OrderCheckoutItemDTO item : items) {
-            SkuSnapshotDTO snapshot = goodsFeignClient.skuSnapshot(item.getSkuId()).getData();
+        Map<Long, List<OrderItemPO>> itemsByMerchant = new LinkedHashMap<>();
+        for (Map.Entry<Long, Integer> entry : quantityBySku.entrySet()) {
+            Long skuId = entry.getKey();
+            Integer quantity = entry.getValue();
+            SkuSnapshotDTO snapshot = snapshots.get(skuId);
             if (snapshot == null || snapshot.getPrice() == null) {
                 throw new BizException(OrderCodeEnum.ORDER_SKU_SNAPSHOT_MISSING);
             }
             if (snapshot.getMerchantId() == null) {
                 throw new BizException(OrderCodeEnum.ORDER_SKU_SNAPSHOT_MISSING);
             }
-            Boolean reserved = stockFeignClient.reserve(
-                new StockReserveDTO(item.getSkuId(), item.getQuantity())).getData();
-            if (reserved == null || !reserved) {
-                throw new BizException(OrderCodeEnum.STOCK_RESERVE_FAIL);
-            }
 
             BigDecimal lineAmount = normalizeAmount(snapshot.getPrice()
-                .multiply(BigDecimal.valueOf(item.getQuantity())));
+                .multiply(BigDecimal.valueOf(quantity)));
 
             OrderItemPO itemPO = new OrderItemPO();
-            itemPO.setSkuId(item.getSkuId());
+            itemPO.setSkuId(skuId);
             itemPO.setSpuId(snapshot.getSpuId());
             itemPO.setMerchantId(snapshot.getMerchantId());
             itemPO.setSkuName(snapshot.getSkuName());
-            itemPO.setQuantity(item.getQuantity());
+            itemPO.setQuantity(quantity);
             itemPO.setUnitPrice(snapshot.getPrice());
             itemPO.setAmount(lineAmount);
             itemPO.setSubtotalAmount(lineAmount);
@@ -321,6 +321,65 @@ public class OrderServiceImpl implements OrderService {
         log.info("order checkout done, userId={}, groupNo={}, subOrders={}",
             userId, orderGroupNo, itemsByMerchant.size());
         return mainOrderId;
+    }
+
+    /**
+     * 合并重复 SKU 并限制单次结算 SKU 数，避免重复请求 RPC 与超大批次。
+     * @param items 结算明细
+     * @return skuId -> 合并后的数量
+     */
+    private Map<Long, Integer> mergeCheckoutItems(List<OrderCheckoutItemDTO> items) {
+        if (items == null || items.isEmpty()) {
+            throw new BizException(OrderCodeEnum.ORDER_ITEMS_EMPTY);
+        }
+        Map<Long, Integer> quantityBySku = new LinkedHashMap<>(items.size() * 2);
+        for (OrderCheckoutItemDTO item : items) {
+            if (item == null || item.getSkuId() == null || item.getQuantity() == null
+                || item.getQuantity() <= 0) {
+                throw new BizException(OrderCodeEnum.ORDER_CHECKOUT_ITEM_INVALID);
+            }
+            long merged = (long) quantityBySku.getOrDefault(item.getSkuId(), 0)
+                + item.getQuantity();
+            if (merged > Integer.MAX_VALUE) {
+                throw new BizException(OrderCodeEnum.ORDER_CHECKOUT_ITEM_INVALID);
+            }
+            if (!quantityBySku.containsKey(item.getSkuId())
+                && quantityBySku.size() >= MAX_CHECKOUT_SKU_COUNT) {
+                throw new BizException(OrderCodeEnum.ORDER_ITEMS_LIMIT_EXCEEDED);
+            }
+            quantityBySku.put(item.getSkuId(), (int) merged);
+        }
+        return quantityBySku;
+    }
+
+    /**
+     * 一次批量查询结算 SKU 快照，返回缺失项时拒绝下单。
+     * @param skuIds 去重后的 SKU 集合
+     * @return skuId -> 快照
+     */
+    private Map<Long, SkuSnapshotDTO> loadCheckoutSnapshots(List<Long> skuIds) {
+        Result<Map<Long, SkuSnapshotDTO>> result = goodsFeignClient.batchSkuSnapshot(skuIds);
+        Map<Long, SkuSnapshotDTO> snapshots = result == null ? null : result.getData();
+        if (snapshots == null || snapshots.size() != skuIds.size()
+            || !snapshots.keySet().containsAll(skuIds)) {
+            throw new BizException(OrderCodeEnum.ORDER_SKU_SNAPSHOT_MISSING);
+        }
+        return snapshots;
+    }
+
+    /**
+     * 一次批量预占结算库存，失败时交由 stock-service 本地事务整批回滚。
+     * @param quantityBySku skuId -> 合并后的数量
+     */
+    private void reserveCheckoutStock(Map<Long, Integer> quantityBySku) {
+        List<StockReserveDTO> reserveItems = quantityBySku.entrySet().stream()
+            .map(entry -> new StockReserveDTO(entry.getKey(), entry.getValue()))
+            .toList();
+        Result<Boolean> result = stockFeignClient.reserveBatch(new StockBatchReserveDTO(reserveItems));
+        if (result == null || !CommonCode.SUCCESS.equals(result.getCode())
+            || !Boolean.TRUE.equals(result.getData())) {
+            throw new BizException(OrderCodeEnum.STOCK_RESERVE_FAIL);
+        }
     }
 
     /**

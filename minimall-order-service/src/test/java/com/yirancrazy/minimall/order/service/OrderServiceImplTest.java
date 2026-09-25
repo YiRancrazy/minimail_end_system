@@ -4,8 +4,10 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionTemplate;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -25,6 +27,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.yirancrazy.minimall.api.dto.goods.SkuSnapshotDTO;
@@ -32,6 +35,7 @@ import com.yirancrazy.minimall.api.dto.order.OrderCommentEligibilityDTO;
 import com.yirancrazy.minimall.api.dto.order.OrderPaySnapshotDTO;
 import com.yirancrazy.minimall.api.dto.order.RefundCallbackDTO;
 import com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO;
+import com.yirancrazy.minimall.api.dto.stock.StockBatchReserveDTO;
 import com.yirancrazy.minimall.api.feign.GoodsFeignClient;
 import com.yirancrazy.minimall.api.feign.IdFeignClient;
 import com.yirancrazy.minimall.api.feign.PayFeignClient;
@@ -111,7 +115,11 @@ public class OrderServiceImplTest {
         lenient().when(statusLogManager.save(any(OrderStatusLogPO.class))).thenReturn(true);
         lenient().when(goodsFeignClient.skuSnapshot(any())).thenReturn(Result.success(
             new SkuSnapshotDTO(100L, 1L, "sku-100", new BigDecimal("9.90"), 100, 10L)));
+        lenient().when(goodsFeignClient.batchSkuSnapshot(any())).thenReturn(Result.success(
+            Map.of(100L, new SkuSnapshotDTO(100L, 1L, "sku-100",
+                new BigDecimal("9.90"), 100, 10L))));
         lenient().when(stockFeignClient.reserve(any())).thenReturn(Result.success(Boolean.TRUE));
+        lenient().when(stockFeignClient.reserveBatch(any())).thenReturn(Result.success(Boolean.TRUE));
         lenient().when(stockFeignClient.release(any())).thenReturn(Result.success(Boolean.TRUE));
         lenient().when(payFeignClient.create(any())).thenReturn(Result.success(2001L));
         lenient().when(payFeignClient.refund(any())).thenReturn(Result.success(Boolean.TRUE));
@@ -1167,13 +1175,15 @@ public class OrderServiceImplTest {
         List<OrderCheckoutItemDTO> items = List.of(
             new OrderCheckoutItemDTO(100L, 2),
             new OrderCheckoutItemDTO(200L, 1));
-        when(goodsFeignClient.skuSnapshot(any())).thenReturn(Result.success(
-            new SkuSnapshotDTO(100L, 1L, "sku-100", new BigDecimal("9.90"), 100, 10L)));
+        when(goodsFeignClient.batchSkuSnapshot(any())).thenReturn(Result.success(Map.of(
+            100L, new SkuSnapshotDTO(100L, 1L, "sku-100", new BigDecimal("9.90"), 100, 10L),
+            200L, new SkuSnapshotDTO(200L, 1L, "sku-200", new BigDecimal("5.00"), 100, 10L))));
 
         Long orderId = service.checkout(1L, items);
 
         assertNotNull(orderId);
-        verify(stockFeignClient, times(2)).reserve(any());
+        verify(goodsFeignClient).batchSkuSnapshot(any());
+        verify(stockFeignClient).reserveBatch(any());
         verify(orderItemManager, times(2)).save(any(OrderItemPO.class));
         verify(payFeignClient).create(any());
     }
@@ -1187,13 +1197,13 @@ public class OrderServiceImplTest {
         OrderCheckoutItemDTO itemB = new OrderCheckoutItemDTO(200L, 1);
         SkuSnapshotDTO snapA = new SkuSnapshotDTO(100L, 1L, "sku-A", new BigDecimal("10.00"), 100, 10L);
         SkuSnapshotDTO snapB = new SkuSnapshotDTO(200L, 2L, "sku-B", new BigDecimal("20.00"), 100, 20L);
-        when(goodsFeignClient.skuSnapshot(100L)).thenReturn(Result.success(snapA));
-        when(goodsFeignClient.skuSnapshot(200L)).thenReturn(Result.success(snapB));
+        when(goodsFeignClient.batchSkuSnapshot(any())).thenReturn(Result.success(Map.of(
+            100L, snapA, 200L, snapB)));
 
         Long mainOrderId = service.checkout(1L, List.of(itemA, itemB));
 
         assertNotNull(mainOrderId);
-        verify(stockFeignClient, times(2)).reserve(any());
+        verify(stockFeignClient).reserveBatch(any());
         verify(orderItemManager, times(2)).save(any(OrderItemPO.class));
         verify(payFeignClient, times(2)).create(any());
         verify(manager, times(2)).save(any(OrderPO.class));
@@ -1204,8 +1214,9 @@ public class OrderServiceImplTest {
      */
     @Test
     public void checkout_snapshot_without_merchant_throws() {
-        when(goodsFeignClient.skuSnapshot(any())).thenReturn(Result.success(
-            new SkuSnapshotDTO(100L, 1L, "sku-100", new BigDecimal("9.90"), 100, null)));
+        when(goodsFeignClient.batchSkuSnapshot(any())).thenReturn(Result.success(Map.of(
+            100L, new SkuSnapshotDTO(100L, 1L, "sku-100",
+                new BigDecimal("9.90"), 100, null))));
         List<OrderCheckoutItemDTO> items = List.of(new OrderCheckoutItemDTO(100L, 1));
 
         assertThrows(BizException.class, () -> service.checkout(1L, items));
@@ -1305,7 +1316,7 @@ public class OrderServiceImplTest {
      */
     @Test
     public void checkout_snapshot_missing_throws() {
-        when(goodsFeignClient.skuSnapshot(any())).thenReturn(Result.success(null));
+        when(goodsFeignClient.batchSkuSnapshot(any())).thenReturn(Result.success(Map.of()));
         List<OrderCheckoutItemDTO> items = List.of(new OrderCheckoutItemDTO(100L, 1));
 
         assertThrows(BizException.class, () -> service.checkout(1L, items));
@@ -1316,10 +1327,71 @@ public class OrderServiceImplTest {
      */
     @Test
     public void checkout_stock_reserve_fail_throws() {
-        when(stockFeignClient.reserve(any())).thenReturn(Result.success(Boolean.FALSE));
+        when(goodsFeignClient.batchSkuSnapshot(any())).thenReturn(Result.success(Map.of(
+            100L, new SkuSnapshotDTO(100L, 1L, "sku-100",
+                new BigDecimal("9.90"), 100, 10L))));
+        when(stockFeignClient.reserveBatch(any())).thenReturn(Result.success(Boolean.FALSE));
         List<OrderCheckoutItemDTO> items = List.of(new OrderCheckoutItemDTO(100L, 1));
 
         assertThrows(BizException.class, () -> service.checkout(1L, items));
+    }
+
+    /**
+     * 验证100项结算只调用一次商品批量快照和一次批量库存预占。
+     */
+    @Test
+    public void checkout_100_skus_uses_batch_calls_once() {
+        List<OrderCheckoutItemDTO> items = new ArrayList<>(100);
+        java.util.Map<Long, SkuSnapshotDTO> snapshots = new java.util.HashMap<>(200);
+        for (long skuId = 1L; skuId <= 100L; skuId++) {
+            items.add(new OrderCheckoutItemDTO(skuId, 1));
+            snapshots.put(skuId, new SkuSnapshotDTO(skuId, skuId, "sku-" + skuId,
+                new BigDecimal("1.00"), 100, 10L));
+        }
+        when(goodsFeignClient.batchSkuSnapshot(any())).thenReturn(Result.success(snapshots));
+
+        service.checkout(1L, items);
+
+        verify(goodsFeignClient).batchSkuSnapshot(any());
+        verify(stockFeignClient).reserveBatch(any());
+    }
+
+    /**
+     * 验证重复 SKU 在订单服务合并后只查询和预占一次。
+     */
+    @Test
+    public void checkout_merges_duplicate_skus() {
+        when(goodsFeignClient.batchSkuSnapshot(any())).thenReturn(Result.success(Map.of(
+            100L, new SkuSnapshotDTO(100L, 1L, "sku-100",
+                new BigDecimal("9.90"), 100, 10L))));
+        List<OrderCheckoutItemDTO> items = List.of(
+            new OrderCheckoutItemDTO(100L, 2),
+            new OrderCheckoutItemDTO(100L, 3));
+
+        service.checkout(1L, items);
+
+        ArgumentCaptor<StockBatchReserveDTO> captor =
+            ArgumentCaptor.forClass(StockBatchReserveDTO.class);
+        verify(stockFeignClient).reserveBatch(captor.capture());
+        assertEquals(1, captor.getValue().getItems().size());
+        assertEquals(100L, captor.getValue().getItems().get(0).getSkuId());
+        assertEquals(5, captor.getValue().getItems().get(0).getQuantity());
+    }
+
+    /**
+     * 验证结算 SKU 数超过100时在下游调用前拒绝。
+     */
+    @Test
+    public void checkout_rejects_more_than_100_unique_skus() {
+        List<OrderCheckoutItemDTO> items = new ArrayList<>(101);
+        for (long skuId = 1L; skuId <= 101L; skuId++) {
+            items.add(new OrderCheckoutItemDTO(skuId, 1));
+        }
+
+        BizException ex = assertThrows(BizException.class, () -> service.checkout(1L, items));
+
+        assertEquals(OrderCodeEnum.ORDER_ITEMS_LIMIT_EXCEEDED.getCode(), ex.getCode());
+        verifyNoInteractions(goodsFeignClient, stockFeignClient);
     }
 
     /**
@@ -1557,8 +1629,9 @@ public class OrderServiceImplTest {
     @Test
     public void checkout_writes_item_snapshot() {
         List<OrderCheckoutItemDTO> items = List.of(new OrderCheckoutItemDTO(100L, 2));
-        when(goodsFeignClient.skuSnapshot(any())).thenReturn(Result.success(
-            new SkuSnapshotDTO(100L, 1L, "sku-100", new BigDecimal("9.90"), 100, 10L)));
+        when(goodsFeignClient.batchSkuSnapshot(any())).thenReturn(Result.success(Map.of(
+            100L, new SkuSnapshotDTO(100L, 1L, "sku-100",
+                new BigDecimal("9.90"), 100, 10L))));
 
         service.checkout(1L, items);
 

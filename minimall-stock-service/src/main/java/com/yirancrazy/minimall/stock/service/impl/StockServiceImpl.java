@@ -2,13 +2,16 @@ package com.yirancrazy.minimall.stock.service.impl;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.extern.slf4j.Slf4j;
+import com.yirancrazy.minimall.api.dto.stock.StockReserveDTO;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CommonCode;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
@@ -46,6 +49,7 @@ public class StockServiceImpl implements StockService {
 
     private static final int EXPORT_MAX_ROWS = 10000;
     private static final int QUERY_MAX_ROWS = 200;
+    private static final int MAX_RESERVE_BATCH_SIZE = 100;
 
     private final StockManager stockManager;
     private final StockJournalManager journalManager;
@@ -88,6 +92,40 @@ public class StockServiceImpl implements StockService {
 
         recordJournal(skuId, -quantity.longValue(), StockJournalTypeEnum.RESERVE, null, null);
         checkAlert(s);
+        return true;
+    }
+
+    /**
+     * 批量预占库存，按 SKU 合并重复明细后在同一事务内逐项原子扣减。
+     * @param items 预占明细
+     * @return true 表示整批成功
+     * @throws BizException 任一 SKU 数量非法、超限或库存不足时
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean reserveBatch(List<StockReserveDTO> items) {
+        if (items == null || items.isEmpty()) {
+            throw new BizException(CommonCode.PARAM_INVALID, "预占明细不能为空");
+        }
+        Map<Long, Long> quantityBySku = new LinkedHashMap<>(items.size() * 2);
+        for (StockReserveDTO item : items) {
+            if (item == null || item.getSkuId() == null || item.getQuantity() == null
+                || item.getQuantity() <= 0) {
+                throw new BizException(CommonCode.PARAM_INVALID, "预占数量必须大于0");
+            }
+            if (!quantityBySku.containsKey(item.getSkuId())
+                && quantityBySku.size() >= MAX_RESERVE_BATCH_SIZE) {
+                throw new BizException(CommonCode.PARAM_INVALID, "单次最多预占100个SKU");
+            }
+            long merged = quantityBySku.getOrDefault(item.getSkuId(), 0L) + item.getQuantity();
+            if (merged > Integer.MAX_VALUE) {
+                throw new BizException(CommonCode.PARAM_INVALID, "预占数量超出范围");
+            }
+            quantityBySku.put(item.getSkuId(), merged);
+        }
+        for (Map.Entry<Long, Long> entry : quantityBySku.entrySet()) {
+            reserve(entry.getKey(), entry.getValue().intValue());
+        }
         return true;
     }
 

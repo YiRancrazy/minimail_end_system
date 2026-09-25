@@ -4,6 +4,7 @@ import org.springframework.cloud.openfeign.FallbackFactory;
 import org.springframework.stereotype.Component;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.api.dto.stock.StockAdjustDTO;
+import com.yirancrazy.minimall.api.dto.stock.StockBatchReserveDTO;
 import com.yirancrazy.minimall.api.dto.stock.StockInitDTO;
 import com.yirancrazy.minimall.api.dto.stock.StockReserveDTO;
 import com.yirancrazy.minimall.api.feign.StockFeignClient;
@@ -25,6 +26,11 @@ public class StockFeignFallbackFactory implements FallbackFactory<StockFeignClie
         return new StockFeignClient() {
             @Override
             public Result<Boolean> reserve(StockReserveDTO dto) {
+                return Result.fail(CommonCode.SYS_ERROR, "库存服务不可用");
+            }
+
+            @Override
+            public Result<Boolean> reserveBatch(StockBatchReserveDTO dto) {
                 return Result.fail(CommonCode.SYS_ERROR, "库存服务不可用");
             }
 

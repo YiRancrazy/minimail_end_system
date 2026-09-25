@@ -5,6 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Locale;
 import org.springframework.context.ApplicationContextInitializer;
 import org.springframework.context.ConfigurableApplicationContext;
 import lombok.extern.slf4j.Slf4j;
@@ -47,7 +48,7 @@ public class DotenvConfig implements ApplicationContextInitializer {
                 }
                 System.setProperty(key, value);
                 count++;
-                log.debug("Loaded .env: {}={}", key, key.contains("PASSWORD") ? "***" : value);
+                log.debug("Loaded .env: {}={}", key, redactedValue(key, value));
             }
             log.info("Loaded {} entries from .env file", count);
         }
@@ -70,5 +71,24 @@ public class DotenvConfig implements ApplicationContextInitializer {
             }
         }
         return null;
+    }
+
+    /**
+     * 按配置键名脱敏敏感值，供启动日志安全输出。
+     * @param key 配置键名
+     * @param value 配置原始值
+     * @return 敏感配置返回星号，否则返回原值
+     */
+    static String redactedValue(String key, String value) {
+        String normalizedKey = key == null ? "" : key.toUpperCase(Locale.ROOT);
+        if (normalizedKey.contains("PASSWORD")
+            || normalizedKey.contains("SECRET")
+            || normalizedKey.contains("TOKEN")
+            || normalizedKey.contains("PRIVATE_KEY")
+            || normalizedKey.contains("ACCESS_KEY")
+            || normalizedKey.contains("AES_KEY")) {
+            return "***";
+        }
+        return value;
     }
 }

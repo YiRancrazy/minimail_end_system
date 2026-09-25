@@ -8,6 +8,8 @@ import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -19,6 +21,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
@@ -190,6 +193,35 @@ public class SpuServiceImplTest {
         assertEquals(new BigDecimal("19.90"), saved.getPrice());
         assertEquals(5, saved.getStock());
         assertNotNull(saved.getSpuId());
+    }
+
+    /**
+     * 验证库存联动在本地事务提交后才执行，失败不会污染本地写入。
+     */
+    @Test
+    public void create_defers_stock_init_until_after_commit() {
+        SpuCreateDTO dto = new SpuCreateDTO();
+        dto.setShopId(1L);
+        dto.setCategoryId(1L);
+        dto.setTitle("new-spu");
+        SkuItemDTO item = new SkuItemDTO();
+        item.setSkuName("颜色/黑");
+        item.setPrice(new BigDecimal("19.90"));
+        item.setStock(5);
+        dto.setSkus(List.of(item));
+
+        TransactionSynchronizationManager.initSynchronization();
+        try {
+            service.create(10L, dto);
+            verify(stockFeignClient, never()).initStock(any());
+
+            TransactionSynchronizationManager.getSynchronizations()
+                .forEach(TransactionSynchronization::afterCommit);
+            verify(stockFeignClient).initStock(any());
+        }
+        finally {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
     }
 
     /**

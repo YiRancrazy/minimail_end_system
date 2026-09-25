@@ -15,6 +15,9 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.api.dto.goods.SpuSnapshotDTO;
@@ -149,6 +152,7 @@ public class SpuServiceImpl implements SpuService {
      * @return 新建 SPU 的主键 ID
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public Long create(Long merchantId, SpuCreateDTO dto) {
         // 发布前提：店铺存在、归属当前商家且营业中，无店铺商家无法发布商品
         requireActiveShop(dto.getShopId(), merchantId);
@@ -162,7 +166,8 @@ public class SpuServiceImpl implements SpuService {
         po.setMainImageUrl(dto.getMainImageUrl());
         po.setStatus(SpuStatusEnum.DRAFT.statusValue());
         spuManager.save(po);
-        saveSkus(merchantId, po.getId(), dto.getSkus());
+        List<SkuPO> createdSkus = saveSkus(merchantId, po.getId(), dto.getSkus());
+        afterCommit(() -> createdSkus.forEach(sku -> initStockBestEffort(sku, merchantId)));
         log.info("spu created, spuId={}, merchantId={}", po.getId(), merchantId);
         return po.getId();
     }
@@ -173,9 +178,9 @@ public class SpuServiceImpl implements SpuService {
      * @param spuId 新建 SPU 的主键
      * @param items 创建入参携带的 SKU 清单，允许为空
      */
-    private void saveSkus(Long merchantId, Long spuId, List<SkuItemDTO> items) {
+    private List<SkuPO> saveSkus(Long merchantId, Long spuId, List<SkuItemDTO> items) {
         if (items == null || items.isEmpty()) {
-            return;
+            return Collections.emptyList();
         }
         List<SkuPO> skus = items.stream().map(it -> {
             SkuPO sku = new SkuPO();
@@ -187,7 +192,7 @@ public class SpuServiceImpl implements SpuService {
             return sku;
         }).collect(Collectors.toList());
         skuManager.saveBatch(skus);
-        skus.forEach(sku -> initStockBestEffort(sku, merchantId));
+        return skus;
     }
 
     /**
@@ -270,6 +275,7 @@ public class SpuServiceImpl implements SpuService {
      * @return 更新是否成功
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public boolean update(Long id, Long merchantId, SpuUpdateDTO dto) {
         SpuPO existing = spuManager.getById(id);
         if (existing == null) {
@@ -301,10 +307,15 @@ public class SpuServiceImpl implements SpuService {
         boolean ok = spuManager.updateById(existing);
         if (ok) {
             // skus 非空时先同步 SKU 再刷 ES，保证价格区间聚合到最新 SKU
+            List<SkuPO> createdSkus = Collections.emptyList();
             if (dto.getSkus() != null) {
-                syncSkus(merchantId, id, dto.getSkus());
+                createdSkus = syncSkus(merchantId, id, dto.getSkus());
             }
-            syncToEs(existing);
+            List<SkuPO> finalCreatedSkus = createdSkus;
+            afterCommit(() -> {
+                finalCreatedSkus.forEach(sku -> initStockBestEffort(sku, merchantId));
+                syncToEs(existing);
+            });
         }
         return ok;
     }
@@ -316,7 +327,7 @@ public class SpuServiceImpl implements SpuService {
      * @param spuId SPU 主键 ID
      * @param items 编辑后 SKU 全量清单
      */
-    private void syncSkus(Long merchantId, Long spuId, List<SkuItemDTO> items) {
+    private List<SkuPO> syncSkus(Long merchantId, Long spuId, List<SkuItemDTO> items) {
         List<SkuPO> existing = skuManager.list(
             Wrappers.lambdaQuery(SkuPO.class).eq(SkuPO::getSpuId, spuId));
         Map<Long, SkuPO> existingById = existing.stream()
@@ -343,7 +354,6 @@ public class SpuServiceImpl implements SpuService {
         }
         if (!toCreate.isEmpty()) {
             skuManager.saveBatch(toCreate);
-            toCreate.forEach(sku -> initStockBestEffort(sku, merchantId));
         }
         if (!toUpdate.isEmpty()) {
             skuManager.updateBatchById(toUpdate);
@@ -353,6 +363,7 @@ public class SpuServiceImpl implements SpuService {
         if (!toDelete.isEmpty()) {
             skuManager.removeByIds(toDelete);
         }
+        return toCreate;
     }
 
     /**
@@ -483,6 +494,7 @@ public class SpuServiceImpl implements SpuService {
      * @return 审核是否成功
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public boolean approve(Long spuId, Long auditorId) {
         SpuPO existing = spuManager.getById(spuId);
         if (existing == null) {
@@ -496,7 +508,7 @@ public class SpuServiceImpl implements SpuService {
         existing.setPublishAt(LocalDateTime.now());
         boolean ok = spuManager.updateById(existing);
         if (ok) {
-            syncToEs(existing);
+            afterCommit(() -> syncToEs(existing));
         }
         saveAuditRecord(spuId, auditorId, AuditDecisionEnum.APPROVE, null);
         log.info("spu approved, spuId={}, auditorId={}", spuId, auditorId);
@@ -511,6 +523,7 @@ public class SpuServiceImpl implements SpuService {
      * @return 审核是否成功
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public boolean reject(Long spuId, Long auditorId, String reason) {
         SpuPO existing = spuManager.getById(spuId);
         if (existing == null) {
@@ -523,7 +536,7 @@ public class SpuServiceImpl implements SpuService {
         existing.setStatus(SpuStatusEnum.REJECTED.statusValue());
         boolean ok = spuManager.updateById(existing);
         if (ok) {
-            syncToEs(existing);
+            afterCommit(() -> syncToEs(existing));
         }
         saveAuditRecord(spuId, auditorId, AuditDecisionEnum.REJECT, reason);
         log.info("spu rejected, spuId={}, auditorId={}, reason={}", spuId, auditorId, reason);
@@ -552,6 +565,23 @@ public class SpuServiceImpl implements SpuService {
         record.setReason(reason);
         record.setAuditAt(LocalDateTime.now());
         spuAuditRecordManager.save(record);
+    }
+
+    /**
+     * 在事务提交后执行外部副作用；无事务时立即执行。
+     * @param action 待执行动作
+     */
+    private void afterCommit(Runnable action) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            action.run();
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                action.run();
+            }
+        });
     }
 
     /**

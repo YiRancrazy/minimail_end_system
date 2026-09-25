@@ -78,9 +78,8 @@ public class RocketMqEventBus implements EventBus {
             public LocalTransactionState checkLocalTransaction(MessageExt msg) {
                 if (outboxStore != null && msg.getTransactionId() != null) {
                     try {
-                        return outboxStore.isCommitted(msg.getTransactionId())
-                            ? LocalTransactionState.COMMIT_MESSAGE
-                            : LocalTransactionState.ROLLBACK_MESSAGE;
+                        return toLocalTransactionState(
+                            outboxStore.commitStatus(msg.getTransactionId()));
                     }
                     catch (Exception e) {
                         log.warn("outbox check failed for tag={}: {}", msg.getTags(), e.getMessage());
@@ -193,6 +192,21 @@ public class RocketMqEventBus implements EventBus {
             checkers.remove(tag);
             tagTypes.remove(tag);
         }
+    }
+
+    /**
+     * 将 outbox 三态映射为 RocketMQ 本地事务状态。
+     * @param status outbox 本地事务状态
+     * @return RocketMQ 本地事务状态
+     */
+    static LocalTransactionState toLocalTransactionState(OutboxStore.CommitStatus status) {
+        if (status == OutboxStore.CommitStatus.COMMITTED) {
+            return LocalTransactionState.COMMIT_MESSAGE;
+        }
+        if (status == OutboxStore.CommitStatus.ROLLED_BACK) {
+            return LocalTransactionState.ROLLBACK_MESSAGE;
+        }
+        return LocalTransactionState.UNKNOW;
     }
 
     /**

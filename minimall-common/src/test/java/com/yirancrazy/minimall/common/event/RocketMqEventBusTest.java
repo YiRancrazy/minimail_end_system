@@ -122,6 +122,24 @@ class RocketMqEventBusTest {
             () -> bus.publishInTx(new DummyEvent("x"), tx -> { }, e -> Boolean.TRUE));
     }
 
+    @Test
+    void mapOutboxStatus_pending_thenUnknown() {
+        assertEquals(LocalTransactionState.UNKNOW,
+            RocketMqEventBus.toLocalTransactionState(OutboxStore.CommitStatus.PENDING));
+    }
+
+    @Test
+    void mapOutboxStatus_committed_thenCommit() {
+        assertEquals(LocalTransactionState.COMMIT_MESSAGE,
+            RocketMqEventBus.toLocalTransactionState(OutboxStore.CommitStatus.COMMITTED));
+    }
+
+    @Test
+    void mapOutboxStatus_rolledBack_thenRollback() {
+        assertEquals(LocalTransactionState.ROLLBACK_MESSAGE,
+            RocketMqEventBus.toLocalTransactionState(OutboxStore.CommitStatus.ROLLED_BACK));
+    }
+
     private static void setProducer(RocketMqEventBus bus, TransactionMQProducer producer) throws Exception {
         Field field = RocketMqEventBus.class.getDeclaredField("producer");
         field.setAccessible(true);

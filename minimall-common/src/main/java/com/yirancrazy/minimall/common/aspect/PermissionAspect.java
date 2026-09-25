@@ -1,5 +1,6 @@
 package com.yirancrazy.minimall.common.aspect;
 
+import java.util.Collections;
 import java.util.Set;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -34,7 +35,7 @@ public class PermissionAspect {
 
     /**
      * 权限切面构造器。
-     * @param redisTemplate Redis 模板；为空时鉴权仅依赖静态映射表
+     * @param redisTemplate Redis 模板；为空时无法读取动态权限，受保护操作默认拒绝
      */
     public PermissionAspect(StringRedisTemplate redisTemplate) {
         this.redisTemplate = redisTemplate;
@@ -57,7 +58,8 @@ public class PermissionAspect {
         }
 
         PermissionEnum[] required = requirePermission.value();
-        Set<PermissionEnum> effective = resolveEffectivePermissions(role);
+        String method = pjp.getSignature().toShortString();
+        Set<PermissionEnum> effective = resolveEffectivePermissions(role, method);
         boolean authorized = requirePermission.requireAll()
             ? hasAllPermissions(effective, required)
             : hasAnyPermission(effective, required);
@@ -79,30 +81,35 @@ public class PermissionAspect {
     }
 
     /**
-     * 解析角色生效权限集：与角色权限管理页展示一致，Redis 覆盖集优先，
-     * 无覆盖或 Redis 不可用时回退静态映射表。
+     * 解析角色生效权限集：仅信任 Redis 中的动态覆盖集，读取失败或无覆盖时返回空集。
      * @param role 角色
+     * @param method 受保护方法签名
      * @return 生效权限集
      */
-    private Set<PermissionEnum> resolveEffectivePermissions(RoleEnum role) {
+    private Set<PermissionEnum> resolveEffectivePermissions(RoleEnum role, String method) {
         if (redisTemplate == null) {
-            return RolePermissionMapping.permissionsOf(role);
+            log.warn("permission cache unavailable, deny request. role={}, method={}, exceptionType={}",
+                role.getCode(), method, "RedisTemplateUnavailable");
+            return Collections.emptySet();
         }
         String json;
         try {
             json = redisTemplate.opsForValue().get(RolePermissionMapping.KEY_PREFIX + role.getCode());
         }
         catch (Exception e) {
-            // Redis 故障不应阻断鉴权，回退静态表保证可用性
-            log.warn("redis unavailable, fallback to static mapping. role={}, err={}",
-                role.getCode(), e.getMessage());
-            return RolePermissionMapping.permissionsOf(role);
+            log.warn("permission cache read failed, deny request. role={}, method={}, exceptionType={}",
+                role.getCode(), method, e.getClass().getName());
+            return Collections.emptySet();
         }
         if (json == null || json.isEmpty()) {
-            log.warn("no permission override in redis for role={}, fallback to static mapping", role.getCode());
-            return RolePermissionMapping.permissionsOf(role);
+            log.warn("permission override missing, deny request. role={}, method={}", role.getCode(), method);
+            return Collections.emptySet();
         }
-        return RolePermissionMapping.parsePermissions(json);
+        Set<PermissionEnum> permissions = RolePermissionMapping.parsePermissions(json);
+        if (permissions.isEmpty()) {
+            log.warn("permission override empty, deny request. role={}, method={}", role.getCode(), method);
+        }
+        return permissions;
     }
 
     private boolean hasAnyPermission(Set<PermissionEnum> effective, PermissionEnum[] required) {

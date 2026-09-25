@@ -5,6 +5,7 @@ import java.io.InputStream;
 import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -40,7 +41,8 @@ public class UploadControllerV1 {
      * @return 分片结果；done=true 时 data.objectKey 为最终文件 key
      */
     @PostMapping("/chunk")
-    public Result<ChunkResultVO> chunk(@RequestParam("file") MultipartFile file,
+    public Result<ChunkResultVO> chunk(@RequestHeader("X-User-Id") Long userId,
+                                       @RequestParam("file") MultipartFile file,
                                        @RequestParam("uploadId") String uploadId,
                                        @RequestParam("chunkIndex") int chunkIndex,
                                        @RequestParam("totalChunks") int totalChunks,
@@ -48,7 +50,7 @@ public class UploadControllerV1 {
         ChunkUploadService.ChunkResult result;
         try (InputStream in = file.getInputStream()) {
             result = chunkUploadService.saveChunk(
-                uploadId, chunkIndex, totalChunks,
+                userId, uploadId, chunkIndex, totalChunks,
                 file.getContentType() != null ? file.getContentType() : "application/octet-stream",
                 fileName, in);
         }
@@ -65,9 +67,10 @@ public class UploadControllerV1 {
      * @return 已接收分片序号列表
      */
     @GetMapping("/status")
-    public Result<ChunkStatusVO> status(@RequestParam("uploadId") String uploadId,
+    public Result<ChunkStatusVO> status(@RequestHeader("X-User-Id") Long userId,
+                                        @RequestParam("uploadId") String uploadId,
                                         @RequestParam("totalChunks") int totalChunks) {
-        List<Integer> received = chunkUploadService.receivedChunks(uploadId, totalChunks);
+        List<Integer> received = chunkUploadService.receivedChunks(userId, uploadId, totalChunks);
         return Result.success(new ChunkStatusVO(uploadId, received, received.size() == totalChunks));
     }
 

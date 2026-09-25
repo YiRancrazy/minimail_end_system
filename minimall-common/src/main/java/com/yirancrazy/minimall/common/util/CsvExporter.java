@@ -80,9 +80,33 @@ public final class CsvExporter {
         writer.write("\n");
     }
 
-    private static String escape(String field) {
-        if (field.contains(",") || field.contains("\"") || field.contains("\n")) {
-            return "\"" + field.replace("\"", "\"\"") + "\"";
+    /**
+     * 转义 CSV 字段：先中和公式前缀，再按 RFC 4180 处理逗号、引号与换行。
+     * @param field 原始字段值
+     * @return 转义后的字段值
+     */
+    static String escape(String field) {
+        String safe = neutralizeFormula(field);
+        if (safe.contains(",") || safe.contains("\"") || safe.contains("\n")) {
+            return "\"" + safe.replace("\"", "\"\"") + "\"";
+        }
+        return safe;
+    }
+
+    /**
+     * 中和 CSV 公式注入：以 = + - @ 或制表符/回车开头的字段前置单引号，
+     * 避免表格软件把用户可控内容当作公式执行。
+     * @param field 原始字段值
+     * @return 中和后的字段值
+     */
+    private static String neutralizeFormula(String field) {
+        if (field.isEmpty()) {
+            return field;
+        }
+        char first = field.charAt(0);
+        if (first == '=' || first == '+' || first == '-' || first == '@'
+            || first == '\t' || first == '\r') {
+            return "'" + field;
         }
         return field;
     }

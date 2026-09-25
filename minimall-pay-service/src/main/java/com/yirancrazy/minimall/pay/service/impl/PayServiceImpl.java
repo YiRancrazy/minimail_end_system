@@ -218,10 +218,6 @@ public class PayServiceImpl implements PayService {
      * @param dto 回调DTO
      */
     private void applyCallbackSuccess(PayTransactionPO po, PayCallbackDTO dto) {
-        Result<Void> advanceResult = advanceOrder(po.getOrderNo());
-        if (advanceResult == null || !CommonCode.SUCCESS.equals(advanceResult.getCode())) {
-            throw new BizException(PayCodeEnum.PAY_ORDER_ADVANCE_FAILED);
-        }
         int status = po.getStatus();
         if (status == Integer.parseInt(PayStatusEnum.REFUNDING.getCode())
             || status == Integer.parseInt(PayStatusEnum.REFUNDED.getCode())
@@ -229,6 +225,10 @@ public class PayServiceImpl implements PayService {
             log.warn("callback success ignored, payment not in payable state, paymentNo={}, status={}",
                 dto.getPaymentNo(), status);
             return;
+        }
+        Result<Void> advanceResult = advanceOrder(po.getOrderNo());
+        if (advanceResult == null || !CommonCode.SUCCESS.equals(advanceResult.getCode())) {
+            throw new BizException(PayCodeEnum.PAY_ORDER_ADVANCE_FAILED);
         }
 
         po.setTradeNo(dto.getTradeNo());

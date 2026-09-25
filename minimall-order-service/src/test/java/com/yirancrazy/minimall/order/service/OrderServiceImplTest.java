@@ -246,6 +246,36 @@ public class OrderServiceImplTest {
     }
 
     /**
+     * 验证退款中的订单不能再次推进为已支付。
+     */
+    @Test
+    public void pay_refunding_order_throws() {
+        OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.REFUNDING.intCode());
+        when(manager.getById(99L)).thenReturn(existing);
+
+        BizException exception = assertThrows(BizException.class, () -> service.pay(99L));
+
+        assertEquals(OrderCodeEnum.ORDER_STATUS_TRANSITION_INVALID.getCode(), exception.getCode());
+        assertEquals(OrderStatusEnum.REFUNDING.intCode(), existing.getStatus());
+        verify(eventBus, never()).publishInTx(any(), any(), any());
+    }
+
+    /**
+     * 验证已退款订单不能再次推进为已支付。
+     */
+    @Test
+    public void pay_refunded_order_throws() {
+        OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.REFUNDED.intCode());
+        when(manager.getById(99L)).thenReturn(existing);
+
+        BizException exception = assertThrows(BizException.class, () -> service.pay(99L));
+
+        assertEquals(OrderCodeEnum.ORDER_STATUS_TRANSITION_INVALID.getCode(), exception.getCode());
+        assertEquals(OrderStatusEnum.REFUNDED.intCode(), existing.getStatus());
+        verify(eventBus, never()).publishInTx(any(), any(), any());
+    }
+
+    /**
      * 验证 payByOrderNo 按业务单号推进订单为已支付。
      */
     @Test

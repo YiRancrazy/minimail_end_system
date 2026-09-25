@@ -334,6 +334,66 @@ public class PayServiceImplTest {
     }
 
     /**
+     * 验证退款中的支付单收到迟到成功回调时不会推进订单。
+     */
+    @Test
+    public void handleCallback_refunding_payment_does_not_advance_order() {
+        PayTransactionPO rec = new PayTransactionPO();
+        rec.setId(1L);
+        rec.setStatus(5);
+        rec.setOrderNo("100");
+        when(manager.getOne(any())).thenReturn(rec);
+
+        PayCallbackDTO dto = new PayCallbackDTO("PAY123", "TRADE123", true, "response");
+        service.handleCallback(dto);
+
+        assertEquals(5, rec.getStatus());
+        verify(orderFeignClient, never()).pay(anyLong());
+        verify(orderFeignClient, never()).payByOrderNo(anyString());
+        verify(manager, never()).updateById(rec);
+    }
+
+    /**
+     * 验证已退款的支付单收到迟到成功回调时不会推进订单。
+     */
+    @Test
+    public void handleCallback_refunded_payment_does_not_advance_order() {
+        PayTransactionPO rec = new PayTransactionPO();
+        rec.setId(1L);
+        rec.setStatus(6);
+        rec.setOrderNo("100");
+        when(manager.getOne(any())).thenReturn(rec);
+
+        PayCallbackDTO dto = new PayCallbackDTO("PAY123", "TRADE123", true, "response");
+        service.handleCallback(dto);
+
+        assertEquals(6, rec.getStatus());
+        verify(orderFeignClient, never()).pay(anyLong());
+        verify(orderFeignClient, never()).payByOrderNo(anyString());
+        verify(manager, never()).updateById(rec);
+    }
+
+    /**
+     * 验证冻结支付单收到成功回调时不会推进订单。
+     */
+    @Test
+    public void handleCallback_frozen_payment_does_not_advance_order() {
+        PayTransactionPO rec = new PayTransactionPO();
+        rec.setId(1L);
+        rec.setStatus(7);
+        rec.setOrderNo("100");
+        when(manager.getOne(any())).thenReturn(rec);
+
+        PayCallbackDTO dto = new PayCallbackDTO("PAY123", "TRADE123", true, "response");
+        service.handleCallback(dto);
+
+        assertEquals(7, rec.getStatus());
+        verify(orderFeignClient, never()).pay(anyLong());
+        verify(orderFeignClient, never()).payByOrderNo(anyString());
+        verify(manager, never()).updateById(rec);
+    }
+
+    /**
      * 验证 handleCallback 在订单标识为业务单号（C 端直付）时按单号推进订单，修复回调推进订单崩溃。
      */
     @Test

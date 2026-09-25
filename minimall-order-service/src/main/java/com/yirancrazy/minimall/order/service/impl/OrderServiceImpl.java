@@ -340,6 +340,9 @@ public class OrderServiceImpl implements OrderService {
             log.info("order already paid, skip duplicate advance, orderId={}", orderId);
             return;
         }
+        if (po.getStatus() != OrderStatusEnum.PENDING.intCode()) {
+            throw new BizException(OrderCodeEnum.ORDER_STATUS_TRANSITION_INVALID);
+        }
         OrderPaidDTO event = new OrderPaidDTO(
             orderId, po.getUserId(), po.getAmount(), LocalDateTime.now().toString());
         eventBus.publishInTx(event, txId -> transactionTemplate.executeWithoutResult(status -> {

@@ -4,6 +4,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cloud.gateway.handler.predicate.MethodRoutePredicateFactory;
 import org.springframework.cloud.gateway.handler.predicate.PathRoutePredicateFactory;
 import org.springframework.cloud.gateway.route.Route;
 import org.springframework.cloud.gateway.route.RouteLocator;
@@ -62,6 +63,15 @@ class GatewayRouteContextTest {
         @Bean
         PathRoutePredicateFactory pathRoutePredicateFactory() {
             return new PathRoutePredicateFactory();
+        }
+
+        /**
+         * 构造 HTTP 方法断言工厂，供平台导出路由的 POST 约束使用。
+         * @return HTTP 方法断言工厂
+         */
+        @Bean
+        MethodRoutePredicateFactory methodRoutePredicateFactory() {
+            return new MethodRoutePredicateFactory();
         }
     }
 }

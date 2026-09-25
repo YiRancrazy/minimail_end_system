@@ -121,6 +121,15 @@ class ChunkUploadServiceTest {
     }
 
     @Test
+    void saveChunk_retry_truncates_existing_chunk() throws IOException {
+        service.saveChunk(uploadId, 0, 2, "image/png", "a.png", chunk("abcdef"));
+        service.saveChunk(uploadId, 0, 2, "image/png", "a.png", chunk("xy"));
+
+        Path chunk = ROOT.resolve(uploadId).resolve("chunk-0");
+        assertEquals("xy", Files.readString(chunk));
+    }
+
+    @Test
     void saveChunk_last_chunk_triggers_merge_and_upload() {
         service.saveChunk(uploadId, 0, 2, "image/png", "a.png", chunk("hello"));
         Path dir = ROOT.resolve(uploadId);

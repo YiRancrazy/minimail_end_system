@@ -48,7 +48,9 @@ public class ChunkUploadService {
         try {
             Files.createDirectories(taskDir(uploadId));
             try (OutputStream out = Files.newOutputStream(
-                    taskDir(uploadId).resolve("chunk-" + chunkIndex), StandardOpenOption.CREATE)) {
+                    taskDir(uploadId).resolve("chunk-" + chunkIndex),
+                    StandardOpenOption.CREATE,
+                    StandardOpenOption.TRUNCATE_EXISTING)) {
                 in.transferTo(out);
             }
         }
@@ -128,7 +130,10 @@ public class ChunkUploadService {
         Path merged = dir.resolve("merged.bin");
         try {
             // 按序号拼接分片到合并文件，避免一次性持有多个流
-            try (OutputStream out = Files.newOutputStream(merged, StandardOpenOption.CREATE)) {
+            try (OutputStream out = Files.newOutputStream(
+                    merged,
+                    StandardOpenOption.CREATE,
+                    StandardOpenOption.TRUNCATE_EXISTING)) {
                 for (int i = 0; i < totalChunks; i++) {
                     Path chunk = dir.resolve("chunk-" + i);
                     try (InputStream in = Files.newInputStream(chunk)) {

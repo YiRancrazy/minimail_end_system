@@ -19,6 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -845,7 +846,8 @@ public class PayServiceImplTest {
             .thenReturn("REFUND_TRADE_123");
 
         com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO dto =
-            new com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO(1L, new BigDecimal("50.00"), "reason");
+            new com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO(
+                1L, new BigDecimal("50.00"), "reason", "REFUND-REQ-1");
         // insert 时点快照：同一退款对象后续会被服务置为 SUCCESS，需在插入瞬间记录状态
         final int[] insertStatusSnapshot = new int[1];
         doAnswer(inv -> {
@@ -863,8 +865,34 @@ public class PayServiceImplTest {
         assertEquals(0, insertStatusSnapshot[0]); // 落库时为 PENDING
         verify(payRefundMapper).updateById(cap.getValue());
         assertEquals(1, cap.getValue().getStatus()); // 成功后 SUCCESS
+        assertEquals("REFUND-REQ-1", cap.getValue().getRefundRequestNo());
         verify(payTransactionMapper).updateStatusIf("PAY123", 5, 2); // 未退满回 SUCCESS
         verify(orderFeignClient).refundCallback(100L, true);
+    }
+
+    /**
+     * 验证同一退款请求号直接复用已有退款记录，不重复抢占支付单或调用渠道。
+     */
+    @Test
+    public void createRefund_reuses_existing_request() {
+        PayRefundPO existing = new PayRefundPO();
+        existing.setRefundNo("REFUND-EXISTING");
+        existing.setRefundRequestNo("REFUND-REQ-1");
+        existing.setPaymentNo("PAY123");
+        existing.setAmount(new BigDecimal("50.00"));
+        existing.setStatus(1);
+        when(payRefundMapper.findByRefundRequestNo("REFUND-REQ-1")).thenReturn(existing);
+
+        com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO dto =
+            new com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO(
+                1L, new BigDecimal("50.00"), "reason", "REFUND-REQ-1");
+        RefundVO result = service.createRefund(dto);
+
+        assertEquals("REFUND-EXISTING", result.getRefundNo());
+        verify(manager, never()).getById(anyLong());
+        verify(payTransactionMapper, never()).updateStatusIf(anyString(), anyInt(), anyInt());
+        verify(payGateway, never()).refund(anyString(), anyString(), any(BigDecimal.class), anyString());
+        verify(orderFeignClient, never()).refundCallback(anyLong(), anyBoolean());
     }
 
     /**

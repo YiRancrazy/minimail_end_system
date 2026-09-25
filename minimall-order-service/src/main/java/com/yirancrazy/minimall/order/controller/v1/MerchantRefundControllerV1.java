@@ -39,7 +39,7 @@ public class MerchantRefundControllerV1 {
                                        @RequestHeader("X-User-Id") Long merchantId,
                                        @Valid @RequestBody MerchantRefundExecuteDTO dto) {
         orderService.merchantInitiateRefund(parseOrderIdFromRefundNo(refundNo), merchantId,
-            dto.getRefundAmount(), dto.getReason());
+            dto.getRefundAmount(), dto.getReason(), refundNo);
         return Result.success(null);
     }
 
@@ -51,7 +51,8 @@ public class MerchantRefundControllerV1 {
     @PostMapping("/{refundNo}/approve")
     public Result<Void> approveRefund(@PathVariable String refundNo,
                                       @RequestHeader("X-Merchant-Id") Long merchantId) {
-        orderService.reviewRefund(parseOrderIdFromRefundNo(refundNo), true, merchantId, null);
+        orderService.reviewRefund(
+            parseOrderIdFromRefundNo(refundNo), true, merchantId, null, refundNo);
         return Result.success(null);
     }
 
@@ -65,7 +66,8 @@ public class MerchantRefundControllerV1 {
     public Result<Void> rejectRefund(@PathVariable String refundNo,
                                      @RequestHeader("X-Merchant-Id") Long merchantId,
                                      @RequestParam String reason) {
-        orderService.reviewRefund(parseOrderIdFromRefundNo(refundNo), false, merchantId, reason);
+        orderService.reviewRefund(
+            parseOrderIdFromRefundNo(refundNo), false, merchantId, reason, refundNo);
         return Result.success(null);
     }
 

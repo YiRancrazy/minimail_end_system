@@ -47,13 +47,15 @@ class AmountDigitsValidationTest {
 
     @Test
     void refund_create_dto_rejects_three_decimals() {
-        RefundCreateDTO dto = new RefundCreateDTO(1L, new BigDecimal("10.005"), "reason");
+        RefundCreateDTO dto = new RefundCreateDTO(
+            1L, new BigDecimal("10.005"), "reason", "REFUND-REQ-1");
         assertEquals("amount", onlyViolation(validator.validate(dto)));
     }
 
     @Test
     void refund_create_dto_accepts_two_decimals() {
-        RefundCreateDTO dto = new RefundCreateDTO(1L, new BigDecimal("10.00"), "reason");
+        RefundCreateDTO dto = new RefundCreateDTO(
+            1L, new BigDecimal("10.00"), "reason", "REFUND-REQ-1");
         assertTrue(validator.validate(dto).isEmpty());
     }
 

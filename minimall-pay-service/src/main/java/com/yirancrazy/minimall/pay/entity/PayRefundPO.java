@@ -19,6 +19,7 @@ import com.yirancrazy.minimall.common.base.BasePO;
 @TableName("t_pay_refund")
 public class PayRefundPO extends BasePO {
     private String refundNo;
+    private String refundRequestNo;
     private String paymentNo;
     private String refundTradeNo;
     private BigDecimal amount;

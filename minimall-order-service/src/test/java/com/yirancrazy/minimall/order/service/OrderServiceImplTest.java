@@ -872,11 +872,15 @@ public class OrderServiceImplTest {
         existing.setRefundFromStatus(OrderStatusEnum.PAID.intCode());
         existing.setPayId(2001L);
         existing.setAmount(new BigDecimal("19.80"));
+        existing.setRefundRequestNo("REFUND-REQ-99");
         when(manager.getById(99L)).thenReturn(existing);
 
         service.reviewRefund(99L, true, 10L, null);
         assertEquals(OrderStatusEnum.REFUNDING.intCode(), existing.getStatus());
-        verify(payFeignClient).refund(any());
+        org.mockito.ArgumentCaptor<RefundCreateDTO> captor =
+            org.mockito.ArgumentCaptor.forClass(RefundCreateDTO.class);
+        verify(payFeignClient).refund(captor.capture());
+        assertEquals("REFUND-REQ-99", captor.getValue().getRefundRequestNo());
     }
 
     /**
@@ -887,6 +891,7 @@ public class OrderServiceImplTest {
         OrderPO existing = buildOrder(100L, 1L, 10L, OrderStatusEnum.REFUNDING.intCode());
         existing.setPayId(200L);
         existing.setAmount(new BigDecimal("50.00"));
+        existing.setRefundRequestNo("REFUND-REQ-100");
         when(manager.getById(100L)).thenReturn(existing);
         when(payFeignClient.refund(any())).thenReturn(Result.success(Boolean.FALSE));
 
@@ -999,6 +1004,7 @@ public class OrderServiceImplTest {
         existing.setPayId(2001L);
         existing.setAmount(new BigDecimal("19.80"));
         existing.setRefundAmount(new BigDecimal("5.00"));
+        existing.setRefundRequestNo("REFUND-REQ-99");
         when(manager.getById(99L)).thenReturn(existing);
 
         service.reviewRefund(99L, true, 10L, null);
@@ -1008,6 +1014,7 @@ public class OrderServiceImplTest {
         verify(payFeignClient).refund(captor.capture());
         assertEquals(2001L, captor.getValue().getPayId().longValue());
         assertEquals(0, new BigDecimal("5.00").compareTo(captor.getValue().getAmount()));
+        assertEquals("REFUND-REQ-99", captor.getValue().getRefundRequestNo());
     }
 
     /**

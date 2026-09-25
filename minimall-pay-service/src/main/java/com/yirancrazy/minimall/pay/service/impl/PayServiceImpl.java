@@ -322,6 +322,12 @@ public class PayServiceImpl implements PayService {
      */
     @Override
     public RefundVO createRefund(RefundCreateDTO dto) {
+        PayRefundPO existingRefund = findByRefundRequestNo(dto.getRefundRequestNo());
+        if (existingRefund != null) {
+            log.info("refund request reused, requestNo={}, refundNo={}, status={}",
+                dto.getRefundRequestNo(), existingRefund.getRefundNo(), existingRefund.getStatus());
+            return toRefundVO(existingRefund);
+        }
         PayTransactionPO payTx = payManager.getById(dto.getPayId());
 
         if (payTx == null) {
@@ -336,12 +342,20 @@ public class PayServiceImpl implements PayService {
         }
 
         String refundNo = generateRefundNo();
+        String refundRequestNo = dto.getRefundRequestNo();
+        if (refundRequestNo == null || refundRequestNo.isBlank()) {
+            refundRequestNo = refundNo;
+        }
         String paymentNo = payTx.getPaymentNo();
         int successCode = Integer.parseInt(PayStatusEnum.SUCCESS.getCode());
         int refundingCode = Integer.parseInt(PayStatusEnum.REFUNDING.getCode());
 
         // 原子抢占：仅当支付单仍为 SUCCESS 时置为 REFUNDING，并发退款第二个请求影响 0 行直接拒绝，杜绝双重退款
         if (payTransactionMapper.updateStatusIf(paymentNo, successCode, refundingCode) == 0) {
+            existingRefund = findByRefundRequestNo(refundRequestNo);
+            if (existingRefund != null) {
+                return toRefundVO(existingRefund);
+            }
             throw new BizException(PayCodeEnum.REFUND_CONFLICT);
         }
 
@@ -354,12 +368,23 @@ public class PayServiceImpl implements PayService {
 
         PayRefundPO refund = new PayRefundPO();
         refund.setRefundNo(refundNo);
+        refund.setRefundRequestNo(refundRequestNo);
         refund.setPaymentNo(paymentNo);
         refund.setAmount(refundAmount);
         refund.setReason(dto.getReason());
         refund.setStatus(Integer.parseInt(RefundStatusEnum.PENDING.getCode()));
         refund.setIdempotencyKey(UUID.randomUUID().toString());
-        payRefundMapper.insert(refund);
+        try {
+            payRefundMapper.insert(refund);
+        }
+        catch (DuplicateKeyException e) {
+            existingRefund = findByRefundRequestNo(refundRequestNo);
+            if (existingRefund != null) {
+                payTransactionMapper.updateStatusIf(paymentNo, refundingCode, successCode);
+                return toRefundVO(existingRefund);
+            }
+            throw e;
+        }
 
         // C 端直付订单号可能为非数字业务单号，OrderFeignClient 仅有按订单ID的退款回调，
         // 无法推进时记 WARN 跳过订单推进，避免 NumberFormatException 导致退款中断
@@ -398,7 +423,19 @@ public class PayServiceImpl implements PayService {
             notifyOrderRefund(orderId, refund);
         }
         log.info("refund success, refundNo={}, paymentNo={}", refundNo, paymentNo);
-        return new RefundVO(refundNo, paymentNo, refundAmount, refund.getStatus());
+        return toRefundVO(refund);
+    }
+
+    private PayRefundPO findByRefundRequestNo(String refundRequestNo) {
+        if (refundRequestNo == null || refundRequestNo.isBlank()) {
+            return null;
+        }
+        return payRefundMapper.findByRefundRequestNo(refundRequestNo);
+    }
+
+    private static RefundVO toRefundVO(PayRefundPO refund) {
+        return new RefundVO(
+            refund.getRefundNo(), refund.getPaymentNo(), refund.getAmount(), refund.getStatus());
     }
 
     /**

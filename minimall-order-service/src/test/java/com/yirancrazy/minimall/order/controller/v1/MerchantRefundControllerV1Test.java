@@ -41,7 +41,7 @@ class MerchantRefundControllerV1Test {
                 .content(body))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.code").value("00000"));
-        verify(service).merchantInitiateRefund(99L, 1L, "5.00", "部分退货");
+        verify(service).merchantInitiateRefund(99L, 1L, "5.00", "部分退货", "R99");
     }
 
     /**
@@ -53,7 +53,7 @@ class MerchantRefundControllerV1Test {
                 .header("X-Merchant-Id", 1L))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.code").value("00000"));
-        verify(service).reviewRefund(99L, true, 1L, null);
+        verify(service).reviewRefund(99L, true, 1L, null, "R99");
     }
 
     /**
@@ -66,6 +66,6 @@ class MerchantRefundControllerV1Test {
                 .param("reason", "证据不足"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.code").value("00000"));
-        verify(service).reviewRefund(99L, false, 1L, "证据不足");
+        verify(service).reviewRefund(99L, false, 1L, "证据不足", "R99");
     }
 }

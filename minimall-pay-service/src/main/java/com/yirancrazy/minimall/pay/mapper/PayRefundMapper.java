@@ -18,6 +18,15 @@ import com.yirancrazy.minimall.pay.entity.PayRefundPO;
 public interface PayRefundMapper extends BaseMapper<PayRefundPO> {
 
     /**
+     * 按退款请求幂等键查询退款记录。
+     * @param refundRequestNo 退款请求幂等键
+     * @return 退款记录；不存在返回 null
+     */
+    @Select("SELECT * FROM t_pay_refund WHERE refund_request_no = #{refundRequestNo} "
+        + "AND is_deleted = 0 LIMIT 1")
+    PayRefundPO findByRefundRequestNo(@Param("refundRequestNo") String refundRequestNo);
+
+    /**
      * 统计指定支付单已占用退款金额（在途待发起 PENDING + 已成功 SUCCESS），用于累计退款上限校验，
      * 失败/关闭的退款记录不计入，避免并发部分退款累计超退。
      * @param paymentNo 支付单号

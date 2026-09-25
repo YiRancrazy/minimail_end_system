@@ -268,6 +268,7 @@ CREATE TABLE IF NOT EXISTS t_order (
     quantity                INT             NULL COMMENT '总数量（冗余）',
     amount                  DECIMAL(12,2)   DEFAULT 0 COMMENT '商品总额（原价）',
     refund_amount           DECIMAL(12,2)   NULL COMMENT '实际退款金额（元），部分退款时记录',
+    refund_request_no       VARCHAR(64)     NULL COMMENT '退款请求幂等键',
     total_amount            DECIMAL(12,2)   NOT NULL DEFAULT 0 COMMENT '应付总额（含运费）',
     pay_amount              DECIMAL(12,2)   NOT NULL DEFAULT 0 COMMENT '实付金额',
     freight_amount          DECIMAL(12,2)   NOT NULL DEFAULT 0 COMMENT '运费',
@@ -483,8 +484,9 @@ CREATE TABLE IF NOT EXISTS t_pay_transaction (
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='支付流水表';
 
 CREATE TABLE IF NOT EXISTS t_pay_refund (
-                                            id                  BIGINT UNSIGNED NOT NULL COMMENT '主键ID',
-                                            refund_no           VARCHAR(32)     NOT NULL COMMENT '退款流水号（唯一）',
+    id                  BIGINT UNSIGNED NOT NULL COMMENT '主键ID',
+    refund_no           VARCHAR(32)     NOT NULL COMMENT '退款流水号（唯一）',
+    refund_request_no   VARCHAR(64)     NOT NULL COMMENT '退款请求幂等键',
     payment_no          VARCHAR(32)     NOT NULL COMMENT '关联支付流水号',
     refund_trade_no     VARCHAR(64)     DEFAULT NULL COMMENT '第三方退款交易号',
     amount              DECIMAL(12,2)   NOT NULL COMMENT '退款金额(元)',
@@ -498,6 +500,7 @@ CREATE TABLE IF NOT EXISTS t_pay_refund (
     update_time         DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '更新时间',
     PRIMARY KEY (id),
     UNIQUE KEY uk_pay_refund_refund_no (refund_no, is_deleted),
+    UNIQUE KEY uk_pay_refund_request_no (refund_request_no, is_deleted),
     INDEX idx_pay_refund_payment_no (payment_no)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='退款流水表';
 

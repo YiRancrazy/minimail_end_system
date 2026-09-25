@@ -42,6 +42,8 @@ public class OrderPO extends BasePO {
     private Integer refundFromStatus;
     /** 本次申请退款金额，部分退款场景使用；null 表示全单退款 */
     private BigDecimal refundAmount;
+    /** 退款请求幂等键，用于跨服务重复请求去重 */
+    private String refundRequestNo;
     private LocalDateTime shippedAt;
     private String orderGroupNo;
 }

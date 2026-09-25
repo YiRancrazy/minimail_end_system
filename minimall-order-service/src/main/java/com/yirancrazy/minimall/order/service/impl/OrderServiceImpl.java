@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -423,9 +424,21 @@ public class OrderServiceImpl implements OrderService {
      */
     @Override
     public void merchantInitiateRefund(Long orderId, Long merchantId, String refundAmount, String reason) {
+        merchantInitiateRefund(orderId, merchantId, refundAmount, reason, "R" + orderId);
+    }
+
+    @Override
+    public void merchantInitiateRefund(Long orderId, Long merchantId, String refundAmount, String reason,
+                                       String refundRequestNo) {
         OrderPO po = getOrder(orderId);
         if (po.getMerchantId() == null || !po.getMerchantId().equals(merchantId)) {
             throw new BizException(OrderCodeEnum.ORDER_NOT_FOUND);
+        }
+        String requestNo = resolveRefundRequestNo(po, refundRequestNo);
+        if (po.getStatus() == OrderStatusEnum.REFUNDING.intCode()
+            || po.getStatus() == OrderStatusEnum.REFUNDED.intCode()) {
+            log.info("merchant refund already submitted, orderId={}, requestNo={}", orderId, requestNo);
+            return;
         }
         OrderStatusEnum current = statusMachine.fromCode(po.getStatus());
         if (current != OrderStatusEnum.PAID && current != OrderStatusEnum.SHIPPED) {
@@ -433,7 +446,7 @@ public class OrderServiceImpl implements OrderService {
         }
         po.setRefundAmount(validateRefundAmount(refundAmount, po));
         orderManager.updateById(po);
-        refund(orderId, po.getUserId());
+        refund(orderId, po.getUserId(), requestNo);
         log.info("merchant initiated refund, orderId={}, merchantId={}, amount={}, reason={}",
             orderId, merchantId, refundAmount, reason);
     }
@@ -450,6 +463,10 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public void refund(Long orderId, Long userId) {
+        refund(orderId, userId, UUID.randomUUID().toString().replace("-", ""));
+    }
+
+    private void refund(Long orderId, Long userId, String refundRequestNo) {
         OrderPO po = getOrder(orderId);
         if (!po.getUserId().equals(userId)) {
             throw new BizException(OrderCodeEnum.ORDER_NOT_FOUND);
@@ -460,6 +477,7 @@ public class OrderServiceImpl implements OrderService {
         }
         // 申请退款仅登记退款意向（记录原状态并置 REFUNDING），真实退款由商家审核通过后调用支付网关触发
         po.setRefundFromStatus(po.getStatus());
+        po.setRefundRequestNo(resolveRefundRequestNo(po, refundRequestNo));
         transition(po, OrderStatusEnum.REFUNDING, "USER_APPLY_REFUND", null, null);
         log.info("order refunding, orderId={}", orderId);
     }
@@ -1364,6 +1382,12 @@ public class OrderServiceImpl implements OrderService {
      */
     @Override
     public void reviewRefund(Long orderId, boolean approved, Long merchantId, String reason) {
+        reviewRefund(orderId, approved, merchantId, reason, null);
+    }
+
+    @Override
+    public void reviewRefund(Long orderId, boolean approved, Long merchantId, String reason,
+                             String refundRequestNo) {
         OrderPO po = getOrder(orderId);
         if (po.getMerchantId() == null || !po.getMerchantId().equals(merchantId)) {
             throw new BizException(OrderCodeEnum.ORDER_NOT_FOUND);
@@ -1378,7 +1402,12 @@ public class OrderServiceImpl implements OrderService {
             return;
         }
         // 审核通过才调支付网关真实退款，避免"先退钱后审核"；状态迁移由支付回调 handleRefundCallback 驱动
-        requestPayRefund(po);
+        boolean requestNoMissing = po.getRefundRequestNo() == null || po.getRefundRequestNo().isBlank();
+        String requestNo = resolveRefundRequestNo(po, refundRequestNo);
+        if (requestNoMissing) {
+            orderManager.updateById(po);
+        }
+        requestPayRefund(po, requestNo);
         log.info("refund approved by merchant, orderId={}, merchantId={}", orderId, merchantId);
     }
 
@@ -1395,7 +1424,7 @@ public class OrderServiceImpl implements OrderService {
             throw new BizException(OrderCodeEnum.ORDER_NOT_REFUNDING);
         }
         if (approved) {
-            requestPayRefund(po);
+            requestPayRefund(po, resolveRefundRequestNo(po, null));
             log.info("refund arbitrated approved and submitted, orderId={}", orderId);
             return;
         }
@@ -1407,20 +1436,41 @@ public class OrderServiceImpl implements OrderService {
      * 发起真实支付退款，失败时抛出 ORDER_REFUND_FAIL；订单状态由支付退款回调统一推进。
      * @param po 退款中的订单
      */
-    private void requestPayRefund(OrderPO po) {
+    private void requestPayRefund(OrderPO po, String refundRequestNo) {
         BigDecimal refundAmount = po.getRefundAmount() != null ? po.getRefundAmount() : po.getAmount();
         if (refundAmount == null) {
             throw new BizException(OrderCodeEnum.REFUND_AMOUNT_INVALID);
         }
         BigDecimal refundAmt = normalizeAmount(refundAmount);
         Result<Boolean> refundResult = payFeignClient.refund(
-            new RefundCreateDTO(po.getPayId(), refundAmt, null));
+            new RefundCreateDTO(po.getPayId(), refundAmt, null, refundRequestNo));
         if (refundResult == null
             || !CommonCode.SUCCESS.equals(refundResult.getCode())
             || !Boolean.TRUE.equals(refundResult.getData())) {
             log.error("pay refund failed, orderId={}, payId={}", po.getId(), po.getPayId());
             throw new BizException(OrderCodeEnum.ORDER_REFUND_FAIL);
         }
+    }
+
+    /**
+     * 解析订单退款请求号，已有请求号时拒绝被其他请求覆盖。
+     * @param po 订单实体
+     * @param candidate 本次请求携带的退款请求号，可为空
+     * @return 稳定的退款请求号
+     */
+    private String resolveRefundRequestNo(OrderPO po, String candidate) {
+        String current = po.getRefundRequestNo();
+        if (current != null && !current.isBlank()) {
+            if (candidate != null && !candidate.isBlank() && !current.equals(candidate)) {
+                throw new BizException(OrderCodeEnum.ORDER_STATUS_TRANSITION_INVALID);
+            }
+            return current;
+        }
+        String resolved = candidate == null || candidate.isBlank()
+            ? "R" + po.getId()
+            : candidate;
+        po.setRefundRequestNo(resolved);
+        return resolved;
     }
 
     /**

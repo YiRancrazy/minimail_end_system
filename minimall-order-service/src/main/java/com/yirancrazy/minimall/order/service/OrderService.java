@@ -87,6 +87,17 @@ public interface OrderService {
     void merchantInitiateRefund(Long orderId, Long merchantId, String refundAmount, String reason);
 
     /**
+     * 商家主动发起退款并携带稳定退款请求号。
+     * @param orderId 订单ID
+     * @param merchantId 商家ID
+     * @param refundAmount 退款金额
+     * @param reason 退款原因
+     * @param refundRequestNo 退款请求幂等键
+     */
+    void merchantInitiateRefund(Long orderId, Long merchantId, String refundAmount, String reason,
+                                String refundRequestNo);
+
+    /**
      * 接收支付服务退款结果回调：仅 REFUNDING 状态可受理（否则抛状态流转异常，天然幂等）；
      * success 推进 REFUNDED，失败回退到 refundFromStatus。
      * @param orderId 订单ID
@@ -214,6 +225,17 @@ public interface OrderService {
      * @param reason 驳回原因，仅 approved=false 时有效；同意退款或无需驳回原因时传 null
      */
     void reviewRefund(Long orderId, boolean approved, Long merchantId, String reason);
+
+    /**
+     * 商家审核退款并携带稳定退款请求号。
+     * @param orderId 订单ID
+     * @param approved 是否同意退款
+     * @param merchantId 商家ID
+     * @param reason 驳回原因
+     * @param refundRequestNo 退款请求幂等键
+     */
+    void reviewRefund(Long orderId, boolean approved, Long merchantId, String reason,
+                      String refundRequestNo);
 
     /**
      * 平台退款仲裁，仅允许 REFUNDING 状态订单；approved=true 发起真实支付退款并由回调推进 REFUNDED，

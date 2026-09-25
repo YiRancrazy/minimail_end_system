@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import org.springframework.stereotype.Service;
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.api.dto.goods.SkuSnapshotDTO;
@@ -15,6 +16,7 @@ import com.yirancrazy.minimall.cart.dto.CartItemAddDTO;
 import com.yirancrazy.minimall.cart.dto.CartUpdateDTO;
 import com.yirancrazy.minimall.cart.entity.CartItemPO;
 import com.yirancrazy.minimall.cart.manager.CartItemManager;
+import com.yirancrazy.minimall.cart.mapper.CartItemMapper;
 import com.yirancrazy.minimall.cart.service.CartService;
 import com.yirancrazy.minimall.cart.vo.CartItemVO;
 import com.yirancrazy.minimall.common.exception.BizException;
@@ -32,17 +34,17 @@ import com.yirancrazy.minimall.common.util.MinioUtil;
 @Service
 public class CartServiceImpl implements CartService {
 
-    // 购物车单项数量上限，与 CartItemAddDTO/CartUpdateDTO 的 @Max(999) 校验保持一致
-    private static final int MAX_QUANTITY = 999;
-
     private final CartItemManager cartItemManager;
+    private final CartItemMapper cartItemMapper;
     private final UserFeignClient userFeignClient;
     private final GoodsFeignClient goodsFeignClient;
     private final MinioUtil minioUtil;
 
-    public CartServiceImpl(CartItemManager cartItemManager, UserFeignClient userFeignClient,
-                           GoodsFeignClient goodsFeignClient, MinioUtil minioUtil) {
+    public CartServiceImpl(CartItemManager cartItemManager, CartItemMapper cartItemMapper,
+                           UserFeignClient userFeignClient, GoodsFeignClient goodsFeignClient,
+                           MinioUtil minioUtil) {
         this.cartItemManager = cartItemManager;
+        this.cartItemMapper = cartItemMapper;
         this.userFeignClient = userFeignClient;
         this.goodsFeignClient = goodsFeignClient;
         this.minioUtil = minioUtil;
@@ -89,24 +91,20 @@ public class CartServiceImpl implements CartService {
      */
     @Override
     public Long add(Long userId, CartItemAddDTO dto) {
-        // 依赖 t_cart_item 的 uk_user_sku 唯一索引，同 SKU 只能存在一行，重复加入时累加数量
-        CartItemPO existing = cartItemManager.getByUserIdAndSkuId(userId, dto.getSkuId());
-
-        // 数据存在则对应数量+1
-        if (existing != null) {
-            int merged = existing.getQuantity() + dto.getQuantity();
-            existing.setQuantity(Math.min(merged, MAX_QUANTITY));
-            cartItemManager.updateById(existing);
-            return existing.getId();
+        int selected = dto.getSelected() != null ? dto.getSelected() : 1;
+        // 唯一键冲突由数据库原子累加，避免 read-check-write 丢增量或首次并发插入异常
+        int affected = cartItemMapper.upsertQuantity(
+            IdWorker.getId(), userId, dto.getSkuId(), dto.getQuantity(), selected);
+        if (affected <= 0) {
+            log.error("cart item upsert affected no rows, userId={}, skuId={}", userId, dto.getSkuId());
+            throw new BizException(CommonCode.SYS_ERROR, "购物车更新失败");
         }
-
-        // 数据不存在则新建
-        CartItemPO item = new CartItemPO();
-        item.setUserId(userId);
-        item.setSkuId(dto.getSkuId());
-        item.setQuantity(dto.getQuantity());
-        item.setSelected(dto.getSelected() != null ? dto.getSelected() : 1);
-        cartItemManager.save(item);
+        CartItemPO item = cartItemManager.getByUserIdAndSkuId(userId, dto.getSkuId());
+        if (item == null) {
+            log.error("cart item upsert succeeded but row is not readable, userId={}, skuId={}",
+                userId, dto.getSkuId());
+            throw new BizException(CommonCode.SYS_ERROR, "购物车更新失败");
+        }
         return item.getId();
     }
 

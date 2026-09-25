@@ -1,12 +1,27 @@
 package com.yirancrazy.minimall.cart.service;
 
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.Statement;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import javax.sql.DataSource;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
+import org.apache.ibatis.mapping.Environment;
+import org.apache.ibatis.session.SqlSession;
+import org.apache.ibatis.session.SqlSessionFactory;
+import org.apache.ibatis.session.SqlSessionFactoryBuilder;
+import org.apache.ibatis.transaction.jdbc.JdbcTransactionFactory;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -14,6 +29,8 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.lenient;
@@ -34,6 +51,7 @@ import com.yirancrazy.minimall.cart.dto.CartSelectAllDTO;
 import com.yirancrazy.minimall.cart.dto.CartUpdateDTO;
 import com.yirancrazy.minimall.cart.entity.CartItemPO;
 import com.yirancrazy.minimall.cart.manager.CartItemManager;
+import com.yirancrazy.minimall.cart.mapper.CartItemMapper;
 import com.yirancrazy.minimall.cart.service.impl.CartServiceImpl;
 import com.yirancrazy.minimall.cart.vo.CartItemVO;
 import com.yirancrazy.minimall.common.exception.BizException;
@@ -46,22 +64,57 @@ import com.yirancrazy.minimall.common.util.MinioUtil;
  */
 public class CartServiceImplTest {
 
+    private static DataSource dataSource;
+    private static SqlSessionFactory sqlSessionFactory;
+
     @BeforeAll
-    static void initLambdaCache() {
+    static void initLambdaCache() throws Exception {
         TableInfoHelper.initTableInfo(
             new MapperBuilderAssistant(new MybatisConfiguration(), ""),
             CartItemPO.class);
+        DriverManagerDataSource driverManagerDataSource = new DriverManagerDataSource();
+        driverManagerDataSource.setDriverClassName("org.h2.Driver");
+        driverManagerDataSource.setUrl("jdbc:h2:mem:cart_t13;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1");
+        driverManagerDataSource.setUsername("sa");
+        dataSource = driverManagerDataSource;
+        try (Connection connection = dataSource.getConnection();
+             Statement statement = connection.createStatement()) {
+            statement.execute("""
+                CREATE TABLE t_cart_item (
+                    id BIGINT PRIMARY KEY,
+                    user_id BIGINT NOT NULL,
+                    sku_id BIGINT NOT NULL,
+                    quantity INT,
+                    selected INT,
+                    version INT DEFAULT 0,
+                    is_deleted TINYINT DEFAULT 0,
+                    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE (user_id, sku_id, is_deleted)
+                )
+                """);
+        }
+        MybatisConfiguration configuration = new MybatisConfiguration();
+        configuration.setEnvironment(new Environment("test", new JdbcTransactionFactory(), dataSource));
+        configuration.addMapper(CartItemMapper.class);
+        sqlSessionFactory = new SqlSessionFactoryBuilder().build(configuration);
     }
 
     private CartItemManager cartItemManager;
+    private CartItemMapper cartItemMapper;
     private UserFeignClient userFeignClient;
     private GoodsFeignClient goodsFeignClient;
     private MinioUtil minioUtil;
     private CartServiceImpl service;
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws Exception {
+        try (Connection connection = dataSource.getConnection();
+             Statement statement = connection.createStatement()) {
+            statement.execute("DELETE FROM t_cart_item");
+        }
         cartItemManager = mock(CartItemManager.class);
+        cartItemMapper = mock(CartItemMapper.class);
         userFeignClient = mock(UserFeignClient.class);
         goodsFeignClient = mock(GoodsFeignClient.class);
         minioUtil = mock(MinioUtil.class);
@@ -72,7 +125,7 @@ public class CartServiceImplTest {
             }
             return true;
         }).when(cartItemManager).save(any(CartItemPO.class));
-        service = new CartServiceImpl(cartItemManager, userFeignClient, goodsFeignClient, minioUtil);
+        service = new CartServiceImpl(cartItemManager, cartItemMapper, userFeignClient, goodsFeignClient, minioUtil);
     }
 
     /**
@@ -174,39 +227,43 @@ public class CartServiceImplTest {
     }
 
     /**
-     * 验证 add 在 selected 为 null 时默认置为 1 并返回新 ID。
+     * 验证 add 使用数据库原子 upsert，在 selected 为空时默认选中并返回持久化条目 ID。
      */
     @Test
-    public void add_defaults_selected_when_null() {
+    public void add_uses_atomic_upsert_and_defaults_selected() {
+        CartItemPO persisted = cartItem(9L, 7L, 100L, 2, 1);
+        when(cartItemMapper.upsertQuantity(anyLong(), eq(7L), eq(100L), eq(2), eq(1))).thenReturn(1);
+        when(cartItemManager.getByUserIdAndSkuId(7L, 100L)).thenReturn(persisted);
         CartItemAddDTO dto = new CartItemAddDTO();
         dto.setSkuId(100L);
         dto.setQuantity(2);
         dto.setSelected(null);
 
         Long id = service.add(7L, dto);
-        assertNotNull(id);
 
-        doAnswer(inv -> {
-            CartItemPO p = inv.getArgument(0);
-            assertEquals(1, p.getSelected());
-            return true;
-        }).when(cartItemManager).save(any(CartItemPO.class));
-
-        service.add(7L, dto);
+        assertEquals(9L, id);
+        verify(cartItemMapper).upsertQuantity(anyLong(), eq(7L), eq(100L), eq(2), eq(1));
+        verify(cartItemManager, never()).updateById(any(CartItemPO.class));
+        verify(cartItemManager, never()).save(any(CartItemPO.class));
     }
 
     /**
-     * 验证 add 在 selected 非空时透传原值。
+     * 验证 add 透传 selected 原值给数据库 upsert。
      */
     @Test
     public void add_passes_through_selected_when_set() {
+        CartItemPO persisted = cartItem(9L, 7L, 100L, 2, 0);
+        when(cartItemMapper.upsertQuantity(anyLong(), eq(7L), eq(100L), eq(2), eq(0))).thenReturn(1);
+        when(cartItemManager.getByUserIdAndSkuId(7L, 100L)).thenReturn(persisted);
         CartItemAddDTO dto = new CartItemAddDTO();
         dto.setSkuId(100L);
         dto.setQuantity(2);
         dto.setSelected(0);
 
         Long id = service.add(7L, dto);
-        assertNotNull(id);
+
+        assertEquals(9L, id);
+        verify(cartItemMapper).upsertQuantity(anyLong(), eq(7L), eq(100L), eq(2), eq(0));
     }
 
     /**
@@ -387,19 +444,13 @@ public class CartServiceImplTest {
     }
 
     /**
-     * 验证 add 在同用户同 SKU 已存在时合并累加数量并返回已有条目 ID。
+     * 验证 add 合并数量由数据库原子 upsert 完成，不执行 read-check-write。
      */
     @Test
-    public void add_merges_same_sku_quantity() {
-        CartItemPO existing = new CartItemPO();
-        existing.setId(1L);
-        existing.setUserId(7L);
-        existing.setSkuId(100L);
-        existing.setQuantity(2);
-        existing.setSelected(1);
-        when(cartItemManager.getByUserIdAndSkuId(7L, 100L)).thenReturn(existing);
-        when(cartItemManager.updateById(any(CartItemPO.class))).thenReturn(true);
-
+    public void add_delegates_merge_to_atomic_upsert() {
+        CartItemPO persisted = cartItem(1L, 7L, 100L, 5, 1);
+        when(cartItemMapper.upsertQuantity(anyLong(), eq(7L), eq(100L), eq(3), eq(1))).thenReturn(2);
+        when(cartItemManager.getByUserIdAndSkuId(7L, 100L)).thenReturn(persisted);
         CartItemAddDTO dto = new CartItemAddDTO();
         dto.setSkuId(100L);
         dto.setQuantity(3);
@@ -407,58 +458,77 @@ public class CartServiceImplTest {
         Long id = service.add(7L, dto);
 
         assertEquals(1L, id);
-        assertEquals(5, existing.getQuantity());
-        verify(cartItemManager).updateById(existing);
+        verify(cartItemMapper).upsertQuantity(anyLong(), eq(7L), eq(100L), eq(3), eq(1));
+        verify(cartItemManager, never()).updateById(any(CartItemPO.class));
         verify(cartItemManager, never()).save(any(CartItemPO.class));
     }
 
     /**
-     * 验证 add 合并时数量累加结果封顶为 999。
+     * 验证 add 不忽略 upsert 失败结果，未更新任何行时抛出系统异常。
      */
     @Test
-    public void add_merge_caps_quantity_at_max() {
-        CartItemPO existing = new CartItemPO();
-        existing.setId(1L);
-        existing.setUserId(7L);
-        existing.setSkuId(100L);
-        existing.setQuantity(998);
-        existing.setSelected(1);
-        when(cartItemManager.getByUserIdAndSkuId(7L, 100L)).thenReturn(existing);
-        when(cartItemManager.updateById(any(CartItemPO.class))).thenReturn(true);
-
+    public void add_throws_when_upsert_affects_no_rows() {
+        when(cartItemMapper.upsertQuantity(anyLong(), anyLong(), anyLong(), anyInt(), anyInt())).thenReturn(0);
         CartItemAddDTO dto = new CartItemAddDTO();
         dto.setSkuId(100L);
-        dto.setQuantity(3);
+        dto.setQuantity(1);
+        dto.setSelected(1);
 
-        service.add(7L, dto);
+        BizException exception = assertThrows(BizException.class, () -> service.add(7L, dto));
 
-        assertEquals(999, existing.getQuantity());
+        assertEquals(CommonCode.SYS_ERROR, exception.getCode());
+        verify(cartItemManager, never()).getByUserIdAndSkuId(anyLong(), anyLong());
     }
 
     /**
-     * 验证 add 在同用户同 SKU 已存在时走显式封装查询方法，避免直接插入触发唯一索引冲突。
+     * 验证 upsert 缺少返回行时抛出系统异常，不静默返回错误 ID。
      */
     @Test
-    public void add_uses_getByUserIdAndSkuId_before_save() {
-        CartItemPO existing = new CartItemPO();
-        existing.setId(9L);
-        existing.setUserId(7L);
-        existing.setSkuId(100L);
-        existing.setQuantity(1);
-        existing.setSelected(1);
-        when(cartItemManager.getByUserIdAndSkuId(7L, 100L)).thenReturn(existing);
-        when(cartItemManager.updateById(any(CartItemPO.class))).thenReturn(true);
-
+    public void add_throws_when_upserted_row_is_not_readable() {
+        when(cartItemMapper.upsertQuantity(anyLong(), anyLong(), anyLong(), anyInt(), anyInt())).thenReturn(1);
+        when(cartItemManager.getByUserIdAndSkuId(7L, 100L)).thenReturn(null);
         CartItemAddDTO dto = new CartItemAddDTO();
         dto.setSkuId(100L);
-        dto.setQuantity(2);
+        dto.setQuantity(1);
+        dto.setSelected(1);
 
-        Long id = service.add(7L, dto);
+        BizException exception = assertThrows(BizException.class, () -> service.add(7L, dto));
 
-        assertEquals(9L, id);
-        verify(cartItemManager).getByUserIdAndSkuId(7L, 100L);
-        verify(cartItemManager).updateById(existing);
-        verify(cartItemManager, never()).save(any(CartItemPO.class));
+        assertEquals(CommonCode.SYS_ERROR, exception.getCode());
+    }
+
+    /**
+     * 验证同一用户同一 SKU 的首次并发 upsert 只产生一条记录并累计两次增量。
+     */
+    @Test
+    public void concurrent_first_insert_produces_single_row_and_accumulates_quantity() throws Exception {
+        ExecutorService executor = Executors.newFixedThreadPool(2,
+            runnable -> new Thread(runnable, "cart-upsert-test"));
+        CountDownLatch start = new CountDownLatch(1);
+        try {
+            Future<Integer> first = executor.submit(() -> runConcurrentUpsert(start, 1001L, 1));
+            Future<Integer> second = executor.submit(() -> runConcurrentUpsert(start, 1002L, 1));
+            start.countDown();
+            first.get(5, TimeUnit.SECONDS);
+            second.get(5, TimeUnit.SECONDS);
+        }
+        finally {
+            executor.shutdownNow();
+        }
+
+        assertEquals(1, queryLong("SELECT COUNT(*) FROM t_cart_item WHERE user_id = 7 AND sku_id = 100"));
+        assertEquals(2, queryInt("SELECT quantity FROM t_cart_item WHERE user_id = 7 AND sku_id = 100"));
+    }
+
+    /**
+     * 验证数据库 upsert 将同 SKU 数量累加后封顶为 999。
+     */
+    @Test
+    public void upsert_caps_quantity_at_999() {
+        upsert(1001L, 998);
+        upsert(1002L, 5);
+
+        assertEquals(999, queryInt("SELECT quantity FROM t_cart_item WHERE user_id = 7 AND sku_id = 100"));
     }
 
     /**
@@ -608,5 +678,42 @@ public class CartServiceImplTest {
         verify(userFeignClient).addFavorite(eq(7L), eq(100L));
         verify(userFeignClient).addFavorite(eq(7L), eq(200L));
         verify(cartItemManager).removeByIds(List.of(1L, 2L));
+    }
+
+    private CartItemPO cartItem(Long id, Long userId, Long skuId, int quantity, int selected) {
+        CartItemPO item = new CartItemPO();
+        item.setId(id);
+        item.setUserId(userId);
+        item.setSkuId(skuId);
+        item.setQuantity(quantity);
+        item.setSelected(selected);
+        return item;
+    }
+
+    private int runConcurrentUpsert(CountDownLatch start, Long id, int quantity) throws Exception {
+        start.await(5, TimeUnit.SECONDS);
+        return upsert(id, quantity);
+    }
+
+    private int upsert(Long id, int quantity) {
+        try (SqlSession session = sqlSessionFactory.openSession(true)) {
+            return session.getMapper(CartItemMapper.class).upsertQuantity(id, 7L, 100L, quantity, 1);
+        }
+    }
+
+    private long queryLong(String sql) {
+        try (Connection connection = dataSource.getConnection();
+             Statement statement = connection.createStatement();
+             ResultSet resultSet = statement.executeQuery(sql)) {
+            resultSet.next();
+            return resultSet.getLong(1);
+        }
+        catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    private int queryInt(String sql) {
+        return Math.toIntExact(queryLong(sql));
     }
 }

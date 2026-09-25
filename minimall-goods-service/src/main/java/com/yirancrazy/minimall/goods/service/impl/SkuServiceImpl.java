@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.api.dto.goods.SkuSnapshotDTO;
+import com.yirancrazy.minimall.api.dto.stock.StockAdjustDTO;
 import com.yirancrazy.minimall.api.dto.stock.StockInitDTO;
 import com.yirancrazy.minimall.api.feign.StockFeignClient;
 import com.yirancrazy.minimall.common.exception.BizException;
@@ -180,15 +181,57 @@ public class SkuServiceImpl implements SkuService {
         if (dto.getPrice() != null) {
             existing.setPrice(dto.getPrice());
         }
-        if (dto.getStock() != null) {
+        Integer originalStock = existing.getStock();
+        Integer stockDelta = null;
+        if (dto.getStock() != null && !dto.getStock().equals(existing.getStock())) {
+            int currentStock = existing.getStock() == null ? 0 : existing.getStock();
+            int delta = dto.getStock() - currentStock;
+            stockDelta = delta;
+            adjustStock(existing.getId(), merchantId, delta, "商品规格库存调整");
             existing.setStock(dto.getStock());
         }
         boolean ok = skuManager.updateById(existing);
+        if (!ok && stockDelta != null) {
+            existing.setStock(originalStock);
+            rollbackStockAdjustment(existing.getId(), merchantId, -stockDelta);
+            throw new BizException(SkuCodeEnum.STOCK_ADJUST_FAILED);
+        }
         if (ok) {
             // 改价会影响父 SPU 价格区间，刷新 ES 镜像（失败不阻断主链路）
             spuService.refreshEsDocument(existing.getSpuId());
         }
         return ok;
+    }
+
+    /**
+     * 调整权威库存，库存服务失败时中止商品更新，避免本地库存投影产生伪更新。
+     * @param skuId SKU 主键 ID
+     * @param merchantId 商家ID
+     * @param delta 库存增量
+     * @param reason 调整原因
+     * @throws BizException 库存服务返回失败时
+     */
+    private void adjustStock(Long skuId, Long merchantId, long delta, String reason) {
+        Result<Void> result = stockFeignClient.adjustStock(
+            new StockAdjustDTO(skuId, merchantId, delta, reason));
+        if (result == null || !CommonCode.SUCCESS.equals(result.getCode())) {
+            throw new BizException(SkuCodeEnum.STOCK_ADJUST_FAILED);
+        }
+    }
+
+    /**
+     * 本地 SKU 更新失败时补偿库存调整，补偿异常单独记录以免掩盖主失败原因。
+     * @param skuId SKU 主键 ID
+     * @param merchantId 商家ID
+     * @param delta 反向调整量
+     */
+    private void rollbackStockAdjustment(Long skuId, Long merchantId, long delta) {
+        try {
+            adjustStock(skuId, merchantId, delta, "商品规格库存调整回滚");
+        }
+        catch (Exception e) {
+            log.error("rollback stock adjustment failed, skuId={}, quantity={}", skuId, delta, e);
+        }
     }
 
     /**

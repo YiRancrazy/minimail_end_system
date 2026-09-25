@@ -27,6 +27,7 @@ import static org.mockito.Mockito.when;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.yirancrazy.minimall.api.dto.goods.SpuSnapshotDTO;
 import com.yirancrazy.minimall.api.dto.merchant.ShopSnapshotDTO;
+import com.yirancrazy.minimall.api.dto.stock.StockAdjustDTO;
 import com.yirancrazy.minimall.api.feign.MerchantFeignClient;
 import com.yirancrazy.minimall.api.feign.StockFeignClient;
 import com.yirancrazy.minimall.common.exception.BizException;
@@ -34,6 +35,7 @@ import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.common.util.MinioUtil;
 import com.yirancrazy.minimall.goods.constant.AuditDecisionEnum;
+import com.yirancrazy.minimall.goods.constant.SkuCodeEnum;
 import com.yirancrazy.minimall.goods.constant.SpuStatusEnum;
 import com.yirancrazy.minimall.goods.dto.SkuItemDTO;
 import com.yirancrazy.minimall.goods.dto.SpuCreateDTO;
@@ -339,11 +341,14 @@ public class SpuServiceImplTest {
         keptSku.setId(1L);
         keptSku.setSpuId(100L);
         keptSku.setSkuName("旧规格");
+        keptSku.setStock(5);
         SkuPO goneSku = new SkuPO();
         goneSku.setId(2L);
         goneSku.setSpuId(100L);
         goneSku.setSkuName("被移除");
         when(skuManager.list(any(Wrapper.class))).thenReturn(List.of(keptSku, goneSku));
+        when(stockFeignClient.adjustStock(any(StockAdjustDTO.class))).thenReturn(Result.success());
+        when(skuManager.updateBatchById(anyList())).thenReturn(true);
 
         SpuUpdateDTO dto = new SpuUpdateDTO();
         SkuItemDTO kept = new SkuItemDTO();
@@ -374,6 +379,11 @@ public class SpuServiceImplTest {
         ArgumentCaptor<List<Long>> deleteCaptor = ArgumentCaptor.forClass(List.class);
         verify(skuManager).removeByIds(deleteCaptor.capture());
         assertEquals(List.of(2L), deleteCaptor.getValue());
+
+        ArgumentCaptor<StockAdjustDTO> adjustCaptor = ArgumentCaptor.forClass(StockAdjustDTO.class);
+        verify(stockFeignClient).adjustStock(adjustCaptor.capture());
+        assertEquals(1L, adjustCaptor.getValue().getSkuId());
+        assertEquals(4L, adjustCaptor.getValue().getQuantity());
     }
 
     /**
@@ -445,6 +455,41 @@ public class SpuServiceImplTest {
         assertEquals("new", existing.getTitle());
         assertEquals("sub", existing.getSubtitle());
         verify(spuManager).updateById(any(SpuPO.class));
+    }
+
+    /**
+     * 验证库存服务调整失败时不写入 SKU，避免商品侧库存与权威库存漂移。
+     */
+    @Test
+    public void update_does_not_sync_skus_when_stock_adjust_fails() {
+        SpuPO existing = new SpuPO();
+        existing.setId(100L);
+        existing.setMerchantId(10L);
+        existing.setStatus(SpuStatusEnum.DRAFT.statusValue());
+        when(spuManager.getById(100L)).thenReturn(existing);
+
+        SkuPO sku = new SkuPO();
+        sku.setId(1L);
+        sku.setSpuId(100L);
+        sku.setSkuName("规格");
+        sku.setStock(5);
+        when(skuManager.list(any(Wrapper.class))).thenReturn(List.of(sku));
+        when(stockFeignClient.adjustStock(any(StockAdjustDTO.class)))
+            .thenReturn(Result.fail("20000", "stock unavailable"));
+
+        SkuItemDTO item = new SkuItemDTO();
+        item.setId(1L);
+        item.setSkuName("规格");
+        item.setPrice(new BigDecimal("10.00"));
+        item.setStock(6);
+        SpuUpdateDTO dto = new SpuUpdateDTO();
+        dto.setSkus(List.of(item));
+
+        BizException ex = assertThrows(BizException.class,
+            () -> service.update(100L, 10L, dto));
+
+        assertEquals(SkuCodeEnum.STOCK_ADJUST_FAILED.getCode(), ex.getCode());
+        verify(skuManager, never()).updateBatchById(anyList());
     }
 
     /**

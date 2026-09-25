@@ -5,6 +5,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
+import com.yirancrazy.minimall.api.dto.stock.StockAdjustDTO;
 import com.yirancrazy.minimall.api.dto.stock.StockInitDTO;
 import com.yirancrazy.minimall.api.dto.stock.StockReserveDTO;
 import com.yirancrazy.minimall.common.result.Result;
@@ -56,6 +57,18 @@ public class InternalStockControllerV1 {
     @PostMapping("/init")
     public Result<Void> init(@Valid @RequestBody StockInitDTO dto) {
         stockService.initStock(dto.getSkuId(), dto.getMerchantId(), dto.getInitialQuantity());
+        return Result.success();
+    }
+
+    /**
+     * 调整已有 SKU 的权威库存，校验库存记录归属商品所属商家。
+     * @param dto 库存增量调整入参
+     * @return 统一响应体
+     */
+    @PostMapping("/adjust")
+    public Result<Void> adjust(@Valid @RequestBody StockAdjustDTO dto) {
+        stockService.adjustStock(dto.getSkuId(), dto.getQuantity(), dto.getReason(),
+            dto.getMerchantId());
         return Result.success();
     }
 }

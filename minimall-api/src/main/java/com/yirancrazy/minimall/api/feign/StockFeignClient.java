@@ -3,6 +3,7 @@ package com.yirancrazy.minimall.api.feign;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import com.yirancrazy.minimall.api.dto.stock.StockAdjustDTO;
 import com.yirancrazy.minimall.api.dto.stock.StockInitDTO;
 import com.yirancrazy.minimall.api.dto.stock.StockReserveDTO;
 import com.yirancrazy.minimall.api.fallback.StockFeignFallbackFactory;
@@ -34,4 +35,12 @@ public interface StockFeignClient {
      */
     @PostMapping("/internal/stock/init")
     Result<Void> initStock(@RequestBody StockInitDTO dto);
+
+    /**
+     * 调整已有 SKU 的权威可用库存，商品服务只同步本地展示投影。
+     * @param dto 库存增量与商家归属信息
+     * @return 统一响应体
+     */
+    @PostMapping("/internal/stock/adjust")
+    Result<Void> adjustStock(@RequestBody StockAdjustDTO dto);
 }

@@ -16,13 +16,17 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.yirancrazy.minimall.api.dto.goods.SkuSnapshotDTO;
+import com.yirancrazy.minimall.api.dto.stock.StockAdjustDTO;
 import com.yirancrazy.minimall.api.feign.StockFeignClient;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
+import com.yirancrazy.minimall.common.result.Result;
+import com.yirancrazy.minimall.goods.constant.SkuCodeEnum;
 import com.yirancrazy.minimall.goods.constant.SpuStatusEnum;
 import com.yirancrazy.minimall.goods.dto.SkuCreateDTO;
 import com.yirancrazy.minimall.goods.dto.SkuPageDTO;
@@ -240,15 +244,105 @@ public class SkuServiceImplTest {
         SkuUpdateDTO dto = new SkuUpdateDTO();
         dto.setSkuName("new-name");
         dto.setPrice(new BigDecimal("29.90"));
-        dto.setStock(100);
 
         boolean ok = service.update(100L, 10L, dto);
         assertTrue(ok);
         assertEquals("new-name", existing.getSkuName());
         assertEquals(new BigDecimal("29.90"), existing.getPrice());
-        assertEquals(100, existing.getStock());
         verify(skuManager).updateById(any(SkuPO.class));
         verify(spuService).refreshEsDocument(10L);
+    }
+
+    /**
+     * 验证修改库存时以增量调用库存服务，成功后再更新本地展示投影。
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void update_adjusts_stock_via_stock_service() {
+        SkuPO existing = new SkuPO();
+        existing.setId(100L);
+        existing.setSpuId(10L);
+        existing.setMerchantId(10L);
+        existing.setSkuName("old-name");
+        existing.setStock(10);
+        when(skuManager.getById(100L)).thenReturn(existing);
+
+        SkuUpdateDTO dto = new SkuUpdateDTO();
+        dto.setSkuName("new-name");
+        dto.setStock(20);
+        when(stockFeignClient.adjustStock(any(StockAdjustDTO.class)))
+            .thenReturn(Result.success());
+
+        boolean ok = service.update(100L, 10L, dto);
+
+        assertTrue(ok);
+        assertEquals(20, existing.getStock());
+        org.mockito.ArgumentCaptor<StockAdjustDTO> captor =
+            org.mockito.ArgumentCaptor.forClass(StockAdjustDTO.class);
+        verify(stockFeignClient).adjustStock(captor.capture());
+        assertEquals(100L, captor.getValue().getSkuId());
+        assertEquals(10L, captor.getValue().getMerchantId());
+        assertEquals(10L, captor.getValue().getQuantity());
+        verify(skuManager).updateById(existing);
+    }
+
+    /**
+     * 验证库存服务失败时中止商品更新，不产生本地库存伪更新。
+     */
+    @Test
+    public void update_does_not_change_stock_when_adjust_fails() {
+        SkuPO existing = new SkuPO();
+        existing.setId(100L);
+        existing.setSpuId(10L);
+        existing.setMerchantId(10L);
+        existing.setSkuName("old-name");
+        existing.setStock(10);
+        when(skuManager.getById(100L)).thenReturn(existing);
+        when(stockFeignClient.adjustStock(any(StockAdjustDTO.class)))
+            .thenReturn(Result.fail("20000", "stock unavailable"));
+
+        SkuUpdateDTO dto = new SkuUpdateDTO();
+        dto.setSkuName("new-name");
+        dto.setStock(20);
+
+        BizException ex = assertThrows(BizException.class,
+            () -> service.update(100L, 10L, dto));
+
+        assertEquals(SkuCodeEnum.STOCK_ADJUST_FAILED.getCode(), ex.getCode());
+        assertEquals(10, existing.getStock());
+        verify(skuManager, never()).updateById(any(SkuPO.class));
+    }
+
+    /**
+     * 验证本地 SKU 更新失败时反向补偿已成功的库存调整。
+     */
+    @Test
+    public void update_rolls_back_stock_when_local_update_fails() {
+        SkuPO existing = new SkuPO();
+        existing.setId(100L);
+        existing.setSpuId(10L);
+        existing.setMerchantId(10L);
+        existing.setSkuName("old-name");
+        existing.setStock(10);
+        when(skuManager.getById(100L)).thenReturn(existing);
+        when(skuManager.updateById(any(SkuPO.class))).thenReturn(false);
+        when(stockFeignClient.adjustStock(any(StockAdjustDTO.class)))
+            .thenReturn(Result.success());
+
+        SkuUpdateDTO dto = new SkuUpdateDTO();
+        dto.setSkuName("new-name");
+        dto.setStock(20);
+
+        BizException ex = assertThrows(BizException.class,
+            () -> service.update(100L, 10L, dto));
+
+        assertEquals(SkuCodeEnum.STOCK_ADJUST_FAILED.getCode(), ex.getCode());
+        assertEquals(10, existing.getStock());
+        org.mockito.ArgumentCaptor<StockAdjustDTO> captor =
+            org.mockito.ArgumentCaptor.forClass(StockAdjustDTO.class);
+        verify(stockFeignClient, times(2)).adjustStock(captor.capture());
+        assertEquals(10L, captor.getAllValues().get(0).getQuantity());
+        assertEquals(-10L, captor.getAllValues().get(1).getQuantity());
     }
 
     /**

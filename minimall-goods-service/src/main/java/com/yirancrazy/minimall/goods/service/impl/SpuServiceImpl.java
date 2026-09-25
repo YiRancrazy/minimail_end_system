@@ -22,6 +22,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.api.dto.goods.SpuSnapshotDTO;
 import com.yirancrazy.minimall.api.dto.merchant.ShopSnapshotDTO;
+import com.yirancrazy.minimall.api.dto.stock.StockAdjustDTO;
 import com.yirancrazy.minimall.api.dto.stock.StockInitDTO;
 import com.yirancrazy.minimall.api.feign.MerchantFeignClient;
 import com.yirancrazy.minimall.api.feign.StockFeignClient;
@@ -32,6 +33,7 @@ import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.common.util.CursorUtils;
 import com.yirancrazy.minimall.common.util.MinioUtil;
 import com.yirancrazy.minimall.goods.constant.AuditDecisionEnum;
+import com.yirancrazy.minimall.goods.constant.SkuCodeEnum;
 import com.yirancrazy.minimall.goods.constant.SpuCodeEnum;
 import com.yirancrazy.minimall.goods.constant.SpuStatusEnum;
 import com.yirancrazy.minimall.goods.dto.SkuItemDTO;
@@ -336,6 +338,7 @@ public class SpuServiceImpl implements SpuService {
         Set<Long> keepIds = new HashSet<>();
         List<SkuPO> toCreate = new ArrayList<>();
         List<SkuPO> toUpdate = new ArrayList<>();
+        List<StockAdjustDTO> appliedAdjustments = new ArrayList<>();
         for (SkuItemDTO it : items) {
             SkuPO sku = existingById.get(it.getId());
             if (sku == null) {
@@ -350,20 +353,74 @@ public class SpuServiceImpl implements SpuService {
             }
             sku.setSkuName(it.getSkuName() == null || it.getSkuName().isBlank() ? "-" : it.getSkuName());
             sku.setPrice(it.getPrice() != null ? it.getPrice() : BigDecimal.ZERO);
-            sku.setStock(it.getStock() != null ? it.getStock() : 0);
+            if (sku.getId() != null && it.getStock() != null
+                && !it.getStock().equals(sku.getStock())) {
+                long currentStock = sku.getStock() == null ? 0L : sku.getStock().longValue();
+                long delta = it.getStock().longValue() - currentStock;
+                try {
+                    adjustStock(sku.getId(), merchantId, delta, "商品规格库存调整");
+                    appliedAdjustments.add(new StockAdjustDTO(
+                        sku.getId(), merchantId, -delta, "商品规格库存调整回滚"));
+                    sku.setStock(it.getStock());
+                }
+                catch (RuntimeException e) {
+                    rollbackStockAdjustments(appliedAdjustments);
+                    throw e;
+                }
+            }
+            if (sku.getId() == null) {
+                sku.setStock(it.getStock() != null ? it.getStock() : 0);
+            }
         }
-        if (!toCreate.isEmpty()) {
-            skuManager.saveBatch(toCreate);
+        try {
+            if (!toCreate.isEmpty()) {
+                skuManager.saveBatch(toCreate);
+            }
+            if (!toUpdate.isEmpty() && !skuManager.updateBatchById(toUpdate)) {
+                throw new BizException(SkuCodeEnum.STOCK_ADJUST_FAILED);
+            }
+            List<Long> toDelete = existing.stream().map(SkuPO::getId)
+                .filter(id -> id != null && !keepIds.contains(id)).collect(Collectors.toList());
+            if (!toDelete.isEmpty()) {
+                skuManager.removeByIds(toDelete);
+            }
         }
-        if (!toUpdate.isEmpty()) {
-            skuManager.updateBatchById(toUpdate);
-        }
-        List<Long> toDelete = existing.stream().map(SkuPO::getId)
-            .filter(id -> id != null && !keepIds.contains(id)).collect(Collectors.toList());
-        if (!toDelete.isEmpty()) {
-            skuManager.removeByIds(toDelete);
+        catch (RuntimeException e) {
+            rollbackStockAdjustments(appliedAdjustments);
+            throw e;
         }
         return toCreate;
+    }
+
+    /**
+     * 调用库存服务调整权威库存，失败时抛出业务异常。
+     * @param skuId SKU 主键 ID
+     * @param merchantId 商家ID
+     * @param delta 库存增量
+     * @param reason 调整原因
+     */
+    private void adjustStock(Long skuId, Long merchantId, long delta, String reason) {
+        Result<Void> result = stockFeignClient.adjustStock(
+            new StockAdjustDTO(skuId, merchantId, delta, reason));
+        if (result == null || !CommonCode.SUCCESS.equals(result.getCode())) {
+            throw new BizException(SkuCodeEnum.STOCK_ADJUST_FAILED);
+        }
+    }
+
+    /**
+     * 本地 SKU 写入失败时反向补偿已成功的库存调整，降低跨服务不一致窗口。
+     * @param adjustments 已应用调整的反向操作
+     */
+    private void rollbackStockAdjustments(List<StockAdjustDTO> adjustments) {
+        for (StockAdjustDTO adjustment : adjustments) {
+            try {
+                stockFeignClient.adjustStock(adjustment);
+            }
+            catch (Exception e) {
+                log.error("rollback stock adjustment failed, skuId={}, quantity={}",
+                    adjustment.getSkuId(), adjustment.getQuantity(), e);
+            }
+        }
     }
 
     /**

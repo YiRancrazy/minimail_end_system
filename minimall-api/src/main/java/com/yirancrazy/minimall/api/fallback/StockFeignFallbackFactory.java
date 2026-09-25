@@ -3,6 +3,7 @@ package com.yirancrazy.minimall.api.fallback;
 import org.springframework.cloud.openfeign.FallbackFactory;
 import org.springframework.stereotype.Component;
 import lombok.extern.slf4j.Slf4j;
+import com.yirancrazy.minimall.api.dto.stock.StockAdjustDTO;
 import com.yirancrazy.minimall.api.dto.stock.StockInitDTO;
 import com.yirancrazy.minimall.api.dto.stock.StockReserveDTO;
 import com.yirancrazy.minimall.api.feign.StockFeignClient;
@@ -35,6 +36,11 @@ public class StockFeignFallbackFactory implements FallbackFactory<StockFeignClie
             @Override
             public Result<Void> initStock(StockInitDTO dto) {
                 log.warn("stock-service unreachable, init stock skipped, skuId={}", dto.getSkuId());
+                return Result.fail(CommonCode.SYS_ERROR, "库存服务不可用");
+            }
+
+            @Override
+            public Result<Void> adjustStock(StockAdjustDTO dto) {
                 return Result.fail(CommonCode.SYS_ERROR, "库存服务不可用");
             }
         };

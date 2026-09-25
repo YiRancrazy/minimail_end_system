@@ -1,6 +1,7 @@
 package com.yirancrazy.minimall.pay.integration;
 
 import java.math.BigDecimal;
+import java.util.concurrent.atomic.AtomicLong;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +16,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
+import com.yirancrazy.minimall.api.dto.order.OrderPaySnapshotDTO;
 import com.yirancrazy.minimall.api.feign.IdFeignClient;
 import com.yirancrazy.minimall.api.feign.OrderFeignClient;
 import com.yirancrazy.minimall.common.exception.BizException;
@@ -35,6 +37,8 @@ import com.yirancrazy.minimall.pay.service.PayService;
 @SpringBootTest
 @ActiveProfiles("test")
 class PayServiceImplIntegrationTest {
+
+    private static final AtomicLong NEXT_ID = new AtomicLong(80001L);
 
     @Autowired
     private PayService payService;
@@ -79,11 +83,28 @@ class PayServiceImplIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        lenient().when(idFeignClient.nextId(anyString())).thenReturn(Result.success(80001L));
+        lenient().when(idFeignClient.nextId(anyString()))
+            .thenAnswer(invocation -> Result.success(NEXT_ID.getAndIncrement()));
         lenient().when(alipayGateway.createPagePayment(anyString(), any(), anyString(), anyString()))
             .thenReturn("<form action=\"http://pay.url/test\"></form>");
         lenient().when(alipayGateway.refund(anyString(), anyString(), any(), anyString()))
             .thenReturn("REFUND_TRADE_TEST");
+        lenient().when(orderFeignClient.paySnapshot(anyString())).thenAnswer(invocation -> {
+            String orderNo = invocation.getArgument(0);
+            if ("ORD-INT-1".equals(orderNo)) {
+                return Result.success(new OrderPaySnapshotDTO(
+                    1L, orderNo, 100L, 200L, new BigDecimal("99.99"), 1, null));
+            }
+            if ("ORD-INT-OWNER".equals(orderNo)) {
+                return Result.success(new OrderPaySnapshotDTO(
+                    2L, orderNo, 100L, 200L, new BigDecimal("19.99"), 1, null));
+            }
+            if ("ORD-INT-3".equals(orderNo)) {
+                return Result.success(new OrderPaySnapshotDTO(
+                    3L, orderNo, 1L, 2L, new BigDecimal("50.00"), 1, null));
+            }
+            return Result.success(null);
+        });
     }
 
     /**

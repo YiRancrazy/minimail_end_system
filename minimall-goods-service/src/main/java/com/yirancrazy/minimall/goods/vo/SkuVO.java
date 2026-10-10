@@ -24,7 +24,7 @@ public class SkuVO {
     /**
      * 将 SkuPO 转换为 SkuVO。
      * @param po SKU持久化对象
-     * @return SKU VO
+     * @return SKU 视图对象
      */
     public static SkuVO from(SkuPO po) {
         SkuVO vo = new SkuVO();

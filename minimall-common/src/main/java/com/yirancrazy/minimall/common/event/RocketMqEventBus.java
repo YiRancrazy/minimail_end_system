@@ -32,9 +32,8 @@ public class RocketMqEventBus implements EventBus {
     private final String topic;
     private TransactionMQProducer producer;
     /**
-     * Optional persistent store for commit confirmation. When present, the
-     * broker callback reads commit state from it; otherwise falls back to
-     * the in-memory checker map which is lost on producer restart.
+     * 可选的持久化存储，用于提交确认。存在时，broker 回调从其中读取提交状态；
+     * 否则回退到生产者重启后会丢失的内存 checker map。
      */
     private OutboxStore outboxStore;
     private final Map<String, Function<Object, Boolean>> checkers = new ConcurrentHashMap<>();
@@ -48,8 +47,8 @@ public class RocketMqEventBus implements EventBus {
     }
 
     /**
-     * Inject a persistent {@link OutboxStore} for crash-safe callback.
-     * @param outboxStore the store, or null to fall back to in-memory checkers
+     * 注入用于崩溃安全回调的持久化 {@link OutboxStore}。
+     * @param outboxStore 存储实例；为 null 时回退到内存 checker
      */
     public void setOutboxStore(OutboxStore outboxStore) {
         this.outboxStore = outboxStore;
@@ -69,7 +68,7 @@ public class RocketMqEventBus implements EventBus {
                     return LocalTransactionState.COMMIT_MESSAGE;
                 }
                 catch (Exception e) {
-                    log.warn("local tx failed for {}: {}", msg.getTags(), e.getMessage());
+                    log.warn("本地事务执行失败，tag={}: {}", msg.getTags(), e.getMessage());
                     return LocalTransactionState.ROLLBACK_MESSAGE;
                 }
             }
@@ -82,14 +81,14 @@ public class RocketMqEventBus implements EventBus {
                             outboxStore.commitStatus(msg.getTransactionId()));
                     }
                     catch (Exception e) {
-                        log.warn("outbox check failed for tag={}: {}", msg.getTags(), e.getMessage());
+                        log.warn("outbox 状态检查失败，tag={}: {}", msg.getTags(), e.getMessage());
                         return LocalTransactionState.UNKNOW;
                     }
                 }
                 Function<Object, Boolean> checker = checkers.get(msg.getTags());
                 Class<?> type = tagTypes.get(msg.getTags());
                 if (checker == null || type == null) {
-                    log.warn("no checker for tag={}, returning UNKNOWN", msg.getTags());
+                    log.warn("tag={} 没有 checker，返回 UNKNOWN", msg.getTags());
                     return LocalTransactionState.UNKNOW;
                 }
                 try {
@@ -98,19 +97,19 @@ public class RocketMqEventBus implements EventBus {
                         : LocalTransactionState.ROLLBACK_MESSAGE;
                 }
                 catch (Exception e) {
-                    log.warn("checker failed for tag={}: {}", msg.getTags(), e.getMessage());
+                    log.warn("checker 执行失败，tag={}: {}", msg.getTags(), e.getMessage());
                     return LocalTransactionState.UNKNOW;
                 }
             }
         });
         try {
             producer.start();
-            log.info("rocketmq transaction producer started, namesrv={}, topic={}", namesrvAddr, topic);
+            log.info("rocketmq 事务生产者已启动，namesrv={}，topic={}", namesrvAddr, topic);
         }
         catch (MQClientException e) {
-            log.error("rocketmq producer start failed", e);
+            log.error("rocketmq 生产者启动失败", e);
             producer = null;
-            throw new IllegalStateException("rocketmq producer start failed", e);
+            throw new IllegalStateException("RocketMQ 生产者启动失败", e);
         }
     }
 
@@ -122,37 +121,34 @@ public class RocketMqEventBus implements EventBus {
     }
 
     /**
-     * Deliver the given event to the configured RocketMQ topic using the
-     * event's simple class name as the routing tag and its JSON encoding as
-     * the message body. Producer outages are logged at WARN and swallowed so
-     * the publish site is never blocked.
+     * 使用事件简单类名作为路由 Tag、JSON 编码作为消息体，将给定事件投递到配置的
+     * RocketMQ topic。生产者不可用只记录 WARN 日志并吞掉异常，确保发布点不会被阻塞。
      *
-     * @param event the domain event to send; encoded via {@link MqEventJsonCodec}
+     * @param event 要发送的领域事件；通过 {@link MqEventJsonCodec} 编码
      */
     @Override
     public void publish(Object event) {
         if (producer == null) {
-            throw new IllegalStateException("rocketmq producer not started");
+            throw new IllegalStateException("RocketMQ 生产者未启动");
         }
         try {
             Message msg = new Message(topic, MqEventJsonCodec.tagFor(event.getClass()),
                 MqEventJsonCodec.encode(event));
             attachTraceId(msg);
             producer.send(msg);
-            log.debug("rocketmq send ok for {}", event.getClass().getSimpleName());
+            log.debug("rocketmq 发送成功，event={}", event.getClass().getSimpleName());
         }
         catch (Exception e) {
-            log.error("rocketmq send failed for {}", event.getClass().getSimpleName(), e);
-            throw new IllegalStateException("rocketmq send failed", e);
+            log.error("rocketmq 发送失败，event={}", event.getClass().getSimpleName(), e);
+            throw new IllegalStateException("RocketMQ 消息发送失败", e);
         }
     }
 
     /**
-     * Publish an event as a transactional half-message. The local transaction
-     * runs in the broker callback; on success the message is committed, on
-     * exception it is rolled back.
-     * @param event the domain event to publish
-     * @param localTx the local transaction executed after the half-message is staged
+     * 以事务半消息发布事件。本地事务在 broker 回调中运行；
+     * 成功时提交消息，异常时回滚消息。
+     * @param event 要发布的领域事件
+     * @param localTx 半消息暂存后要执行的本地事务
      */
     @Override
     public void publishInTx(Object event, Consumer<String> localTx) {
@@ -160,17 +156,16 @@ public class RocketMqEventBus implements EventBus {
     }
 
     /**
-     * Publish an event as a transactional half-message with a checker for
-     * broker callback. The checker is registered by event tag so the broker
-     * can confirm commit/rollback when the producer fails to reply.
-     * @param event the domain event to publish
-     * @param localTx the local transaction executed after the half-message is staged
-     * @param checker returns true to commit, false to roll back
+     * 使用 broker 回调 checker 以事务半消息发布事件。checker 按事件 Tag 注册，
+     * 使 broker 能在生产者未回复时确认提交或回滚。
+     * @param event 要发布的领域事件
+     * @param localTx 半消息暂存后要执行的本地事务
+     * @param checker 提交返回 true，回滚返回 false
      */
     @Override
     public void publishInTx(Object event, Consumer<String> localTx, Function<Object, Boolean> checker) {
         if (producer == null) {
-            throw new IllegalStateException("rocketmq producer not started");
+            throw new IllegalStateException("RocketMQ 生产者未启动");
         }
         String tag = MqEventJsonCodec.tagFor(event.getClass());
         checkers.put(tag, checker);
@@ -179,12 +174,12 @@ public class RocketMqEventBus implements EventBus {
             Message msg = new Message(topic, tag, MqEventJsonCodec.encode(event));
             attachTraceId(msg);
             TransactionSendResult r = producer.sendMessageInTransaction(msg, localTx);
-            log.debug("rocketmq txn send ok for {}: state={}", event.getClass().getSimpleName(),
+            log.debug("rocketmq 事务消息发送成功，event={}，state={}", event.getClass().getSimpleName(),
                 r.getLocalTransactionState());
         }
         catch (Exception e) {
-            log.error("rocketmq txn send failed for {}", event.getClass().getSimpleName(), e);
-            throw new IllegalStateException("rocketmq txn send failed", e);
+            log.error("rocketmq 事务消息发送失败，event={}", event.getClass().getSimpleName(), e);
+            throw new IllegalStateException("RocketMQ 事务消息发送失败", e);
         }
         finally {
             // checker 仅在发送窗口期供 broker 回查事务状态，发送流程结束即移除，避免注册表无界增长

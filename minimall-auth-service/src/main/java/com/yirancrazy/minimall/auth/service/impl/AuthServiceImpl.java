@@ -180,7 +180,7 @@ public class AuthServiceImpl implements AuthService {
         if (po == null) {
             throw new BizException(AuthCodeEnum.USER_NOT_FOUND);
         }
-        log.info("refresh token rotated, userId={}", userId);
+        log.info("refresh token 已轮换，userId={}", userId);
         String roleCode = resolveRoleCode(po.getRoleId());
         return issueTokens(po.getId(), po.getAccount(), roleCode, po.getRoleId());
     }
@@ -197,7 +197,7 @@ public class AuthServiceImpl implements AuthService {
             redisTemplate.delete(keys);
         }
         revokeToken(jti, userId, "sign_out");
-        log.info("user signed out, userId={}", userId);
+        log.info("用户已退出登录，userId={}", userId);
     }
 
     /**
@@ -238,7 +238,7 @@ public class AuthServiceImpl implements AuthService {
         }
         applyNewPassword(po, dto.getNewPassword());
         invalidateRefreshTokens(userId);
-        log.info("password changed, userId={}", userId);
+        log.info("密码已修改，userId={}", userId);
     }
 
     /**
@@ -263,8 +263,8 @@ public class AuthServiceImpl implements AuthService {
             java.util.concurrent.ThreadLocalRandom.current().nextInt(1_000_000));
         redisTemplate.opsForValue().set(
             RESET_CODE_KEY_PREFIX + dto.getAccount(), code, RESET_CODE_TTL_SECONDS, TimeUnit.SECONDS);
-        // SMS channel not ready in first iteration; log code for integration debugging.
-        log.info("reset code generated, account={}", dto.getAccount());
+        // 首轮迭代短信通道尚未就绪；记录验证码便于联调排查。
+        log.info("重置验证码已生成，account={}", dto.getAccount());
     }
 
     /**
@@ -294,7 +294,7 @@ public class AuthServiceImpl implements AuthService {
         applyNewPassword(po, dto.getNewPassword());
         redisTemplate.delete(RESET_CODE_KEY_PREFIX + dto.getAccount());
         invalidateRefreshTokens(po.getId());
-        log.info("password reset, userId={}", po.getId());
+        log.info("密码已重置，userId={}", po.getId());
     }
 
     private void applyNewPassword(AuthUserPO po, String newPassword) {
@@ -318,7 +318,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
     private void revokeToken(String jti, Long userId, String reason) {
-        // Persist to DB as source of truth
+        // 持久化到 DB，作为可信数据源
         AuthTokenBlacklistPO bl = new AuthTokenBlacklistPO();
         bl.setJti(jti);
         bl.setUserId(userId);
@@ -326,7 +326,7 @@ public class AuthServiceImpl implements AuthService {
         bl.setRevokedAt(LocalDateTime.now());
         bl.setReason(reason);
         tokenBlacklistManager.save(bl);
-        // Also write to Redis for Gateway fast lookup
+        // 同时写入 Redis，供 Gateway 快速查询
         redisTemplate.opsForValue().set(
             BLACKLIST_KEY_PREFIX + jti, "1", ttlSeconds, TimeUnit.SECONDS);
     }

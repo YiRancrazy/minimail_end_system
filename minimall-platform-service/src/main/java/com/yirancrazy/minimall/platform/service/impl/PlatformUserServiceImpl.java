@@ -48,7 +48,7 @@ public class PlatformUserServiceImpl implements PlatformUserService {
         q.setStatus(null);
         Result<CursorPageVO<UserManageVO>> r = userFeignClient.pageManage(q);
         if (r == null || r.getData() == null) {
-            log.warn("userFeignClient.pageManage returned empty result");
+            log.warn("userFeignClient.pageManage 返回空结果");
             return CursorPageVO.of(List.of(),
                     dto.getLimit() == null ? 20 : dto.getLimit(), v -> v.getId());
         }

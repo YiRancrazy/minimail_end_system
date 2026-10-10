@@ -34,7 +34,7 @@ public class JdbcOutboxStore implements OutboxStore {
             outboxManager.save(po);
         }
         catch (DuplicateKeyException e) {
-            // idempotent: already recorded
+            // 幂等：已记录
         }
     }
 

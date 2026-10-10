@@ -34,8 +34,8 @@ public class MinioConfig {
     private String publicEndpoint;
 
     /**
-     * Build MinioClient bean for object storage operations.
-     * @return MinioClient instance
+     * 构建用于对象存储操作的 MinioClient Bean。
+     * @return MinioClient 实例
      */
     @Bean
     public MinioClient minioClient() {
@@ -46,8 +46,8 @@ public class MinioConfig {
     }
 
     /**
-     * Build MinioUtil bean for presigned URL generation.
-     * @return MinioUtil instance
+     * 构建用于预签名 URL 生成的 MinioUtil Bean。
+     * @return MinioUtil 实例
      */
     @Bean
     public MinioUtil minioUtil() {
@@ -55,8 +55,8 @@ public class MinioConfig {
     }
 
     /**
-     * Build ChunkUploadService bean for chunked upload support.
-     * @return ChunkUploadService instance
+     * 构建用于分片上传支持的 ChunkUploadService Bean。
+     * @return ChunkUploadService 实例
      */
     @Bean
     public ChunkUploadService chunkUploadService() {

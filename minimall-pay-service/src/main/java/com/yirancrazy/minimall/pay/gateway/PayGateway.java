@@ -34,17 +34,17 @@ public interface PayGateway {
     String createPagePayment(String paymentNo, BigDecimal amount, String subject, String expireTime);
 
     /**
-     * Verify callback signature and return trade_no
+     * 校验回调签名并返回 trade_no。
      */
     String verifyCallback(Map<String, String> params);
 
     /**
-     * Query payment status from Alipay
+     * 查询支付宝支付状态。
      */
     String queryPayment(String paymentNo);
 
     /**
-     * Refund payment
+     * 退款支付。
      */
     String refund(String paymentNo, String refundNo, BigDecimal amount, String reason);
 

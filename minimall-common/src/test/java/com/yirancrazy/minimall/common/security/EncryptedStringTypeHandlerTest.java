@@ -70,7 +70,7 @@ class EncryptedStringTypeHandlerTest {
 
     @Test
     void getNullableResult_wrongKey_preservesOriginalCause() throws Exception {
-        // 用 KEY_A 加密，再用 KEY_B 解密 → cause 应为 IllegalStateException（AES decryption failed）
+        // 用 KEY_A 加密，再用 KEY_B 解密，cause 应为 IllegalStateException（AES 解密失败）
         byte[] keyA = EncryptionContext.getKey();
         String cipher = AesEncryptor.encrypt("secret", keyA);
         byte[] keyB = "99999999999999999999999999999999".getBytes(java.nio.charset.StandardCharsets.UTF_8);

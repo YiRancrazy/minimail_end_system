@@ -35,14 +35,13 @@ public class RocketMqEventConsumer {
     }
 
     /**
-     * Register a handler to be invoked whenever a message with the tag
-     * corresponding to {@code eventType} is received. The handler is stored
-     * eagerly so it can be replayed on {@link #start()}; if the consumer has
-     * already started, the handler is also attached to the live wrapper.
+     * 注册 handler，当收到与 {@code eventType} 对应 Tag 的消息时调用。
+     * handler 会被提前存储，以便 {@link #start()} 时重放；如果 consumer
+     * 已启动，handler 也会挂到实时 wrapper 上。
      *
-     * @param eventType the event {@link Class} whose tag this handler should react to
-     * @param handler the typed {@link Consumer} invoked with the decoded payload
-     * @param <T> the event type handled by {@code handler}
+     * @param eventType 当前 handler 要响应的事件 {@link Class} Tag
+     * @param handler 处理解码后载荷的强类型 {@link Consumer}
+     * @param <T> {@code handler} 处理的事件类型
      */
     public <T> void subscribe(Class<T> eventType, Consumer<T> handler) {
         handlers.put(eventType, e -> handler.accept(eventType.cast(e)));
@@ -52,32 +51,30 @@ public class RocketMqEventConsumer {
     }
 
     /**
-     * Bring the underlying push consumer online and wire all previously
-     * registered handlers. When no handlers were registered this is a
-     * logged no-op; on startup failure the wrapper is dropped and events are
-     * silently ignored.
+     * 启动底层 push consumer，并连接所有此前注册的 handler。
+     * 未注册 handler 时只记录日志并直接返回；启动失败时丢弃 wrapper，
+     * 事件被静默忽略。
      */
     public void start() {
         if (handlers.isEmpty()) {
-            log.warn("RocketMqEventConsumer.start() called with no handlers registered; events will not be consumed");
+            log.warn("RocketMqEventConsumer.start() 调用时未注册 handler，事件将不会被消费");
             return;
         }
         try {
             wrapper = new DefaultMQConsumerWrapper(namesrvAddr, topic, group, handlers);
             wrapper.start();
-            log.info("rocketmq consumer started, group={}, topic={}", group, topic);
+            log.info("rocketmq 消费者已启动，group={}，topic={}", group, topic);
         }
         catch (Exception e) {
-            log.error("rocketmq consumer start failed", e);
+            log.error("rocketmq 消费者启动失败", e);
             wrapper = null;
-            throw new IllegalStateException("rocketmq consumer start failed", e);
+            throw new IllegalStateException("RocketMQ 消费者启动失败", e);
         }
     }
 
     /**
-     * Shut down the underlying push consumer if it was started, releasing
-     * the RocketMQ client resources. Safe to call when the consumer never
-     * successfully started.
+     * 如果底层 push consumer 已启动则关闭，释放 RocketMQ 客户端资源。
+     * consumer 从未成功启动时调用也安全。
      */
     public void stop() {
         if (wrapper != null) {
@@ -120,14 +117,14 @@ public class RocketMqEventConsumer {
                         }
                         catch (Exception ex) {
                             // 解码失败不静默丢弃：返回 RECONSUME_LATER 由 RocketMQ 重投，重试耗尽进死信队列
-                            log.warn("rocketmq consumer decode failed for tag={}, retry later", tag, ex);
+                            log.warn("rocketmq 消费者解码失败，tag={}，稍后重试", tag, ex);
                             return ConsumeConcurrentlyStatus.RECONSUME_LATER;
                         }
                         try {
                             handlers.get(matched).accept(payload);
                         }
                         catch (Exception ex) {
-                            log.warn("rocketmq handler failed for tag={}: {}", tag, ex.getMessage());
+                            log.warn("rocketmq handler 执行失败，tag={}: {}", tag, ex.getMessage());
                             return ConsumeConcurrentlyStatus.RECONSUME_LATER;
                         }
                     }

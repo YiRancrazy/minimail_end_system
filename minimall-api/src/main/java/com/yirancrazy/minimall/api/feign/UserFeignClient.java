@@ -39,7 +39,7 @@ public interface UserFeignClient {
 
     /**
      * 平台用户管理分页查询。
-     * Internal: 仅内网调用，禁止 Gateway 暴露。
+     * 内部接口：仅内网调用，禁止 Gateway 暴露。
      * @param query 通用分页查询
      * @return 用户管理分页结果；服务不可用时由 fallback 返回空分页
      */
@@ -48,7 +48,7 @@ public interface UserFeignClient {
 
     /**
      * 平台用户详情。
-     * Internal: 仅内网调用，禁止 Gateway 暴露。
+     * 内部接口：仅内网调用，禁止 Gateway 暴露。
      * @param userId 用户ID
      * @return 用户管理视图；服务不可用时由 fallback 返回 null
      */

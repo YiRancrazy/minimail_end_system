@@ -54,7 +54,7 @@ public class ComplaintServiceImpl implements ComplaintService {
         po.setContent(dto.getContent());
         po.setStatus(ComplaintStatusEnum.PENDING.intCode());
         complaintManager.save(po);
-        log.info("complaint created, id={}, complainantId={}", po.getId(), complainantId);
+        log.info("投诉已创建，id={}，complainantId={}", po.getId(), complainantId);
         return po.getId();
     }
 
@@ -115,7 +115,7 @@ public class ComplaintServiceImpl implements ComplaintService {
             // 条件更新 0 行：并发下状态已被其他请求推进，按状态流转非法处理
             throw new BizException(NotifyCodeEnum.COMPLAINT_STATUS_INVALID);
         }
-        log.info("complaint handled, id={}, handlerId={}, newStatus={}", id, handlerId, dto.getStatus());
+        log.info("投诉已处理，id={}，handlerId={}，newStatus={}", id, handlerId, dto.getStatus());
     }
 
     /**
@@ -136,17 +136,17 @@ public class ComplaintServiceImpl implements ComplaintService {
         if (current == null || target == null) {
             return false;
         }
-        // PENDING → PROCESSING
+        // PENDING 转 PROCESSING
         if (current == ComplaintStatusEnum.PENDING.intCode()
             && target == ComplaintStatusEnum.PROCESSING.intCode()) {
             return true;
         }
-        // PROCESSING → RESOLVED
+        // PROCESSING 转 RESOLVED
         if (current == ComplaintStatusEnum.PROCESSING.intCode()
             && target == ComplaintStatusEnum.RESOLVED.intCode()) {
             return true;
         }
-        // PROCESSING → REJECTED
+        // PROCESSING 转 REJECTED
         if (current == ComplaintStatusEnum.PROCESSING.intCode()
             && target == ComplaintStatusEnum.REJECTED.intCode()) {
             return true;

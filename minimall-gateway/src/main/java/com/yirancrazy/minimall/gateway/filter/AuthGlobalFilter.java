@@ -109,26 +109,27 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
      */
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
-        String path = exchange.getRequest().getPath().value();
-        String method = exchange.getRequest().getMethod().name();
+        String path = exchange.getRequest().getPath().value();  // 获取请求路径
+        String method = exchange.getRequest().getMethod().name();  // 获取请求方法
 
+        // 判断是否在白名单中
         if (isWhitelisted(path)) {
             return chain.filter(exchange);
         }
 
-        // 判断是否是内部请求链接
+        // 判断是否是内部请求链接，是则进行内部请求验证
         if (path.startsWith("/internal/")) {
             return handleInternal(exchange, chain);
         }
 
-        // 获取access_token
+        // 获取access_token，进行JWT验证
         String auth = exchange.getRequest().getHeaders().getFirst("Authorization");
         if (auth == null || !auth.startsWith("Bearer ")) {
-            return reject(exchange, HttpStatus.UNAUTHORIZED, "missing token", "14003");
+            return reject(exchange, HttpStatus.UNAUTHORIZED, "缺少 token", "14003");
         }
         String token = auth.substring(7);
         if (!JWT_PATTERN.matcher(token).matches()) {
-            return reject(exchange, HttpStatus.UNAUTHORIZED, "malformed token", "14003");
+            return reject(exchange, HttpStatus.UNAUTHORIZED, "token 格式错误", "14003");
         }
 
         Claims claims;
@@ -136,7 +137,7 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
             claims = verifier.verify(token);
         }
         catch (JwtException ex) {
-            return reject(exchange, HttpStatus.UNAUTHORIZED, "token invalid", "14003");
+            return reject(exchange, HttpStatus.UNAUTHORIZED, "token 无效", "14003");
         }
 
         String jti = claims.get("jti", String.class);
@@ -146,20 +147,22 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
         }
 
         if (!isAuthorized(path, role)) {
-            return reject(exchange, HttpStatus.FORBIDDEN, "access denied", "14007");
+            return reject(exchange, HttpStatus.FORBIDDEN, "访问被拒绝", "14007");
         }
 
         if (jti != null) {
             return redisTemplate.hasKey("blacklist:jti:" + jti)
                 .flatMap(blacklisted -> {
                     if (Boolean.TRUE.equals(blacklisted)) {
-                        return reject(exchange, HttpStatus.UNAUTHORIZED, "token revoked", "14003");
+                        return reject(exchange, HttpStatus.UNAUTHORIZED, "token 已失效", "14003");
                     }
+                    // JTI模式的JWT验证通过，进行后续权限校验
                     ServerWebExchange mutated = mutateWithHeaders(exchange, claims, jti);
                     return postAuthChecks(mutated, chain, path, method);
                 });
         }
 
+        // 非JTI模式的JWT验证通过，进行后续权限校验(兼容旧代码)
         ServerWebExchange mutated = mutateWithHeaders(exchange, claims, jti);
         return postAuthChecks(mutated, chain, path, method);
     }
@@ -175,9 +178,9 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
         // 获取请求中携带的 X-Internal-Token
         String token = exchange.getRequest().getHeaders().getFirst("X-Internal-Token");
         if (internalToken.isBlank() || !internalToken.equals(token)) {
-            log.warn("internal endpoint access denied, path={}",
+            log.warn("内部接口访问被拒绝，path={}",
                 exchange.getRequest().getPath().value());
-            return reject(exchange, HttpStatus.FORBIDDEN, "internal access denied", "14011");
+            return reject(exchange, HttpStatus.FORBIDDEN, "内部接口访问被拒绝", "14011");
         }
         return chain.filter(exchange);
     }
@@ -199,8 +202,8 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
 
         String idempotencyKey = exchange.getRequest().getHeaders().getFirst("X-Idempotency-Key");
         if (idempotencyKey == null || idempotencyKey.isBlank()) {
-            log.warn("missing Idempotency-Key, path={}, method={}", path, method);
-            return reject(exchange, HttpStatus.BAD_REQUEST, "missing Idempotency-Key", "14010");
+            log.warn("缺少 Idempotency-Key，path={}，method={}", path, method);
+            return reject(exchange, HttpStatus.BAD_REQUEST, "缺少 Idempotency-Key", "14010");
         }
 
         if (isSensitiveWrite(path)) {
@@ -237,21 +240,21 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
         String nonce = exchange.getRequest().getHeaders().getFirst("X-Client-Nonce");
 
         if (ts == null || ts.isBlank()) {
-            return reject(exchange, HttpStatus.BAD_REQUEST, "missing X-Client-Ts", "14012");
+            return reject(exchange, HttpStatus.BAD_REQUEST, "缺少 X-Client-Ts", "14012");
         }
         if (nonce == null || nonce.length() < NONCE_MIN_LEN || nonce.length() > NONCE_MAX_LEN) {
-            return reject(exchange, HttpStatus.BAD_REQUEST, "invalid X-Client-Nonce", "14012");
+            return reject(exchange, HttpStatus.BAD_REQUEST, "X-Client-Nonce 非法", "14012");
         }
 
         Long clientTs = parseTimestamp(ts);
         if (clientTs == null) {
-            return reject(exchange, HttpStatus.BAD_REQUEST, "invalid X-Client-Ts", "14012");
+            return reject(exchange, HttpStatus.BAD_REQUEST, "X-Client-Ts 非法", "14012");
         }
 
         long now = System.currentTimeMillis();
         if (Math.abs(now - clientTs) > TIMESTAMP_WINDOW_MS) {
-            log.warn("request timestamp expired, clientTs={}, now={}", clientTs, now);
-            return reject(exchange, HttpStatus.BAD_REQUEST, "request timestamp expired", "14012");
+            log.warn("请求时间戳已过期，clientTs={}，now={}", clientTs, now);
+            return reject(exchange, HttpStatus.BAD_REQUEST, "请求时间戳已过期", "14012");
         }
 
         String nonceKey = "nonce:" + nonce;
@@ -261,8 +264,8 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
                 if (Boolean.TRUE.equals(success)) {
                     return chain.filter(exchange);
                 }
-                log.warn("replay detected, nonce={}", nonce);
-                return reject(exchange, HttpStatus.BAD_REQUEST, "replay detected", "14012");
+                log.warn("检测到重放请求，nonce={}", nonce);
+                return reject(exchange, HttpStatus.BAD_REQUEST, "检测到重放请求", "14012");
             });
     }
 
@@ -308,6 +311,13 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
         return false;
     }
 
+    /**
+     * 将用户信息写入请求头，供下游服务读取。
+     * @param exchange 服务端交换上下文
+     * @param claims JWT声明
+     * @param jti JWT的JTI
+     * @return 修改后的服务端交换上下文
+     */
     private ServerWebExchange mutateWithHeaders(ServerWebExchange exchange, Claims claims, String jti) {
         String userId = claims.getSubject();
         String role = claims.get("role", String.class);

@@ -49,7 +49,7 @@ public interface StockService {
 
     /**
      * 按订单号幂等释放库存。
-     * @param skuId SKU ID
+     * @param skuId SKU 主键 ID
      * @param quantity 释放数量
      * @param orderNo 订单号；为空时退化为旧释放语义
      * @return 已释放或本次释放成功返回 true

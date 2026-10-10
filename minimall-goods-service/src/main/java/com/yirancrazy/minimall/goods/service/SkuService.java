@@ -18,16 +18,16 @@ import com.yirancrazy.minimall.goods.entity.SkuPO;
 public interface SkuService {
     /**
      * 根据ID查询SKU。
-     * @param id SKU ID
-     * @return SKU PO
+     * @param id SKU 主键 ID
+     * @return SKU 持久化对象
      */
     SkuPO getById(Long id);
 
     /**
      * 根据ID查询SKU，并校验归属商家，供商家端使用。
-     * @param id SKU ID
+     * @param id SKU 主键 ID
      * @param merchantId 商家ID，来自可信Header
-     * @return SKU PO
+     * @return SKU 持久化对象
      * @throws BizException 当 SKU 不存在或不属于该商家时
      */
     SkuPO getById(Long id, Long merchantId);
@@ -36,7 +36,7 @@ public interface SkuService {
      * 创建SKU，归属商家ID来自可信Header。
      * @param merchantId 商家ID，来自可信Header
      * @param dto SKU创建DTO
-     * @return SKU ID
+     * @return SKU 主键 ID
      */
     Long create(Long merchantId, SkuCreateDTO dto);
 
@@ -49,7 +49,7 @@ public interface SkuService {
 
     /**
      * 根据ID更新SKU信息。
-     * @param id SKU ID
+     * @param id SKU 主键 ID
      * @param merchantId 商家ID，来自可信Header
      * @param dto SKU修改DTO
      * @return 更新是否成功
@@ -58,7 +58,7 @@ public interface SkuService {
 
     /**
      * 根据ID删除SKU。
-     * @param id SKU ID
+     * @param id SKU 主键 ID
      * @param merchantId 商家ID，来自可信Header
      * @return 删除是否成功
      */

@@ -14,8 +14,8 @@ spring:
     baseline-on-migrate: true
   cloud:
     inetutils:
-      # Register a routable address (docker bridge or LAN); the default
-      # first-non-loopback pick can be 169.254.x.x, which the gateway cannot reach.
+      # 注册一个可路由地址（Docker bridge 或局域网）；默认选择
+      # 第一个非回环地址时可能得到 169.254.x.x，网关无法访问。
       preferred-networks: ${MINIMALL_PREFERRED_NETWORKS:172.,192.168.,10.}
     nacos:
       discovery:

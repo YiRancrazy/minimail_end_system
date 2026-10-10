@@ -148,7 +148,7 @@ public class OrderServiceImpl implements OrderService {
     /**
      * 创建订单：取商品快照算金额，Seata AT 全局事务内锁库存与创建支付流水，落库后返回订单ID。
      * @param userId 用户ID
-     * @param skuId SKU ID
+     * @param skuId SKU 主键 ID
      * @param quantity 购买数量
      * @return 订单ID
      */
@@ -166,8 +166,11 @@ public class OrderServiceImpl implements OrderService {
         if (snapshot == null || snapshot.getPrice() == null) {
             throw new BizException(OrderCodeEnum.ORDER_SKU_SNAPSHOT_MISSING);
         }
+
+        // 统一小数位数
         BigDecimal amount = normalizeAmount(snapshot.getPrice().multiply(BigDecimal.valueOf(quantity)));
 
+        // 锁库存
         Boolean reserved = stockFeignClient.reserve(new StockReserveDTO(skuId, quantity)).getData();
         if (reserved == null || !reserved) {
             throw new BizException(OrderCodeEnum.STOCK_RESERVE_FAIL);
@@ -215,7 +218,7 @@ public class OrderServiceImpl implements OrderService {
         po.setPayId(payId);
         orderManager.updateById(po);
 
-        log.info("order created, orderId={}, userId={}, amount={}, payId={}",
+        log.info("订单已创建，orderId={}，userId={}，amount={}，payId={}",
             po.getId(), userId, amount, payId);
         return po.getId();
     }
@@ -314,11 +317,11 @@ public class OrderServiceImpl implements OrderService {
             if (mainOrderId == null) {
                 mainOrderId = po.getId();
             }
-            log.info("order checkout split, orderId={}, userId={}, merchantId={}, groupNo={}, items={}, amount={}",
+            log.info("订单结算拆单，orderId={}，userId={}，merchantId={}，groupNo={}，items={}，amount={}",
                 po.getId(), userId, merchantId, orderGroupNo, merchantItems.size(), groupAmount);
         }
 
-        log.info("order checkout done, userId={}, groupNo={}, subOrders={}",
+        log.info("订单结算完成，userId={}，groupNo={}，subOrders={}",
             userId, orderGroupNo, itemsByMerchant.size());
         return mainOrderId;
     }
@@ -398,7 +401,7 @@ public class OrderServiceImpl implements OrderService {
     private void doPay(OrderPO po) {
         Long orderId = po.getId();
         if (po.getStatus() == OrderStatusEnum.PAID.intCode()) {
-            log.info("order already paid, skip duplicate advance, orderId={}", orderId);
+            log.info("订单已支付，跳过重复推进，orderId={}", orderId);
             return;
         }
         if (po.getStatus() != OrderStatusEnum.PENDING.intCode()) {
@@ -412,7 +415,7 @@ public class OrderServiceImpl implements OrderService {
                 outboxStore.recordCommit(txId);
             }
         }), e -> isOrderPaid(orderId));
-        log.info("order paid, orderId={}", orderId);
+        log.info("订单已支付，orderId={}", orderId);
     }
 
     /**
@@ -431,10 +434,9 @@ public class OrderServiceImpl implements OrderService {
     }
 
     /**
-     * Check whether the order has reached PAID status, used as the
-     * transaction-message callback checker.
-     * @param orderId the order id to probe
-     * @return true if the order is PAID
+     * 检查订单是否已进入 PAID 状态，用于事务消息回调校验。
+     * @param orderId 待检查的订单 ID
+     * @return 订单为 PAID 时返回 true
      */
     private boolean isOrderPaid(Long orderId) {
         OrderPO po = orderManager.getById(orderId);
@@ -452,9 +454,9 @@ public class OrderServiceImpl implements OrderService {
         boolean released = releaseStockForOrder(po);
         markStockReleaseResult(po, released);
         if (!released) {
-            log.error("stock release pending, orderId={}", orderId);
+            log.error("库存释放待处理，orderId={}", orderId);
         }
-        log.info("order cancelled, orderId={}, userId={}", orderId, userId);
+        log.info("订单已取消，orderId={}，userId={}", orderId, userId);
     }
 
     @Override
@@ -470,7 +472,7 @@ public class OrderServiceImpl implements OrderService {
         node.setDescription(String.format("%s · %s", carrier, trackingNo));
         node.setCreatedTime(LocalDateTime.now());
         orderLogisticsManager.save(node);
-        log.info("order shipped, orderId={}, merchantId={}, carrier={}, trackingNo={}",
+        log.info("订单已发货，orderId={}，merchantId={}，carrier={}，trackingNo={}",
             orderId, merchantId, carrier, trackingNo);
     }
 
@@ -497,7 +499,7 @@ public class OrderServiceImpl implements OrderService {
         String requestNo = resolveRefundRequestNo(po, refundRequestNo);
         if (po.getStatus() == OrderStatusEnum.REFUNDING.intCode()
             || po.getStatus() == OrderStatusEnum.REFUNDED.intCode()) {
-            log.info("merchant refund already submitted, orderId={}, requestNo={}", orderId, requestNo);
+            log.info("商家退款已提交，orderId={}，requestNo={}", orderId, requestNo);
             return;
         }
         OrderStatusEnum current = statusMachine.fromCode(po.getStatus());
@@ -507,7 +509,7 @@ public class OrderServiceImpl implements OrderService {
         po.setRefundAmount(validateRefundAmount(refundAmount, po));
         orderManager.updateById(po);
         refund(orderId, po.getUserId(), requestNo);
-        log.info("merchant initiated refund, orderId={}, merchantId={}, amount={}, reason={}",
+        log.info("商家已发起退款，orderId={}，merchantId={}，amount={}，reason={}",
             orderId, merchantId, refundAmount, reason);
     }
 
@@ -518,7 +520,7 @@ public class OrderServiceImpl implements OrderService {
             throw new BizException(OrderCodeEnum.ORDER_NOT_FOUND);
         }
         transitStatus(orderId, OrderStatusEnum.COMPLETED, "USER_CONFIRM", null);
-        log.info("order confirmed, orderId={}, userId={}", orderId, userId);
+        log.info("订单已确认收货，orderId={}，userId={}", orderId, userId);
     }
 
     @Override
@@ -539,7 +541,7 @@ public class OrderServiceImpl implements OrderService {
         po.setRefundFromStatus(po.getStatus());
         po.setRefundRequestNo(resolveRefundRequestNo(po, refundRequestNo));
         transition(po, OrderStatusEnum.REFUNDING, "USER_APPLY_REFUND", null, null);
-        log.info("order refunding, orderId={}", orderId);
+        log.info("订单退款处理中，orderId={}", orderId);
     }
 
     @Override
@@ -563,7 +565,7 @@ public class OrderServiceImpl implements OrderService {
         BigDecimal currentRefunded = po.getTotalRefundedAmount() == null
             ? BigDecimal.ZERO : po.getTotalRefundedAmount();
         if (totalRefunded.compareTo(currentRefunded) <= 0) {
-            log.info("refund callback ignored, cumulative amount unchanged, orderId={}, total={}",
+            log.info("退款回调已忽略，累计退款金额未变化，orderId={}，total={}",
                 dto.getOrderId(), currentRefunded);
             return;
         }
@@ -584,14 +586,14 @@ public class OrderServiceImpl implements OrderService {
             || totalRefunded.compareTo(payable) >= 0;
         if (fullyRefunded) {
             transition(po, OrderStatusEnum.REFUNDED, "PAY_REFUND_CALLBACK", null, null);
-            log.info("order fully refunded, orderId={}, totalRefunded={}", po.getId(), totalRefunded);
+            log.info("订单已全额退款，orderId={}，totalRefunded={}", po.getId(), totalRefunded);
         }
         else {
-            // Partial refund returns to the prior state and clears this round's request key.
+            // 部分退款回到退款前状态，并清理本轮退款请求键。
             po.setRefundAmount(null);
             po.setRefundRequestNo(null);
             transition(po, revertTarget(po), "PAY_REFUND_CALLBACK_PARTIAL", null, null);
-            log.info("order partially refunded, orderId={}, totalRefunded={}",
+            log.info("订单已部分退款，orderId={}，totalRefunded={}",
                 po.getId(), totalRefunded);
         }
     }
@@ -800,9 +802,9 @@ public class OrderServiceImpl implements OrderService {
         boolean released = releaseStockForOrder(po);
         markStockReleaseResult(po, released);
         if (!released) {
-            log.error("stock release pending, orderId={}", orderId);
+            log.error("库存释放待处理，orderId={}", orderId);
         }
-        log.info("order merchant-closed, orderId={}, merchantId={}", orderId, merchantId);
+        log.info("订单已由商家关闭，orderId={}，merchantId={}", orderId, merchantId);
     }
 
     /**
@@ -823,7 +825,7 @@ public class OrderServiceImpl implements OrderService {
             throw new BizException(OrderCodeEnum.ORDER_DELETE_NOT_ALLOWED);
         }
         orderManager.removeById(orderId);
-        log.info("order deleted, orderId={}, userId={}", orderId, userId);
+        log.info("订单已删除，orderId={}，userId={}", orderId, userId);
     }
 
     /**
@@ -838,9 +840,9 @@ public class OrderServiceImpl implements OrderService {
         boolean released = releaseStockForOrder(po);
         markStockReleaseResult(po, released);
         if (!released) {
-            log.error("stock release pending, orderId={}", orderId);
+            log.error("库存释放待处理，orderId={}", orderId);
         }
-        log.info("order platform-closed, orderId={}", orderId);
+        log.info("订单已由平台关闭，orderId={}", orderId);
     }
 
     /**
@@ -1016,10 +1018,10 @@ public class OrderServiceImpl implements OrderService {
             if (result != null && CommonCode.SUCCESS.equals(result.getCode()) && result.getData() != null) {
                 return result.getData();
             }
-            log.error("id-service returned failure, bizTag={}, result={}", bizTag, result);
+            log.error("id-service 返回失败，bizTag={}，result={}", bizTag, result);
         }
         catch (Exception e) {
-            log.error("id-service nextId failed, bizTag={}", bizTag, e);
+            log.error("id-service nextId 失败，bizTag={}", bizTag, e);
         }
         throw new BizException(OrderCodeEnum.ORDER_ID_GENERATE_FAIL);
     }
@@ -1066,7 +1068,7 @@ public class OrderServiceImpl implements OrderService {
             return objectMapper.writeValueAsString(value);
         }
         catch (JsonProcessingException e) {
-            log.warn("serialize order snapshot failed", e);
+            log.warn("序列化订单快照失败", e);
             return null;
         }
     }
@@ -1410,7 +1412,7 @@ public class OrderServiceImpl implements OrderService {
             return Long.parseLong(merchantId.trim());
         }
         catch (NumberFormatException e) {
-            log.warn("invalid merchantId in order summary, treat as all-platform. merchantId={}", merchantId);
+            log.warn("订单汇总中的 merchantId 非法，按全平台处理。merchantId={}", merchantId);
             return null;
         }
     }
@@ -1424,7 +1426,7 @@ public class OrderServiceImpl implements OrderService {
             return LocalDate.parse(date).atStartOfDay();
         }
         catch (Exception e) {
-            log.warn("invalid startDate in order summary, ignore boundary. date={}", date);
+            log.warn("订单汇总中的 startDate 非法，忽略边界。date={}", date);
             return null;
         }
     }
@@ -1438,7 +1440,7 @@ public class OrderServiceImpl implements OrderService {
             return LocalDate.parse(date).atTime(LocalTime.MAX);
         }
         catch (Exception e) {
-            log.warn("invalid endDate in order summary, ignore boundary. date={}", date);
+            log.warn("订单汇总中的 endDate 非法，忽略边界。date={}", date);
             return null;
         }
     }
@@ -1497,7 +1499,7 @@ public class OrderServiceImpl implements OrderService {
         if (!approved) {
             // 驳回原因写入状态日志 note，供商家端列表回显
             transition(po, revertTarget(po), "MERCHANT_REJECT_REFUND", null, reason);
-            log.info("refund rejected by merchant, orderId={}, merchantId={}", orderId, merchantId);
+            log.info("商家已拒绝退款，orderId={}，merchantId={}", orderId, merchantId);
             return;
         }
         // 审核通过才调支付网关真实退款，避免"先退钱后审核"；状态迁移由支付回调 handleRefundCallback 驱动
@@ -1507,7 +1509,7 @@ public class OrderServiceImpl implements OrderService {
             orderManager.updateById(po);
         }
         requestPayRefund(po, requestNo);
-        log.info("refund approved by merchant, orderId={}, merchantId={}", orderId, merchantId);
+        log.info("商家已同意退款，orderId={}，merchantId={}", orderId, merchantId);
     }
 
     /**
@@ -1524,11 +1526,11 @@ public class OrderServiceImpl implements OrderService {
         }
         if (approved) {
             requestPayRefund(po, resolveRefundRequestNo(po, null));
-            log.info("refund arbitrated approved and submitted, orderId={}", orderId);
+            log.info("退款仲裁已同意并提交，orderId={}", orderId);
             return;
         }
         transitStatus(orderId, revertTarget(po), "PLATFORM_ARBITRATE_REJECT", null);
-        log.info("refund arbitrated rejected, orderId={}", orderId);
+        log.info("退款仲裁已拒绝，orderId={}", orderId);
     }
 
     /**
@@ -1546,7 +1548,7 @@ public class OrderServiceImpl implements OrderService {
         if (refundResult == null
             || !CommonCode.SUCCESS.equals(refundResult.getCode())
             || !Boolean.TRUE.equals(refundResult.getData())) {
-            log.error("pay refund failed, orderId={}, payId={}", po.getId(), po.getPayId());
+            log.error("支付退款失败，orderId={}，payId={}", po.getId(), po.getPayId());
             throw new BizException(OrderCodeEnum.ORDER_REFUND_FAIL);
         }
     }
@@ -1626,12 +1628,12 @@ public class OrderServiceImpl implements OrderService {
                     boolean released = releaseStockForOrder(po);
                     markStockReleaseResult(po, released);
                     if (!released) {
-                        log.error("stock release pending, orderId={}", po.getId());
+                        log.error("库存释放待处理，orderId={}", po.getId());
                     }
                     count++;
                 }
                 catch (Exception e) {
-                    log.warn("scanExpiredOrders cancel failed, orderId={}, err={}", po.getId(), e.getMessage());
+                    log.warn("scanExpiredOrders 取消失败，orderId={}，err={}", po.getId(), e.getMessage());
                 }
             }
             lastId = expired.get(expired.size() - 1).getId();
@@ -1640,7 +1642,7 @@ public class OrderServiceImpl implements OrderService {
             }
         }
         if (count > 0) {
-            log.info("scanExpiredOrders cancelled {} orders", count);
+            log.info("scanExpiredOrders 已取消 {} 个订单", count);
         }
         return count;
     }
@@ -1666,7 +1668,7 @@ public class OrderServiceImpl implements OrderService {
             else {
                 // 失败时刷新 updateTime，让该订单排到队尾，避免故障单长期占据批次造成饥饿
                 markStockReleaseResult(po, false);
-                log.error("stock release retry failed, orderId={}", po.getId());
+                log.error("库存释放重试失败，orderId={}", po.getId());
             }
         }
         return count;
@@ -1697,7 +1699,7 @@ public class OrderServiceImpl implements OrderService {
                     count++;
                 }
                 catch (Exception e) {
-                    log.warn("scanAutoConfirm confirm failed, orderId={}, err={}", po.getId(), e.getMessage());
+                    log.warn("scanAutoConfirm 确认失败，orderId={}，err={}", po.getId(), e.getMessage());
                 }
             }
             lastId = overdue.get(overdue.size() - 1).getId();
@@ -1706,7 +1708,7 @@ public class OrderServiceImpl implements OrderService {
             }
         }
         if (count > 0) {
-            log.info("scanAutoConfirm completed {} orders", count);
+            log.info("scanAutoConfirm 已完成 {} 个订单", count);
         }
         return count;
     }

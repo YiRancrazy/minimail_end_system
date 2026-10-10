@@ -18,7 +18,7 @@ import com.yirancrazy.minimall.common.result.Result;
 public class IdFeignFallbackFactory implements FallbackFactory<IdFeignClient> {
     @Override
     public IdFeignClient create(Throwable cause) {
-        log.warn("id-service unreachable: {}", cause.getMessage());
+        log.warn("id-service 不可达: {}", cause.getMessage());
         return new IdFeignClient() {
             @Override
             public Result<Long> nextId(String bizTag) {

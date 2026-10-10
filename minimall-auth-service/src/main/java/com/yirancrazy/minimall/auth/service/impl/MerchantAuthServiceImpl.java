@@ -90,7 +90,7 @@ public class MerchantAuthServiceImpl implements MerchantAuthService {
         po.setRoleId(DEFAULT_ROLE_ID_MERCHANT);
         po.setStatus(1);
         authUserManager.save(po);
-        log.info("merchant registered, accountId={}, account={}", po.getId(), po.getAccount());
+        log.info("商家已注册，accountId={}，account={}", po.getId(), po.getAccount());
         return issueTokens(po.getId(), po.getAccount(), po.getRoleId());
     }
 
@@ -117,7 +117,7 @@ public class MerchantAuthServiceImpl implements MerchantAuthService {
         }
         po.setLastLoginAt(LocalDateTime.now());
         authUserManager.updateById(po);
-        log.info("merchant login, accountId={}, account={}", po.getId(), po.getAccount());
+        log.info("商家已登录，accountId={}，account={}", po.getId(), po.getAccount());
         return issueTokens(po.getId(), po.getAccount(), po.getRoleId());
     }
 
@@ -133,7 +133,7 @@ public class MerchantAuthServiceImpl implements MerchantAuthService {
             redisTemplate.delete(keys);
         }
         revokeToken(jti, merchantAccountId, "sign_out");
-        log.info("merchant signed out, accountId={}", merchantAccountId);
+        log.info("商家已退出登录，accountId={}", merchantAccountId);
     }
 
     /**
@@ -152,7 +152,7 @@ public class MerchantAuthServiceImpl implements MerchantAuthService {
         }
         applyNewPassword(po, dto.getNewPassword());
         invalidateRefreshTokens(merchantAccountId);
-        log.info("merchant password changed, accountId={}", merchantAccountId);
+        log.info("商家密码已修改，accountId={}", merchantAccountId);
     }
 
     /**

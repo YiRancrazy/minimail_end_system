@@ -126,12 +126,12 @@ public class PayServiceImpl implements PayService {
             boolean pendingAlive = status == Integer.parseInt(PayStatusEnum.PENDING.getCode())
                 && existing.getExpireAt() != null && existing.getExpireAt().isAfter(LocalDateTime.now());
             if (status == Integer.parseInt(PayStatusEnum.SUCCESS.getCode()) || pendingAlive) {
-                log.info("payment reused, paymentNo={}, orderNo={}, status={}",
+                log.info("支付单已复用，paymentNo={}，orderNo={}，status={}",
                     existing.getPaymentNo(), orderNo, status);
                 return existing.getId();
             }
             if (status == Integer.parseInt(PayStatusEnum.PENDING.getCode())) {
-                log.warn("payment expired pending, creating new one, paymentNo={}, orderNo={}, expireAt={}",
+                log.warn("支付单已过期但仍待支付，创建新支付单，paymentNo={}，orderNo={}，expireAt={}",
                     existing.getPaymentNo(), orderNo, existing.getExpireAt());
                 existing.setStatus(Integer.parseInt(PayStatusEnum.CLOSED.getCode()));
                 existing.setActiveOrderNo(null);
@@ -171,7 +171,7 @@ public class PayServiceImpl implements PayService {
             if (active != null && active.getStatus() != null
                 && active.getStatus() != Integer.parseInt(PayStatusEnum.FAILED.getCode())
                 && active.getStatus() != Integer.parseInt(PayStatusEnum.CLOSED.getCode())) {
-                log.warn("duplicate active payment create, reuse existing, orderNo={}, paymentNo={}",
+                log.warn("重复创建有效支付单，复用已有支付单，orderNo={}，paymentNo={}",
                     orderNo, active.getPaymentNo());
                 return active.getId();
             }
@@ -179,7 +179,7 @@ public class PayServiceImpl implements PayService {
         }
 
         // 收银台表单由 getPaymentParams 重新生成，此处不做同步外部调用，避免支付宝不可达时阻塞下单请求
-        log.info("payment created, paymentNo={}, orderNo={}, channel={}", paymentNo, orderNo, channelCode);
+        log.info("支付单已创建，paymentNo={}，orderNo={}，channel={}", paymentNo, orderNo, channelCode);
         return po.getId();
     }
 
@@ -190,6 +190,7 @@ public class PayServiceImpl implements PayService {
      */
     @Override
     public void handleCallback(PayCallbackDTO dto) {
+        // 根据支付流水号查询支付单
         PayTransactionPO po = payManager.getOne(
             Wrappers.lambdaQuery(PayTransactionPO.class).eq(PayTransactionPO::getPaymentNo, dto.getPaymentNo()));
         if (po == null) {
@@ -198,7 +199,7 @@ public class PayServiceImpl implements PayService {
 
         // 幂等：支付单已 SUCCESS 时直接返回，避免重复推进订单与重复回调 order 服务
         if (po.getStatus() == Integer.parseInt(PayStatusEnum.SUCCESS.getCode())) {
-            log.info("callback ignored, payment already success, paymentNo={}", dto.getPaymentNo());
+            log.info("回调已忽略，支付单已成功，paymentNo={}", dto.getPaymentNo());
             return;
         }
 
@@ -207,7 +208,7 @@ public class PayServiceImpl implements PayService {
             po.setStatus(Integer.parseInt(PayStatusEnum.FROZEN.getCode()));
             po.setChannelResponse(dto.getChannelResponse());
             payManager.updateById(po);
-            log.error("callback amount mismatch, payment frozen, paymentNo={}, callbackAmount={}, dbAmount={}",
+            log.error("回调金额不匹配，支付单已冻结，paymentNo={}，callbackAmount={}，dbAmount={}",
                 dto.getPaymentNo(), dto.getTotalAmount(), po.getAmount());
             return;
         }
@@ -218,7 +219,7 @@ public class PayServiceImpl implements PayService {
         else {
             applyCallbackFailure(po, dto);
         }
-        log.info("payment callback handled, paymentNo={}, success={}", dto.getPaymentNo(), dto.isSuccess());
+        log.info("支付回调已处理，paymentNo={}，success={}", dto.getPaymentNo(), dto.isSuccess());
     }
 
     /**
@@ -232,7 +233,7 @@ public class PayServiceImpl implements PayService {
         if (status == Integer.parseInt(PayStatusEnum.REFUNDING.getCode())
             || status == Integer.parseInt(PayStatusEnum.REFUNDED.getCode())
             || status == Integer.parseInt(PayStatusEnum.FROZEN.getCode())) {
-            log.warn("callback success ignored, payment not in payable state, paymentNo={}, status={}",
+            log.warn("成功回调已忽略，支付单不处于可支付状态，paymentNo={}，status={}",
                 dto.getPaymentNo(), status);
             return;
         }
@@ -264,7 +265,7 @@ public class PayServiceImpl implements PayService {
                 : orderFeignClient.payByOrderNo(orderNo);
         }
         catch (Exception e) {
-            log.warn("advance order failed, orderNo={}", orderNo, e);
+            log.warn("推进订单失败，orderNo={}", orderNo, e);
             return Result.fail(PayCodeEnum.PAY_ORDER_ADVANCE_FAILED.getCode(),
                 PayCodeEnum.PAY_ORDER_ADVANCE_FAILED.getMessage());
         }
@@ -279,7 +280,7 @@ public class PayServiceImpl implements PayService {
     private void applyCallbackFailure(PayTransactionPO po, PayCallbackDTO dto) {
         int status = po.getStatus();
         if (status != Integer.parseInt(PayStatusEnum.PENDING.getCode())) {
-            log.warn("callback failure ignored, payment not pending, paymentNo={}, status={}",
+            log.warn("失败回调已忽略，支付单不处于待支付状态，paymentNo={}，status={}",
                 dto.getPaymentNo(), status);
             return;
         }
@@ -334,7 +335,7 @@ public class PayServiceImpl implements PayService {
     public RefundVO createRefund(RefundCreateDTO dto) {
         PayRefundPO existingRefund = findByRefundRequestNo(dto.getRefundRequestNo());
         if (existingRefund != null && isFinalRefundStatus(existingRefund.getStatus())) {
-            log.info("refund request reused, requestNo={}, refundNo={}, status={}",
+            log.info("退款请求已复用，requestNo={}，refundNo={}，status={}",
                 dto.getRefundRequestNo(), existingRefund.getRefundNo(), existingRefund.getStatus());
             return toRefundVO(existingRefund);
         }
@@ -430,7 +431,7 @@ public class PayServiceImpl implements PayService {
         }
         catch (Exception e) {
             scheduleRefundRetry(refund);
-            log.error("refund gateway failed, refundNo={}, paymentNo={}",
+            log.error("退款网关调用失败，refundNo={}，paymentNo={}",
                 refund.getRefundNo(), refund.getPaymentNo(), e);
             throw new BizException(PayCodeEnum.REFUND_FAILED);
         }
@@ -448,7 +449,7 @@ public class PayServiceImpl implements PayService {
         }
         catch (Exception e) {
             scheduleRefundRetry(refund);
-            log.error("query refund failed, refundNo={}, paymentNo={}",
+            log.error("查询退款失败，refundNo={}，paymentNo={}",
                 refund.getRefundNo(), refund.getPaymentNo(), e);
             throw new BizException(PayCodeEnum.REFUND_FAILED);
         }
@@ -465,7 +466,7 @@ public class PayServiceImpl implements PayService {
             return submitRefund(refund);
         }
         scheduleRefundRetry(refund);
-        log.warn("refund query pending, refundNo={}, paymentNo={}, status={}",
+        log.warn("退款查询仍待处理，refundNo={}，paymentNo={}，status={}",
             refund.getRefundNo(), refund.getPaymentNo(), queryStatus);
         throw new BizException(PayCodeEnum.REFUND_FAILED);
     }
@@ -509,7 +510,7 @@ public class PayServiceImpl implements PayService {
         if (orderId != null) {
             notifyOrderRefund(orderId, payTx, refund, totalRefunded, fullyRefunded);
         }
-        log.info("refund success, refundNo={}, paymentNo={}",
+        log.info("退款成功，refundNo={}，paymentNo={}",
             refund.getRefundNo(), refund.getPaymentNo());
         return toRefundVO(refund);
     }
@@ -527,7 +528,7 @@ public class PayServiceImpl implements PayService {
             payRefundMapper.scheduleRefundRetry(refund.getRefundNo(), nextRetryAt);
         }
         catch (Exception e) {
-            log.error("schedule refund retry failed, refundNo={}", refund.getRefundNo(), e);
+            log.error("定时退款重试失败，refundNo={}", refund.getRefundNo(), e);
         }
     }
 
@@ -539,7 +540,7 @@ public class PayServiceImpl implements PayService {
             return Long.valueOf(payTx.getOrderNo());
         }
         catch (NumberFormatException e) {
-            log.warn("refund skip order advance for non-numeric orderNo, paymentNo={}, orderNo={}",
+            log.warn("orderNo 非数字，跳过退款后订单推进，paymentNo={}，orderNo={}",
                 payTx.getPaymentNo(), payTx.getOrderNo());
             return null;
         }
@@ -585,14 +586,14 @@ public class PayServiceImpl implements PayService {
                 fullyRefunded, refund.getRefundRequestNo());
             Result<Void> result = orderFeignClient.refundCallback(dto);
             if (result == null || !CommonCode.SUCCESS.equals(result.getCode())) {
-                throw new IllegalStateException("order refund callback rejected: "
+                throw new IllegalStateException("订单退款回调被拒绝："
                     + (result == null ? "null" : result.getCode()));
             }
             refund.setNotifiedAt(LocalDateTime.now());
             payRefundMapper.updateById(refund);
         }
         catch (Exception e) {
-            log.error("order refund callback failed, will retry, orderId={}, refundNo={}",
+            log.error("订单退款回调失败，将重试，orderId={}，refundNo={}",
                 orderId, refund.getRefundNo(), e);
         }
     }
@@ -614,10 +615,10 @@ public class PayServiceImpl implements PayService {
             if (result != null && CommonCode.SUCCESS.equals(result.getCode()) && result.getData() != null) {
                 return result.getData();
             }
-            log.error("id-service returned failure, bizTag={}, result={}", bizTag, result);
+            log.error("id-service 返回失败，bizTag={}，result={}", bizTag, result);
         }
         catch (Exception e) {
-            log.error("id-service nextId failed, bizTag={}", bizTag, e);
+            log.error("id-service nextId 失败，bizTag={}", bizTag, e);
         }
         throw new BizException(PayCodeEnum.PAY_ID_GENERATE_FAIL);
     }
@@ -669,7 +670,7 @@ public class PayServiceImpl implements PayService {
             result = orderFeignClient.paySnapshot(orderNo);
         }
         catch (Exception e) {
-            log.warn("load order pay snapshot failed, orderNo={}", orderNo, e);
+            log.warn("加载订单支付快照失败，orderNo={}", orderNo, e);
             throw new BizException(CommonCode.SYS_ERROR, "订单服务不可用");
         }
         if (result == null || !CommonCode.SUCCESS.equals(result.getCode()) || result.getData() == null) {
@@ -779,7 +780,7 @@ public class PayServiceImpl implements PayService {
         }
         po.setStatus(Integer.parseInt(PayStatusEnum.FROZEN.getCode()));
         payManager.updateById(po);
-        log.info("payment frozen, paymentNo={}", paymentNo);
+        log.info("支付单已冻结，paymentNo={}", paymentNo);
     }
 
     /**
@@ -842,7 +843,7 @@ public class PayServiceImpl implements PayService {
                     }
                 }
                 catch (Exception e) {
-                    log.warn("scanPaidButOrderPending advance failed, paymentNo={}, orderNo={}, err={}",
+                    log.warn("scanPaidButOrderPending 推进失败，paymentNo={}，orderNo={}，err={}",
                         po.getPaymentNo(), po.getOrderNo(), e.getMessage());
                 }
             }
@@ -852,7 +853,7 @@ public class PayServiceImpl implements PayService {
             }
         }
         if (count > 0) {
-            log.info("scanPaidButOrderPending compensated {} payments", count);
+            log.info("scanPaidButOrderPending 已补偿 {} 笔支付", count);
         }
         return count;
     }
@@ -879,16 +880,16 @@ public class PayServiceImpl implements PayService {
                 }
             }
             catch (BizException e) {
-                log.warn("scanPendingRefunds retry scheduled, refundNo={}, code={}",
+                log.warn("scanPendingRefunds 已安排重试，refundNo={}，code={}",
                     refund.getRefundNo(), e.getCode());
             }
             catch (Exception e) {
                 scheduleRefundRetry(refund);
-                log.error("scanPendingRefunds recover failed, refundNo={}", refund.getRefundNo(), e);
+                log.error("scanPendingRefunds 恢复失败，refundNo={}", refund.getRefundNo(), e);
             }
         }
         if (count > 0) {
-            log.info("scanPendingRefunds compensated {} refunds", count);
+            log.info("scanPendingRefunds 已补偿 {} 笔退款", count);
         }
         return count;
     }
@@ -913,7 +914,7 @@ public class PayServiceImpl implements PayService {
                 .eq(PayTransactionPO::getPaymentNo, refund.getPaymentNo())
                 .last("LIMIT 1"));
             if (payTx == null) {
-                log.warn("scanUnnotifiedRefunds payment missing, refundNo={}", refund.getRefundNo());
+                log.warn("scanUnnotifiedRefunds 未找到支付单，refundNo={}", refund.getRefundNo());
                 continue;
             }
             Long orderId;

@@ -45,7 +45,7 @@ public class PlatformMerchantServiceImpl implements PlatformMerchantService {
         q.setStatus(dto.getAuditStatus());
         Result<CursorPageVO<MerchantManageVO>> r = merchantFeignClient.pageManage(q);
         if (r == null || r.getData() == null) {
-            log.warn("merchantFeignClient.pageManage returned empty result");
+            log.warn("merchantFeignClient.pageManage 返回空结果");
             return CursorPageVO.of(List.of(),
                     dto.getLimit() == null ? 20 : dto.getLimit(), v -> v.getMerchantId());
         }

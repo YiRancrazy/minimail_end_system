@@ -136,16 +136,16 @@ public final class RolePermissionMapping {
     public static void updatePermissions(
             RoleEnum role, List<String> permissionCodes, StringRedisTemplate redisTemplate) {
         if (role == RoleEnum.USER) {
-            throw new IllegalArgumentException("USER role permissions are not modifiable");
+            throw new IllegalArgumentException("USER 角色权限不可修改");
         }
-        // Validate all permission codes
+        // 校验所有权限码
         for (String code : permissionCodes) {
             try {
                 PermissionEnum.valueOf(code);
             }
             catch (IllegalArgumentException e) {
                 throw new IllegalArgumentException(
-                    "Invalid permission code: " + code);
+                    "权限码非法：" + code);
             }
         }
         String json = "[" + permissionCodes.stream()

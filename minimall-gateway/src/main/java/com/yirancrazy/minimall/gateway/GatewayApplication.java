@@ -22,12 +22,11 @@ public class GatewayApplication {
     }
 
     /**
-     * Workaround for Spring Boot 3.x regression (issue #49693):
-     * NettyReactiveWebServerAutoConfiguration is missing
-     * {@code @ConditionalOnWebApplication(type = REACTIVE)} and, on some
-     * classpaths, fails to register a {@link ReactiveWebServerFactory} bean.
-     * Declaring one explicitly guarantees Reactor Netty starts regardless of
-     * whether the auto-configuration kicks in.
+     * 规避 Spring Boot 3.x 回归问题（issue #49693）：
+     * NettyReactiveWebServerAutoConfiguration 缺少
+     * {@code @ConditionalOnWebApplication(type = REACTIVE)}，在部分 classpath
+     * 下无法注册 {@link ReactiveWebServerFactory} Bean。
+     * 显式声明该 Bean，确保无论自动配置是否生效，Reactor Netty 都能启动。
      */
     @Bean
     public ReactiveWebServerFactory nettyReactiveWebServerFactory() {

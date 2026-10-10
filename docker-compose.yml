@@ -1,7 +1,7 @@
 # 薄荷商城统一编排文件：中间件 + 12 个应用服务。
 # 用法：
 #   cp .env.example .env        # 按需修改密钥
-#   docker compose up -d --build
+#   执行 docker compose up -d --build
 # 仅 Gateway(8080) 对外暴露，业务服务只在内部网络通过服务名互访。
 #
 # 中间件定义来自 scripts/docker-compose.yaml（所有环境通用版），与其冲突时以该文件为准。
@@ -228,8 +228,8 @@ services:
     container_name: mini-mail-system-seata
     restart: unless-stopped
     ports:
-      - "7091:7091"   # seata console
-      - "8091:8091"   # seata server (RPC)
+      - "7091:7091"   # seata 控制台
+      - "8091:8091"   # seata 服务（RPC）
     environment:
       # seata-server 自身的 IP / 端口。容器内 127.0.0.1 即可，应用从 nacos 发现服务地址
       SEATA_IP: 127.0.0.1

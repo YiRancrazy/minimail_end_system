@@ -41,7 +41,7 @@ class GatewayRouteContextTest {
     }
 
     /**
-     * Minimal wiring that mirrors the beans GatewayAutoConfiguration contributes to RouterConfig.
+     * 最小化装配，模拟 GatewayAutoConfiguration 为 RouterConfig 提供的 Bean。
      */
     @Configuration
     static class TestGatewayConfig {

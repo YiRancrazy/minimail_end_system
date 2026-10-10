@@ -34,7 +34,7 @@ public class InternalMerchantManageControllerV1 {
 
     /**
      * 平台分页查询商家列表。
-     * Internal: 仅内网调用，禁止 Gateway 暴露。
+     * 内部接口：仅内网调用，禁止 Gateway 暴露。
      * @param query 通用分页查询
      * @return 商家管理分页结果
      */
@@ -51,7 +51,7 @@ public class InternalMerchantManageControllerV1 {
 
     /**
      * 平台查询商家详情。
-     * Internal: 仅内网调用，禁止 Gateway 暴露。
+     * 内部接口：仅内网调用，禁止 Gateway 暴露。
      * @param merchantId 商家ID
      * @return 商家管理视图
      */
@@ -62,7 +62,7 @@ public class InternalMerchantManageControllerV1 {
 
     /**
      * 平台审核商家资质，仅允许 PENDING 状态审核；驳回时 reason 必填。
-     * Internal: 仅内网调用，禁止 Gateway 暴露。
+     * 内部接口：仅内网调用，禁止 Gateway 暴露。
      * @param merchantId 商家主体ID
      * @param approved 是否通过
      * @param reason 驳回原因，approved=false 时必填

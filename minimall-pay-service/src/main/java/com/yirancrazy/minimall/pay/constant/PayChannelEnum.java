@@ -44,6 +44,6 @@ public enum PayChannelEnum implements BaseEnum {
                 return e;
             }
         }
-        throw new IllegalArgumentException("Unknown channel: " + value);
+        throw new IllegalArgumentException("未知支付渠道：" + value);
     }
 }

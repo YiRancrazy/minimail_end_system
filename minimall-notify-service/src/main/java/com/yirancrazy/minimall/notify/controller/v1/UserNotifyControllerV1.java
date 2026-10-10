@@ -74,7 +74,7 @@ public class UserNotifyControllerV1 {
     }
 
     /**
-     * Alias for {@link #unreadCount} that matches the frontend contract.
+     * 匹配前端契约的 {@link #unreadCount} 别名。
      */
     @GetMapping("/unread-count")
     public Result<Long> unreadCountAlias(@RequestHeader("X-User-Id") Long userId) {

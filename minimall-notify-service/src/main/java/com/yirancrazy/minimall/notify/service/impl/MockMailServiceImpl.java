@@ -18,7 +18,7 @@ public class MockMailServiceImpl implements MailService {
 
     @Override
     public boolean send(String to, String subject, String htmlBody) {
-        log.info("mock mail sent, to={}, subject={}, bodyLen={}", maskEmail(to), subject,
+        log.info("mock 邮件已发送，to={}，subject={}，bodyLen={}", maskEmail(to), subject,
             htmlBody == null ? 0 : htmlBody.length());
         return true;
     }

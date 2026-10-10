@@ -50,7 +50,7 @@ public class OrderPaidMqConsumer {
         consumer = new RocketMqEventConsumer(namesrv, topic, group);
         consumer.subscribe(OrderPaidDTO.class, this::onPaid);
         consumer.start();
-        log.info("OrderPaidMqConsumer ready (namesrv={}, topic={})", namesrv, topic);
+        log.info("OrderPaidMqConsumer 已就绪（namesrv={}，topic={}）", namesrv, topic);
     }
 
     @PreDestroy
@@ -71,14 +71,14 @@ public class OrderPaidMqConsumer {
         String key = "notify:order:paid:" + event.getOrderId();
         Boolean first = redis.opsForValue().setIfAbsent(key, "1", IDEMPOTENT_TTL);
         if (Boolean.FALSE.equals(first)) {
-            log.info("duplicate order paid event skipped, orderId={}", event.getOrderId());
+            log.info("重复订单支付事件已跳过，orderId={}", event.getOrderId());
             return;
         }
         try {
             String title = "订单支付成功";
             String content = "订单 " + event.getOrderId() + " 已支付，金额 " + event.getAmount();
             notifyService.push(event.getUserId(), title, content);
-            log.info("notified user {} of order {} via mq", event.getUserId(), event.getOrderId());
+            log.info("已通过 mq 通知用户 {} 订单 {} 支付成功", event.getUserId(), event.getOrderId());
         }
         catch (Exception e) {
             // DB 落库失败时删除幂等键：否则 RocketMQ 重投会被 SETNX 挡掉，支付成功通知永久丢失

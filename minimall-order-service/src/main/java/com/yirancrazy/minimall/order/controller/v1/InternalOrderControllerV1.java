@@ -74,7 +74,7 @@ public class InternalOrderControllerV1 {
 
     /**
      * 校验订单评价资格，供评价服务创建评价前校验用户、订单、商品与购买状态，并回传订单快照商家ID。
-     * Internal: 仅内网调用，禁止 Gateway 暴露。
+     * 内部接口：仅内网调用，禁止 Gateway 暴露。
      * @param orderNo 订单号
      * @param userId 评价用户ID
      * @param spuId 商品SPU ID
@@ -125,7 +125,7 @@ public class InternalOrderControllerV1 {
 
     /**
      * 全平台订单统计聚合，供平台经营报表跨服务调用。
-     * Internal: 仅内网调用，禁止 Gateway 暴露。
+     * 内部接口：仅内网调用，禁止 Gateway 暴露。
      * @return 订单统计DTO
      */
     @GetMapping("/statistics")
@@ -135,7 +135,7 @@ public class InternalOrderControllerV1 {
 
     /**
      * 全平台订单导出列表，按创建时间倒序，服务端限制最大导出行数。
-     * Internal: 仅内网调用，禁止 Gateway 暴露。
+     * 内部接口：仅内网调用，禁止 Gateway 暴露。
      * @param startDate 起始日期（yyyy-MM-dd），null 表示不限制
      * @param endDate 结束日期（yyyy-MM-dd），null 表示不限制
      * @return 订单导出项列表

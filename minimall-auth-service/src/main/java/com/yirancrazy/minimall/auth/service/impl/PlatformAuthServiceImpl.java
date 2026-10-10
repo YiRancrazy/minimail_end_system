@@ -98,7 +98,7 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
         }
         po.setLastLoginAt(LocalDateTime.now());
         authUserManager.updateById(po);
-        log.info("platform admin login, accountId={}, account={}", po.getId(), po.getAccount());
+        log.info("平台管理员已登录，accountId={}，account={}", po.getId(), po.getAccount());
         return issueTokens(po.getId(), po.getAccount(), po.getRoleId());
     }
 
@@ -114,7 +114,7 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
             redisTemplate.delete(keys);
         }
         revokeToken(jti, adminAccountId, "sign_out");
-        log.info("platform admin signed out, accountId={}", adminAccountId);
+        log.info("平台管理员已退出登录，accountId={}", adminAccountId);
     }
 
     /**
@@ -141,7 +141,7 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
         po.setNickname(dto.getNickname());
         po.setContact(dto.getContact());
         authUserManager.save(po);
-        log.info("admin created, id={}, account={}, roleId={}", po.getId(), po.getAccount(), po.getRoleId());
+        log.info("管理员已创建，id={}，account={}，roleId={}", po.getId(), po.getAccount(), po.getRoleId());
         return po.getId();
     }
 
@@ -184,7 +184,7 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
         }
         po.setRoleId(resolveRoleId(dto.getRoleCode()));
         authUserManager.updateById(po);
-        log.info("admin role assigned, id={}, roleId={}", id, po.getRoleId());
+        log.info("管理员角色已分配，id={}，roleId={}", id, po.getRoleId());
     }
 
     /**
@@ -204,7 +204,7 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
         }
         applyNewPassword(po, dto.getNewPassword());
         invalidateRefreshTokens(adminAccountId);
-        log.info("platform admin password changed, accountId={}", adminAccountId);
+        log.info("平台管理员密码已修改，accountId={}", adminAccountId);
     }
 
     private void applyNewPassword(AuthUserPO po, String newPassword) {
@@ -237,7 +237,7 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
         }
         po.setNickname(dto.getNickname());
         boolean ok = authUserManager.updateById(po);
-        log.info("admin updated, id={}", id);
+        log.info("管理员已更新，id={}", id);
         return ok;
     }
 
@@ -257,7 +257,7 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
             throw new BizException(AuthCodeEnum.USER_NOT_FOUND);
         }
         authUserManager.removeById(targetId);
-        log.info("admin deleted, targetId={}, operatorId={}", targetId, operatorId);
+        log.info("管理员已删除，targetId={}，operatorId={}", targetId, operatorId);
     }
 
     /**

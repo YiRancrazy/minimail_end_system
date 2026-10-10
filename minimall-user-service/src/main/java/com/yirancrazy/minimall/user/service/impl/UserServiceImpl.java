@@ -153,7 +153,7 @@ public class UserServiceImpl implements UserService {
             user.setGender(dto.getGender());
         }
         boolean ok = userManager.updateById(user);
-        log.info("profile updated, userId={}", userId);
+        log.info("用户资料已更新，userId={}", userId);
         return ok;
     }
 }

@@ -71,7 +71,7 @@ public class AddressServiceImpl implements AddressService {
         po.setIsDefault(count == 0 ? 1 : null);
 
         addressManager.save(po);
-        log.info("address created, userId={}, addressId={}", userId, po.getId());
+        log.info("收货地址已创建，userId={}，addressId={}", userId, po.getId());
         return po.getId();
     }
 
@@ -96,7 +96,7 @@ public class AddressServiceImpl implements AddressService {
         existing.setDetailAddress(dto.getDetail());
 
         boolean ok = addressManager.updateById(existing);
-        log.info("address updated, userId={}, addressId={}", userId, id);
+        log.info("收货地址已更新，userId={}，addressId={}", userId, id);
         return ok;
     }
 
@@ -111,7 +111,7 @@ public class AddressServiceImpl implements AddressService {
     public void delete(Long userId, Long id) {
         getOwnedAddress(userId, id);
         addressManager.removeById(id);
-        log.info("address deleted, userId={}, addressId={}", userId, id);
+        log.info("收货地址已删除，userId={}，addressId={}", userId, id);
     }
 
     /**
@@ -134,7 +134,7 @@ public class AddressServiceImpl implements AddressService {
 
         existing.setIsDefault(1);
         addressManager.updateById(existing);
-        log.info("default address set, userId={}, addressId={}", userId, id);
+        log.info("默认收货地址已设置，userId={}，addressId={}", userId, id);
     }
 
     private AddressPO getOwnedAddress(Long userId, Long id) {

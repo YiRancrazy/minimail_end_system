@@ -30,9 +30,9 @@ public interface StockFeignClient {
     Result<Boolean> reserveBatch(@RequestBody StockBatchReserveDTO dto);
 
     /**
-     * Release previously reserved stock for a SKU.
-     * @param dto the release request, reusing the reserve DTO shape
-     * @return true if released successfully
+     * 释放 SKU 之前锁定的库存。
+     * @param dto 释放请求，复用预留 DTO 结构
+     * @return 释放成功时返回 true
      */
     @PostMapping("/internal/stock/release")
     Result<Boolean> release(@RequestBody StockReserveDTO dto);

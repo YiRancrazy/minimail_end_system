@@ -19,7 +19,7 @@ public class MockSmsServiceImpl implements SmsService {
 
     @Override
     public boolean send(String phone, String templateCode, Map<String, String> params) {
-        log.info("mock sms sent, phone={}, template={}, params={}", maskPhone(phone), templateCode, params);
+        log.info("mock 短信已发送，phone={}，template={}，params={}", maskPhone(phone), templateCode, params);
         return true;
     }
 

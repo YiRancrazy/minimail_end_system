@@ -32,7 +32,7 @@ public interface MerchantFeignClient {
 
     /**
      * 平台商家管理分页查询。
-     * Internal: 仅内网调用，禁止 Gateway 暴露。
+     * 内部接口：仅内网调用，禁止 Gateway 暴露。
      * @param query 通用分页查询
      * @return 商家管理分页结果；服务不可用时由 fallback 返回空分页
      */
@@ -41,7 +41,7 @@ public interface MerchantFeignClient {
 
     /**
      * 平台商家详情。
-     * Internal: 仅内网调用，禁止 Gateway 暴露。
+     * 内部接口：仅内网调用，禁止 Gateway 暴露。
      * @param merchantId 商家ID
      * @return 商家管理视图；服务不可用时由 fallback 返回 null
      */
@@ -50,7 +50,7 @@ public interface MerchantFeignClient {
 
     /**
      * 平台审核商家资质，仅允许 PENDING 状态审核；驳回时 reason 必填。
-     * Internal: 仅内网调用，禁止 Gateway 暴露。
+     * 内部接口：仅内网调用，禁止 Gateway 暴露。
      * @param merchantId 商家主体ID
      * @param approved 是否通过
      * @param reason 驳回原因，approved=false 时必填

@@ -30,7 +30,7 @@ public final class EncryptionContext {
      */
     public static byte[] getKey() {
         if (key == null) {
-            throw new IllegalStateException("EncryptionContext not initialized");
+            throw new IllegalStateException("EncryptionContext 未初始化");
         }
         return key.clone();
     }

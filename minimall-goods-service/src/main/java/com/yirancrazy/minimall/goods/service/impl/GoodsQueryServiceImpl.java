@@ -115,7 +115,7 @@ public class GoodsQueryServiceImpl implements GoodsQueryService {
             throw new BizException(SpuCodeEnum.SPU_NOT_FOUND);
         }
         List<SkuVO> skus = listSkusInternal(spuId);
-        log.info("goods detail queried, spuId={}, skuCount={}", spuId, skus.size());
+        log.info("商品详情查询完成，spuId={}，skuCount={}", spuId, skus.size());
         return new SpuDetailVO(po.getId(), po.getSpuNo(), po.getTitle(), po.getSubtitle(),
             resolveImageUrl(po.getMainImageUrl()), po.getMerchantId(), po.getCategoryId(),
             Boolean.TRUE, skus);

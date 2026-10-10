@@ -49,7 +49,7 @@ public class AlipayGateway implements PayGateway {
     public String createPagePayment(String paymentNo, BigDecimal amount, String subject, String expireTime) {
 
         if (paymentNo == null || paymentNo.isBlank() || amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Invalid payment parameters");
+            throw new IllegalArgumentException("支付参数非法");
         }
 
         AlipayTradePagePayRequest request = new AlipayTradePagePayRequest();
@@ -72,8 +72,8 @@ public class AlipayGateway implements PayGateway {
             return alipayClient.pageExecute(request).getBody();
         }
         catch (AlipayApiException e) {
-            log.error("create page payment failed, paymentNo={}", paymentNo, e);
-            throw new RuntimeException("Alipay create page payment failed", e);
+            log.error("创建支付宝页面支付失败，paymentNo={}", paymentNo, e);
+            throw new RuntimeException("支付宝创建页面支付失败", e);
         }
     }
 
@@ -88,13 +88,13 @@ public class AlipayGateway implements PayGateway {
             boolean verified = AlipaySignature.rsaCheckV1(
                 params, config.getAlipayPublicKey(), config.getCharset(), config.getSignType());
             if (!verified) {
-                throw new RuntimeException("Alipay callback signature verification failed");
+                throw new RuntimeException("支付宝回调验签失败");
             }
             return params.get("trade_no");
         }
         catch (AlipayApiException e) {
-            log.error("verify callback failed", e);
-            throw new RuntimeException("Alipay callback verification failed", e);
+            log.error("回调验签失败", e);
+            throw new RuntimeException("支付宝回调验证失败", e);
         }
     }
 
@@ -115,7 +115,7 @@ public class AlipayGateway implements PayGateway {
             return null;
         }
         catch (AlipayApiException e) {
-            log.error("query payment failed, paymentNo={}", paymentNo, e);
+            log.error("查询支付失败，paymentNo={}", paymentNo, e);
             return null;
         }
     }
@@ -139,11 +139,11 @@ public class AlipayGateway implements PayGateway {
             if (response.isSuccess()) {
                 return response.getTradeNo();
             }
-            throw new RuntimeException("Alipay refund failed: " + response.getSubMsg());
+            throw new RuntimeException("支付宝退款失败：" + response.getSubMsg());
         }
         catch (AlipayApiException e) {
-            log.error("refund failed, paymentNo={}, refundNo={}", paymentNo, refundNo, e);
-            throw new RuntimeException("Alipay refund failed", e);
+            log.error("退款失败，paymentNo={}，refundNo={}", paymentNo, refundNo, e);
+            throw new RuntimeException("支付宝退款失败", e);
         }
     }
 
@@ -179,12 +179,12 @@ public class AlipayGateway implements PayGateway {
             if (isRefundNotFound(response.getSubCode())) {
                 return RefundQueryStatus.NOT_FOUND;
             }
-            log.warn("query refund failed, paymentNo={}, refundNo={}, subCode={}, subMsg={}",
+            log.warn("查询退款失败，paymentNo={}，refundNo={}，subCode={}，subMsg={}",
                 paymentNo, refundNo, response.getSubCode(), response.getSubMsg());
             return RefundQueryStatus.FAILED;
         }
         catch (AlipayApiException e) {
-            log.error("query refund failed, paymentNo={}, refundNo={}", paymentNo, refundNo, e);
+            log.error("查询退款失败，paymentNo={}，refundNo={}", paymentNo, refundNo, e);
             return RefundQueryStatus.FAILED;
         }
     }

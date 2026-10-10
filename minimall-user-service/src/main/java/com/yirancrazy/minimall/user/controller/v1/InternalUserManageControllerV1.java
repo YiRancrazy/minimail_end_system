@@ -37,7 +37,7 @@ public class InternalUserManageControllerV1 {
 
     /**
      * 平台分页查询用户列表。
-     * Internal: 仅内网调用，禁止 Gateway 暴露。
+     * 内部接口：仅内网调用，禁止 Gateway 暴露。
      * @param query 通用分页查询
      * @return 用户管理分页结果
      */
@@ -64,7 +64,7 @@ public class InternalUserManageControllerV1 {
 
     /**
      * 平台查询用户详情。
-     * Internal: 仅内网调用，禁止 Gateway 暴露。
+     * 内部接口：仅内网调用，禁止 Gateway 暴露。
      * @param userId 用户ID
      * @return 用户管理视图
      */

@@ -41,14 +41,14 @@ public class OrderPaidListener {
         String key = "notify:order:paid:" + event.getOrderId();
         Boolean first = redis.opsForValue().setIfAbsent(key, "1", IDEMPOTENT_TTL);
         if (Boolean.FALSE.equals(first)) {
-            log.info("duplicate order paid event skipped, orderId={}", event.getOrderId());
+            log.info("重复订单支付事件已跳过，orderId={}", event.getOrderId());
             return;
         }
         try {
             String title = "订单支付成功";
             String content = "订单 " + event.getOrderId() + " 已支付，金额 " + event.getAmount();
             notifyService.push(event.getUserId(), title, content);
-            log.info("notified user {} of order {}", event.getUserId(), event.getOrderId());
+            log.info("已通知用户 {} 订单 {}", event.getUserId(), event.getOrderId());
         }
         catch (Exception e) {
             // DB 落库失败时删除幂等键：否则事件重投会被 SETNX 挡掉，支付成功通知永久丢失

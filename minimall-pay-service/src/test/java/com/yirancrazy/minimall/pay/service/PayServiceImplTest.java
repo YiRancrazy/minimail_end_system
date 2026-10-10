@@ -228,7 +228,7 @@ public class PayServiceImplTest {
         PayTransactionPO existing = new PayTransactionPO();
         existing.setId(99L);
         existing.setOrderNo("ORDER100");
-        existing.setStatus(1); // PENDING
+        existing.setStatus(1); // 待支付（PENDING）
         existing.setExpireAt(LocalDateTime.now().plusMinutes(10));
         when(manager.getOne(any())).thenReturn(existing);
 
@@ -247,7 +247,7 @@ public class PayServiceImplTest {
         PayTransactionPO existing = new PayTransactionPO();
         existing.setId(99L);
         existing.setOrderNo("ORDER100");
-        existing.setStatus(1); // PENDING
+        existing.setStatus(1); // 待支付（PENDING）
         existing.setExpireAt(LocalDateTime.now().minusMinutes(1));
         when(manager.getOne(any())).thenReturn(existing);
 
@@ -289,7 +289,7 @@ public class PayServiceImplTest {
         PayTransactionPO existing = new PayTransactionPO();
         existing.setId(88L);
         existing.setOrderNo("ORDER100");
-        existing.setStatus(2); // SUCCESS
+        existing.setStatus(2); // 支付成功（SUCCESS）
         when(manager.getOne(any())).thenReturn(existing);
 
         Long id = service.createPayment("ORDER100", 1L, 1L, new BigDecimal("99.99"), null);
@@ -306,7 +306,7 @@ public class PayServiceImplTest {
         PayTransactionPO existing = new PayTransactionPO();
         existing.setId(77L);
         existing.setOrderNo("ORDER100");
-        existing.setStatus(3); // FAILED
+        existing.setStatus(3); // 支付失败（FAILED）
         when(manager.getOne(any())).thenReturn(existing);
 
         Long id = service.createPayment("ORDER100", 1L, 1L, new BigDecimal("99.99"), null);
@@ -686,7 +686,7 @@ public class PayServiceImplTest {
     public void createRefund_pay_not_success_throws() {
         PayTransactionPO payTx = new PayTransactionPO();
         payTx.setId(1L);
-        payTx.setStatus(1); // PENDING, not SUCCESS(2)
+        payTx.setStatus(1); // 待支付，不是支付成功（SUCCESS，2）
         payTx.setPaymentNo("PAY123");
         payTx.setAmount(new BigDecimal("100.00"));
         when(manager.getById(1L)).thenReturn(payTx);
@@ -703,7 +703,7 @@ public class PayServiceImplTest {
     public void createRefund_amount_exceed_throws() {
         PayTransactionPO payTx = new PayTransactionPO();
         payTx.setId(1L);
-        payTx.setStatus(2); // SUCCESS
+        payTx.setStatus(2); // 支付成功（SUCCESS）
         payTx.setPaymentNo("PAY123");
         payTx.setAmount(new BigDecimal("50.00"));
         payTx.setOrderNo("100");
@@ -721,7 +721,7 @@ public class PayServiceImplTest {
     public void createRefund_rejects_more_than_two_decimals() {
         PayTransactionPO payTx = new PayTransactionPO();
         payTx.setId(1L);
-        payTx.setStatus(2); // SUCCESS
+        payTx.setStatus(2); // 支付成功（SUCCESS）
         payTx.setPaymentNo("PAY123");
         payTx.setAmount(new BigDecimal("50.00"));
         payTx.setOrderNo("100");
@@ -742,7 +742,7 @@ public class PayServiceImplTest {
     public void createRefund_fails_when_id_service_unavailable() {
         PayTransactionPO payTx = new PayTransactionPO();
         payTx.setId(1L);
-        payTx.setStatus(2); // SUCCESS
+        payTx.setStatus(2); // 支付成功（SUCCESS）
         payTx.setPaymentNo("PAY123");
         payTx.setAmount(new BigDecimal("50.00"));
         payTx.setOrderNo("100");
@@ -764,7 +764,7 @@ public class PayServiceImplTest {
     public void createRefund_success_returns_vo() {
         PayTransactionPO payTx = new PayTransactionPO();
         payTx.setId(1L);
-        payTx.setStatus(2); // SUCCESS
+        payTx.setStatus(2); // 支付成功（SUCCESS）
         payTx.setPaymentNo("PAY123");
         payTx.setAmount(new BigDecimal("100.00"));
         payTx.setOrderNo("100");
@@ -827,7 +827,7 @@ public class PayServiceImplTest {
     public void createRefund_rejects_when_cumulative_exceeds() {
         PayTransactionPO payTx = new PayTransactionPO();
         payTx.setId(1L);
-        payTx.setStatus(2); // SUCCESS
+        payTx.setStatus(2); // 支付成功（SUCCESS）
         payTx.setPaymentNo("PAY123");
         payTx.setAmount(new BigDecimal("100.00"));
         payTx.setOrderNo("100");
@@ -855,7 +855,7 @@ public class PayServiceImplTest {
     public void createRefund_success_records_refund() {
         PayTransactionPO payTx = new PayTransactionPO();
         payTx.setId(1L);
-        payTx.setStatus(2); // SUCCESS
+        payTx.setStatus(2); // 支付成功（SUCCESS）
         payTx.setPaymentNo("PAY123");
         payTx.setAmount(new BigDecimal("100.00"));
         payTx.setOrderNo("100");
@@ -1041,7 +1041,7 @@ public class PayServiceImplTest {
     public void createRefund_full_refund_marks_refunded() {
         PayTransactionPO payTx = new PayTransactionPO();
         payTx.setId(1L);
-        payTx.setStatus(2); // SUCCESS
+        payTx.setStatus(2); // 支付成功（SUCCESS）
         payTx.setPaymentNo("PAY123");
         payTx.setAmount(new BigDecimal("100.00"));
         payTx.setOrderNo("100");
@@ -1274,7 +1274,7 @@ public class PayServiceImplTest {
         PayCallbackDTO dto = new PayCallbackDTO("PAY123", "TRADE123", true, "response", new BigDecimal("99.99"));
         service.handleCallback(dto);
 
-        assertEquals(7, rec.getStatus()); // FROZEN
+        assertEquals(7, rec.getStatus()); // 已冻结（FROZEN）
         verify(manager).updateById(rec);
         verify(orderFeignClient, never()).pay(anyLong());
         verify(orderFeignClient, never()).payByOrderNo(anyString());
@@ -1308,7 +1308,7 @@ public class PayServiceImplTest {
     public void handleCallback_already_success_ignores_duplicate() {
         PayTransactionPO rec = new PayTransactionPO();
         rec.setId(1L);
-        rec.setStatus(2); // SUCCESS
+        rec.setStatus(2); // 支付成功（SUCCESS）
         rec.setOrderNo("100");
         when(manager.getOne(any())).thenReturn(rec);
 
@@ -1327,7 +1327,7 @@ public class PayServiceImplTest {
     public void handleCallback_failure_does_not_overwrite_success() {
         PayTransactionPO rec = new PayTransactionPO();
         rec.setId(1L);
-        rec.setStatus(2); // SUCCESS
+        rec.setStatus(2); // 支付成功（SUCCESS）
         rec.setOrderNo("100");
         when(manager.getOne(any())).thenReturn(rec);
 
@@ -1346,7 +1346,7 @@ public class PayServiceImplTest {
     public void handleCallback_failure_ignored_when_not_pending() {
         PayTransactionPO rec = new PayTransactionPO();
         rec.setId(1L);
-        rec.setStatus(3); // FAILED
+        rec.setStatus(3); // 支付失败（FAILED）
         when(manager.getOne(any())).thenReturn(rec);
 
         PayCallbackDTO dto = new PayCallbackDTO("PAY123", "TRADE123", false, "fail-response");
@@ -1364,7 +1364,7 @@ public class PayServiceImplTest {
     public void createRefund_non_numeric_order_no_skips_feign() {
         PayTransactionPO payTx = new PayTransactionPO();
         payTx.setId(1L);
-        payTx.setStatus(2); // SUCCESS
+        payTx.setStatus(2); // 支付成功（SUCCESS）
         payTx.setPaymentNo("PAY123");
         payTx.setAmount(new BigDecimal("100.00"));
         payTx.setOrderNo("OD20260814001");

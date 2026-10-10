@@ -17,7 +17,7 @@ import com.yirancrazy.minimall.common.result.Result;
 public class CartFeignFallbackFactory implements FallbackFactory<CartFeignClient> {
     @Override
     public CartFeignClient create(Throwable cause) {
-        log.warn("cart-service unreachable, returning sentinel count=-1: {}", cause.getMessage());
+        log.warn("cart-service 不可达，返回哨兵 count=-1: {}", cause.getMessage());
         return new CartFeignClient() {
             @Override
             public Result<Long> countByUser(Long userId) {

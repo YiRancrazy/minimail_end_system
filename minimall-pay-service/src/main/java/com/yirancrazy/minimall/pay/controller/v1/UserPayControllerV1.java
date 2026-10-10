@@ -69,7 +69,7 @@ public class UserPayControllerV1 {
     public String callback(HttpServletRequest request) {
         Map<String, String> params = new HashMap<>();
         request.getParameterMap().forEach((key, values) -> params.put(key, values[0]));
-        log.info("alipay callback received, paymentNo={}, tradeStatus={}, paramsSize={}",
+        log.info("收到支付宝回调，paymentNo={}，tradeStatus={}，paramsSize={}",
             params.get("out_trade_no"), params.get("trade_status"), params.size());
 
         try {
@@ -81,15 +81,15 @@ public class UserPayControllerV1 {
             PayCallbackDTO dto = new PayCallbackDTO(
                 paymentNo, tradeNo, success, params.toString(), parseTotalAmount(paymentNo, params));
             payService.handleCallback(dto);
-            log.info("alipay callback handled, paymentNo={}, tradeNo={}, success={}", paymentNo, tradeNo, success);
+            log.info("支付宝回调已处理，paymentNo={}，tradeNo={}，success={}", paymentNo, tradeNo, success);
             return "success";
         }
         catch (BizException e) {
-            log.error("callback failed: {}", e.getMessage());
+            log.error("回调处理失败: {}", e.getMessage());
             return "fail";
         }
         catch (Exception e) {
-            log.error("callback verify failed", e);
+            log.error("回调验签失败", e);
             return "fail";
         }
     }
@@ -133,7 +133,7 @@ public class UserPayControllerV1 {
             return new BigDecimal(rawAmount);
         }
         catch (NumberFormatException e) {
-            log.warn("callback total_amount invalid, paymentNo={}, totalAmount={}", paymentNo, rawAmount);
+            log.warn("回调 total_amount 非法，paymentNo={}，totalAmount={}", paymentNo, rawAmount);
             return null;
         }
     }

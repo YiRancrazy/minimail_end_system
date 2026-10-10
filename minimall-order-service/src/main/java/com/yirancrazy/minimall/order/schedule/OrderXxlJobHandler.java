@@ -37,12 +37,12 @@ public class OrderXxlJobHandler {
     public void scanExpiredOrders() {
         String lockKey = "order:schedule:scanExpiredOrders";
         if (!tryLock(lockKey)) {
-            log.info("xxl-job scanExpiredOrders skipped, lock held by another instance");
+            log.info("xxl-job scanExpiredOrders 已跳过，锁被其他实例持有");
             return;
         }
         try {
             int count = orderService.scanExpiredOrders();
-            log.info("xxl-job scanExpiredOrders, processed={}", count);
+            log.info("xxl-job scanExpiredOrders 执行完成，processed={}", count);
         }
         finally {
             redisTemplate.delete(lockKey);
@@ -56,12 +56,12 @@ public class OrderXxlJobHandler {
     public void scanAutoConfirm() {
         String lockKey = "order:schedule:scanAutoConfirm";
         if (!tryLock(lockKey)) {
-            log.info("xxl-job scanAutoConfirm skipped, lock held by another instance");
+            log.info("xxl-job scanAutoConfirm 已跳过，锁被其他实例持有");
             return;
         }
         try {
             int count = orderService.scanAutoConfirm();
-            log.info("xxl-job scanAutoConfirm, processed={}", count);
+            log.info("xxl-job scanAutoConfirm 执行完成，processed={}", count);
         }
         finally {
             redisTemplate.delete(lockKey);
@@ -75,12 +75,12 @@ public class OrderXxlJobHandler {
     public void scanStockReleasePending() {
         String lockKey = "order:schedule:scanStockReleasePending";
         if (!tryLock(lockKey)) {
-            log.info("xxl-job scanStockReleasePending skipped, lock held by another instance");
+            log.info("xxl-job scanStockReleasePending 已跳过，锁被其他实例持有");
             return;
         }
         try {
             int count = orderService.scanStockReleasePending();
-            log.info("xxl-job scanStockReleasePending, processed={}", count);
+            log.info("xxl-job scanStockReleasePending 执行完成，processed={}", count);
         }
         finally {
             redisTemplate.delete(lockKey);

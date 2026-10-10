@@ -50,7 +50,7 @@ public class NotifyServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        // Initialize TableInfo so LambdaUpdateWrapper can resolve lambda cache
+        // 初始化 TableInfo，便于 LambdaUpdateWrapper 解析 lambda 缓存
         MybatisConfiguration configuration = new MybatisConfiguration();
         MapperBuilderAssistant assistant = new MapperBuilderAssistant(configuration, "");
         assistant.setCurrentNamespace("com.yirancrazy.minimall.notify.mapper.NotifyMessageMapper");

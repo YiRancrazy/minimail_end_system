@@ -6,27 +6,26 @@ spring:
   profiles:
     active: dev
   main:
-    # Force reactive container even though gateway depends on several
-    # reactive starters. Without this hint, the deduplication logic in
-    # WebApplicationType.deduceFromClasspath sometimes picks NONE when both
-    # spring-web and spring-webflux are on the classpath transitively.
+    # 即使网关依赖多个响应式 starter，也强制使用响应式容器。
+    # 若缺少此配置，当 classpath 同时存在 spring-web 和 spring-webflux 时，
+    # WebApplicationType.deduceFromClasspath 的去重逻辑有时会选择 NONE。
     web-application-type: reactive
   config:
-    # Nacos config is optional; the gateway only needs discovery for routing.
-    # Gateway does not depend on minimall-common (to keep the reactive stack
-    # clean), so DotenvConfig never runs here; import the repo .env directly
-    # instead. Relative paths resolve against the JVM working dir, which varies
-    # between repo root (mvnw) and the module dir (IDE / java -jar).
+    # Nacos config 可选；网关路由只需要服务发现。
+    # 网关不依赖 minimall-common（以保持响应式技术栈干净），
+    # 因此这里不会执行 DotenvConfig；直接导入仓库 .env。
+    # 相对路径基于 JVM 工作目录解析，不同启动方式下目录会变化：
+    # 可能是仓库根目录（mvnw），也可能是模块目录（IDE / java -jar）。
     import: "optional:nacos:minimall-gateway-dev.yaml,optional:file:.env[.properties],optional:file:../.env[.properties],optional:file:../../.env[.properties]"
   cloud:
     inetutils:
-      # Register a routable address (docker bridge or LAN); the default
-      # first-non-loopback pick can be 169.254.x.x, which peers cannot reach.
+      # 注册一个可路由地址（Docker bridge 或局域网）；默认选择
+      # 第一个非回环地址时可能得到 169.254.x.x，其他节点无法访问。
       preferred-networks: ${MINIMALL_PREFERRED_NETWORKS:172.,192.168.,10.}
     nacos:
       discovery:
-        # Use the dev host (Nacos + Redis + MySQL all live on localdev);
-        # 127.0.0.1 would point at this machine's empty ports.
+        # 使用 dev 主机（Nacos + Redis + MySQL 都运行在 localdev）；
+        # 127.0.0.1 会指向本机未监听的端口。
         server-addr: ${NACOS_HOST:localdev}:${NACOS_PORT:8848}
       config:
         server-addr: ${NACOS_HOST:localdev}:${NACOS_PORT:8848}

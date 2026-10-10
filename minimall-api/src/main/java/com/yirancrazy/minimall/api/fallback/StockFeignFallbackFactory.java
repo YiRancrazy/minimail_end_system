@@ -22,7 +22,7 @@ import com.yirancrazy.minimall.common.result.Result;
 public class StockFeignFallbackFactory implements FallbackFactory<StockFeignClient> {
     @Override
     public StockFeignClient create(Throwable cause) {
-        log.warn("stock-service unreachable: {}", cause.getMessage());
+        log.warn("stock-service 不可达: {}", cause.getMessage());
         return new StockFeignClient() {
             @Override
             public Result<Boolean> reserve(StockReserveDTO dto) {
@@ -41,7 +41,7 @@ public class StockFeignFallbackFactory implements FallbackFactory<StockFeignClie
 
             @Override
             public Result<Void> initStock(StockInitDTO dto) {
-                log.warn("stock-service unreachable, init stock skipped, skuId={}", dto.getSkuId());
+                log.warn("stock-service 不可达，初始化库存已跳过，skuId={}", dto.getSkuId());
                 return Result.fail(CommonCode.SYS_ERROR, "库存服务不可用");
             }
 

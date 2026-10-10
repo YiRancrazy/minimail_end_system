@@ -24,7 +24,7 @@ import com.yirancrazy.minimall.common.result.Result;
 public class OrderFeignFallbackFactory implements FallbackFactory<OrderFeignClient> {
     @Override
     public OrderFeignClient create(Throwable cause) {
-        log.warn("order-service unreachable: {}", cause.getMessage());
+        log.warn("order-service 不可达: {}", cause.getMessage());
         return new OrderFeignClient() {
             @Override
             public Result<Integer> status(Long id) {
@@ -33,50 +33,50 @@ public class OrderFeignFallbackFactory implements FallbackFactory<OrderFeignClie
 
             @Override
             public Result<Long> merchantId(String ref) {
-                log.warn("order merchant resolve fallback, ref={} skipped", ref);
+                log.warn("订单商家解析降级，ref={}，已跳过", ref);
                 return Result.fail(CommonCode.SYS_ERROR, "订单服务不可用");
             }
 
             @Override
             public Result<OrderPaySnapshotDTO> paySnapshot(String ref) {
-                log.warn("order pay snapshot fallback, ref={} skipped", ref);
+                log.warn("订单支付快照降级，ref={}，已跳过", ref);
                 return Result.fail(CommonCode.SYS_ERROR, "订单服务不可用");
             }
 
             @Override
             public Result<Void> pay(Long id) {
-                log.warn("order pay fallback, orderId={} skipped", id);
+                log.warn("订单支付降级，orderId={}，已跳过", id);
                 return Result.fail(CommonCode.SYS_ERROR, "订单服务不可用");
             }
 
             @Override
             public Result<Void> payByOrderNo(String orderNo) {
-                log.warn("order pay-by-order-no fallback, orderNo={} skipped", orderNo);
+                log.warn("订单按订单号支付降级，orderNo={}，已跳过", orderNo);
                 return Result.fail(CommonCode.SYS_ERROR, "订单服务不可用");
             }
 
             @Override
             public Result<Void> refundCallback(RefundCallbackDTO dto) {
-                log.warn("order refund-callback fallback, orderId={} skipped",
+                log.warn("订单退款回调降级，orderId={}，已跳过",
                     dto == null ? null : dto.getOrderId());
                 return Result.fail(CommonCode.SYS_ERROR, "订单服务不可用");
             }
 
             @Override
             public Result<OrderStatisticsDTO> statistics() {
-                log.warn("order statistics fallback, return empty statistics");
+                log.warn("订单统计降级，返回空统计");
                 return Result.success(new OrderStatisticsDTO());
             }
 
             @Override
             public Result<OrderCommentEligibilityDTO> commentEligibility(String orderNo, Long userId, Long spuId) {
-                log.warn("order comment eligibility fallback, orderNo={} rejected", orderNo);
+                log.warn("订单评价资格降级，orderNo={}，已拒绝", orderNo);
                 return Result.fail(CommonCode.SYS_ERROR, "订单服务不可用");
             }
 
             @Override
             public Result<List<OrderExportItemDTO>> exportList(String startDate, String endDate) {
-                log.warn("order export-list fallback, startDate={}, endDate={} skipped", startDate, endDate);
+                log.warn("订单导出列表降级，startDate={}，endDate={}，已跳过", startDate, endDate);
                 return Result.success(List.of());
             }
         };

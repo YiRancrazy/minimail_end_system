@@ -24,7 +24,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(BizException.class)
     public ResponseEntity<Result<Void>> biz(BizException e) {
-        log.warn("biz exception code={} alias={} msg={}", e.getCode(), e.getAlias(), e.getMessage());
+        log.warn("业务异常，code={}，alias={}，msg={}", e.getCode(), e.getAlias(), e.getMessage());
         return ResponseEntity.status(HttpStatus.OK).body(Result.fail(e.getCode(), e.getMessage()));
     }
 
@@ -36,7 +36,7 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler({MethodArgumentNotValidException.class, BindException.class})
     public ResponseEntity<Result<Void>> validation(Exception e) {
-        log.warn("validation failed: {}", e.getMessage());
+        log.warn("参数校验失败: {}", e.getMessage());
         return ResponseEntity.status(HttpStatus.OK).body(Result.fail(CommonCode.PARAM_INVALID, "请求参数校验失败"));
     }
 
@@ -48,7 +48,7 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<Result<Void>> unreadable(HttpMessageNotReadableException e) {
-        log.warn("request body not readable: {}", e.getMessage());
+        log.warn("请求体不可读: {}", e.getMessage());
         return ResponseEntity.status(HttpStatus.OK).body(Result.fail(CommonCode.PARAM_INVALID, "请求体格式错误"));
     }
 
@@ -60,7 +60,7 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(BaseException.class)
     public ResponseEntity<Result<Void>> base(BaseException e) {
-        log.error("base error code={} msg={}", e.getCode(), e.getMessage(), e);
+        log.error("基础异常，code={}，msg={}", e.getCode(), e.getMessage(), e);
         return ResponseEntity.status(HttpStatus.OK).body(Result.fail(e.getCode(), e.getMessage()));
     }
 
@@ -72,7 +72,7 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(MissingRequestHeaderException.class)
     public ResponseEntity<Result<Void>> missingHeader(MissingRequestHeaderException e) {
-        log.warn("missing required header: {}", e.getHeaderName());
+        log.warn("缺少必填请求头: {}", e.getHeaderName());
         return ResponseEntity.status(HttpStatus.OK).body(Result.fail("14003", "缺少请求头: " + e.getHeaderName()));
     }
 
@@ -88,16 +88,16 @@ public class GlobalExceptionHandler {
         // 深挖 cause 链，找回被 Seata 代理吞掉类型的 BizException/BaseException，恢复业务错误码语义，避免越权/不存在订单误报"系统繁忙"
         for (Throwable t = e; t != null; t = t.getCause()) {
             if (t instanceof BizException biz) {
-                log.warn("unwrapped biz exception code={} alias={} msg={}",
+                log.warn("解包后业务异常，code={}，alias={}，msg={}",
                     biz.getCode(), biz.getAlias(), biz.getMessage());
                 return ResponseEntity.status(HttpStatus.OK).body(Result.fail(biz.getCode(), biz.getMessage()));
             }
             if (t instanceof BaseException base) {
-                log.warn("unwrapped base exception code={} msg={}", base.getCode(), base.getMessage());
+                log.warn("解包后基础异常，code={}，msg={}", base.getCode(), base.getMessage());
                 return ResponseEntity.status(HttpStatus.OK).body(Result.fail(base.getCode(), base.getMessage()));
             }
         }
-        log.error("unknown error", e);
+        log.error("未知异常", e);
         return ResponseEntity.status(HttpStatus.OK).body(Result.fail(CommonCode.SYS_ERROR, "系统繁忙"));
     }
 }

@@ -29,7 +29,7 @@ public class PayReturnControllerV1 {
     public String success(@RequestParam(value = "out_trade_no", required = false) String outTradeNo,
                           @RequestParam(value = "trade_no", required = false) String tradeNo,
                           @RequestParam(value = "total_amount", required = false) String totalAmount) {
-        log.info("alipay return success page visited, paymentNo={}, tradeNo={}, amount={}",
+        log.info("支付宝同步返回成功页已访问，paymentNo={}，tradeNo={}，amount={}",
             outTradeNo, tradeNo, totalAmount);
         return "<!DOCTYPE html><html lang=\"zh-CN\"><head><meta charset=\"UTF-8\">"
             + "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"

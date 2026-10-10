@@ -51,7 +51,7 @@ public class SkuControllerV1 {
      * 创建SKU，归属商家ID来自可信Header。
      * @param merchantId 商家ID，来自可信Header
      * @param dto SKU创建DTO
-     * @return SKU ID
+     * @return SKU 主键 ID
      */
     @PostMapping
     public Result<Long> create(@RequestHeader("X-Merchant-Id") Long merchantId,
@@ -75,7 +75,7 @@ public class SkuControllerV1 {
     /**
      * 根据ID更新SKU信息。
      * @param merchantId 商家ID，来自可信Header
-     * @param id SKU ID
+     * @param id SKU 主键 ID
      * @param dto SKU修改DTO
      * @return 更新是否成功
      */
@@ -89,7 +89,7 @@ public class SkuControllerV1 {
     /**
      * 根据ID删除SKU。
      * @param merchantId 商家ID，来自可信Header
-     * @param id SKU ID
+     * @param id SKU 主键 ID
      * @return 删除是否成功
      */
     @DeleteMapping("/{id}")

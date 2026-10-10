@@ -48,7 +48,7 @@ public class RolePermissionServiceImpl implements RolePermissionService {
             RolePermissionMapping.updatePermissions(role, permissionCodes, redisTemplate);
         }
         catch (IllegalArgumentException e) {
-            if (e.getMessage().contains("not modifiable")) {
+            if (e.getMessage().contains("不可修改")) {
                 throw new BizException(PlatformCodeEnum.ROLE_PERMISSION_NOT_MODIFIABLE);
             }
             throw new BizException(PlatformCodeEnum.ROLE_PERMISSION_UPDATE_FAILED);

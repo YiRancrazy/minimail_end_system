@@ -35,7 +35,7 @@ class RocketMqEventConsumerTest {
         consumer.start();
 
         assertThat(output).contains(
-            "RocketMqEventConsumer.start() called with no handlers registered; events will not be consumed");
+            "RocketMqEventConsumer.start() 调用时未注册 handler，事件将不会被消费");
     }
 
     @Test

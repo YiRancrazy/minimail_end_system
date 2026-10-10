@@ -29,7 +29,7 @@ public class StockReserveDTO {
 
     /**
      * 构造不携带订单号的兼容入参。
-     * @param skuId SKU ID
+     * @param skuId SKU 主键 ID
      * @param quantity 数量
      */
     public StockReserveDTO(Long skuId, Integer quantity) {

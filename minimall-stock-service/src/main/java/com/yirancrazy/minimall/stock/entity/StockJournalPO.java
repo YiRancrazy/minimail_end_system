@@ -27,7 +27,7 @@ public class StockJournalPO {
     private String reason;
     private String orderNo;
 
-    // BasePO fields redefined with the real column names used by V13 migration.
+    // 按 V13 迁移实际列名重新定义 BasePO 字段。
     @TableField(value = "created_at", fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 

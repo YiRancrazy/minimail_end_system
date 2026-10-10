@@ -85,7 +85,7 @@ public class MinioUtil {
      * @param objectKey 目标对象 key
      * @param size 文件大小（字节）
      * @param contentType 内容类型
-     * @return objectKey
+     * @return 对象 key
      * @throws BizException 当上传失败时
      */
     public String upload(InputStream inputStream, String objectKey, long size, String contentType) {
@@ -136,7 +136,7 @@ public class MinioUtil {
      * @param file 本地文件路径
      * @param objectKey 目标对象 key
      * @param contentType 内容类型
-     * @return objectKey
+     * @return 对象 key
      * @throws BizException 当上传失败时
      */
     public String upload(Path file, String objectKey, String contentType) {
@@ -190,4 +190,3 @@ public class MinioUtil {
         return presignedGetUrl(objectKey);
     }
 }
-

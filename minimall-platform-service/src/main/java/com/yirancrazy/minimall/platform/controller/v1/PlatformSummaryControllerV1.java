@@ -49,7 +49,7 @@ public class PlatformSummaryControllerV1 {
     public Result<Map<String, Long>> orderSummary() {
         Result<OrderStatisticsDTO> r = orderFeignClient.statistics();
         if (r == null || !CommonCode.SUCCESS.equals(r.getCode()) || r.getData() == null) {
-            log.warn("order statistics unavailable, summary returns zeros. result={}", r);
+            log.warn("订单统计服务不可用，汇总数据返回零值。result={}", r);
             return Result.success(zeros());
         }
         OrderStatisticsDTO s = r.getData();
@@ -74,7 +74,7 @@ public class PlatformSummaryControllerV1 {
         Result<List<OrderExportItemDTO>> r =
                 orderFeignClient.exportList(dto.getStartDate(), dto.getEndDate());
         if (r == null || !CommonCode.SUCCESS.equals(r.getCode()) || r.getData() == null) {
-            log.warn("order export data unavailable, export empty file. result={}", r);
+            log.warn("订单导出数据不可用，导出空文件。result={}", r);
             CsvExporter.write(response, "orders.csv", ORDER_HEADERS, List.of());
             return;
         }
@@ -102,7 +102,7 @@ public class PlatformSummaryControllerV1 {
         Result<List<PayExportItemDTO>> r =
                 payFeignClient.exportTransactions(dto.getStartDate(), dto.getEndDate());
         if (r == null || !CommonCode.SUCCESS.equals(r.getCode()) || r.getData() == null) {
-            log.warn("pay reconciliation data unavailable, export empty file. result={}", r);
+            log.warn("支付对账数据不可用，导出空文件。result={}", r);
             CsvExporter.write(response, "reconciliation.csv", PAY_HEADERS, List.of());
             return;
         }

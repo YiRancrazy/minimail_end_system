@@ -88,12 +88,12 @@ public class SseHub {
      */
     public SseEmitter register(Long userId) {
         if (!tryAcquireUser(userId)) {
-            log.warn("sse connection limit exceeded, userId={}, max={}", userId, MAX_CONNECTIONS_PER_USER);
+            log.warn("sse 连接数超过限制，userId={}，max={}", userId, MAX_CONNECTIONS_PER_USER);
             throw new BizException(NotifyCodeEnum.NOTIFY_SSE_LIMIT);
         }
         if (!tryAcquireGlobal()) {
             releaseUser(userId);
-            log.warn("sse global connection limit exceeded, userId={}, max={}", userId, maxGlobalConnections);
+            log.warn("sse 全局连接数超过限制，userId={}，max={}", userId, maxGlobalConnections);
             throw new BizException(NotifyCodeEnum.NOTIFY_SSE_LIMIT);
         }
         SseEmitter emitter = createEmitter();
@@ -108,7 +108,7 @@ public class SseHub {
         }
         catch (Exception e) {
             // ready 事件失败说明连接不可用：回滚注册并释放配额，避免僵尸连接长期占用连接数
-            log.warn("sse ready event failed, rollback registration, userId={}", userId, e);
+            log.warn("sse ready 事件发送失败，回滚连接注册，userId={}", userId, e);
             remove(connection);
             emitter.completeWithError(e);
             throw new BizException(NotifyCodeEnum.NOTIFY_SSE_CONNECT_FAILED);
@@ -141,7 +141,7 @@ public class SseHub {
             }
             catch (IOException | RuntimeException ex) {
                 // 连接已断开或 emitter 已完成：任意发送异常都移除连接并释放配额
-                log.debug("sse send failed, connection removed, userId={}", userId, ex);
+                log.debug("sse 发送失败，连接已移除，userId={}", userId, ex);
                 remove(connection);
             }
         }
@@ -171,7 +171,7 @@ public class SseHub {
             connection.emitter.complete();
         }
         catch (RuntimeException e) {
-            log.debug("sse complete failed after connection removal, userId={}", connection.userId, e);
+            log.debug("连接移除后 sse complete 失败，userId={}", connection.userId, e);
         }
     }
 
@@ -209,7 +209,7 @@ public class SseHub {
     public SseEmitter open(@RequestHeader("X-User-Id") Long userId,
                            @RequestParam(required = false) Long userIdParam) {
         if (userIdParam != null && !userId.equals(userIdParam)) {
-            log.warn("sse subscribe denied, headerUserId={}, paramUserId={}", userId, userIdParam);
+            log.warn("sse 订阅被拒绝，headerUserId={}，paramUserId={}", userId, userIdParam);
             throw new BizException(NotifyCodeEnum.NOTIFY_SSE_FORBIDDEN);
         }
         return register(userId);
@@ -269,7 +269,7 @@ public class SseHub {
     private void releaseGlobal() {
         int remaining = globalConnectionCount.decrementAndGet();
         if (remaining < 0) {
-            log.error("sse global connection count became negative");
+            log.error("sse 全局连接计数变为负数");
         }
     }
 

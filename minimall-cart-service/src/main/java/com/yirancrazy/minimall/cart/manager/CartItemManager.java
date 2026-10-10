@@ -14,7 +14,7 @@ public interface CartItemManager extends IService<CartItemPO> {
     /**
      * 根据用户ID和SKU ID查询购物车条目。
      * @param userId 用户ID，来自网关X-User-Id可信头
-     * @param skuId SKU ID
+     * @param skuId SKU 主键 ID
      * @return 购物车条目；不存在返回 null
      */
     CartItemPO getByUserIdAndSkuId(Long userId, Long skuId);

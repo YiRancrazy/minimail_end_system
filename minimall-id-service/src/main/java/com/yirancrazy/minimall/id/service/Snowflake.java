@@ -25,10 +25,10 @@ public class Snowflake {
      */
     public Snowflake(long datacenterId, long workerId) {
         if (datacenterId < 0 || datacenterId > 31) {
-            throw new IllegalArgumentException("datacenterId out of range [0,31]");
+            throw new IllegalArgumentException("datacenterId 超出范围 [0,31]");
         }
         if (workerId < 0 || workerId > 31) {
-            throw new IllegalArgumentException("workerId out of range [0,31]");
+            throw new IllegalArgumentException("workerId 超出范围 [0,31]");
         }
         this.datacenterId = datacenterId;
         this.workerId = workerId;
@@ -43,7 +43,7 @@ public class Snowflake {
 
         // 判断时钟是否回拨
         if (ts < lastTs) {
-            throw new IllegalStateException("clock moved backwards");
+            throw new IllegalStateException("时钟回拨");
         }
 
         // 判断是否为同一毫秒
@@ -72,9 +72,12 @@ public class Snowflake {
      */
     private long waitNextMillis(long last) {
         long ts = System.currentTimeMillis();
+
+        // 自旋等待下一毫秒,解决轻微时钟回拨,严重时钟回拨只能被动等待。
         while (ts <= last) {
             ts = System.currentTimeMillis();
         }
+
         return ts;
     }
 }

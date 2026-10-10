@@ -170,7 +170,7 @@ public class SpuServiceImpl implements SpuService {
         spuManager.save(po);
         List<SkuPO> createdSkus = saveSkus(merchantId, po.getId(), dto.getSkus());
         afterCommit(() -> createdSkus.forEach(sku -> initStockBestEffort(sku, merchantId)));
-        log.info("spu created, spuId={}, merchantId={}", po.getId(), merchantId);
+        log.info("spu 已创建，spuId={}，merchantId={}", po.getId(), merchantId);
         return po.getId();
     }
 
@@ -417,7 +417,7 @@ public class SpuServiceImpl implements SpuService {
                 stockFeignClient.adjustStock(adjustment);
             }
             catch (Exception e) {
-                log.error("rollback stock adjustment failed, skuId={}, quantity={}",
+                log.error("回滚库存调整失败，skuId={}，quantity={}",
                     adjustment.getSkuId(), adjustment.getQuantity(), e);
             }
         }
@@ -434,12 +434,12 @@ public class SpuServiceImpl implements SpuService {
             Result<Void> r = stockFeignClient.initStock(
                 new StockInitDTO(sku.getId(), merchantId, sku.getStock()));
             if (r == null || !CommonCode.SUCCESS.equals(r.getCode())) {
-                log.warn("init stock failed, skuId={}, msg={}", sku.getId(),
-                    r == null ? "no response" : r.getMessage());
+                log.warn("初始化库存失败，skuId={}，msg={}", sku.getId(),
+                    r == null ? "无响应" : r.getMessage());
             }
         }
         catch (Exception e) {
-            log.warn("init stock error, skuId={}", sku.getId(), e);
+            log.warn("初始化库存异常，skuId={}", sku.getId(), e);
         }
     }
 
@@ -463,10 +463,10 @@ public class SpuServiceImpl implements SpuService {
                 spuSearchService.deleteById(id);
             }
             catch (Exception e) {
-                log.error("delete spu from ES failed, spuId={}", id, e);
+                log.error("从 ES 删除 spu 失败，spuId={}", id, e);
             }
         }
-        log.info("spu deleted, spuId={}", id);
+        log.info("spu 已删除，spuId={}", id);
         return ok;
     }
 
@@ -497,7 +497,7 @@ public class SpuServiceImpl implements SpuService {
         if (ok) {
             syncToEs(existing);
         }
-        log.info("spu submit audit, spuId={}, ok={}", id, ok);
+        log.info("spu 已提交审核，spuId={}，ok={}", id, ok);
         return ok;
     }
 
@@ -523,7 +523,7 @@ public class SpuServiceImpl implements SpuService {
         if (ok) {
             syncToEs(existing);
         }
-        log.info("spu off shelf, spuId={}, ok={}", id, ok);
+        log.info("spu 已下架，spuId={}，ok={}", id, ok);
         return ok;
     }
 
@@ -568,7 +568,7 @@ public class SpuServiceImpl implements SpuService {
             afterCommit(() -> syncToEs(existing));
         }
         saveAuditRecord(spuId, auditorId, AuditDecisionEnum.APPROVE, null);
-        log.info("spu approved, spuId={}, auditorId={}", spuId, auditorId);
+        log.info("spu 审核通过，spuId={}，auditorId={}", spuId, auditorId);
         return ok;
     }
 
@@ -596,7 +596,7 @@ public class SpuServiceImpl implements SpuService {
             afterCommit(() -> syncToEs(existing));
         }
         saveAuditRecord(spuId, auditorId, AuditDecisionEnum.REJECT, reason);
-        log.info("spu rejected, spuId={}, auditorId={}, reason={}", spuId, auditorId, reason);
+        log.info("spu 审核拒绝，spuId={}，auditorId={}，reason={}", spuId, auditorId, reason);
         return ok;
     }
 
@@ -650,7 +650,7 @@ public class SpuServiceImpl implements SpuService {
         SpuPO spu = spuManager.getById(spuId);
         if (spu == null) {
             // SPU 已删除时 ES 文档由 delete 流程清理，SKU 侧刷新直接忽略
-            log.warn("spu not found when refreshing ES document, spuId={}", spuId);
+            log.warn("刷新 ES 文档时未找到 spu，spuId={}", spuId);
             return;
         }
         syncToEs(spu);
@@ -665,9 +665,9 @@ public class SpuServiceImpl implements SpuService {
         List<SpuPO> onSaleList = spuManager.list(
             Wrappers.lambdaQuery(SpuPO.class)
                 .eq(SpuPO::getStatus, SpuStatusEnum.ON_SALE.statusValue()));
-        log.info("rebuild ES documents start, count={}", onSaleList.size());
+        log.info("开始重建 ES 文档，count={}", onSaleList.size());
         onSaleList.forEach(this::syncToEs);
-        log.info("rebuild ES documents done, count={}", onSaleList.size());
+        log.info("重建 ES 文档完成，count={}", onSaleList.size());
     }
 
     private void syncToEs(SpuPO po) {
@@ -693,7 +693,7 @@ public class SpuServiceImpl implements SpuService {
             spuSearchService.sync(doc);
         }
         catch (Exception e) {
-            log.error("sync spu to ES failed, spuId={}", po.getId(), e);
+            log.error("同步 spu 到 ES 失败，spuId={}", po.getId(), e);
         }
     }
 

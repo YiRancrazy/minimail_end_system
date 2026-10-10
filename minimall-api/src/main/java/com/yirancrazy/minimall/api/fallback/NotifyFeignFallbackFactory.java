@@ -18,7 +18,7 @@ import com.yirancrazy.minimall.common.result.Result;
 public class NotifyFeignFallbackFactory implements FallbackFactory<NotifyFeignClient> {
     @Override
     public NotifyFeignClient create(Throwable cause) {
-        log.warn("notify-service unreachable: {}", cause.getMessage());
+        log.warn("notify-service 不可达: {}", cause.getMessage());
         return new NotifyFeignClient() {
             @Override
             public Result<Boolean> push(NotifyEventDTO dto) {

@@ -45,7 +45,7 @@ public class XxlJobConfig {
      */
     @Bean
     public XxlJobSpringExecutor xxlJobExecutor() {
-        log.info("xxl-job executor init, admin={}, app={}", adminAddresses, appName);
+        log.info("xxl-job 执行器初始化，admin={}，app={}", adminAddresses, appName);
         XxlJobSpringExecutor executor = new XxlJobSpringExecutor();
         executor.setAdminAddresses(adminAddresses);
         executor.setAccessToken(accessToken);

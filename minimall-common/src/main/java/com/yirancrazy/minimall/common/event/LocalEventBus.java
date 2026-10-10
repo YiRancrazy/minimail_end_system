@@ -16,10 +16,10 @@ public class LocalEventBus implements ApplicationEventPublisherAware, EventBus {
     private ApplicationEventPublisher publisher;
 
     /**
-     * Spring {@link ApplicationEventPublisherAware} callback that injects the
-     * application-level event publisher used by {@link #publish(Object)}.
+     * Spring {@link ApplicationEventPublisherAware} 回调，注入
+     * {@link #publish(Object)} 使用的应用级事件发布器。
      *
-     * @param publisher the Spring-managed {@link ApplicationEventPublisher} to delegate to; must not be {@code null}
+     * @param publisher Spring 管理的 {@link ApplicationEventPublisher}，用于委托发布；不能为 {@code null}
      */
     @Override
     public void setApplicationEventPublisher(@NonNull ApplicationEventPublisher publisher) {
@@ -28,7 +28,7 @@ public class LocalEventBus implements ApplicationEventPublisherAware, EventBus {
 
     public void publish(Object event) {
         if (publisher == null) {
-            throw new IllegalStateException("LocalEventBus not initialized");
+            throw new IllegalStateException("LocalEventBus 未初始化");
         }
         publisher.publishEvent(event);
     }

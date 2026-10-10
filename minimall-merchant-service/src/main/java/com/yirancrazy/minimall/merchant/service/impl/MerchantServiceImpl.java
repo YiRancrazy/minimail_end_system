@@ -73,7 +73,7 @@ public class MerchantServiceImpl implements MerchantService {
             po.setAuditAt(null);
             merchantManager.updateById(po);
         }
-        log.info("qualification submitted, merchantId={}, merchantName={}", merchantId, dto.getMerchantName());
+        log.info("资质已提交，merchantId={}，merchantName={}", merchantId, dto.getMerchantName());
         return toVO(po);
     }
 
@@ -117,10 +117,10 @@ public class MerchantServiceImpl implements MerchantService {
         po.setAuditAt(LocalDateTime.now());
         // 并发审核时第二个事务受乐观锁版本冲突影响受影响行数为 0，updateById 返回 false，必须显式失败而非静默成功
         if (!merchantManager.updateById(po)) {
-            log.warn("merchant audit conflict, merchantId={}, approved={}", merchantId, approved);
+            log.warn("商家审核冲突，merchantId={}，approved={}", merchantId, approved);
             throw new BizException(MerchantCodeEnum.MERCHANT_ALREADY_AUDITED);
         }
-        log.info("merchant audited, merchantId={}, approved={}", merchantId, approved);
+        log.info("商家审核完成，merchantId={}，approved={}", merchantId, approved);
     }
 
     private MerchantPO getByUserId(Long merchantId) {

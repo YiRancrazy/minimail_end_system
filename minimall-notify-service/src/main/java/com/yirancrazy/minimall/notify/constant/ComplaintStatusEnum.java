@@ -28,8 +28,8 @@ public enum ComplaintStatusEnum implements BaseEnum {
     }
 
     /**
-     * Get the integer code for persistence.
-     * @return the integer code value
+     * 获取用于持久化的整数编码。
+     * @return 整数编码值
      */
     public int intCode() {
         return code;

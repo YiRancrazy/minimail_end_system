@@ -60,7 +60,7 @@ public class IdempotentAspect {
         }
         if (key == null || key.isBlank()) {
             // 未走网关的直连请求无幂等键，幂等检查不阻塞业务
-            log.warn("idempotency key missing, method={}, skip idempotent check",
+            log.warn("幂等键缺失，method={}，跳过幂等校验",
                 pjp.getSignature().toShortString());
             return pjp.proceed();
         }
@@ -107,7 +107,7 @@ public class IdempotentAspect {
             return value == null ? null : String.valueOf(value);
         }
         catch (Exception e) {
-            log.warn("resolve idempotent SpEL key failed, expression={}", expression, e);
+            log.warn("解析幂等 SpEL key 失败，expression={}", expression, e);
             return null;
         }
     }

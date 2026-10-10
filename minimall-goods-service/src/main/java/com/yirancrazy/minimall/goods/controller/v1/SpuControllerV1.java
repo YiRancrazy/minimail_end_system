@@ -50,7 +50,7 @@ public class SpuControllerV1 {
      * 创建 SPU，商家ID来自可信 Header。
      * @param merchantId 商家ID
      * @param dto SPU创建DTO
-     * @return SPU ID
+     * @return SPU 主键 ID
      */
     @PostMapping
     public Result<Long> create(@RequestHeader("X-Merchant-Id") Long merchantId,
@@ -74,7 +74,7 @@ public class SpuControllerV1 {
     /**
      * 根据ID更新 SPU 信息。
      * @param merchantId 商家ID，来自可信Header
-     * @param id SPU ID
+     * @param id SPU 主键 ID
      * @param dto SPU修改DTO
      * @return 更新是否成功
      */
@@ -88,7 +88,7 @@ public class SpuControllerV1 {
     /**
      * 根据ID删除 SPU。
      * @param merchantId 商家ID，来自可信Header
-     * @param id SPU ID
+     * @param id SPU 主键 ID
      * @return 删除是否成功
      */
     @DeleteMapping("/{id}")
@@ -100,7 +100,7 @@ public class SpuControllerV1 {
     /**
      * 上架 SPU。
      * @param merchantId 商家ID，来自可信Header
-     * @param id SPU ID
+     * @param id SPU 主键 ID
      * @return 上架是否成功
      */
     @PutMapping("/{id}/on-shelf")
@@ -112,7 +112,7 @@ public class SpuControllerV1 {
     /**
      * 下架 SPU。
      * @param merchantId 商家ID，来自可信Header
-     * @param id SPU ID
+     * @param id SPU 主键 ID
      * @return 下架是否成功
      */
     @PutMapping("/{id}/off-shelf")

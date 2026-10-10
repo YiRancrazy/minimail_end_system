@@ -22,7 +22,7 @@ import com.yirancrazy.minimall.common.result.Result;
 public class UserFeignFallbackFactory implements FallbackFactory<UserFeignClient> {
     @Override
     public UserFeignClient create(Throwable cause) {
-        log.warn("user-service unreachable: {}", cause.getMessage());
+        log.warn("user-service 不可达: {}", cause.getMessage());
         return new UserFeignClient() {
             @Override
             public Result<UserSnapshotDTO> snapshot(Long id) {
@@ -31,7 +31,7 @@ public class UserFeignFallbackFactory implements FallbackFactory<UserFeignClient
 
             @Override
             public Result<Void> addFavorite(Long userId, Long skuId) {
-                return Result.fail(CommonCode.SYS_ERROR, "user-service unreachable");
+                return Result.fail(CommonCode.SYS_ERROR, "user-service 不可达");
             }
 
             @Override

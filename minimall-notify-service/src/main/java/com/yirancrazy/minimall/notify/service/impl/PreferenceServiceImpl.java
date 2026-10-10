@@ -88,7 +88,7 @@ public class PreferenceServiceImpl implements PreferenceService {
                 preferenceManager.updateById(existing);
             }
         }
-        log.info("preferences batch updated, userId={}, count={}", userId, items.size());
+        log.info("通知偏好批量更新完成，userId={}，count={}", userId, items.size());
     }
 
     /**

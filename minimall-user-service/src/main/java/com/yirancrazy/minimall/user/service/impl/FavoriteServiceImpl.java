@@ -57,14 +57,14 @@ public class FavoriteServiceImpl implements FavoriteService {
             .eq(UserFavoritePO::getUserId, userId)
             .eq(UserFavoritePO::getSkuId, skuId));
         if (exists > 0) {
-            log.info("favorite already exists, userId={}, skuId={}", userId, skuId);
+            log.info("收藏已存在，userId={}，skuId={}", userId, skuId);
             return;
         }
         UserFavoritePO po = new UserFavoritePO();
         po.setUserId(userId);
         po.setSkuId(skuId);
         userFavoriteManager.save(po);
-        log.info("favorite added, userId={}, skuId={}", userId, skuId);
+        log.info("收藏已添加，userId={}，skuId={}", userId, skuId);
     }
 
     /**
@@ -81,7 +81,7 @@ public class FavoriteServiceImpl implements FavoriteService {
         userFavoriteManager.remove(Wrappers.lambdaQuery(UserFavoritePO.class)
             .eq(UserFavoritePO::getUserId, userId)
             .eq(UserFavoritePO::getSkuId, skuId));
-        log.info("favorite removed, userId={}, skuId={}", userId, skuId);
+        log.info("收藏已移除，userId={}，skuId={}", userId, skuId);
     }
 
     /**

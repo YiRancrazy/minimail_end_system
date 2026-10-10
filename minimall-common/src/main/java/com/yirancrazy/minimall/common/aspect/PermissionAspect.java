@@ -53,7 +53,7 @@ public class PermissionAspect {
         String roleCode = extractRoleCode();
         RoleEnum role = RoleEnum.fromCode(roleCode);
         if (role == null) {
-            log.warn("permission denied: unknown role={}", roleCode);
+            log.warn("权限校验失败：未知 role={}", roleCode);
             throw new BizException(CommonCode.FORBIDDEN, "无访问权限");
         }
 
@@ -65,7 +65,7 @@ public class PermissionAspect {
             : hasAnyPermission(effective, required);
 
         if (!authorized) {
-            log.warn("permission denied: role={}, required={}", roleCode, required);
+            log.warn("权限校验失败：role={}，required={}", roleCode, required);
             throw new BizException(CommonCode.FORBIDDEN, "无访问权限");
         }
         return pjp.proceed();
@@ -88,7 +88,7 @@ public class PermissionAspect {
      */
     private Set<PermissionEnum> resolveEffectivePermissions(RoleEnum role, String method) {
         if (redisTemplate == null) {
-            log.warn("permission cache unavailable, deny request. role={}, method={}, exceptionType={}",
+            log.warn("权限缓存不可用，拒绝请求。role={}，method={}，exceptionType={}",
                 role.getCode(), method, "RedisTemplateUnavailable");
             return Collections.emptySet();
         }
@@ -97,17 +97,17 @@ public class PermissionAspect {
             json = redisTemplate.opsForValue().get(RolePermissionMapping.KEY_PREFIX + role.getCode());
         }
         catch (Exception e) {
-            log.warn("permission cache read failed, deny request. role={}, method={}, exceptionType={}",
+            log.warn("权限缓存读取失败，拒绝请求。role={}，method={}，exceptionType={}",
                 role.getCode(), method, e.getClass().getName());
             return Collections.emptySet();
         }
         if (json == null || json.isEmpty()) {
-            log.warn("permission override missing, deny request. role={}, method={}", role.getCode(), method);
+            log.warn("权限覆盖配置缺失，拒绝请求。role={}，method={}", role.getCode(), method);
             return Collections.emptySet();
         }
         Set<PermissionEnum> permissions = RolePermissionMapping.parsePermissions(json);
         if (permissions.isEmpty()) {
-            log.warn("permission override empty, deny request. role={}, method={}", role.getCode(), method);
+            log.warn("权限覆盖配置为空，拒绝请求。role={}，method={}", role.getCode(), method);
         }
         return permissions;
     }

@@ -39,7 +39,7 @@ public class ComplaintServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        // Initialize TableInfo so LambdaQueryWrapper can resolve lambda cache
+        // 初始化 TableInfo，便于 LambdaQueryWrapper 解析 lambda 缓存
         MybatisConfiguration configuration = new MybatisConfiguration();
         MapperBuilderAssistant assistant = new MapperBuilderAssistant(configuration, "");
         assistant.setCurrentNamespace("com.yirancrazy.minimall.notify.mapper.ComplaintMapper");

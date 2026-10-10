@@ -22,7 +22,7 @@ import com.yirancrazy.minimall.common.result.Result;
 public class MerchantFeignFallbackFactory implements FallbackFactory<MerchantFeignClient> {
     @Override
     public MerchantFeignClient create(Throwable cause) {
-        log.warn("merchant-service unreachable: {}", cause.getMessage());
+        log.warn("merchant-service 不可达: {}", cause.getMessage());
         return new MerchantFeignClient() {
             @Override
             public Result<ShopSnapshotDTO> shopSnapshot(Long id) {
@@ -43,7 +43,7 @@ public class MerchantFeignFallbackFactory implements FallbackFactory<MerchantFei
 
             @Override
             public Result<Void> audit(Long merchantId, boolean approved, String reason) {
-                log.warn("merchant audit fallback, merchantId={}, approved={} skipped", merchantId, approved);
+                log.warn("商家审核降级，merchantId={}，approved={}，已跳过", merchantId, approved);
                 return Result.fail(CommonCode.SYS_ERROR, "商家服务不可用");
             }
         };

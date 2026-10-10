@@ -27,8 +27,8 @@ public enum StockCountTaskStatusEnum implements BaseEnum {
     }
 
     /**
-     * Get the integer status code for persistence.
-     * @return the integer code value
+     * 获取用于持久化的整数状态编码。
+     * @return 整数编码值
      */
     public int intCode() {
         return code;

@@ -21,7 +21,7 @@ import com.yirancrazy.minimall.common.result.Result;
 public class PayFeignFallbackFactory implements FallbackFactory<PayFeignClient> {
     @Override
     public PayFeignClient create(Throwable cause) {
-        log.warn("pay-service unreachable: {}", cause.getMessage());
+        log.warn("pay-service 不可达: {}", cause.getMessage());
         return new PayFeignClient() {
             @Override
             public Result<Long> create(PayCreateDTO dto) {
@@ -35,7 +35,7 @@ public class PayFeignFallbackFactory implements FallbackFactory<PayFeignClient> 
 
             @Override
             public Result<List<PayExportItemDTO>> exportTransactions(String startDate, String endDate) {
-                log.warn("pay export-transactions fallback, startDate={}, endDate={} skipped", startDate, endDate);
+                log.warn("支付流水导出降级，startDate={}，endDate={}，已跳过", startDate, endDate);
                 return Result.success(List.of());
             }
         };

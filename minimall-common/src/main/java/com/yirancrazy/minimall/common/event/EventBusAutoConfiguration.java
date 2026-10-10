@@ -24,11 +24,11 @@ public class EventBusAutoConfiguration {
     }
 
     /**
-     * Expose the in-process {@link LocalEventBus} as the default {@link EventBus}
-     * bean when no other implementation is registered in the context.
+     * 将进程内 {@link LocalEventBus} 暴露为默认 {@link EventBus} Bean，
+     * 当上下文中未注册其他实现时使用。
      *
-     * @param local the always-registered {@link LocalEventBus} candidate bean
-     * @return the same {@link LocalEventBus} instance, to be used as the fallback {@link EventBus}
+     * @param local 始终注册的 {@link LocalEventBus} 候选 Bean
+     * @return 同一个 {@link LocalEventBus} 实例，用作兜底 {@link EventBus}
      */
     @Bean
     @ConditionalOnMissingBean(EventBus.class)
@@ -37,14 +37,13 @@ public class EventBusAutoConfiguration {
     }
 
     /**
-     * Register the RocketMQ-backed {@link EventBus} when rocketmq is enabled.
-     * Marked {@link Primary} so it overrides the local fallback in contexts
-     * that opt in to transactional messaging.
+     * 启用 rocketmq 时注册基于 RocketMQ 的 {@link EventBus}。
+     * 标记为 {@link Primary}，使其在启用事务消息的上下文中覆盖本地兜底实现。
      *
-     * @param namesrvAddr the RocketMQ name server address
-     * @param topic the event topic
-     * @param outboxProvider optional {@link OutboxStore} for crash-safe callback
-     * @return a configured {@link RocketMqEventBus}
+     * @param namesrvAddr RocketMQ NameServer 地址
+     * @param topic 事件主题
+     * @param outboxProvider 可选的 {@link OutboxStore}，用于崩溃安全的回调
+     * @return 配置好的 {@link RocketMqEventBus}
      */
     @Bean
     @ConditionalOnProperty(name = "minimall.eventbus.rocketmq.enabled", havingValue = "true")

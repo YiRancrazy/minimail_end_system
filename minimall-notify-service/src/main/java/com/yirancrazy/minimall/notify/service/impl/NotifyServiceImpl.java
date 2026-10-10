@@ -194,21 +194,21 @@ public class NotifyServiceImpl implements NotifyService {
         if (ids.size() > 100) {
             throw new BizException(NotifyCodeEnum.NOTIFY_BATCH_TOO_MANY);
         }
-        // Query all messages by IDs
+        // 按 ID 查询全部消息
         List<NotifyMessagePO> messages = notifyManager.listByIds(ids);
-        // Validate all messages belong to the user
+        // 校验全部消息均属于当前用户
         for (NotifyMessagePO m : messages) {
             if (!recipientType.equals(m.getRecipientType()) || !userId.equals(m.getUserId())) {
                 throw new BizException(NotifyCodeEnum.NOTIFY_NOT_FOUND);
             }
         }
-        // Check if all IDs were found
+        // 检查是否找到全部 ID
         if (messages.size() != ids.size()) {
             throw new BizException(NotifyCodeEnum.NOTIFY_NOT_FOUND);
         }
-        // Batch soft delete
+        // 批量软删除
         notifyManager.removeByIds(ids);
-        log.info("batch deleted messages, count={}, userId={}", ids.size(), userId);
+        log.info("消息已批量删除，count={}，userId={}", ids.size(), userId);
     }
 
     /**
@@ -241,7 +241,7 @@ public class NotifyServiceImpl implements NotifyService {
             m.setUserId(0L);
             notifyManager.save(m);
         }
-        log.info("broadcast notify, recipientType={}, targetId={}",
+        log.info("广播通知已发送，recipientType={}，targetId={}",
             dto.getRecipientType(), dto.getTargetId());
     }
 
@@ -279,7 +279,7 @@ public class NotifyServiceImpl implements NotifyService {
                 sseHub.send(uid, dto.getTitle());
             }
         }
-        log.info("marketing push, userIds={}", dto.getUserIds());
+        log.info("营销消息已推送，userIds={}", dto.getUserIds());
     }
 
     /**
@@ -298,7 +298,7 @@ public class NotifyServiceImpl implements NotifyService {
         m.setReadFlag(0);
         notifyManager.save(m);
         sseHub.send(dto.getMerchantId(), dto.getTitle());
-        log.info("violation warning, merchantId={}, type={}",
+        log.info("违规警告已发送，merchantId={}，type={}",
             dto.getMerchantId(), dto.getViolationType());
     }
 
@@ -317,7 +317,7 @@ public class NotifyServiceImpl implements NotifyService {
         m.setContent(dto.getContent());
         m.setReadFlag(0);
         notifyManager.save(m);
-        log.info("system alert, title={}, level={}", dto.getTitle(), dto.getAlertLevel());
+        log.info("系统告警已发送，title={}，level={}", dto.getTitle(), dto.getAlertLevel());
     }
 
     /**
@@ -354,7 +354,7 @@ public class NotifyServiceImpl implements NotifyService {
         m.setContent(dto.getContent());
         m.setReadFlag(0);
         notifyManager.save(m);
-        log.info("announcement published, title={}", dto.getTitle());
+        log.info("公告已发布，title={}", dto.getTitle());
     }
 
     private NotifyMessagePO getOwnedMessage(Long id, Integer recipientType, Long userId) {

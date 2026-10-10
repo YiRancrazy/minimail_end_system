@@ -22,7 +22,7 @@ public class LocalVaultKeyProvider implements VaultKeyProvider {
         @Value("${minimall.security.aes-key:${MINIMALL_SECURITY_AES_KEY}}") String base64Key) {
         byte[] decoded = Base64.getDecoder().decode(base64Key);
         if (decoded.length != 32) {
-            throw new IllegalArgumentException("AES-256 key must be 32 bytes, got " + decoded.length);
+            throw new IllegalArgumentException("AES-256 密钥必须为 32 字节，实际为 " + decoded.length);
         }
         this.key = decoded;
     }

@@ -67,8 +67,7 @@ public class InternalPayControllerV1 {
     }
 
     /**
-     * Create a refund for an existing payment and notify the order service
-     * of the result so it can advance its status.
+     * 为已有支付创建退款，并将结果通知订单服务，以便订单服务推进状态。
      * 幂等键取网关注入的 X-Idempotency-Key，防内部重复退款重放。
      *
      * @param dto 退款创建参数
@@ -83,7 +82,7 @@ public class InternalPayControllerV1 {
 
     /**
      * 全平台支付流水导出列表，按创建时间倒序，服务端限制最大导出行数。
-     * Internal: 仅内网调用，禁止 Gateway 暴露。
+     * 内部接口：仅内网调用，禁止 Gateway 暴露。
      * @param startDate 起始日期（yyyy-MM-dd），null 表示不限制
      * @param endDate 结束日期（yyyy-MM-dd），null 表示不限制
      * @return 支付流水导出项列表

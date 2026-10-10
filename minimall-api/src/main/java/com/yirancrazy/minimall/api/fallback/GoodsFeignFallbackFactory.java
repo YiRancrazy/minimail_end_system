@@ -22,7 +22,7 @@ import com.yirancrazy.minimall.common.result.Result;
 public class GoodsFeignFallbackFactory implements FallbackFactory<GoodsFeignClient> {
     @Override
     public GoodsFeignClient create(Throwable cause) {
-        log.warn("goods-service unreachable: {}", cause.getMessage());
+        log.warn("goods-service 不可达: {}", cause.getMessage());
         return new GoodsFeignClient() {
             @Override
             public Result<SkuSnapshotDTO> skuSnapshot(Long id) {

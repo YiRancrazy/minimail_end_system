@@ -11,17 +11,16 @@ import java.util.function.Function;
  */
 public interface EventBus {
     /**
-     * Publish an event as a plain message.
-     * @param event the domain event to publish
+     * 以普通消息发布事件。
+     * @param event 要发布的领域事件
      */
     void publish(Object event);
 
     /**
-     * Publish an event with a local transaction. Default implementation runs
-     * the local transaction then publishes, which is NOT atomic. RocketMQ
-     * implementations override this with half-message semantics.
-     * @param event the domain event to publish
-     * @param localTx the local transaction to execute before committing the message
+     * 以本地事务发布事件。默认实现先执行本地事务再发布，因此不具备原子性。
+     * RocketMQ 实现通过半消息语义覆盖该行为。
+     * @param event 要发布的领域事件
+     * @param localTx 提交消息前要执行的本地事务
      */
     default void publishInTx(Object event, Consumer<String> localTx) {
         localTx.accept(null);
@@ -29,12 +28,11 @@ public interface EventBus {
     }
 
     /**
-     * Publish an event with a local transaction and a checker for broker
-     * callback. The checker probes whether the local transaction committed,
-     * so the broker can commit or roll back an unconfirmed half-message.
-     * @param event the domain event to publish
-     * @param localTx the local transaction to execute before committing the message
-     * @param checker returns true if the local transaction committed, false to roll back
+     * 使用本地事务和 broker 回调 checker 发布事件。checker 用于探测本地事务是否已提交，
+     * 从而使 broker 可以提交或回滚未确认的半消息。
+     * @param event 要发布的领域事件
+     * @param localTx 提交消息前要执行的本地事务
+     * @param checker 本地事务已提交返回 true，回滚返回 false
      */
     default void publishInTx(Object event, Consumer<String> localTx, Function<Object, Boolean> checker) {
         publishInTx(event, localTx);

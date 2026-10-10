@@ -90,7 +90,7 @@ public final class SensitiveDataUtils {
      * Token脱敏
      * <p>保留前4位和后4位，中间用*替换</p>
      *
-     * @param token Token
+     * @param token Token 值
      * @return 脱敏后的Token
      */
     public static String maskToken(String token) {

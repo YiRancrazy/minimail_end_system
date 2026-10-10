@@ -133,12 +133,12 @@ public class SkuServiceImpl implements SkuService {
             Result<Void> r = stockFeignClient.initStock(
                 new StockInitDTO(sku.getId(), merchantId, sku.getStock()));
             if (r == null || !CommonCode.SUCCESS.equals(r.getCode())) {
-                log.warn("init stock failed, skuId={}, msg={}", sku.getId(),
-                    r == null ? "no response" : r.getMessage());
+                log.warn("初始化库存失败，skuId={}，msg={}", sku.getId(),
+                    r == null ? "无响应" : r.getMessage());
             }
         }
         catch (Exception e) {
-            log.warn("init stock error, skuId={}", sku.getId(), e);
+            log.warn("初始化库存异常，skuId={}", sku.getId(), e);
         }
     }
 
@@ -230,7 +230,7 @@ public class SkuServiceImpl implements SkuService {
             adjustStock(skuId, merchantId, delta, "商品规格库存调整回滚");
         }
         catch (Exception e) {
-            log.error("rollback stock adjustment failed, skuId={}, quantity={}", skuId, delta, e);
+            log.error("回滚库存调整失败，skuId={}，quantity={}", skuId, delta, e);
         }
     }
 

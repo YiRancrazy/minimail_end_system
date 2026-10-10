@@ -96,12 +96,12 @@ public class CartServiceImpl implements CartService {
         int affected = cartItemMapper.upsertQuantity(
             IdWorker.getId(), userId, dto.getSkuId(), dto.getQuantity(), selected);
         if (affected <= 0) {
-            log.error("cart item upsert affected no rows, userId={}, skuId={}", userId, dto.getSkuId());
+            log.error("购物车商品 upsert 未影响任何行，userId={}，skuId={}", userId, dto.getSkuId());
             throw new BizException(CommonCode.SYS_ERROR, "购物车更新失败");
         }
         CartItemPO item = cartItemManager.getByUserIdAndSkuId(userId, dto.getSkuId());
         if (item == null) {
-            log.error("cart item upsert succeeded but row is not readable, userId={}, skuId={}",
+            log.error("购物车商品 upsert 成功但无法读取记录，userId={}，skuId={}",
                 userId, dto.getSkuId());
             throw new BizException(CommonCode.SYS_ERROR, "购物车更新失败");
         }
@@ -208,7 +208,7 @@ public class CartServiceImpl implements CartService {
         for (CartItemPO item : items) {
             Result<Void> result = userFeignClient.addFavorite(userId, item.getSkuId());
             if (result == null || !CommonCode.SUCCESS.equals(result.getCode())) {
-                log.error("moveToFavorite feign addFavorite failed, userId={}, skuId={}, code={}",
+                log.error("moveToFavorite 调用 addFavorite 失败，userId={}，skuId={}，code={}",
                     userId, item.getSkuId(), result == null ? null : result.getCode());
                 throw new BizException(CartCodeEnum.MOVE_TO_FAVORITE_FAIL);
             }
@@ -217,6 +217,6 @@ public class CartServiceImpl implements CartService {
             // 删除失败抛异常触发事务回滚，购物车条目保持原状，由调用方重试
             throw new BizException(CartCodeEnum.MOVE_TO_FAVORITE_FAIL);
         }
-        log.info("cart items moved to favorite, userId={}, itemIds={}", userId, itemIds);
+        log.info("购物车商品已移入收藏，userId={}，itemIds={}", userId, itemIds);
     }
 }

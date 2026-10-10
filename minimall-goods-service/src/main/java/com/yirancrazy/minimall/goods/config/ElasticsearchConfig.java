@@ -35,19 +35,19 @@ public class ElasticsearchConfig {
         return args -> {
             IndexOperations ops = elasticsearchOperations.indexOps(SpuDocument.class);
             if (ops.exists() && hasIkAnalyzer(ops)) {
-                log.info("ES index {} already has ik analyzer, skip recreate",
+                log.info("ES 索引 {} 已包含 ik 分词器，跳过重建",
                     SpuDocument.class.getSimpleName());
             }
             else {
                 // 索引缺失或缺 ik 分词器 → 重建，保证 title 中文分词生效
                 if (ops.exists()) {
                     ops.delete();
-                    log.warn("ES index recreated due to missing ik analyzer");
+                    log.warn("ES 索引缺少 ik 分词器，已重建");
                 }
                 ops = elasticsearchOperations.indexOps(SpuDocument.class);
                 ops.create();
                 ops.putMapping(ops.createMapping());
-                log.info("ES index created with ik mapping");
+                log.info("ES 索引已使用 ik mapping 创建");
             }
             spuService.rebuildAllEsDocuments();
         };

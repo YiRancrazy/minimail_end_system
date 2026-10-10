@@ -18,7 +18,7 @@ public interface CartItemMapper extends BaseMapper<CartItemPO> {
      *
      * @param id 新记录候选主键；重复键命中时保留数据库已有主键
      * @param userId 用户ID
-     * @param skuId SKU ID
+     * @param skuId SKU 主键 ID
      * @param quantity 本次增加数量
      * @param selected 是否选中：0=否 1=是
      * @return 受影响行数

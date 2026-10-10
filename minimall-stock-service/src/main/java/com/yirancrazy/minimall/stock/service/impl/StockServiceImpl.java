@@ -149,7 +149,7 @@ public class StockServiceImpl implements StockService {
                 recordJournal(skuId, quantity.longValue(), StockJournalTypeEnum.RELEASE, null, orderNo);
             }
             catch (DuplicateKeyException e) {
-                log.info("stock release already recorded, skuId={}, orderNo={}", skuId, orderNo);
+                log.info("库存释放已记录，skuId={}，orderNo={}", skuId, orderNo);
                 return true;
             }
         }
@@ -195,7 +195,7 @@ public class StockServiceImpl implements StockService {
         if (initQty > 0) {
             recordJournal(skuId, initQty, StockJournalTypeEnum.ADJUST, "商品创建初始库存", null);
         }
-        log.info("stock initialized, skuId={}, merchantId={}, initial={}", skuId, merchantId, initQty);
+        log.info("库存已初始化，skuId={}，merchantId={}，initial={}", skuId, merchantId, initQty);
     }
 
     /**
@@ -246,7 +246,7 @@ public class StockServiceImpl implements StockService {
         if (!stockManager.updateById(po)) {
             throw new BizException(StockCodeEnum.STOCK_CONCURRENT_UPDATE);
         }
-        log.info("threshold set, skuId={}, threshold={}", skuId, threshold);
+        log.info("库存阈值已设置，skuId={}，threshold={}", skuId, threshold);
     }
 
     /**
@@ -267,7 +267,7 @@ public class StockServiceImpl implements StockService {
         if (!stockManager.updateById(po)) {
             throw new BizException(StockCodeEnum.STOCK_CONCURRENT_UPDATE);
         }
-        log.info("threshold set, skuId={}, merchantId={}, threshold={}",
+        log.info("库存阈值已设置，skuId={}，merchantId={}，threshold={}",
             skuId, merchantId, threshold);
     }
 
@@ -297,7 +297,7 @@ public class StockServiceImpl implements StockService {
 
         recordJournal(skuId, quantity, StockJournalTypeEnum.ADJUST, reason, null);
         checkAlert(po);
-        log.info("stock adjusted, skuId={}, quantity={}", skuId, quantity);
+        log.info("库存已调整，skuId={}，quantity={}", skuId, quantity);
     }
 
     /**
@@ -326,7 +326,7 @@ public class StockServiceImpl implements StockService {
 
         recordJournal(skuId, quantity, StockJournalTypeEnum.ADJUST, reason, null);
         checkAlert(po);
-        log.info("stock adjusted, skuId={}, merchantId={}, quantity={}",
+        log.info("库存已调整，skuId={}，merchantId={}，quantity={}",
             skuId, merchantId, quantity);
     }
 
@@ -477,7 +477,7 @@ public class StockServiceImpl implements StockService {
 
         checkAlert(from);
         checkAlert(to);
-        log.info("stock transfer, from={}, to={}, quantity={}",
+        log.info("库存已调拨，from={}，to={}，quantity={}",
             dto.getFromSkuId(), dto.getToSkuId(), dto.getQuantity());
     }
 
@@ -521,7 +521,7 @@ public class StockServiceImpl implements StockService {
         task.setRemark(dto.getRemark());
         task.setOperatorId(dto.getOperatorId());
         countTaskManager.save(task);
-        log.info("count task created, id={}, skuId={}, expected={}",
+        log.info("盘点任务已创建，id={}，skuId={}，expected={}",
             task.getId(), dto.getSkuId(), po.getAvailable());
         return task.getId();
     }
@@ -582,7 +582,7 @@ public class StockServiceImpl implements StockService {
         if (diffQuantity != 0) {
             adjustStock(task.getSkuId(), diffQuantity, "盘点差异调整");
         }
-        log.info("count task completed, id={}, skuId={}, diff={}",
+        log.info("盘点任务已完成，id={}，skuId={}，diff={}",
             id, task.getSkuId(), diffQuantity);
     }
 
@@ -608,7 +608,7 @@ public class StockServiceImpl implements StockService {
             throw new BizException(StockCodeEnum.STOCK_COUNT_TASK_NOT_PENDING);
         }
         task.setStatus(StockCountTaskStatusEnum.CANCELLED.intCode());
-        log.info("count task cancelled, id={}, operator={}", id, operatorId);
+        log.info("盘点任务已取消，id={}，operator={}", id, operatorId);
     }
 
     /**
@@ -647,7 +647,7 @@ public class StockServiceImpl implements StockService {
         }
 
         recordJournal(skuId, delta, StockJournalTypeEnum.CORRECT, reason, null);
-        log.info("stock corrected, skuId={}, from={}, to={}", skuId, oldAvailable, correctQuantity);
+        log.info("库存已修正，skuId={}，from={}，to={}", skuId, oldAvailable, correctQuantity);
     }
 
     /**
@@ -744,7 +744,7 @@ public class StockServiceImpl implements StockService {
      */
     private void checkAlert(StockPO po) {
         if (po.getAlertThreshold() != null && po.getAvailable() <= po.getAlertThreshold()) {
-            log.warn("stock alert, skuId={}, available={}, threshold={}",
+            log.warn("库存告警，skuId={}，available={}，threshold={}",
                 po.getSkuId(), po.getAvailable(), po.getAlertThreshold());
         }
     }

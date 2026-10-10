@@ -18,21 +18,21 @@ public interface OutboxStore {
     }
 
     /**
-     * Record that the local transaction for the given message committed.
-     * @param messageKey the RocketMQ transaction id or message key
+     * 记录给定消息的本地事务已提交。
+     * @param messageKey RocketMQ 事务 ID 或消息 key
      */
     void recordCommit(String messageKey);
 
     /**
-     * Probe whether the local transaction for the given message committed.
-     * @param messageKey the RocketMQ transaction id or message key
-     * @return true if committed; false otherwise
+     * 探测给定消息的本地事务是否已提交。
+     * @param messageKey RocketMQ 事务 ID 或消息 key
+     * @return 已提交返回 true；否则返回 false
      */
     boolean isCommitted(String messageKey);
 
     /**
      * 查询本地事务状态。默认实现兼容只有提交记录的历史存储，未命中按待确认处理。
-     * @param messageKey the RocketMQ transaction id or message key
+     * @param messageKey RocketMQ 事务 ID 或消息 key
      * @return 本地事务提交状态
      */
     default CommitStatus commitStatus(String messageKey) {

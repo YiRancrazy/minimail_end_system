@@ -57,7 +57,7 @@ public class CommentServiceImpl implements CommentService {
     public Long create(Long userId, CommentCreateDTO dto) {
         OrderCommentEligibilityDTO eligibility = loadEligibility(userId, dto);
         if (!eligibility.isEligible()) {
-            log.warn("comment rejected, order not eligible, userId={}, orderNo={}, spuId={}",
+            log.warn("评价已拒绝，订单不符合条件，userId={}，orderNo={}，spuId={}",
                 userId, dto.getOrderNo(), dto.getSpuId());
             throw new BizException(NotifyCodeEnum.COMMENT_ORDER_NOT_PURCHASED);
         }
@@ -82,11 +82,11 @@ public class CommentServiceImpl implements CommentService {
         }
         catch (DuplicateKeyException e) {
             // 唯一索引兜底：并发重复提交时仅一条落库，其余转为明确业务错误
-            log.warn("duplicate comment rejected by unique index, userId={}, orderNo={}, spuId={}",
+            log.warn("唯一索引拒绝重复评价，userId={}，orderNo={}，spuId={}",
                 userId, dto.getOrderNo(), dto.getSpuId());
             throw new BizException(NotifyCodeEnum.COMMENT_ALREADY_EXISTS);
         }
-        log.info("comment created, id={}, userId={}, spuId={}, orderNo={}",
+        log.info("评价已创建，id={}，userId={}，spuId={}，orderNo={}",
                 po.getId(), userId, dto.getSpuId(), dto.getOrderNo());
         return po.getId();
     }
@@ -104,12 +104,12 @@ public class CommentServiceImpl implements CommentService {
             result = orderFeignClient.commentEligibility(dto.getOrderNo(), userId, dto.getSpuId());
         }
         catch (Exception e) {
-            log.error("order comment eligibility call failed, orderNo={}, userId={}",
+            log.error("订单评价资格查询失败，orderNo={}，userId={}",
                 dto.getOrderNo(), userId, e);
             throw new BizException(NotifyCodeEnum.COMMENT_ORDER_SERVICE_UNAVAILABLE);
         }
         if (result == null || !CommonCode.SUCCESS.equals(result.getCode()) || result.getData() == null) {
-            log.warn("order comment eligibility unavailable, orderNo={}, result={}", dto.getOrderNo(), result);
+            log.warn("订单评价资格服务不可用，orderNo={}，result={}", dto.getOrderNo(), result);
             throw new BizException(NotifyCodeEnum.COMMENT_ORDER_SERVICE_UNAVAILABLE);
         }
         return result.getData();
@@ -166,7 +166,7 @@ public class CommentServiceImpl implements CommentService {
         po.setMerchantReply(reply);
         po.setMerchantReplyTime(LocalDateTime.now());
         commentManager.updateById(po);
-        log.info("comment replied, id={}, merchantId={}", id, merchantId);
+        log.info("评价已回复，id={}，merchantId={}", id, merchantId);
     }
 
     /**

@@ -47,13 +47,13 @@ public final class IdServiceImpl implements IdService {
      */
     private static long parseNodeId(String value, String name) {
         if (value == null || value.isBlank()) {
-            throw new IllegalStateException("missing minimall.id." + name);
+            throw new IllegalStateException("缺少配置项 minimall.id." + name);
         }
         try {
             return Long.parseLong(value.trim());
         }
         catch (NumberFormatException e) {
-            throw new IllegalStateException("invalid minimall.id." + name + ": " + value, e);
+            throw new IllegalStateException("配置项 minimall.id." + name + " 非法：" + value, e);
         }
     }
 }

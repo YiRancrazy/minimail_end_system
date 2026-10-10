@@ -19,30 +19,27 @@
       <optional>true</optional>
     </dependency>
     <!--
-      The gateway intentionally does NOT depend on minimall-common: that module
-      pulls in spring-boot-starter-web and springdoc-openapi-starter-webmvc-ui
-      via transitive dependencies, which then register the Servlet MVC auto
-      configuration and compete with Spring Cloud Gateway's reactive web
-      factory. Keeping gateway free of those classes lets Reactor Netty start
-      cleanly.
+      网关刻意不依赖 minimall-common：该模块会通过传递依赖引入
+      spring-boot-starter-web 和 springdoc-openapi-starter-webmvc-ui，
+      进而注册 Servlet MVC 自动配置，并与 Spring Cloud Gateway 的响应式 Web
+      工厂冲突。网关不引入这些类后，Reactor Netty 才能正常启动。
     -->
     <dependency><groupId>org.springframework.cloud</groupId><artifactId>spring-cloud-starter-gateway</artifactId></dependency>
     <!--
-      spring-cloud-starter-gateway already pulls in spring-boot-starter-webflux,
-      but declaring it explicitly here guarantees that Spring Boot's
-      ReactiveWebServerFactoryAutoConfiguration is loaded even when the
-      implicit transitive graph is reshuffled by Maven's nearest-wins rules.
+      spring-cloud-starter-gateway 已传递引入 spring-boot-starter-webflux，
+      但这里显式声明可确保即使 Maven 的最近优先规则重排传递依赖，
+      Spring Boot 的 ReactiveWebServerFactoryAutoConfiguration 仍会加载。
     -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-webflux</artifactId>
     </dependency>
     <!--
-      spring-boot-starter-webflux does NOT pull in jakarta.servlet-api on its
-      own, but Spring Boot's ReactiveWebServerFactoryAutoConfiguration
-      @ConditionalOnClass({Servlet.class, HttpHandler.class}) needs the
-      Servlet class on the classpath. Adding the servlet API at provided scope
-      satisfies the condition without bringing a servlet container.
+      spring-boot-starter-webflux 不会自行引入 jakarta.servlet-api，但
+      Spring Boot 的 ReactiveWebServerFactoryAutoConfiguration
+      @ConditionalOnClass({Servlet.class, HttpHandler.class}) 要求 classpath
+      中存在 Servlet 类。以 provided 作用域引入 servlet API 即可满足条件，
+      且不会带入 Servlet 容器。
     -->
     <dependency>
       <groupId>jakarta.servlet</groupId>

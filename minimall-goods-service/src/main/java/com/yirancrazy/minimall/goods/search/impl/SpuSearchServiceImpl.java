@@ -99,7 +99,7 @@ public class SpuSearchServiceImpl implements SpuSearchService {
     @Override
     public void sync(SpuDocument document) {
         elasticsearchOperations.save(document);
-        log.info("spu synced to ES, spuId={}", document.getSpuId());
+        log.info("spu 已同步到 ES，spuId={}", document.getSpuId());
     }
 
     /**
@@ -109,7 +109,7 @@ public class SpuSearchServiceImpl implements SpuSearchService {
     @Override
     public void deleteById(Long id) {
         elasticsearchOperations.delete(String.valueOf(id), SpuDocument.class);
-        log.info("spu deleted from ES, spuId={}", id);
+        log.info("spu 已从 ES 删除，spuId={}", id);
     }
 
     private RangeQuery.Builder configurePriceRange(RangeQuery.Builder rq, Long minPrice, Long maxPrice) {

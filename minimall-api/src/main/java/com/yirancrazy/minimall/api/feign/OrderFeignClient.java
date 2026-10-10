@@ -57,9 +57,9 @@ public interface OrderFeignClient {
     Result<Void> payByOrderNo(@PathVariable("orderNo") String orderNo);
 
     /**
-     * Notify the order service of the cumulative refund result.
-     * @param dto refund callback payload
-     * @return refund callback result
+     * 通知 order-service 累加退款结果。
+     * @param dto 退款回调载荷
+     * @return 退款回调结果
      */
     @PostMapping("/internal/order/refund-callback")
     Result<Void> refundCallback(@RequestBody RefundCallbackDTO dto);

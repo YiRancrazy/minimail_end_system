@@ -24,9 +24,9 @@ public interface PayFeignClient {
     Result<Long> create(@RequestBody PayCreateDTO dto);
 
     /**
-     * Create a refund for an existing payment.
-     * @param dto the refund creation request
-     * @return true if the refund was created and processed successfully
+     * 为已有支付创建退款。
+     * @param dto 退款创建请求
+     * @return 退款创建并处理成功时返回 true
      */
     @PostMapping("/internal/pay/refund")
     Result<Boolean> refund(@RequestBody RefundCreateDTO dto);

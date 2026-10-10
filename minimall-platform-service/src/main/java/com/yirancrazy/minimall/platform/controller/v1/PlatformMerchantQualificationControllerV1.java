@@ -54,7 +54,7 @@ public class PlatformMerchantQualificationControllerV1 {
         query.setStatus(0);
         Result<CursorPageVO<MerchantManageVO>> result = merchantFeignClient.pageManage(query);
         if (result == null || !CommonCode.SUCCESS.equals(result.getCode())) {
-            log.warn("list pending merchant qualifications failed, cursor={}, limit={}", cursor, limit);
+            log.warn("查询待审核商家资质失败，cursor={}，limit={}", cursor, limit);
             throw new BizException(CommonCode.SYS_ERROR, "商家服务处理失败");
         }
         CursorPageVO<MerchantManageVO> page = result.getData();
@@ -106,11 +106,11 @@ public class PlatformMerchantQualificationControllerV1 {
     @PostMapping("/{merchantId}/qualifications/audit")
     public Result<Void> audit(@PathVariable Long merchantId,
                                @Valid @RequestBody MerchantQualificationAuditDTO dto) {
-        log.info("platform audit merchant qualification, merchantId={}, qualificationId={}, approved={}, reason={}",
+        log.info("平台审核商家资质，merchantId={}，qualificationId={}，approved={}，reason={}",
                 merchantId, dto.getQualificationId(), dto.getApproved(), dto.getReason());
         Result<Void> r = merchantFeignClient.audit(merchantId, dto.getApproved(), dto.getReason());
         if (r == null || !CommonCode.SUCCESS.equals(r.getCode())) {
-            log.warn("merchant audit rejected by merchant-service, merchantId={}, result={}", merchantId, r);
+            log.warn("merchant-service 拒绝商家审核，merchantId={}，result={}", merchantId, r);
             throw new BizException(CommonCode.SYS_ERROR, "商家服务处理失败");
         }
         return Result.success(null);

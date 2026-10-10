@@ -48,12 +48,12 @@ public class OrderScheduleHandler {
         String lockKey = "order:schedule:scanExpiredOrders";
         String lockToken = tryLock(lockKey);
         if (lockToken == null) {
-            log.debug("scanExpiredOrders skipped, lock held by another instance");
+            log.debug("scanExpiredOrders 已跳过，锁被其他实例持有");
             return;
         }
         try {
             int count = orderService.scanExpiredOrders();
-            log.debug("scanExpiredOrders tick, processed={}", count);
+            log.debug("scanExpiredOrders 执行完成，processed={}", count);
         }
         finally {
             releaseLock(lockKey, lockToken);
@@ -68,12 +68,12 @@ public class OrderScheduleHandler {
         String lockKey = "order:schedule:scanAutoConfirm";
         String lockToken = tryLock(lockKey);
         if (lockToken == null) {
-            log.debug("scanAutoConfirm skipped, lock held by another instance");
+            log.debug("scanAutoConfirm 已跳过，锁被其他实例持有");
             return;
         }
         try {
             int count = orderService.scanAutoConfirm();
-            log.debug("scanAutoConfirm tick, processed={}", count);
+            log.debug("scanAutoConfirm 执行完成，processed={}", count);
         }
         finally {
             releaseLock(lockKey, lockToken);
@@ -92,7 +92,7 @@ public class OrderScheduleHandler {
         }
         try {
             int count = orderService.scanStockReleasePending();
-            log.debug("scanStockReleasePending tick, processed={}", count);
+            log.debug("scanStockReleasePending 执行完成，processed={}", count);
         }
         finally {
             releaseLock(lockKey, lockToken);
@@ -120,7 +120,7 @@ public class OrderScheduleHandler {
             redisTemplate.execute(RELEASE_LOCK_SCRIPT, List.of(key), token);
         }
         catch (Exception e) {
-            log.warn("release schedule lock failed, key={}", key, e);
+            log.warn("释放定时任务锁失败，key={}", key, e);
         }
     }
 }

@@ -31,7 +31,7 @@ public class SpuVO {
     /**
      * 将 SpuPO 转换为 SpuVO。
      * @param po SPU持久化对象
-     * @return SPU VO
+     * @return SPU 视图对象
      */
     public static SpuVO from(SpuPO po) {
         SpuVO vo = new SpuVO();

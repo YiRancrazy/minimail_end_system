@@ -29,7 +29,7 @@ public class PayScheduleHandler {
     @Scheduled(fixedDelayString = "${minimall.schedule.scan-callback-ms:30000}")
     public void scanPaidButOrderPending() {
         int count = payService.scanPaidButOrderPending();
-        log.debug("scanPaidButOrderPending tick, processed={}", count);
+        log.debug("scanPaidButOrderPending 执行，processed={}", count);
     }
 
     /**
@@ -38,7 +38,7 @@ public class PayScheduleHandler {
     @Scheduled(fixedDelayString = "${minimall.schedule.scan-callback-ms:30000}")
     public void scanUnnotifiedRefunds() {
         int count = payService.scanUnnotifiedRefunds();
-        log.debug("scanUnnotifiedRefunds tick, processed={}", count);
+        log.debug("scanUnnotifiedRefunds 执行，processed={}", count);
     }
 
     /**
@@ -47,6 +47,6 @@ public class PayScheduleHandler {
     @Scheduled(fixedDelayString = "${minimall.schedule.scan-refund-ms:30000}")
     public void scanPendingRefunds() {
         int count = payService.scanPendingRefunds();
-        log.debug("scanPendingRefunds tick, processed={}", count);
+        log.debug("scanPendingRefunds 执行，processed={}", count);
     }
 }

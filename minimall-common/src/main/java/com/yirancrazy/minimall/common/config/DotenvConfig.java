@@ -12,7 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: Load .env file and set as system properties, only from file not system env.
+ * @Description: 加载 .env 文件并设置为系统属性，只读取文件，不读取系统环境变量。
  * @Version: 1.1
  * @DateTime: 2026/08/01
  */
@@ -23,7 +23,7 @@ public class DotenvConfig implements ApplicationContextInitializer {
     public void initialize(ConfigurableApplicationContext applicationContext) {
         Path envFile = findEnvFile();
         if (envFile == null) {
-            log.info(".env file not found, skipping");
+            log.info(".env 文件不存在，已跳过");
             return;
         }
 
@@ -41,24 +41,24 @@ public class DotenvConfig implements ApplicationContextInitializer {
                 }
                 String key = line.substring(0, eq).trim();
                 String value = line.substring(eq + 1).trim();
-                // remove surrounding quotes
+            // 去掉首尾引号
                 if ((value.startsWith("\"") && value.endsWith("\""))
                         || (value.startsWith("'") && value.endsWith("'"))) {
                     value = value.substring(1, value.length() - 1);
                 }
                 System.setProperty(key, value);
                 count++;
-                log.debug("Loaded .env: {}={}", key, redactedValue(key, value));
+                log.debug("已加载 .env: {}={}", key, redactedValue(key, value));
             }
-            log.info("Loaded {} entries from .env file", count);
+            log.info("已从 .env 文件加载 {} 条配置", count);
         }
         catch (IOException e) {
-            log.warn("Failed to read .env file: {}", e.getMessage());
+            log.warn("读取 .env 文件失败: {}", e.getMessage());
         }
     }
 
     private Path findEnvFile() {
-        // search from working dir up to 3 levels
+        // 从工作目录向上最多搜索 3 层
         Path dir = Paths.get(System.getProperty("user.dir"));
         for (int i = 0; i < 4; i++) {
             Path env = dir.resolve(".env");

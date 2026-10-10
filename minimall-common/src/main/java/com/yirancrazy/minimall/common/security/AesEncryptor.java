@@ -49,7 +49,7 @@ public final class AesEncryptor {
             return Base64.getEncoder().encodeToString(combined);
         }
         catch (Exception e) {
-            throw new IllegalStateException("AES encryption failed", e);
+            throw new IllegalStateException("AES 加密失败", e);
         }
     }
 
@@ -86,7 +86,7 @@ public final class AesEncryptor {
             throw e;
         }
         catch (Exception e) {
-            throw new IllegalStateException("AES decryption failed", e);
+            throw new IllegalStateException("AES 解密失败", e);
         }
     }
 }

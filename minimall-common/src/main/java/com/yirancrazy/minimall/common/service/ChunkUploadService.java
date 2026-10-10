@@ -262,7 +262,7 @@ public class ChunkUploadService {
      * @param totalChunks 总分片数
      * @param contentType 内容类型
      * @param fileName 原始文件名，用于生成 objectKey 后缀（可空）
-     * @return MinIO objectKey
+     * @return MinIO 对象 key
      */
     private String mergeAndUpload(String uploadId, int totalChunks, String contentType, String fileName) {
         Path dir = taskDir(uploadId);

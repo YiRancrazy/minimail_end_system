@@ -26,10 +26,15 @@ import com.yirancrazy.minimall.merchant.entity.ShopPO;
 import com.yirancrazy.minimall.merchant.manager.MerchantManager;
 import com.yirancrazy.minimall.merchant.manager.ShopManager;
 import com.yirancrazy.minimall.merchant.service.impl.ShopServiceImpl;
+import com.yirancrazy.minimall.merchant.vo.ShopVO;
+
 
 /**
- * ShopServiceImpl 单元测试，覆盖查询、创建、更新、删除的正常、失败、边界路径及商家归属校验。
- */
+ * @Author: yirancrazy@gmail.com
+ * @Description: ShopServiceImplTest 单元测试。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 public class ShopServiceImplTest {
 
     private ShopManager shopManager;
@@ -67,10 +72,10 @@ public class ShopServiceImplTest {
         return s;
     }
 
+
     /**
-     * 验证 getById 在本商家名下店铺存在时返回实体。
+     * 获取相关数据。
      */
-    @Test
     public void getById_returns_shop_when_exists() {
         when(shopManager.getById(10L)).thenReturn(ownerShop(10L, 1L));
 
@@ -79,37 +84,60 @@ public class ShopServiceImplTest {
         assertEquals("shop-10", result.getShopName());
     }
 
+
     /**
-     * 验证 getById 在店铺不存在时抛出 BizException。
+     * 获取相关数据。
      */
-    @Test
     public void getById_throws_when_missing() {
         when(shopManager.getById(999L)).thenReturn(null);
         assertThrows(BizException.class, () -> service.getById(1L, 999L));
     }
 
+
     /**
-     * 验证 getById 越权访问他人店铺时按"店铺不存在"抛出 BizException。
+     * 获取相关数据。
      */
-    @Test
     public void getById_throws_when_not_owner() {
         when(shopManager.getById(10L)).thenReturn(ownerShop(10L, 2L));
         assertThrows(BizException.class, () -> service.getById(1L, 10L));
     }
 
+
     /**
-     * 验证 getById 对未回填归属的历史数据（merchantId 为空）按"店铺不存在"处理。
+     * 获取相关数据。
      */
-    @Test
     public void getById_throws_when_merchant_id_missing() {
         when(shopManager.getById(10L)).thenReturn(ownerShop(10L, null));
         assertThrows(BizException.class, () -> service.getById(1L, 10L));
     }
 
+
     /**
-     * 验证 list 只查询当前商家名下店铺（merchant_id 条件强制生效）。
+     * 获取相关数据。
      */
-    @Test
+    public void getVO_returns_shop_vo_when_exists() {
+        when(shopManager.getById(10L)).thenReturn(ownerShop(10L, 1L));
+
+        ShopVO result = service.getVO(1L, 10L);
+
+        assertEquals(10L, result.getId());
+        assertEquals(1L, result.getMerchantId());
+        assertEquals("shop-10", result.getShopName());
+    }
+
+
+    /**
+     * 获取相关数据。
+     */
+    public void getVO_throws_when_not_owner() {
+        when(shopManager.getById(10L)).thenReturn(ownerShop(10L, 2L));
+        assertThrows(BizException.class, () -> service.getVO(1L, 10L));
+    }
+
+
+    /**
+     * 查询列表数据。
+     */
     public void list_filters_by_merchant_id() {
         when(shopManager.list(any(QueryWrapper.class)))
                 .thenReturn(java.util.List.of(ownerShop(10L, 1L)));
@@ -125,10 +153,25 @@ public class ShopServiceImplTest {
                 () -> "sqlSegment=" + q.getCustomSqlSegment());
     }
 
+
     /**
-     * 验证 create 持久化店铺并绑定归属商家、返回新 ID；新店状态由服务端固定为营业中。
+     * 查询列表数据。
      */
-    @Test
+    public void listVO_maps_entities_to_views() {
+        when(shopManager.list(any(QueryWrapper.class)))
+                .thenReturn(java.util.List.of(ownerShop(10L, 1L), ownerShop(11L, 1L)));
+
+        java.util.List<ShopVO> result = service.listVO(1L, null, 20);
+
+        assertEquals(2, result.size());
+        assertEquals(10L, result.get(0).getId());
+        assertEquals(11L, result.get(1).getId());
+    }
+
+
+    /**
+     * 创建业务数据。
+     */
     public void create_persists_and_returns_id() {
         when(merchantManager.getOne(any())).thenReturn(approvedMerchant(1L));
         ShopCreateDTO dto = new ShopCreateDTO();
@@ -143,10 +186,10 @@ public class ShopServiceImplTest {
         assertEquals(ShopStatusEnum.ACTIVE.intCode(), captor.getValue().getStatus());
     }
 
+
     /**
-     * 验证 create 在商家资质未审核通过（未提交/待审/驳回）时拒绝开店。
+     * 创建业务数据。
      */
-    @Test
     public void create_throws_when_merchant_not_approved() {
         when(merchantManager.getOne(any())).thenReturn(null);
         ShopCreateDTO dto = new ShopCreateDTO();
@@ -162,10 +205,10 @@ public class ShopServiceImplTest {
         assertThrows(BizException.class, () -> service.create(1L, dto));
     }
 
+
     /**
-     * 验证 update 在本人名下店铺时调用 updateById 并返回其结果。
+     * 更新业务数据。
      */
-    @Test
     public void update_returns_true_on_success() {
         when(shopManager.getById(10L)).thenReturn(ownerShop(10L, 1L));
         ShopUpdateDTO dto = new ShopUpdateDTO();
@@ -178,10 +221,10 @@ public class ShopServiceImplTest {
         verify(shopManager).updateById(any(ShopPO.class));
     }
 
+
     /**
-     * 验证 update 在 updateById 失败时返回 false。
+     * 更新业务数据。
      */
-    @Test
     public void update_returns_false_on_failure() {
         when(shopManager.getById(10L)).thenReturn(ownerShop(10L, 1L));
         when(shopManager.updateById(any(ShopPO.class))).thenReturn(false);
@@ -193,10 +236,10 @@ public class ShopServiceImplTest {
         assertFalse(ok);
     }
 
+
     /**
-     * 验证 update 商家设置冻结（SUSPENDED）状态被拒绝，冻结仅平台可操作。
+     * 更新业务数据。
      */
-    @Test
     public void update_throws_when_setting_suspended() {
         when(shopManager.getById(10L)).thenReturn(ownerShop(10L, 1L));
         ShopUpdateDTO dto = new ShopUpdateDTO();
@@ -207,10 +250,10 @@ public class ShopServiceImplTest {
         verify(shopManager, org.mockito.Mockito.never()).updateById(any(ShopPO.class));
     }
 
+
     /**
-     * 验证 update 越权更新他人店铺时按"店铺不存在"抛出 BizException。
+     * 更新业务数据。
      */
-    @Test
     public void update_throws_when_not_owner() {
         when(shopManager.getById(10L)).thenReturn(ownerShop(10L, 2L));
         ShopUpdateDTO dto = new ShopUpdateDTO();
@@ -220,10 +263,10 @@ public class ShopServiceImplTest {
         verify(shopManager, org.mockito.Mockito.never()).updateById(any(ShopPO.class));
     }
 
+
     /**
-     * 验证 delete 在本人名下店铺时调用 removeById 并返回其结果。
+     * 删除业务数据。
      */
-    @Test
     public void delete_returns_true_on_success() {
         when(shopManager.getById(10L)).thenReturn(ownerShop(10L, 1L));
         when(shopManager.removeById(10L)).thenReturn(true);
@@ -232,10 +275,10 @@ public class ShopServiceImplTest {
         verify(shopManager).removeById(eq(10L));
     }
 
+
     /**
-     * 验证 delete 在 removeById 失败时返回 false。
+     * 删除业务数据。
      */
-    @Test
     public void delete_returns_false_on_failure() {
         when(shopManager.getById(10L)).thenReturn(ownerShop(10L, 1L));
         when(shopManager.removeById(10L)).thenReturn(false);
@@ -243,10 +286,10 @@ public class ShopServiceImplTest {
         assertFalse(ok);
     }
 
+
     /**
-     * 验证 delete 越权删除他人店铺时按"店铺不存在"抛出 BizException。
+     * 删除业务数据。
      */
-    @Test
     public void delete_throws_when_not_owner() {
         when(shopManager.getById(10L)).thenReturn(ownerShop(10L, 2L));
         assertThrows(BizException.class, () -> service.delete(1L, 10L));

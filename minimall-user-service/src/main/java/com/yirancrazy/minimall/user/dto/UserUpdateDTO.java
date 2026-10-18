@@ -6,12 +6,13 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: UserUpdate数据传输对象，用于UserUpdate相关数据传输
+ * @Description: UserUpdateDTO 数据传输对象。
  * @Version: 1.0
- * @DateTime: 2026/07/31
- */
+ * @DateTime: 2026/10/16
+ **/
 @Data
 public class UserUpdateDTO {
 

@@ -5,12 +5,13 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 购物车添加入参，userId 由网关 X-User-Id 可信头注入，不入参
- * @Version: 1.1
- * @DateTime: 2026/08/13
- */
+ * @Description: CartItemAddDTO 数据传输对象。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 @Data
 public class CartItemAddDTO {
 

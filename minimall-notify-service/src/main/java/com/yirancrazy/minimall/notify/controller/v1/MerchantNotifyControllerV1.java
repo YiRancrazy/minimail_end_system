@@ -15,11 +15,12 @@ import com.yirancrazy.minimall.notify.dto.NotifyListDTO;
 import com.yirancrazy.minimall.notify.service.NotifyService;
 import com.yirancrazy.minimall.notify.vo.NotifyMessageVO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 商家端通知控制器，提供商家站内信分页查询、未读计数、标记已读与删除能力。
+ * @Description: MerchantNotifyControllerV1 控制器，提供相关接口。
  * @Version: 1.0
- * @DateTime: 2026/08/04
+ * @DateTime: 2026/10/16
  **/
 @RestController
 @RequestMapping("/api/v1/merchant/notify")
@@ -27,28 +28,34 @@ public class MerchantNotifyControllerV1 {
 
     private final NotifyService notifyService;
 
+    /**
+     * 构造 MerchantNotifyControllerV1 实例。
+     * @param notifyService notifyService 参数
+     */
     public MerchantNotifyControllerV1(NotifyService notifyService) {
         this.notifyService = notifyService;
     }
 
+
     /**
-     * 商家分页查询站内信。
-     * @param merchantId 商家ID（Header 注入）
-     * @param dto 分页入参
-     * @return 站内信分页结果
+     * 分页查询数据。
+     * @param merchantId merchantId 参数
+     * @param dto dto 参数
+     * @return 统一响应结果
      */
     @GetMapping("/messages")
     public Result<CursorPageVO<NotifyMessageVO>> page(@RequestHeader("X-Merchant-Id") Long merchantId,
                                                       @Valid NotifyListDTO dto) {
         dto.setUserId(merchantId);
         dto.setRecipientType(RecipientTypeEnum.MERCHANT.intCode());
-        return Result.success(notifyService.page(dto).map(NotifyMessageVO::from));
+        return Result.success(notifyService.pageVO(dto));
     }
 
+
     /**
-     * 商家未读消息数量。
-     * @param merchantId 商家ID
-     * @return 未读数
+     * 执行 unreadCount 方法。
+     * @param merchantId merchantId 参数
+     * @return 统一响应结果
      */
     @GetMapping("/messages/_count")
     public Result<Long> unreadCount(@RequestHeader("X-Merchant-Id") Long merchantId) {
@@ -56,11 +63,12 @@ public class MerchantNotifyControllerV1 {
             RecipientTypeEnum.MERCHANT.intCode(), merchantId));
     }
 
+
     /**
-     * 商家标记单条消息为已读。
-     * @param id 消息ID
-     * @param merchantId 商家ID
-     * @return 操作结果
+     * 执行 markRead 方法。
+     * @param id id 参数
+     * @param merchantId merchantId 参数
+     * @return 统一响应结果
      */
     @PostMapping("/messages/{id}/_read")
     public Result<Void> markRead(@PathVariable Long id,
@@ -69,10 +77,11 @@ public class MerchantNotifyControllerV1 {
         return Result.success(null);
     }
 
+
     /**
-     * 商家全部消息标记为已读。
-     * @param merchantId 商家ID
-     * @return 操作结果
+     * 执行 markAllRead 方法。
+     * @param merchantId merchantId 参数
+     * @return 统一响应结果
      */
     @PostMapping("/messages/_read-all")
     public Result<Void> markAllRead(@RequestHeader("X-Merchant-Id") Long merchantId) {
@@ -80,11 +89,12 @@ public class MerchantNotifyControllerV1 {
         return Result.success(null);
     }
 
+
     /**
-     * 商家删除单条消息。
-     * @param id 消息ID
-     * @param merchantId 商家ID
-     * @return 操作结果
+     * 删除业务数据。
+     * @param id id 参数
+     * @param merchantId merchantId 参数
+     * @return 统一响应结果
      */
     @DeleteMapping("/messages/{id}")
     public Result<Void> delete(@PathVariable Long id,

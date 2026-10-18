@@ -1,23 +1,48 @@
 package com.yirancrazy.minimall.common.event;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 事务消息 outbox 持久化存储，记录半消息本地事务提交状态，供 broker 回查。
+ * @Description: OutboxStore 接口，定义相关能力。
  * @Version: 1.0
- * @DateTime: 2026/08/02
+ * @DateTime: 2026/10/16
  **/
 public interface OutboxStore {
 
+
     /**
-     * Record that the local transaction for the given message committed.
-     * @param messageKey the RocketMQ transaction id or message key
+     * @Author: yirancrazy@gmail.com
+     * @Description: CommitStatus 枚举，定义相关业务状态。
+     * @Version: 1.0
+     * @DateTime: 2026/10/16
+     **/
+    enum CommitStatus {
+        PENDING,
+        COMMITTED,
+        ROLLED_BACK
+    }
+
+    /**
+     * 记录本地事务提交。
+     * @param messageKey 消息键
      */
     void recordCommit(String messageKey);
 
+
     /**
-     * Probe whether the local transaction for the given message committed.
-     * @param messageKey the RocketMQ transaction id or message key
-     * @return true if committed; false otherwise
+     * 判断本地事务是否已提交。
+     * @param messageKey 消息键
+     * @return 是否已提交
      */
     boolean isCommitted(String messageKey);
+
+
+    /**
+     * 查询消息提交状态。
+     * @param messageKey 消息键
+     * @return 提交状态
+     */
+    default CommitStatus commitStatus(String messageKey) {
+        return isCommitted(messageKey) ? CommitStatus.COMMITTED : CommitStatus.PENDING;
+    }
 }

@@ -4,12 +4,13 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import com.yirancrazy.minimall.common.base.BaseEnum;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: ID生成IdBizTag枚举，定义ID生成相关错误码
+ * @Description: IdBizTagEnum 枚举，定义相关业务状态。
  * @Version: 1.0
- * @DateTime: 2026/07/31
- */
+ * @DateTime: 2026/10/16
+ **/
 @Getter
 @AllArgsConstructor
 public enum IdBizTagEnum implements BaseEnum {

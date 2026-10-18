@@ -15,8 +15,10 @@ HELP.md
 
 # IDE / AI 配置（仓库外冗余）
 .claude/
+.codex/
 .trae/
 .superpowers/
+.workbuddy/
 
 # Maven flatten plugin 中间产物（运行时生成，不入库）
 .flattened-pom.xml

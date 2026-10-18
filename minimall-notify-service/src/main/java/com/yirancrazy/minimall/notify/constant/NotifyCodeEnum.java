@@ -4,12 +4,13 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import com.yirancrazy.minimall.common.base.BaseEnum;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 通知Notify错误码枚举，定义通知相关错误码
- * @Version: 1.1
- * @DateTime: 2026/08/03
- */
+ * @Description: NotifyCodeEnum 枚举，定义相关业务状态。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 @Getter
 @AllArgsConstructor
 public enum NotifyCodeEnum implements BaseEnum {
@@ -25,10 +26,14 @@ public enum NotifyCodeEnum implements BaseEnum {
     COMMENT_NOT_FOUND("19103", "COMMENT_NOT_FOUND", "评价不存在"),
     COMMENT_ALREADY_REPLIED("19104", "COMMENT_ALREADY_REPLIED", "商家已回复过该评价"),
     COMMENT_NO_PERMISSION("19105", "COMMENT_NO_PERMISSION", "无权操作该评价"),
+    COMMENT_ALREADY_EXISTS("19106", "COMMENT_ALREADY_EXISTS", "该订单商品已评价"),
+    COMMENT_ORDER_NOT_PURCHASED("19107", "COMMENT_ORDER_NOT_PURCHASED", "仅已购买该商品的订单可评价"),
+    COMMENT_ORDER_SERVICE_UNAVAILABLE("19108", "COMMENT_ORDER_SERVICE_UNAVAILABLE", "订单校验服务不可用，请稍后重试"),
     PREFERENCE_CATEGORY_INVALID("19201", "PREFERENCE_CATEGORY_INVALID", "通知类别非法"),
     PREFERENCE_CHANNEL_INVALID("19202", "PREFERENCE_CHANNEL_INVALID", "通知渠道非法"),
     NOTIFY_SSE_FORBIDDEN("19301", "NOTIFY_SSE_FORBIDDEN", "无权订阅该用户的通知"),
-    NOTIFY_SSE_LIMIT("19302", "NOTIFY_SSE_LIMIT", "通知连接数已达上限");
+    NOTIFY_SSE_LIMIT("19302", "NOTIFY_SSE_LIMIT", "通知连接数已达上限"),
+    NOTIFY_SSE_CONNECT_FAILED("19303", "NOTIFY_SSE_CONNECT_FAILED", "建立通知连接失败，请稍后重试");
 
     private final String code;
     private final String alias;

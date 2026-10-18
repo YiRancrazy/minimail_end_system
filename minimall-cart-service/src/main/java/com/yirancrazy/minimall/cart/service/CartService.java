@@ -5,73 +5,80 @@ import com.yirancrazy.minimall.cart.dto.CartItemAddDTO;
 import com.yirancrazy.minimall.cart.dto.CartUpdateDTO;
 import com.yirancrazy.minimall.cart.vo.CartItemVO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 购物车领域服务接口，定义Cart相关业务契约
- * @Version: 1.1
- * @DateTime: 2026/08/02
- */
+ * @Description: CartService 服务接口，定义相关业务能力。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 public interface CartService {
+
     /**
-     * 根据用户查询购物车列表，含商品快照展示字段。
-     * @param userId 用户ID，来自网关X-User-Id可信头
-     * @return 购物车项列表
+     * 查询列表数据。
+     * @param userId userId 参数
+     * @return 结果列表
      */
     List<CartItemVO> listByUser(Long userId);
 
+
     /**
-     * 添加购物车项。
-     * @param userId 用户ID，来自网关X-User-Id可信头
-     * @param dto 购物车添加DTO
-     * @return 购物车项ID
+     * 执行 add 方法。
+     * @param userId userId 参数
+     * @param dto dto 参数
+     * @return 业务数值
      */
     Long add(Long userId, CartItemAddDTO dto);
 
+
     /**
-     * 删除购物车项，仅允许删除归属于当前用户的条目。
-     * @param id 购物车项ID
-     * @param userId 用户ID，来自网关X-User-Id可信头
-     * @return 删除是否成功
-     * @throws com.yirancrazy.minimall.common.exception.BizException 条目不存在或不属于该用户时抛 CART_ITEM_NOT_FOUND
+     * 删除业务数据。
+     * @param id id 参数
+     * @param userId userId 参数
+     * @return 是否处理成功
      */
     boolean delete(Long id, Long userId);
 
+
     /**
-     * 统计用户购物车项数量。
-     * @param userId 用户ID
-     * @return 购物车项数量
+     * 统计业务数据。
+     * @param userId userId 参数
+     * @return 业务数值
      */
     long countByUser(Long userId);
 
+
     /**
-     * 部分更新购物车项，仅更新非空字段（quantity / isSelected），条目不存在或不属于当前用户时抛出业务异常。
-     * @param id 购物车项ID
-     * @param userId 用户ID，来自网关X-User-Id可信头
-     * @param dto 更新入参
-     * @return 更新是否成功
-     * @throws com.yirancrazy.minimall.common.exception.BizException 条目不存在或不属于该用户时抛 CART_ITEM_NOT_FOUND
+     * 更新业务数据。
+     * @param id id 参数
+     * @param userId userId 参数
+     * @param dto dto 参数
+     * @return 是否处理成功
      */
     boolean update(Long id, Long userId, CartUpdateDTO dto);
 
+
     /**
-     * 全选或取消全选指定用户的购物车项。
-     * @param userId 用户ID，来自网关X-User-Id可信头
-     * @param selected 选中状态，0 或 1
-     * @return 更新是否成功
+     * 执行 selectAll 方法。
+     * @param userId userId 参数
+     * @param selected selected 参数
+     * @return 是否处理成功
      */
     boolean selectAll(Long userId, Integer selected);
 
+
     /**
-     * 清空指定用户的购物车。
-     * @param userId 用户ID
-     * @return 清空是否成功
+     * 执行 clear 方法。
+     * @param userId userId 参数
+     * @return 是否处理成功
      */
     boolean clear(Long userId);
 
+
     /**
-     * 将指定购物车条目移入收藏夹：收藏与删除在同一事务内，删除失败整体回滚；按条目 ID 精确删除。
-     * @param userId 用户ID，来自网关X-User-Id可信头
-     * @param itemIds 待移入收藏夹的购物车条目 ID 列表，不可为空且必须全部归属于该用户
+     * 执行 moveToFavorite 方法。
+     * @param userId userId 参数
+     * @param itemIds itemIds 参数
      */
     void moveToFavorite(Long userId, List<Long> itemIds);
 }

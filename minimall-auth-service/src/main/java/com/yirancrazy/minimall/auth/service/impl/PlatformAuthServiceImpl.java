@@ -34,11 +34,12 @@ import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.util.CursorUtils;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 平台端认证服务实现，复用 t_auth_user 表与一致的密码、令牌、Redis 约定。
- * @Version: 2.0
- * @DateTime: 2026/08/04
+ * @Description: PlatformAuthServiceImpl 服务实现，实现相关业务逻辑。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
  **/
 @Slf4j
 @Service
@@ -59,6 +60,16 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
     private final long ttlSeconds;
     private final long refreshTtlSeconds;
 
+    /**
+     * 构造 PlatformAuthServiceImpl 实例。
+     * @param authUserManager authUserManager 参数
+     * @param authRoleManager authRoleManager 参数
+     * @param tokenBlacklistManager tokenBlacklistManager 参数
+     * @param jwtUtil jwtUtil 参数
+     * @param redisTemplate redisTemplate 参数
+     * @param ttlSeconds ttlSeconds 参数
+     * @param refreshTtlSeconds refreshTtlSeconds 参数
+     */
     public PlatformAuthServiceImpl(AuthUserManager authUserManager,
                                    AuthRoleManager authRoleManager,
                                    AuthTokenBlacklistManager tokenBlacklistManager,
@@ -75,10 +86,11 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
         this.refreshTtlSeconds = refreshTtlSeconds;
     }
 
+
     /**
-     * 平台管理员登录，仅允许 accountType=PLATFORM 且 status=1 的账号通过。
-     * @param dto 登录DTO
-     * @return 令牌VO
+     * 执行 login 方法。
+     * @param dto dto 参数
+     * @return 处理结果
      */
     @Override
     public TokenVO login(LoginDTO dto) {
@@ -98,30 +110,30 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
         }
         po.setLastLoginAt(LocalDateTime.now());
         authUserManager.updateById(po);
-        log.info("platform admin login, accountId={}, account={}", po.getId(), po.getAccount());
+        log.info("平台管理员已登录，accountId={}，account={}", po.getId(), po.getAccount());
         return issueTokens(po.getId(), po.getAccount(), po.getRoleId());
     }
 
+
     /**
-     * 平台管理员登出，失效当前账号所有刷新令牌并拉黑当前 jti。
-     * @param adminAccountId 管理员账号ID
-     * @param jti 令牌唯一标识
+     * 执行 signOut 方法。
+     * @param adminAccountId adminAccountId 参数
+     * @param jti jti 参数
      */
-    @Override
     public void signOut(Long adminAccountId, String jti) {
         var keys = redisTemplate.keys(REFRESH_KEY_PREFIX + adminAccountId + ":*");
         if (keys != null) {
             redisTemplate.delete(keys);
         }
         revokeToken(jti, adminAccountId, "sign_out");
-        log.info("platform admin signed out, accountId={}", adminAccountId);
+        log.info("平台管理员已退出登录，accountId={}", adminAccountId);
     }
 
+
     /**
-     * 创建平台管理员，账号不可重复，密码 BCrypt 加密存储。
-     * @param dto 创建入参
-     * @return 新管理员ID
-     * @throws BizException 账号重复时
+     * 执行 adminCreate 方法。
+     * @param dto dto 参数
+     * @return 业务数值
      */
     @Override
     public Long adminCreate(AdminCreateDTO dto) {
@@ -141,14 +153,15 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
         po.setNickname(dto.getNickname());
         po.setContact(dto.getContact());
         authUserManager.save(po);
-        log.info("admin created, id={}, account={}, roleId={}", po.getId(), po.getAccount(), po.getRoleId());
+        log.info("管理员已创建，id={}，account={}，roleId={}", po.getId(), po.getAccount(), po.getRoleId());
         return po.getId();
     }
 
+
     /**
-     * 游标分页查询平台管理员，固定 accountType=PLATFORM，按 ID 降序返回。
-     * @param dto 游标分页入参
-     * @return 管理员游标分页结果
+     * 执行 adminPage 方法。
+     * @param dto dto 参数
+     * @return 处理结果
      */
     @Override
     public CursorPageVO<AdminVO> adminPage(AdminPageDTO dto) {
@@ -170,13 +183,12 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
             po.getContact()));
     }
 
+
     /**
-     * 分配平台管理员角色，按角色编码解析角色ID并更新。
-     * @param id 管理员ID
-     * @param dto 角色分配入参
-     * @throws BizException 管理员或角色不存在时
+     * 执行 adminAssignRole 方法。
+     * @param id id 参数
+     * @param dto dto 参数
      */
-    @Override
     public void adminAssignRole(Long id, AdminRoleDTO dto) {
         AuthUserPO po = authUserManager.getById(id);
         if (po == null) {
@@ -184,16 +196,15 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
         }
         po.setRoleId(resolveRoleId(dto.getRoleCode()));
         authUserManager.updateById(po);
-        log.info("admin role assigned, id={}, roleId={}", id, po.getRoleId());
+        log.info("管理员角色已分配，id={}，roleId={}", id, po.getRoleId());
     }
 
+
     /**
-     * 平台管理员修改密码，校验旧密码后设置新密码并失效已有刷新令牌。
-     * @param adminAccountId 管理员账号ID
-     * @param dto 修改密码入参
-     * @throws BizException 账号不存在或旧密码错误时
+     * 执行 changePassword 方法。
+     * @param adminAccountId adminAccountId 参数
+     * @param dto dto 参数
      */
-    @Override
     public void changePassword(Long adminAccountId, ChangePasswordDTO dto) {
         AuthUserPO po = authUserManager.getById(adminAccountId);
         if (po == null) {
@@ -204,9 +215,14 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
         }
         applyNewPassword(po, dto.getNewPassword());
         invalidateRefreshTokens(adminAccountId);
-        log.info("platform admin password changed, accountId={}", adminAccountId);
+        log.info("平台管理员密码已修改，accountId={}", adminAccountId);
     }
 
+    /**
+     * 执行新密码逻辑。
+     * @param po 持久化对象
+     * @param newPassword 新密码
+     */
     private void applyNewPassword(AuthUserPO po, String newPassword) {
         String salt = UUID.randomUUID().toString().replace("-", "");
         String hash = BCrypt.hashpw(newPassword + salt, BCrypt.gensalt(BCRYPT_COST));
@@ -215,6 +231,10 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
         authUserManager.updateById(po);
     }
 
+    /**
+     * 使刷新Token失效。
+     * @param adminAccountId admin账号 ID
+     */
     private void invalidateRefreshTokens(Long adminAccountId) {
         var keys = redisTemplate.keys(REFRESH_KEY_PREFIX + adminAccountId + ":*");
         if (keys != null && !keys.isEmpty()) {
@@ -222,12 +242,12 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
         }
     }
 
+
     /**
-     * 更新平台管理员昵称。
-     * @param id 管理员ID
-     * @param dto 更新入参
-     * @return 更新是否成功
-     * @throws BizException 管理员不存在时
+     * 执行 adminUpdate 方法。
+     * @param id id 参数
+     * @param dto dto 参数
+     * @return 是否处理成功
      */
     @Override
     public boolean adminUpdate(Long id, AdminUpdateDTO dto) {
@@ -237,17 +257,16 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
         }
         po.setNickname(dto.getNickname());
         boolean ok = authUserManager.updateById(po);
-        log.info("admin updated, id={}", id);
+        log.info("管理员已更新，id={}", id);
         return ok;
     }
 
+
     /**
-     * 逻辑删除平台管理员，不允许删除自己。
-     * @param operatorId 操作人ID
-     * @param targetId 目标管理员ID
-     * @throws BizException 删除自己或管理员不存在时
+     * 执行 adminDelete 方法。
+     * @param operatorId operatorId 参数
+     * @param targetId targetId 参数
      */
-    @Override
     public void adminDelete(Long operatorId, Long targetId) {
         if (operatorId.equals(targetId)) {
             throw new BizException(AuthCodeEnum.CANNOT_DELETE_SELF);
@@ -257,14 +276,14 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
             throw new BizException(AuthCodeEnum.USER_NOT_FOUND);
         }
         authUserManager.removeById(targetId);
-        log.info("admin deleted, targetId={}, operatorId={}", targetId, operatorId);
+        log.info("管理员已删除，targetId={}，operatorId={}", targetId, operatorId);
     }
 
+
     /**
-     * 获取当前平台管理员信息，从令牌声明解析，不落库。
-     * @param token 访问令牌
-     * @return 用户信息VO
-     * @throws BizException 令牌无效时
+     * 执行 me 方法。
+     * @param token token 参数
+     * @return 处理结果
      */
     @Override
     public UserInfoVO me(String token) {
@@ -283,6 +302,12 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
             claims.get("roleId", Long.class));
     }
 
+    /**
+     * 吊销Token。
+     * @param jti JWT ID
+     * @param userId 用户 ID
+     * @param reason 原因
+     */
     private void revokeToken(String jti, Long userId, String reason) {
         AuthTokenBlacklistPO bl = new AuthTokenBlacklistPO();
         bl.setJti(jti);
@@ -295,6 +320,11 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
             BLACKLIST_KEY_PREFIX + jti, "1", ttlSeconds, TimeUnit.SECONDS);
     }
 
+    /**
+     * 转换或解析角色编码。
+     * @param roleId 角色 ID
+     * @return 编号或编码
+     */
     private String resolveRoleCode(Long roleId) {
         if (roleId == null) {
             return "PLATFORM";
@@ -303,6 +333,12 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
         return role != null ? role.getRoleCode() : "PLATFORM";
     }
 
+    /**
+     * 转换或解析角色ID。
+     * @param roleCode 角色编码
+     * @return 处理结果
+     * @throws BizException 业务校验失败时抛出
+     */
     private Long resolveRoleId(String roleCode) {
         if (roleCode == null || roleCode.isBlank()) {
             return DEFAULT_ROLE_ID_PLATFORM;
@@ -315,6 +351,13 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
         return role.getId();
     }
 
+    /**
+     * 签发Token。
+     * @param accountId 账号 ID
+     * @param account 账号
+     * @param roleId 角色 ID
+     * @return Token 信息
+     */
     private TokenVO issueTokens(Long accountId, String account, Long roleId) {
         String roleCode = resolveRoleCode(roleId);
         String jti = UUID.randomUUID().toString().replace("-", "");

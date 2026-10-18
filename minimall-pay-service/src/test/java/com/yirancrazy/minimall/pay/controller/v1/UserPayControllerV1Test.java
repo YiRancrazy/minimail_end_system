@@ -8,14 +8,12 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -26,39 +24,34 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO;
 import com.yirancrazy.minimall.common.exception.GlobalExceptionHandler;
 import com.yirancrazy.minimall.pay.constant.PayChannelEnum;
-import com.yirancrazy.minimall.pay.dto.PayCallbackDTO;
+import com.yirancrazy.minimall.pay.dto.AlipayCallbackDTO;
 import com.yirancrazy.minimall.pay.dto.PayCreateDTO;
-import com.yirancrazy.minimall.pay.entity.PayTransactionPO;
-import com.yirancrazy.minimall.pay.gateway.PayGateway;
 import com.yirancrazy.minimall.pay.service.PayService;
+import com.yirancrazy.minimall.pay.vo.PayTransactionVO;
 import com.yirancrazy.minimall.pay.vo.PaymentParamsVO;
-import com.yirancrazy.minimall.pay.vo.RefundVO;
+
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: UserPayControllerV1 MockMvc 单元测试，验证用户端支付 HTTP 路由、支付创建、回调与状态查询。
+ * @Description: UserPayControllerV1Test 单元测试。
  * @Version: 1.0
- * @DateTime: 2026/08/05
+ * @DateTime: 2026/10/16
  **/
 class UserPayControllerV1Test {
 
     private MockMvc mockMvc;
     private PayService service;
-    private PayGateway gateway;
     private final ObjectMapper mapper = new ObjectMapper();
 
     @BeforeEach
     void setUp() {
         service = mock(PayService.class);
-        gateway = mock(PayGateway.class);
-        mockMvc = MockMvcBuilders.standaloneSetup(new UserPayControllerV1(service, gateway))
+        mockMvc = MockMvcBuilders.standaloneSetup(new UserPayControllerV1(service))
             .setControllerAdvice(new GlobalExceptionHandler())
             .build();
     }
 
-    /**
-     * 验证 POST /api/v1/user/pay/create 调用 service 并返回支付流水ID。
-     */
+
     @Test
     void create_returns_payment_id() throws Exception {
         when(service.createPayment(any(), any(), any(), any(), any())).thenReturn(100L);
@@ -73,9 +66,7 @@ class UserPayControllerV1Test {
         verify(service).createPayment(any(), any(), any(), any(), any());
     }
 
-    /**
-     * 验证 channel 支持字符串枚举名（ALIPAY）反序列化，并转换为数字 code 传给 service。
-     */
+
     @Test
     void create_accepts_channel_alias_string() throws Exception {
         when(service.createPayment(any(), any(), any(), any(), any())).thenReturn(100L);
@@ -88,9 +79,7 @@ class UserPayControllerV1Test {
         verify(service).createPayment(eq("NO1"), eq(1L), isNull(), any(), eq(1));
     }
 
-    /**
-     * 验证非法 channel 反序列化失败时返回友好参数错误而非系统繁忙。
-     */
+
     @Test
     void create_rejects_unknown_channel() throws Exception {
         mockMvc.perform(post("/api/v1/user/pay/create")
@@ -102,43 +91,36 @@ class UserPayControllerV1Test {
             .andExpect(jsonPath("$.message").value("请求体格式错误"));
     }
 
-    /**
-     * 验证 POST /api/v1/user/pay/callback/alipay 验签通过后处理 TRADE_SUCCESS 回调返回 success。
-     */
+
     @Test
     void callback_returns_success() throws Exception {
-        when(gateway.verifyCallback(any())).thenReturn("T123");
+        when(service.handleAlipayCallback(any())).thenReturn(true);
         mockMvc.perform(post("/api/v1/user/pay/callback/alipay")
                 .param("trade_no", "T123")
                 .param("out_trade_no", "P456")
                 .param("trade_status", "TRADE_SUCCESS"))
             .andExpect(status().isOk())
             .andExpect(content().string("success"));
-        verify(service).handleCallback(any());
+        verify(service).handleAlipayCallback(any());
     }
 
-    /**
-     * 验证回调验签失败时返回 fail 且不推进业务状态。
-     */
+
     @Test
     void callback_signature_failure_returns_fail() throws Exception {
-        when(gateway.verifyCallback(any()))
-            .thenThrow(new RuntimeException("signature verification failed"));
+        when(service.handleAlipayCallback(any())).thenReturn(false);
         mockMvc.perform(post("/api/v1/user/pay/callback/alipay")
                 .param("trade_no", "T123")
                 .param("out_trade_no", "P456")
                 .param("trade_status", "TRADE_SUCCESS"))
             .andExpect(status().isOk())
             .andExpect(content().string("fail"));
-        verify(service, never()).handleCallback(any());
+        verify(service).handleAlipayCallback(any());
     }
 
-    /**
-     * 验证回调金额 total_amount 被解析为 BigDecimal 传入 service（金额校验依据）。
-     */
+
     @Test
     void callback_passes_total_amount_to_service() throws Exception {
-        when(gateway.verifyCallback(any())).thenReturn("T123");
+        when(service.handleAlipayCallback(any())).thenReturn(true);
         mockMvc.perform(post("/api/v1/user/pay/callback/alipay")
                 .param("trade_no", "T123")
                 .param("out_trade_no", "P456")
@@ -146,73 +128,84 @@ class UserPayControllerV1Test {
                 .param("total_amount", "10.00"))
             .andExpect(status().isOk())
             .andExpect(content().string("success"));
-        ArgumentCaptor<PayCallbackDTO> cap = ArgumentCaptor.forClass(PayCallbackDTO.class);
-        verify(service).handleCallback(cap.capture());
-        assertTrue(cap.getValue().isSuccess());
-        assertEquals(0, new BigDecimal("10.00").compareTo(cap.getValue().getTotalAmount()));
+        ArgumentCaptor<AlipayCallbackDTO> cap = ArgumentCaptor.forClass(AlipayCallbackDTO.class);
+        verify(service).handleAlipayCallback(cap.capture());
+        assertEquals("10.00", cap.getValue().getTotalAmount());
     }
 
-    /**
-     * 验证 TRADE_CLOSED 失败回调标记 success=false 传给 service（防状态倒灌依据）。
-     */
+
     @Test
     void callback_trade_closed_marks_not_success() throws Exception {
-        when(gateway.verifyCallback(any())).thenReturn("T123");
+        when(service.handleAlipayCallback(any())).thenReturn(true);
         mockMvc.perform(post("/api/v1/user/pay/callback/alipay")
                 .param("trade_no", "T123")
                 .param("out_trade_no", "P456")
                 .param("trade_status", "TRADE_CLOSED"))
             .andExpect(status().isOk())
             .andExpect(content().string("success"));
-        ArgumentCaptor<PayCallbackDTO> cap = ArgumentCaptor.forClass(PayCallbackDTO.class);
-        verify(service).handleCallback(cap.capture());
-        assertFalse(cap.getValue().isSuccess());
+        ArgumentCaptor<AlipayCallbackDTO> cap = ArgumentCaptor.forClass(AlipayCallbackDTO.class);
+        verify(service).handleAlipayCallback(cap.capture());
+        assertEquals("TRADE_CLOSED", cap.getValue().getTradeStatus());
     }
 
-    /**
-     * 验证 POST /api/v1/user/pay/refunds 调用 service 并返回退款 VO。
-     */
+
     @Test
-    void createRefund_returns_vo() throws Exception {
-        RefundVO vo = new RefundVO("R001", "P456", new BigDecimal("10.00"), 2);
-        when(service.createRefund(any())).thenReturn(vo);
+    void createRefund_endpoint_is_removed() throws Exception {
         RefundCreateDTO dto = new RefundCreateDTO(1L, new BigDecimal("10.00"), "damaged");
+
         mockMvc.perform(post("/api/v1/user/pay/refunds")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(mapper.writeValueAsString(dto)))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.data.refundNo").value("R001"));
-        verify(service).createRefund(any());
+            .andExpect(jsonPath("$.code").value("20000"));
+
+        verifyNoInteractions(service);
     }
 
-    /**
-     * 验证 GET /api/v1/user/pay/status/{orderNo} 返回支付流水 VO。
-     */
+
     @Test
     void getStatus_returns_vo() throws Exception {
-        PayTransactionPO po = new PayTransactionPO();
-        po.setPaymentNo("P001");
-        po.setOrderNo("NO123");
-        po.setUserId(1L);
-        po.setAmount(new BigDecimal("10.00"));
-        po.setStatus(2);
-        po.setChannel(1);
-        when(service.getByOrderNo("NO123")).thenReturn(po);
-        mockMvc.perform(get("/api/v1/user/pay/status/NO123"))
+        PayTransactionVO vo = new PayTransactionVO();
+        vo.setPaymentNo("P001");
+        vo.setOrderNo("NO123");
+        vo.setUserId(1L);
+        vo.setAmount(new BigDecimal("10.00"));
+        vo.setStatus(2);
+        vo.setChannel(1);
+        when(service.getStatusVO("NO123", 1L)).thenReturn(vo);
+        mockMvc.perform(get("/api/v1/user/pay/status/NO123").header("X-User-Id", "1"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.paymentNo").value("P001"));
     }
 
-    /**
-     * 验证 GET /api/v1/user/pay/params/{paymentNo} 返回支付参数 VO。
-     */
+
+    @Test
+    void getStatus_without_user_header_rejected() throws Exception {
+        mockMvc.perform(get("/api/v1/user/pay/status/NO123"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.code").value("14003"));
+
+        verifyNoInteractions(service);
+    }
+
+
     @Test
     void getParams_returns_vo() throws Exception {
         PaymentParamsVO vo = new PaymentParamsVO();
         vo.setPaymentNo("P001");
-        when(service.getPaymentParams("P001")).thenReturn(vo);
-        mockMvc.perform(get("/api/v1/user/pay/params/P001"))
+        when(service.getPaymentParams("P001", 1L)).thenReturn(vo);
+        mockMvc.perform(get("/api/v1/user/pay/params/P001").header("X-User-Id", "1"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.paymentNo").value("P001"));
+    }
+
+
+    @Test
+    void getParams_without_user_header_rejected() throws Exception {
+        mockMvc.perform(get("/api/v1/user/pay/params/P001"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.code").value("14003"));
+
+        verifyNoInteractions(service);
     }
 }

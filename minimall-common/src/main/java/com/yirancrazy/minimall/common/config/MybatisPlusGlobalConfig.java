@@ -10,15 +10,20 @@ import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: MybatisPlusGlobal配置类，配置MybatisPlusGlobal相关 Bean
- * @Version: 1.1
- * @DateTime: 2026/08/04
- */
+ * @Description: MybatisPlusGlobalConfig 配置类。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 @Configuration
 public class MybatisPlusGlobalConfig {
 
+    /**
+     * 执行 mybatisPlusInterceptor 方法。
+     * @return 处理结果
+     */
     @Bean
     public MybatisPlusInterceptor mybatisPlusInterceptor() {
         MybatisPlusInterceptor i = new MybatisPlusInterceptor();
@@ -27,15 +32,22 @@ public class MybatisPlusGlobalConfig {
         return i;
     }
 
+
+            /**
+             * 执行 insertFill 方法。
+             * @param m m 参数
+             */
     /**
-     * 注册元数据自动填充处理器，统一维护公共审计字段。
-     *
-     * @return 元数据填充处理器，插入时填充 createTime、updateTime 与 isDeleted，更新时填充 updateTime
+     * 执行 metaObjectHandler 方法。
+     * @return 处理结果
      */
     @Bean
     public MetaObjectHandler metaObjectHandler() {
         return new MetaObjectHandler() {
-            @Override
+            /**
+             * 创建填充。
+             * @param m m
+             */
             public void insertFill(MetaObject m) {
                 LocalDateTime now = LocalDateTime.now();
                 strictInsertFill(m, "createTime", LocalDateTime.class, now);
@@ -43,12 +55,11 @@ public class MybatisPlusGlobalConfig {
                 strictInsertFill(m, "isDeleted", Integer.class, 0);
             }
 
+
             /**
-             * 更新操作时自动填充更新时间字段。
-             *
-             * @param m 当前待更新实体的元对象
+             * 更新业务数据。
+             * @param m m 参数
              */
-            @Override
             public void updateFill(MetaObject m) {
                 strictUpdateFill(m, "updateTime", LocalDateTime.class, LocalDateTime.now());
             }

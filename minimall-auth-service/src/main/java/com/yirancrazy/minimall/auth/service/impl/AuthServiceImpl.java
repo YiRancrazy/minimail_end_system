@@ -1,10 +1,12 @@
 package com.yirancrazy.minimall.auth.service.impl;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.stereotype.Service;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
@@ -30,11 +32,12 @@ import com.yirancrazy.minimall.auth.vo.UserInfoVO;
 import com.yirancrazy.minimall.common.exception.BizException;
 
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 业务服务实现，处理核心业务逻辑。
- * @Version: 2.0
- * @DateTime: 2026/08/04
+ * @Description: AuthServiceImpl 服务实现，实现相关业务逻辑。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
  **/
 @Slf4j
 @Service
@@ -57,6 +60,10 @@ public class AuthServiceImpl implements AuthService {
     // 登录失败锁定窗口：10 分钟内累计 5 次失败后临时锁定
     private static final long LOGIN_FAIL_TTL_SECONDS = 600L;
     private static final long LOGIN_FAIL_THRESHOLD = 5L;
+    // 刷新令牌轮换必须原子：比较并删除成功者才能签发新令牌，否则并发重放会各自换出令牌
+    private static final RedisScript<Long> COMPARE_AND_DELETE_REFRESH = RedisScript.of(
+        "if redis.call('GET', KEYS[1]) == ARGV[1] then return redis.call('DEL', KEYS[1]) else return 0 end",
+        Long.class);
 
     private final AuthUserManager authUserManager;
     private final AuthRoleManager authRoleManager;
@@ -66,6 +73,16 @@ public class AuthServiceImpl implements AuthService {
     private final long ttlSeconds;
     private final long refreshTtlSeconds;
 
+    /**
+     * 构造 AuthServiceImpl 实例。
+     * @param authUserManager authUserManager 参数
+     * @param authRoleManager authRoleManager 参数
+     * @param tokenBlacklistManager tokenBlacklistManager 参数
+     * @param jwtUtil jwtUtil 参数
+     * @param redisTemplate redisTemplate 参数
+     * @param ttlSeconds ttlSeconds 参数
+     * @param refreshTtlSeconds refreshTtlSeconds 参数
+     */
     public AuthServiceImpl(AuthUserManager authUserManager,
                            AuthRoleManager authRoleManager,
                            AuthTokenBlacklistManager tokenBlacklistManager,
@@ -82,10 +99,11 @@ public class AuthServiceImpl implements AuthService {
         this.refreshTtlSeconds = refreshTtlSeconds;
     }
 
+
     /**
-     * 用户注册。
-     * @param dto 注册DTO
-     * @return 令牌VO
+     * 执行 register 方法。
+     * @param dto dto 参数
+     * @return 处理结果
      */
     @Override
     public TokenVO register(RegisterDTO dto) {
@@ -108,10 +126,11 @@ public class AuthServiceImpl implements AuthService {
         return issueTokens(po.getId(), po.getAccount(), roleCode, po.getRoleId());
     }
 
+
     /**
-     * 用户登录。
-     * @param dto 登录DTO
-     * @return 令牌VO
+     * 执行 login 方法。
+     * @param dto dto 参数
+     * @return 处理结果
      */
     @Override
     public TokenVO login(LoginDTO dto) {
@@ -144,10 +163,11 @@ public class AuthServiceImpl implements AuthService {
         return issueTokens(po.getId(), po.getAccount(), roleCode, po.getRoleId());
     }
 
+
     /**
-     * 刷新令牌。
-     * @param refreshToken 刷新令牌
-     * @return 新的令牌VO
+     * 执行 refreshToken 方法。
+     * @param refreshToken refreshToken 参数
+     * @return 处理结果
      */
     @Override
     public TokenVO refreshToken(String refreshToken) {
@@ -164,41 +184,41 @@ public class AuthServiceImpl implements AuthService {
         Long userId = Long.parseLong(c.getSubject());
         String jti = c.get("jti", String.class);
         String key = REFRESH_KEY_PREFIX + userId + ":" + jti;
-        String stored = redisTemplate.opsForValue().get(key);
-        if (stored == null || !refreshToken.equals(stored)) {
+        Long deleted = redisTemplate.execute(COMPARE_AND_DELETE_REFRESH, List.of(key), refreshToken);
+        if (deleted == null || deleted == 0L) {
             throw new BizException(AuthCodeEnum.REFRESH_TOKEN_INVALID);
         }
-        redisTemplate.delete(key);
         revokeToken(jti, userId, "refresh_rotated");
 
         AuthUserPO po = authUserManager.getById(userId);
         if (po == null) {
             throw new BizException(AuthCodeEnum.USER_NOT_FOUND);
         }
-        log.info("refresh token rotated, userId={}", userId);
+        log.info("refresh token 已轮换，userId={}", userId);
         String roleCode = resolveRoleCode(po.getRoleId());
         return issueTokens(po.getId(), po.getAccount(), roleCode, po.getRoleId());
     }
 
+
     /**
-     * 用户登出。
-     * @param userId 用户ID
-     * @param jti 令牌唯一标识
+     * 执行 signOut 方法。
+     * @param userId userId 参数
+     * @param jti jti 参数
      */
-    @Override
     public void signOut(Long userId, String jti) {
         var keys = redisTemplate.keys(REFRESH_KEY_PREFIX + userId + ":*");
         if (keys != null) {
             redisTemplate.delete(keys);
         }
         revokeToken(jti, userId, "sign_out");
-        log.info("user signed out, userId={}", userId);
+        log.info("用户已退出登录，userId={}", userId);
     }
 
+
     /**
-     * 获取当前用户信息。
-     * @param token 令牌
-     * @return 用户信息VO
+     * 执行 me 方法。
+     * @param token token 参数
+     * @return 处理结果
      */
     @Override
     public UserInfoVO me(String token) {
@@ -217,12 +237,12 @@ public class AuthServiceImpl implements AuthService {
             c.get("roleId", Long.class));
     }
 
+
     /**
-     * 修改密码，需校验旧密码，成功后失效已有刷新令牌。
-     * @param userId 用户ID
-     * @param dto 修改密码DTO
+     * 执行 changePassword 方法。
+     * @param userId userId 参数
+     * @param dto dto 参数
      */
-    @Override
     public void changePassword(Long userId, ChangePasswordDTO dto) {
         AuthUserPO po = authUserManager.getById(userId);
         if (po == null) {
@@ -233,14 +253,14 @@ public class AuthServiceImpl implements AuthService {
         }
         applyNewPassword(po, dto.getNewPassword());
         invalidateRefreshTokens(userId);
-        log.info("password changed, userId={}", userId);
+        log.info("密码已修改，userId={}", userId);
     }
 
+
     /**
-     * 发送重置密码验证码，首期短信通道未接入时验证码通过日志输出用于联调。
-     * @param dto 发送验证码DTO
+     * 发送业务消息。
+     * @param dto dto 参数
      */
-    @Override
     public void sendResetCode(SendResetCodeDTO dto) {
         AuthUserPO po = authUserManager.getOne(
             Wrappers.lambdaQuery(AuthUserPO.class).eq(AuthUserPO::getAccount, dto.getAccount()));
@@ -258,15 +278,15 @@ public class AuthServiceImpl implements AuthService {
             java.util.concurrent.ThreadLocalRandom.current().nextInt(1_000_000));
         redisTemplate.opsForValue().set(
             RESET_CODE_KEY_PREFIX + dto.getAccount(), code, RESET_CODE_TTL_SECONDS, TimeUnit.SECONDS);
-        // SMS channel not ready in first iteration; log code for integration debugging.
-        log.info("reset code generated, account={}", dto.getAccount());
+        // 首轮迭代短信通道尚未就绪；记录验证码便于联调排查。
+        log.info("重置验证码已生成，account={}", dto.getAccount());
     }
 
+
     /**
-     * 重置密码，校验验证码后设置新密码，成功后失效已有刷新令牌。
-     * @param dto 重置密码DTO
+     * 执行 resetPassword 方法。
+     * @param dto dto 参数
      */
-    @Override
     public void resetPassword(ResetPasswordDTO dto) {
         AuthUserPO po = authUserManager.getOne(
             Wrappers.lambdaQuery(AuthUserPO.class).eq(AuthUserPO::getAccount, dto.getAccount()));
@@ -289,9 +309,14 @@ public class AuthServiceImpl implements AuthService {
         applyNewPassword(po, dto.getNewPassword());
         redisTemplate.delete(RESET_CODE_KEY_PREFIX + dto.getAccount());
         invalidateRefreshTokens(po.getId());
-        log.info("password reset, userId={}", po.getId());
+        log.info("密码已重置，userId={}", po.getId());
     }
 
+    /**
+     * 执行新密码逻辑。
+     * @param po 持久化对象
+     * @param newPassword 新密码
+     */
     private void applyNewPassword(AuthUserPO po, String newPassword) {
         String salt = UUID.randomUUID().toString().replace("-", "");
         String hash = BCrypt.hashpw(newPassword + salt, BCrypt.gensalt(BCRYPT_COST));
@@ -300,11 +325,19 @@ public class AuthServiceImpl implements AuthService {
         authUserManager.updateById(po);
     }
 
+    /**
+     * 更新最近登录时间。
+     * @param po 持久化对象
+     */
     private void updateLastLoginAt(AuthUserPO po) {
         po.setLastLoginAt(LocalDateTime.now());
         authUserManager.updateById(po);
     }
 
+    /**
+     * 使刷新Token失效。
+     * @param userId 用户 ID
+     */
     private void invalidateRefreshTokens(Long userId) {
         var keys = redisTemplate.keys(REFRESH_KEY_PREFIX + userId + ":*");
         if (keys != null && !keys.isEmpty()) {
@@ -312,8 +345,14 @@ public class AuthServiceImpl implements AuthService {
         }
     }
 
+    /**
+     * 吊销Token。
+     * @param jti JWT ID
+     * @param userId 用户 ID
+     * @param reason 原因
+     */
     private void revokeToken(String jti, Long userId, String reason) {
-        // Persist to DB as source of truth
+        // 持久化到 DB，作为可信数据源
         AuthTokenBlacklistPO bl = new AuthTokenBlacklistPO();
         bl.setJti(jti);
         bl.setUserId(userId);
@@ -321,11 +360,16 @@ public class AuthServiceImpl implements AuthService {
         bl.setRevokedAt(LocalDateTime.now());
         bl.setReason(reason);
         tokenBlacklistManager.save(bl);
-        // Also write to Redis for Gateway fast lookup
+        // 同时写入 Redis，供 Gateway 快速查询
         redisTemplate.opsForValue().set(
             BLACKLIST_KEY_PREFIX + jti, "1", ttlSeconds, TimeUnit.SECONDS);
     }
 
+    /**
+     * 转换或解析角色编码。
+     * @param roleId 角色 ID
+     * @return 编号或编码
+     */
     private String resolveRoleCode(Long roleId) {
         if (roleId == null) {
             return "USER";
@@ -334,6 +378,14 @@ public class AuthServiceImpl implements AuthService {
         return role != null ? role.getRoleCode() : "USER";
     }
 
+    /**
+     * 签发Token。
+     * @param userId 用户 ID
+     * @param account 账号
+     * @param roleCode 角色编码
+     * @param roleId 角色 ID
+     * @return Token 信息
+     */
     private TokenVO issueTokens(Long userId, String account, String roleCode, Long roleId) {
         String jti = UUID.randomUUID().toString().replace("-", "");
         String accessToken = jwtUtil.sign(userId, account, roleCode, roleId, jti);

@@ -7,49 +7,53 @@ import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.result.Result;
-import com.yirancrazy.minimall.common.util.MinioUtil;
 import com.yirancrazy.minimall.notify.constant.CommentStatusEnum;
 import com.yirancrazy.minimall.notify.dto.CommentPageDTO;
 import com.yirancrazy.minimall.notify.service.CommentService;
 import com.yirancrazy.minimall.notify.vo.CommentStatsVO;
 import com.yirancrazy.minimall.notify.vo.CommentVO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 公开商品评价控制器，商品详情页可匿名访问评价列表与统计
+ * @Description: PublicCommentControllerV1 控制器，提供相关接口。
  * @Version: 1.0
- * @DateTime: 2026/08/10
+ * @DateTime: 2026/10/16
  **/
 @RestController
 @RequestMapping("/api/v1/goods/comments")
 public class PublicCommentControllerV1 {
 
     private final CommentService commentService;
-    private final MinioUtil minioUtil;
-
-    public PublicCommentControllerV1(CommentService commentService, MinioUtil minioUtil) {
-        this.commentService = commentService;
-        this.minioUtil = minioUtil;
-    }
 
     /**
-     * 公开接口：按 SPU 查询正常状态的评价列表。
-     * @param spuId 商品SPU ID
-     * @param dto 分页入参
-     * @return 评价分页结果
+     * 构造 PublicCommentControllerV1 实例。
+     * @param commentService commentService 参数
+     */
+    public PublicCommentControllerV1(CommentService commentService) {
+        this.commentService = commentService;
+    }
+
+
+    /**
+     * 分页查询数据。
+     * @param spuId spuId 参数
+     * @param dto dto 参数
+     * @return 统一响应结果
      */
     @GetMapping("/{spuId}")
     public Result<CursorPageVO<CommentVO>> pageBySpu(@PathVariable Long spuId,
                                                      @Valid CommentPageDTO dto) {
         dto.setSpuId(spuId);
         dto.setStatus(CommentStatusEnum.NORMAL.intCode());
-        return Result.success(commentService.page(dto).map(po -> CommentVO.from(po, minioUtil)));
+        return Result.success(commentService.pageVO(dto));
     }
 
+
     /**
-     * 公开接口：按 SPU 查询评价统计。
-     * @param spuId 商品SPU ID
-     * @return 评价统计视图
+     * 执行 stats 方法。
+     * @param spuId spuId 参数
+     * @return 统一响应结果
      */
     @GetMapping("/{spuId}/_stats")
     public Result<CommentStatsVO> stats(@PathVariable Long spuId) {

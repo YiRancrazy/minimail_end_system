@@ -8,10 +8,13 @@ import java.util.Map;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.springframework.dao.DuplicateKeyException;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -20,22 +23,34 @@ import static org.mockito.Mockito.when;
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
+import com.yirancrazy.minimall.api.dto.order.OrderCommentEligibilityDTO;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
+import com.yirancrazy.minimall.common.result.Result;
+import com.yirancrazy.minimall.common.util.MinioUtil;
 import com.yirancrazy.minimall.notify.constant.CommentStatusEnum;
+import com.yirancrazy.minimall.notify.constant.NotifyCodeEnum;
 import com.yirancrazy.minimall.notify.dto.CommentCreateDTO;
 import com.yirancrazy.minimall.notify.dto.CommentPageDTO;
+import com.yirancrazy.minimall.notify.dto.CommentRatingCountDTO;
 import com.yirancrazy.minimall.notify.entity.CommentPO;
+import com.yirancrazy.minimall.notify.gateway.CommentRemoteGateway;
 import com.yirancrazy.minimall.notify.manager.CommentManager;
 import com.yirancrazy.minimall.notify.service.impl.CommentServiceImpl;
 import com.yirancrazy.minimall.notify.vo.CommentStatsVO;
 
+
 /**
- * CommentServiceImpl 单元测试，覆盖评价提交、分页、商家回复、统计的正常、失败、边界路径。
- */
+ * @Author: yirancrazy@gmail.com
+ * @Description: CommentServiceImplTest 单元测试。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 public class CommentServiceImplTest {
 
     private CommentManager commentManager;
+    private CommentRemoteGateway commentRemoteGateway;
+    private MinioUtil minioUtil;
     private CommentServiceImpl service;
 
     @BeforeEach
@@ -54,13 +69,17 @@ public class CommentServiceImplTest {
             return true;
         }).when(commentManager).save(any(CommentPO.class));
         lenient().when(commentManager.updateById(any(CommentPO.class))).thenReturn(true);
-        service = new CommentServiceImpl(commentManager);
+        commentRemoteGateway = mock(CommentRemoteGateway.class);
+        lenient().when(commentRemoteGateway.commentEligibility(anyString(), any(), any()))
+            .thenReturn(Result.success(new OrderCommentEligibilityDTO(true, 1L, 7L, 11L, 4)));
+        minioUtil = mock(MinioUtil.class);
+        service = new CommentServiceImpl(commentManager, commentRemoteGateway, minioUtil);
     }
 
+
     /**
-     * 验证 create 正常提交评价：rating/content 落库，merchantId 取自 DTO。
+     * 创建业务数据。
      */
-    @Test
     public void create_persists_with_dto_fields() {
         when(commentManager.getOne(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class)))
                 .thenReturn(null);
@@ -68,7 +87,7 @@ public class CommentServiceImplTest {
         CommentCreateDTO dto = new CommentCreateDTO();
         dto.setOrderNo("O001");
         dto.setSpuId(100L);
-        dto.setMerchantId(11L);
+        dto.setMerchantId(99L);
         dto.setRating(5);
         dto.setContent("好评");
         dto.setImages("a.jpg,b.jpg");
@@ -77,13 +96,15 @@ public class CommentServiceImplTest {
         Long id = service.create(7L, dto);
 
         assertNotNull(id);
-        verify(commentManager).save(any(CommentPO.class));
+        ArgumentCaptor<CommentPO> captor = ArgumentCaptor.forClass(CommentPO.class);
+        verify(commentManager).save(captor.capture());
+        assertEquals(11L, captor.getValue().getMerchantId());
     }
 
+
     /**
-     * 验证 create 在同一订单同一商品重复评价时抛错。
+     * 创建业务数据。
      */
-    @Test
     public void create_throws_on_duplicate() {
         CommentPO existing = new CommentPO();
         existing.setId(1L);
@@ -100,10 +121,10 @@ public class CommentServiceImplTest {
         verify(commentManager, never()).save(any(CommentPO.class));
     }
 
+
     /**
-     * 验证 create merchantId 为空时回填 0。
+     * 创建业务数据。
      */
-    @Test
     public void create_fills_merchant_id_zero_when_null() {
         when(commentManager.getOne(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class)))
                 .thenReturn(null);
@@ -111,18 +132,84 @@ public class CommentServiceImplTest {
         CommentCreateDTO dto = new CommentCreateDTO();
         dto.setOrderNo("O002");
         dto.setSpuId(200L);
+        dto.setMerchantId(88L);
         dto.setRating(3);
         dto.setContent("ok");
+        when(commentRemoteGateway.commentEligibility(anyString(), any(), any()))
+            .thenReturn(Result.success(new OrderCommentEligibilityDTO(true, 1L, 7L, null, 4)));
 
         service.create(7L, dto);
 
-        verify(commentManager).save(any(CommentPO.class));
+        ArgumentCaptor<CommentPO> captor = ArgumentCaptor.forClass(CommentPO.class);
+        verify(commentManager).save(captor.capture());
+        assertEquals(0L, captor.getValue().getMerchantId());
     }
 
+
     /**
-     * 验证 page 分页查询委托给 manager 并按 ID 降序。
+     * 创建业务数据。
      */
-    @Test
+    public void create_rejects_when_order_not_eligible() {
+        when(commentRemoteGateway.commentEligibility(anyString(), any(), any()))
+            .thenReturn(Result.success(new OrderCommentEligibilityDTO(false, 1L, 7L, 11L, 1)));
+
+        CommentCreateDTO dto = new CommentCreateDTO();
+        dto.setOrderNo("O003");
+        dto.setSpuId(300L);
+        dto.setRating(5);
+        dto.setContent("伪造评价");
+
+        BizException ex = assertThrows(BizException.class, () -> service.create(7L, dto));
+
+        assertEquals(NotifyCodeEnum.COMMENT_ORDER_NOT_PURCHASED.getCode(), ex.getCode());
+        verify(commentManager, never()).save(any(CommentPO.class));
+    }
+
+
+    /**
+     * 创建业务数据。
+     */
+    public void create_rejects_when_order_service_unavailable() {
+        when(commentRemoteGateway.commentEligibility(anyString(), any(), any()))
+            .thenReturn(Result.fail("20000", "订单服务不可用"));
+
+        CommentCreateDTO dto = new CommentCreateDTO();
+        dto.setOrderNo("O004");
+        dto.setSpuId(400L);
+        dto.setRating(5);
+        dto.setContent("降级评价");
+
+        BizException ex = assertThrows(BizException.class, () -> service.create(7L, dto));
+
+        assertEquals(NotifyCodeEnum.COMMENT_ORDER_SERVICE_UNAVAILABLE.getCode(), ex.getCode());
+        verify(commentManager, never()).save(any(CommentPO.class));
+    }
+
+
+    /**
+     * 创建业务数据。
+     */
+    public void create_rejects_duplicate_rejected_by_unique_index() {
+        when(commentManager.getOne(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class)))
+                .thenReturn(null);
+        when(commentManager.save(any(CommentPO.class)))
+            .thenThrow(new DuplicateKeyException("uk_notify_comment_order_spu_user"));
+
+        CommentCreateDTO dto = new CommentCreateDTO();
+        dto.setOrderNo("O005");
+        dto.setSpuId(500L);
+        dto.setRating(5);
+        dto.setContent("并发评价");
+
+        BizException ex = assertThrows(BizException.class, () -> service.create(7L, dto));
+
+        assertEquals(NotifyCodeEnum.COMMENT_ALREADY_EXISTS.getCode(), ex.getCode());
+    }
+
+
+    /**
+     * 分页查询数据。
+     */
     public void page_delegates_to_manager() {
         CommentPageDTO dto = new CommentPageDTO();
         dto.setLimit(10);
@@ -136,10 +223,10 @@ public class CommentServiceImplTest {
         verify(commentManager).list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class));
     }
 
+
     /**
-     * 验证 page 按 spuId/userId/merchantId/orderNo/status 过滤全部生效。
+     * 分页查询数据。
      */
-    @Test
     public void page_filters_combined() {
         CommentPageDTO dto = new CommentPageDTO();
         dto.setLimit(10);
@@ -157,10 +244,10 @@ public class CommentServiceImplTest {
         verify(commentManager).list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class));
     }
 
+
     /**
-     * 验证 reply 正常写入回复内容与回复时间。
+     * 执行 reply_writes_reply_and_time 方法。
      */
-    @Test
     public void reply_writes_reply_and_time() {
         CommentPO po = new CommentPO();
         po.setId(1L);
@@ -174,10 +261,10 @@ public class CommentServiceImplTest {
         verify(commentManager).updateById(po);
     }
 
+
     /**
-     * 验证 reply 在 merchantId 不匹配时抛 COMMENT_NO_PERMISSION。
+     * 执行 reply_throws_on_merchant_mismatch 方法。
      */
-    @Test
     public void reply_throws_on_merchant_mismatch() {
         CommentPO po = new CommentPO();
         po.setId(1L);
@@ -188,30 +275,24 @@ public class CommentServiceImplTest {
         verify(commentManager, never()).updateById(any(CommentPO.class));
     }
 
+
     /**
-     * 验证 reply 在评价不存在时抛 COMMENT_NOT_FOUND。
+     * 执行 reply_throws_when_not_found 方法。
      */
-    @Test
     public void reply_throws_when_not_found() {
         when(commentManager.getById(1L)).thenReturn(null);
 
         assertThrows(BizException.class, () -> service.reply(1L, 11L, "x"));
     }
 
+
     /**
-     * 验证 stats 基于数据库聚合结果计算平均分与各档分布。
+     * 执行 stats_aggregates_rating_distribution 方法。
      */
-    @Test
     public void stats_aggregates_rating_distribution() {
-        Map<String, Object> r5 = new HashMap<>();
-        r5.put("rating", 5);
-        r5.put("cnt", 1L);
-        Map<String, Object> r4 = new HashMap<>();
-        r4.put("rating", 4);
-        r4.put("cnt", 1L);
-        Map<String, Object> r3 = new HashMap<>();
-        r3.put("rating", 3);
-        r3.put("cnt", 1L);
+        CommentRatingCountDTO r5 = ratingCount(5, 1L);
+        CommentRatingCountDTO r4 = ratingCount(4, 1L);
+        CommentRatingCountDTO r3 = ratingCount(3, 1L);
         when(commentManager.countGroupByRating(100L, CommentStatusEnum.NORMAL.intCode()))
                 .thenReturn(Arrays.asList(r5, r4, r3));
 
@@ -226,10 +307,17 @@ public class CommentServiceImplTest {
         verify(commentManager, never()).list(any(Wrapper.class));
     }
 
+    private CommentRatingCountDTO ratingCount(int rating, long cnt) {
+        CommentRatingCountDTO dto = new CommentRatingCountDTO();
+        dto.setRating(rating);
+        dto.setCnt(cnt);
+        return dto;
+    }
+
+
     /**
-     * 验证 stats 在无评价时返回零值。
+     * 执行 stats_returns_zeros_when_empty 方法。
      */
-    @Test
     public void stats_returns_zeros_when_empty() {
         when(commentManager.countGroupByRating(100L, CommentStatusEnum.NORMAL.intCode()))
                 .thenReturn(Collections.emptyList());

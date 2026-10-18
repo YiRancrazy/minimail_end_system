@@ -10,9 +10,13 @@ import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.Version;
 import lombok.Data;
 
+
 /**
-* 持久化实体基类，统一定义雪花算法主键、创建时间、更新时间、逻辑删除标记和乐观锁版本号五个公共字段，并配置自动填充与逻辑删除注解。
- */
+ * @Author: yirancrazy@gmail.com
+ * @Description: BasePO 持久化对象，对应数据库表。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 @Data
 public abstract class BasePO implements Serializable {
     @TableId(type = IdType.ASSIGN_ID)

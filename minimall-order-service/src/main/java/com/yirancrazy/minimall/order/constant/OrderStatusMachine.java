@@ -6,20 +6,22 @@ import com.yirancrazy.minimall.order.constant.OrderCodeEnum;
 import com.yirancrazy.minimall.order.constant.OrderStatusEnum;
 import com.yirancrazy.minimall.order.entity.OrderPO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 订单状态机，封装订单状态转换规则的校验与推进。无状态单例，由 Spring 容器管理。
+ * @Description: OrderStatusMachine 类型，承载相关业务能力。
  * @Version: 1.0
- * @DateTime: 2026/08/05
+ * @DateTime: 2026/10/16
  **/
 @Component
 public class OrderStatusMachine {
 
+
     /**
-     * 校验从当前状态到目标状态是否允许转换。
-     * @param from 当前订单状态
-     * @param target 目标订单状态
-     * @return true 如果转换合法
+     * 执行 canTransitTo 方法。
+     * @param from from 参数
+     * @param target target 参数
+     * @return 是否处理成功
      */
     public boolean canTransitTo(OrderStatusEnum from, OrderStatusEnum target) {
         if (from == null || target == null) {
@@ -31,17 +33,16 @@ public class OrderStatusMachine {
             case SHIPPED -> target == OrderStatusEnum.COMPLETED || target == OrderStatusEnum.REFUNDING;
             case REFUNDING -> target == OrderStatusEnum.REFUNDED
                 || target == OrderStatusEnum.PAID
-                || target == OrderStatusEnum.SHIPPED
-                || target == OrderStatusEnum.CANCELED;
+                || target == OrderStatusEnum.SHIPPED;
             default -> false;
         };
     }
 
+
     /**
-     * 推进订单状态，校验失败抛出 BizException。
-     * @param order 待推进的订单持久化对象
-     * @param target 目标状态
-     * @throws BizException 当状态转换非法时
+     * 执行 transit 方法。
+     * @param order order 参数
+     * @param target target 参数
      */
     public void transit(OrderPO order, OrderStatusEnum target) {
         OrderStatusEnum current = fromCode(order.getStatus());
@@ -51,11 +52,11 @@ public class OrderStatusMachine {
         order.setStatus(target.intCode());
     }
 
+
     /**
-     * 由整型状态码解析为订单状态枚举。
-     * @param code 持久化的整型状态码
-     * @return 对应的订单状态枚举
-     * @throws BizException 当状态码非法时
+     * 执行 fromCode 方法。
+     * @param code code 参数
+     * @return 处理结果
      */
     public OrderStatusEnum fromCode(Integer code) {
         for (OrderStatusEnum e : OrderStatusEnum.values()) {

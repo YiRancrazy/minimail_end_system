@@ -6,12 +6,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: EncryptionAutoConfiguration 单元测试，验证加密上下文初始化和 AES-256-GCM 加解密往返。
+ * @Description: EncryptionAutoConfigurationTest 单元测试。
  * @Version: 1.0
- * @DateTime: 2026/08/13
- */
+ * @DateTime: 2026/10/16
+ **/
 class EncryptionAutoConfigurationTest {
 
     private static final String BASE64_KEY = "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=";

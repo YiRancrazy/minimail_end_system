@@ -7,15 +7,20 @@ import io.swagger.v3.oas.models.info.Contact;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.info.License;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: OpenApi配置类，配置OpenApi相关 Bean
+ * @Description: OpenApiConfig 配置类。
  * @Version: 1.0
- * @DateTime: 2026/07/31
- */
+ * @DateTime: 2026/10/16
+ **/
 @Configuration
 public class OpenApiConfig {
 
+    /**
+     * 执行 minimallOpenAPI 方法。
+     * @return 处理结果
+     */
     @Bean
     public OpenAPI minimallOpenAPI() {
         return new OpenAPI()

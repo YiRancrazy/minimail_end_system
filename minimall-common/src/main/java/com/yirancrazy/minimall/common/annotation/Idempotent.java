@@ -8,23 +8,33 @@ import java.lang.annotation.Target;
 import java.util.concurrent.TimeUnit;
 
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: Idempotent 类。
+ * @Description: Idempotent 类型，承载相关业务能力。
  * @Version: 1.0
- * @DateTime: 2026/7/31
+ * @DateTime: 2026/10/16
  **/
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 public @interface Idempotent {
+
     /**
-     * 幂等键 SpEL 表达式（如 #dto.orderNo）；为空时回退取请求头 X-Idempotency-Key。
-     * @return SpEL 表达式
+     * 执行 key 方法。
+     * @return 处理结果
      */
     String key() default "";
 
+    /**
+     * 执行 expire 方法。
+     * @return 业务数值
+     */
     long expire() default 24;
 
+    /**
+     * 执行 unit 方法。
+     * @return 处理结果
+     */
     TimeUnit unit() default TimeUnit.HOURS;
 }

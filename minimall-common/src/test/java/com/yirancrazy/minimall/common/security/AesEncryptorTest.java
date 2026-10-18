@@ -7,11 +7,12 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: AesEncryptor 单元测试，验证AES-256-GCM加密/解密的正确性、边界条件和异常处理。
+ * @Description: AesEncryptorTest 单元测试。
  * @Version: 1.0
- * @DateTime: 2026/08/04
+ * @DateTime: 2026/10/16
  **/
 class AesEncryptorTest {
 

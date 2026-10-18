@@ -3,11 +3,12 @@ package com.yirancrazy.minimall.auth.manager;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.yirancrazy.minimall.auth.entity.AuthTokenBlacklistPO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: AuthTokenBlacklist数据访问层接口，定义Token黑名单表操作契约
+ * @Description: AuthTokenBlacklistManager 管理器接口，封装数据访问能力。
  * @Version: 1.0
- * @DateTime: 2026/08/04
- */
+ * @DateTime: 2026/10/16
+ **/
 public interface AuthTokenBlacklistManager extends IService<AuthTokenBlacklistPO> {
 }

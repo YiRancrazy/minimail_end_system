@@ -13,12 +13,13 @@ import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.common.filter.TraceIdFilter;
 import com.yirancrazy.minimall.common.result.Result;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: RocketMqEvent消费者，消费RocketMqEvent相关消息
+ * @Description: RocketMqEventConsumer 类型，承载相关业务能力。
  * @Version: 1.0
- * @DateTime: 2026/07/31
- */
+ * @DateTime: 2026/10/16
+ **/
 @Slf4j
 public class RocketMqEventConsumer {
 
@@ -28,21 +29,24 @@ public class RocketMqEventConsumer {
     private DefaultMQConsumerWrapper wrapper;
     private final Map<Class<?>, Consumer<Object>> handlers = new ConcurrentHashMap<>();
 
+    /**
+     * 构造 RocketMqEventConsumer 实例。
+     * @param namesrvAddr namesrvAddr 参数
+     * @param topic topic 参数
+     * @param group group 参数
+     */
     public RocketMqEventConsumer(String namesrvAddr, String topic, String group) {
         this.namesrvAddr = namesrvAddr;
         this.topic = topic;
         this.group = group;
     }
 
+
     /**
-     * Register a handler to be invoked whenever a message with the tag
-     * corresponding to {@code eventType} is received. The handler is stored
-     * eagerly so it can be replayed on {@link #start()}; if the consumer has
-     * already started, the handler is also attached to the live wrapper.
-     *
-     * @param eventType the event {@link Class} whose tag this handler should react to
-     * @param handler the typed {@link Consumer} invoked with the decoded payload
-     * @param <T> the event type handled by {@code handler}
+     * 执行 subscribe 方法。
+     * @param <T> 泛型参数
+     * @param eventType eventType 参数
+     * @param handler handler 参数
      */
     public <T> void subscribe(Class<T> eventType, Consumer<T> handler) {
         handlers.put(eventType, e -> handler.accept(eventType.cast(e)));
@@ -51,32 +55,30 @@ public class RocketMqEventConsumer {
         }
     }
 
+
     /**
-     * Bring the underlying push consumer online and wire all previously
-     * registered handlers. When no handlers were registered this is a
-     * logged no-op; on startup failure the wrapper is dropped and events are
-     * silently ignored.
+     * 执行 start 方法。
      */
     public void start() {
         if (handlers.isEmpty()) {
-            log.warn("RocketMqEventConsumer.start() called with no handlers registered; events will not be consumed");
+            log.warn("RocketMqEventConsumer.start() 调用时未注册 handler，事件将不会被消费");
             return;
         }
         try {
             wrapper = new DefaultMQConsumerWrapper(namesrvAddr, topic, group, handlers);
             wrapper.start();
-            log.info("rocketmq consumer started, group={}, topic={}", group, topic);
+            log.info("rocketmq 消费者已启动，group={}，topic={}", group, topic);
         }
         catch (Exception e) {
-            log.warn("rocketmq consumer start failed (events ignored): {}", e.getMessage());
+            log.error("rocketmq 消费者启动失败", e);
             wrapper = null;
+            throw new IllegalStateException("RocketMQ 消费者启动失败", e);
         }
     }
 
+
     /**
-     * Shut down the underlying push consumer if it was started, releasing
-     * the RocketMQ client resources. Safe to call when the consumer never
-     * successfully started.
+     * 执行 stop 方法。
      */
     public void stop() {
         if (wrapper != null) {
@@ -84,10 +86,24 @@ public class RocketMqEventConsumer {
         }
     }
 
+    /**
+     * @Author: yirancrazy@gmail.com
+     * @Description: DefaultMQConsumerWrapper 类型，承载相关业务能力。
+     * @Version: 1.0
+     * @DateTime: 2026/10/16
+     **/
     static class DefaultMQConsumerWrapper {
         private final DefaultMQPushConsumer consumer;
         private final Map<Class<?>, Consumer<Object>> handlers;
 
+        /**
+         * 构造 DefaultMQConsumerWrapper 实例。
+         * @param namesrvAddr namesrvAddr
+         * @param topic topic
+         * @param group group
+         * @param handlers handlers
+         * @throws Exception 处理失败时抛出
+         */
         DefaultMQConsumerWrapper(String namesrvAddr, String topic, String group,
                                  Map<Class<?>, Consumer<Object>> handlers) throws Exception {
             this.handlers = handlers;
@@ -119,14 +135,14 @@ public class RocketMqEventConsumer {
                         }
                         catch (Exception ex) {
                             // 解码失败不静默丢弃：返回 RECONSUME_LATER 由 RocketMQ 重投，重试耗尽进死信队列
-                            log.warn("rocketmq consumer decode failed for tag={}, retry later", tag, ex);
+                            log.warn("rocketmq 消费者解码失败，tag={}，稍后重试", tag, ex);
                             return ConsumeConcurrentlyStatus.RECONSUME_LATER;
                         }
                         try {
                             handlers.get(matched).accept(payload);
                         }
                         catch (Exception ex) {
-                            log.warn("rocketmq handler failed for tag={}: {}", tag, ex.getMessage());
+                            log.warn("rocketmq handler 执行失败，tag={}: {}", tag, ex.getMessage());
                             return ConsumeConcurrentlyStatus.RECONSUME_LATER;
                         }
                     }
@@ -138,14 +154,27 @@ public class RocketMqEventConsumer {
             });
         }
 
+        /**
+         * 创建Handler。
+         * @param <T> 泛型参数
+         * @param type 类型
+         * @param handler handler
+         */
         <T> void registerHandler(Class<T> type, Consumer<T> handler) {
             handlers.put(type, e -> handler.accept(type.cast(e)));
         }
 
+        /**
+         * 启动start。
+         * @throws Exception 处理失败时抛出
+         */
         void start() throws Exception {
             consumer.start();
         }
 
+        /**
+         * 处理shutdown。
+         */
         void shutdown() {
             consumer.shutdown();
         }

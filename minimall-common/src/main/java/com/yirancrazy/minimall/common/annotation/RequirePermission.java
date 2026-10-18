@@ -6,25 +6,28 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import com.yirancrazy.minimall.common.constant.PermissionEnum;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 接口权限注解，标注在 Controller 方法上声明所需权限，由 PermissionAspect 拦截校验。
+ * @Description: RequirePermission 类型，承载相关业务能力。
  * @Version: 1.0
- * @DateTime: 2026/08/03
+ * @DateTime: 2026/10/16
  **/
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface RequirePermission {
 
+
     /**
-     * 所需权限列表。
-     * @return 权限数组
+     * 执行 value 方法。
+     * @return 结果列表
      */
     PermissionEnum[] value();
 
+
     /**
-     * 是否要求同时拥有全部权限；默认 false，即满足任意一个即可。
-     * @return true 表示需要全部权限
+     * 执行 requireAll 方法。
+     * @return 是否处理成功
      */
     boolean requireAll() default false;
 }

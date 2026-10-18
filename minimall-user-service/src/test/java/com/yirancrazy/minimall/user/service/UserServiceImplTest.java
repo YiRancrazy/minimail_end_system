@@ -18,8 +18,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
+import com.yirancrazy.minimall.api.dto.user.UserSnapshotDTO;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
+import com.yirancrazy.minimall.common.util.MinioUtil;
 import com.yirancrazy.minimall.user.dto.UserCreateDTO;
 import com.yirancrazy.minimall.user.dto.UserPageDTO;
 import com.yirancrazy.minimall.user.dto.UserProfileDTO;
@@ -27,18 +29,25 @@ import com.yirancrazy.minimall.user.dto.UserUpdateDTO;
 import com.yirancrazy.minimall.user.entity.UserPO;
 import com.yirancrazy.minimall.user.manager.UserManager;
 import com.yirancrazy.minimall.user.service.impl.UserServiceImpl;
+import com.yirancrazy.minimall.user.vo.UserVO;
+
 
 /**
- * UserServiceImpl 单元测试，覆盖查询、创建、更新、删除的正常、失败、边界路径。
- */
+ * @Author: yirancrazy@gmail.com
+ * @Description: UserServiceImplTest 单元测试。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 public class UserServiceImplTest {
 
     private UserManager userManager;
+    private MinioUtil minioUtil;
     private UserServiceImpl service;
 
     @BeforeEach
     void setUp() {
         userManager = mock(UserManager.class);
+        minioUtil = mock(MinioUtil.class);
         lenient().doAnswer(inv -> {
             UserPO p = inv.getArgument(0);
             if (p.getId() == null) {
@@ -47,13 +56,13 @@ public class UserServiceImplTest {
             return true;
         }).when(userManager).save(any(UserPO.class));
         lenient().when(userManager.updateById(any(UserPO.class))).thenReturn(true);
-        service = new UserServiceImpl(userManager);
+        service = new UserServiceImpl(userManager, minioUtil);
     }
 
+
     /**
-     * 验证 getById 在用户存在时返回实体。
+     * 获取相关数据。
      */
-    @Test
     public void getById_returns_user_when_exists() {
         UserPO u = new UserPO();
         u.setId(1L);
@@ -65,19 +74,36 @@ public class UserServiceImplTest {
         assertEquals("alice", result.getUsername());
     }
 
+
     /**
-     * 验证 getById 在用户不存在时抛出 BizException。
+     * 获取相关数据。
      */
-    @Test
     public void getById_throws_when_missing() {
         when(userManager.getById(999L)).thenReturn(null);
         assertThrows(BizException.class, () -> service.getById(999L));
     }
 
+
     /**
-     * 验证 create 持久化用户并返回新 ID。
+     * 获取相关数据。
      */
-    @Test
+    public void getSnapshot_returns_user_snapshot() {
+        UserPO user = new UserPO();
+        user.setId(1L);
+        user.setUsername("alice");
+        when(userManager.getById(1L)).thenReturn(user);
+
+        UserSnapshotDTO result = service.getSnapshot(1L);
+
+        assertEquals(1L, result.getUserId());
+        assertEquals("alice", result.getUsername());
+        assertEquals("USER", result.getRole());
+    }
+
+
+    /**
+     * 创建业务数据。
+     */
     public void create_persists_and_returns_id() {
         UserCreateDTO dto = new UserCreateDTO();
         dto.setUsername("bob");
@@ -90,10 +116,10 @@ public class UserServiceImplTest {
         verify(userManager).save(any(UserPO.class));
     }
 
+
     /**
-     * 验证 create 同步写入 phoneMasked 脱敏列，供平台列表模糊查询。
+     * 创建业务数据。
      */
-    @Test
     public void create_sets_phoneMasked() {
         UserCreateDTO dto = new UserCreateDTO();
         dto.setUsername("bob");
@@ -108,10 +134,10 @@ public class UserServiceImplTest {
         assertEquals("138****0000", captor.getValue().getPhoneMasked());
     }
 
+
     /**
-     * 验证 update 调用 updateById 并返回其结果。
+     * 更新业务数据。
      */
-    @Test
     public void update_returns_true_on_success() {
         UserUpdateDTO dto = new UserUpdateDTO();
         dto.setUsername("alice-new");
@@ -122,10 +148,10 @@ public class UserServiceImplTest {
         verify(userManager).updateById(any(UserPO.class));
     }
 
+
     /**
-     * 验证 update 同步刷新 phoneMasked 脱敏列。
+     * 更新业务数据。
      */
-    @Test
     public void update_sets_phoneMasked() {
         UserUpdateDTO dto = new UserUpdateDTO();
         dto.setUsername("alice-new");
@@ -139,10 +165,10 @@ public class UserServiceImplTest {
         assertEquals("138****5678", captor.getValue().getPhoneMasked());
     }
 
+
     /**
-     * 验证 update 在 updateById 失败时返回 false。
+     * 更新业务数据。
      */
-    @Test
     public void update_returns_false_on_failure() {
         when(userManager.updateById(any(UserPO.class))).thenReturn(false);
         UserUpdateDTO dto = new UserUpdateDTO();
@@ -152,10 +178,10 @@ public class UserServiceImplTest {
         assertFalse(ok);
     }
 
+
     /**
-     * 验证 delete 调用 removeById 并返回其结果。
+     * 删除业务数据。
      */
-    @Test
     public void delete_returns_true_on_success() {
         when(userManager.removeById(1L)).thenReturn(true);
         boolean ok = service.delete(1L);
@@ -163,20 +189,20 @@ public class UserServiceImplTest {
         verify(userManager).removeById(eq(1L));
     }
 
+
     /**
-     * 验证 delete 在 removeById 失败时返回 false。
+     * 删除业务数据。
      */
-    @Test
     public void delete_returns_false_on_failure() {
         when(userManager.removeById(1L)).thenReturn(false);
         boolean ok = service.delete(1L);
         assertFalse(ok);
     }
 
+
     /**
-     * 验证 page 委托给 userManager.list 并返回游标分页结果。
+     * 分页查询数据。
      */
-    @Test
     public void page_delegates_to_manager() {
         UserPageDTO dto = new UserPageDTO();
         dto.setLimit(10);
@@ -189,10 +215,10 @@ public class UserServiceImplTest {
         verify(userManager).list(any(Wrapper.class));
     }
 
+
     /**
-     * 验证 getProfile 在用户存在时返回含 avatar 和 gender 的实体。
+     * 获取相关数据。
      */
-    @Test
     public void getProfile_returns_user_with_avatar_and_gender() {
         UserPO u = new UserPO();
         u.setId(1L);
@@ -209,19 +235,64 @@ public class UserServiceImplTest {
         assertEquals(1, result.getGender());
     }
 
+
     /**
-     * 验证 getProfile 在用户不存在时抛出 BizException。
+     * 获取相关数据。
      */
-    @Test
     public void getProfile_throws_when_missing() {
         when(userManager.getById(999L)).thenReturn(null);
         assertThrows(BizException.class, () -> service.getProfile(999L));
     }
 
+
     /**
-     * 验证 updateProfile 仅更新 nickname、avatar、gender 字段。
+     * 获取相关数据。
      */
-    @Test
+    public void getVO_returns_masked_user_vo() {
+        UserPO u = new UserPO();
+        u.setId(1L);
+        u.setUsername("alice");
+        u.setPhone("13800000000");
+        u.setAvatar("avatar/alice.png");
+        when(userManager.getById(1L)).thenReturn(u);
+        when(minioUtil.resolvePublicUrl("avatar/alice.png")).thenReturn("https://cdn/avatar/alice.png");
+
+        UserVO vo = service.getVO(1L);
+
+        assertEquals("138****0000", vo.getPhone());
+        assertEquals("https://cdn/avatar/alice.png", vo.getAvatar());
+    }
+
+
+    /**
+     * 获取相关数据。
+     */
+    public void getVO_throws_when_missing() {
+        when(userManager.getById(999L)).thenReturn(null);
+        assertThrows(BizException.class, () -> service.getVO(999L));
+    }
+
+
+    /**
+     * 获取相关数据。
+     */
+    public void getProfileVO_returns_vo() {
+        UserPO u = new UserPO();
+        u.setId(1L);
+        u.setUsername("alice");
+        u.setNickname("Alice");
+        when(userManager.getById(1L)).thenReturn(u);
+
+        UserVO vo = service.getProfileVO(1L);
+
+        assertEquals(1L, vo.getId());
+        assertEquals("Alice", vo.getNickname());
+    }
+
+
+    /**
+     * 更新业务数据。
+     */
     public void updateProfile_updates_partial_fields() {
         UserProfileDTO dto = new UserProfileDTO();
         dto.setNickname("NewNick");
@@ -233,10 +304,10 @@ public class UserServiceImplTest {
         verify(userManager).updateById(any(UserPO.class));
     }
 
+
     /**
-     * 验证 updateProfile 在 nickname 为 null 时不覆盖原值。
+     * 更新业务数据。
      */
-    @Test
     public void updateProfile_skips_null_fields() {
         UserProfileDTO dto = new UserProfileDTO();
         dto.setAvatar("https://example.com/new.png");

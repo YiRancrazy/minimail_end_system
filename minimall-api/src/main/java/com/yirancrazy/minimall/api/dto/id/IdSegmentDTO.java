@@ -2,12 +2,13 @@ package com.yirancrazy.minimall.api.dto.id;
 
 import lombok.Data;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: IdSegment数据传输对象，用于IdSegment相关数据传输
+ * @Description: IdSegmentDTO 数据传输对象。
  * @Version: 1.0
- * @DateTime: 2026/07/31
- */
+ * @DateTime: 2026/10/16
+ **/
 @Data
 public class IdSegmentDTO {
     private String bizTag;

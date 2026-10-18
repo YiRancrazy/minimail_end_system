@@ -12,11 +12,12 @@ import static org.mockito.Mockito.when;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CommonCode;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: EncryptedStringTypeHandler 单元测试，验证读取时解密正常路径、空值透传以及解密失败时显式抛异常（不静默返回密文）。
+ * @Description: EncryptedStringTypeHandlerTest 单元测试。
  * @Version: 1.0
- * @DateTime: 2026/08/16
+ * @DateTime: 2026/10/16
  **/
 class EncryptedStringTypeHandlerTest {
 
@@ -70,7 +71,7 @@ class EncryptedStringTypeHandlerTest {
 
     @Test
     void getNullableResult_wrongKey_preservesOriginalCause() throws Exception {
-        // 用 KEY_A 加密，再用 KEY_B 解密 → cause 应为 IllegalStateException（AES decryption failed）
+        // 用 KEY_A 加密，再用 KEY_B 解密，cause 应为 IllegalStateException（AES 解密失败）
         byte[] keyA = EncryptionContext.getKey();
         String cipher = AesEncryptor.encrypt("secret", keyA);
         byte[] keyB = "99999999999999999999999999999999".getBytes(java.nio.charset.StandardCharsets.UTF_8);

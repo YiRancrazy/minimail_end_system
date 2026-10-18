@@ -4,12 +4,13 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import com.yirancrazy.minimall.common.base.BaseEnum;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 库存流水类型枚举，定义库存变动的类型（预占/释放/调整/调出/调入/纠正）。
- * @Version: 1.1
- * @DateTime: 2026/08/03
-**/
+ * @Description: StockJournalTypeEnum 枚举，定义相关业务状态。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 @Getter
 @AllArgsConstructor
 public enum StockJournalTypeEnum implements BaseEnum {
@@ -24,14 +25,19 @@ public enum StockJournalTypeEnum implements BaseEnum {
     private final String alias;
     private final String message;
 
+    /**
+     * 获取相关数据。
+     * @return 处理结果
+     */
     @Override
     public String getCode() {
         return String.valueOf(code);
     }
 
+
     /**
-     * Get the integer type code for persistence.
-     * @return the integer code value
+     * 执行 intCode 方法。
+     * @return 业务数值
      */
     public int intCode() {
         return code;

@@ -15,13 +15,16 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.api.dto.goods.SpuSnapshotDTO;
 import com.yirancrazy.minimall.api.dto.merchant.ShopSnapshotDTO;
+import com.yirancrazy.minimall.api.dto.stock.StockAdjustDTO;
 import com.yirancrazy.minimall.api.dto.stock.StockInitDTO;
-import com.yirancrazy.minimall.api.feign.MerchantFeignClient;
-import com.yirancrazy.minimall.api.feign.StockFeignClient;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CommonCode;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
@@ -29,6 +32,7 @@ import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.common.util.CursorUtils;
 import com.yirancrazy.minimall.common.util.MinioUtil;
 import com.yirancrazy.minimall.goods.constant.AuditDecisionEnum;
+import com.yirancrazy.minimall.goods.constant.SkuCodeEnum;
 import com.yirancrazy.minimall.goods.constant.SpuCodeEnum;
 import com.yirancrazy.minimall.goods.constant.SpuStatusEnum;
 import com.yirancrazy.minimall.goods.dto.SkuItemDTO;
@@ -38,6 +42,7 @@ import com.yirancrazy.minimall.goods.dto.SpuUpdateDTO;
 import com.yirancrazy.minimall.goods.entity.SkuPO;
 import com.yirancrazy.minimall.goods.entity.SpuAuditRecordPO;
 import com.yirancrazy.minimall.goods.entity.SpuPO;
+import com.yirancrazy.minimall.goods.gateway.GoodsRemoteGateway;
 import com.yirancrazy.minimall.goods.manager.SkuManager;
 import com.yirancrazy.minimall.goods.manager.SpuAuditRecordManager;
 import com.yirancrazy.minimall.goods.manager.SpuManager;
@@ -45,14 +50,16 @@ import com.yirancrazy.minimall.goods.search.SpuDocument;
 import com.yirancrazy.minimall.goods.search.SpuSearchService;
 import com.yirancrazy.minimall.goods.service.SpuService;
 import com.yirancrazy.minimall.goods.vo.SkuVO;
+import com.yirancrazy.minimall.goods.vo.SpuAuditRecordVO;
 import com.yirancrazy.minimall.goods.vo.SpuVO;
+
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 商品领域服务实现，实现Spu相关业务逻辑，含状态流转与审核闭环
- * @Version: 1.2
- * @DateTime: 2026/08/02
- */
+ * @Description: SpuServiceImpl 服务实现，实现相关业务逻辑。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 @Slf4j
 @Service
 public class SpuServiceImpl implements SpuService {
@@ -61,40 +68,51 @@ public class SpuServiceImpl implements SpuService {
     private final SpuAuditRecordManager spuAuditRecordManager;
     private final SpuSearchService spuSearchService;
     private final SkuManager skuManager;
-    private final MerchantFeignClient merchantFeignClient;
-    private final StockFeignClient stockFeignClient;
+    private final GoodsRemoteGateway goodsRemoteGateway;
     private final MinioUtil minioUtil;
+    private final TransactionTemplate transactionTemplate;
 
-    /** 店铺营业中状态 alias，跨服务通过 MerchantFeignClient 快照透传 */
+
     private static final String SHOP_STATUS_ACTIVE = "ACTIVE";
 
+    /**
+     * 构造 SpuServiceImpl 实例。
+     * @param spuManager spuManager 参数
+     * @param spuAuditRecordManager spuAuditRecordManager 参数
+     * @param spuSearchService spuSearchService 参数
+     * @param skuManager skuManager 参数
+     * @param goodsRemoteGateway goodsRemoteGateway 参数
+     * @param minioUtil minioUtil 参数
+     * @param transactionTemplate transactionTemplate 参数
+     */
     public SpuServiceImpl(SpuManager spuManager,
                           SpuAuditRecordManager spuAuditRecordManager,
                           SpuSearchService spuSearchService,
                           SkuManager skuManager,
-                          MerchantFeignClient merchantFeignClient,
-                          StockFeignClient stockFeignClient,
-                          MinioUtil minioUtil) {
+                          GoodsRemoteGateway goodsRemoteGateway,
+                          MinioUtil minioUtil,
+                          TransactionTemplate transactionTemplate) {
         this.spuManager = spuManager;
         this.spuAuditRecordManager = spuAuditRecordManager;
         this.spuSearchService = spuSearchService;
         this.skuManager = skuManager;
-        this.merchantFeignClient = merchantFeignClient;
-        this.stockFeignClient = stockFeignClient;
+        this.goodsRemoteGateway = goodsRemoteGateway;
         this.minioUtil = minioUtil;
+        this.transactionTemplate = transactionTemplate;
     }
 
+
     /**
-     * 发布前置校验：店铺必须存在、归属当前商家且状态为营业中，否则拒绝创建/送审。
-     * Feign 降级（merchant-service 不可用）时快照返回哨兵值，此处 fail-closed，宁可拒绝不可放行。
-     * @param shopId 目标店铺 ID
-     * @param merchantId 请求方商家 ID
+     * 处理requireActive店铺。
+     * @param shopId 店铺 ID
+     * @param merchantId 商户 ID
+     * @throws BizException 业务校验失败时抛出
      */
     private void requireActiveShop(Long shopId, Long merchantId) {
         if (shopId == null) {
             throw new BizException(SpuCodeEnum.SPU_SHOP_INVALID);
         }
-        Result<ShopSnapshotDTO> result = merchantFeignClient.shopSnapshot(shopId);
+        Result<ShopSnapshotDTO> result = goodsRemoteGateway.shopSnapshot(shopId);
         ShopSnapshotDTO snap = result == null ? null : result.getData();
         if (snap == null || snap.getShopId() == null || snap.getShopId() <= 0
             || !merchantId.equals(snap.getMerchantId())
@@ -103,12 +121,12 @@ public class SpuServiceImpl implements SpuService {
         }
     }
 
+
     /**
-     * 按主键查询 SPU，不存在时抛出 SPU_NOT_FOUND 业务异常。
-     * @param id SPU 主键 ID
-     * @return 已存在的 SPU 实体
+     * 获取相关数据。
+     * @param id id 参数
+     * @return 处理结果
      */
-    @Override
     public SpuPO getById(Long id) {
         SpuPO s = spuManager.getById(id);
         if (s == null) {
@@ -117,23 +135,25 @@ public class SpuServiceImpl implements SpuService {
         return s;
     }
 
+
     /**
-     * 按主键查询 SPU 并校验归属商家，供商家端使用；非本人商品按"不存在"返回，避免越权信息泄露。
-     * @param id SPU 主键 ID
-     * @param merchantId 商家ID，来自可信Header
-     * @return 属于该商家的 SPU 实体
+     * 获取相关数据。
+     * @param id id 参数
+     * @param merchantId merchantId 参数
+     * @return 处理结果
      */
-    @Override
     public SpuPO getById(Long id, Long merchantId) {
         SpuPO s = getById(id);
         checkOwner(s, merchantId);
         return s;
     }
 
+
     /**
-     * 归属校验：实体归属商家与请求商家不一致时抛出 SPU_NOT_FOUND，防越权的同时不暴露资源存在性。
-     * @param existing 已查出的 SPU 实体
-     * @param merchantId 请求方商家ID
+     * 校验Owner。
+     * @param existing existing
+     * @param merchantId 商户 ID
+     * @throws BizException 业务校验失败时抛出
      */
     private void checkOwner(SpuPO existing, Long merchantId) {
         if (existing.getMerchantId() != null && !existing.getMerchantId().equals(merchantId)) {
@@ -141,16 +161,16 @@ public class SpuServiceImpl implements SpuService {
         }
     }
 
+
     /**
-     * 创建 SPU，生成业务编号并初始化为草稿状态后落库；携带的 SKU 清单一并批量保存，
-     * 否则列表页商品将无图片与库存展示。
-     * @param merchantId 商家ID，来自可信Header
-     * @param dto 待保存的 SPU 信息
-     * @return 新建 SPU 的主键 ID
+     * 创建业务数据。
+     * @param merchantId merchantId 参数
+     * @param dto dto 参数
+     * @return 业务数值
      */
     @Override
     public Long create(Long merchantId, SpuCreateDTO dto) {
-        // 发布前提：店铺存在、归属当前商家且营业中，无店铺商家无法发布商品
+        // 远程店铺校验必须在事务外完成，避免 RPC 占用数据库事务
         requireActiveShop(dto.getShopId(), merchantId);
         SpuPO po = new SpuPO();
         po.setSpuNo(UUID.randomUUID().toString().replace("-", ""));
@@ -161,21 +181,27 @@ public class SpuServiceImpl implements SpuService {
         po.setSubtitle(dto.getSubtitle());
         po.setMainImageUrl(dto.getMainImageUrl());
         po.setStatus(SpuStatusEnum.DRAFT.statusValue());
-        spuManager.save(po);
-        saveSkus(merchantId, po.getId(), dto.getSkus());
-        log.info("spu created, spuId={}, merchantId={}", po.getId(), merchantId);
-        return po.getId();
+        Long spuId = transactionTemplate.execute(status -> {
+            spuManager.save(po);
+            List<SkuPO> createdSkus = saveSkus(merchantId, po.getId(), dto.getSkus());
+            afterCommit(() -> createdSkus.forEach(sku -> initStockBestEffort(sku, merchantId)));
+            return po.getId();
+        });
+        log.info("spu 已创建，spuId={}，merchantId={}", spuId, merchantId);
+        return spuId;
     }
 
+
     /**
-     * 批量保存创建时携带的 SKU，空清单直接忽略；价格/库存缺省值兜底，规格描述为空时占位 "-"。
-     * @param merchantId 商家ID，来自可信Header
-     * @param spuId 新建 SPU 的主键
-     * @param items 创建入参携带的 SKU 清单，允许为空
+     * 创建Skus。
+     * @param merchantId 商户 ID
+     * @param spuId SPU ID
+     * @param items 明细列表
+     * @return 结果列表
      */
-    private void saveSkus(Long merchantId, Long spuId, List<SkuItemDTO> items) {
+    private List<SkuPO> saveSkus(Long merchantId, Long spuId, List<SkuItemDTO> items) {
         if (items == null || items.isEmpty()) {
-            return;
+            return Collections.emptyList();
         }
         List<SkuPO> skus = items.stream().map(it -> {
             SkuPO sku = new SkuPO();
@@ -187,14 +213,15 @@ public class SpuServiceImpl implements SpuService {
             return sku;
         }).collect(Collectors.toList());
         skuManager.saveBatch(skus);
-        skus.forEach(sku -> initStockBestEffort(sku, merchantId));
+        return skus;
     }
 
+
     /**
-     * 查询 SPU 详情并装配其 SKU 列表，供商家端编辑页回显。
-     * @param id SPU 主键 ID
-     * @param merchantId 商家ID，来自可信Header
-     * @return SPU 视图，含 skus
+     * 获取相关数据。
+     * @param id id 参数
+     * @param merchantId merchantId 参数
+     * @return 处理结果
      */
     @Override
     public SpuVO getDetail(Long id, Long merchantId) {
@@ -206,20 +233,22 @@ public class SpuServiceImpl implements SpuService {
         return vo;
     }
 
+
     /**
-     * 主图 objectKey 转为可访问 URL，商家端展示用，空值返回 null。
-     * @param vo 待处理的 SPU 视图
-     * @return 处理后的 SPU 视图
+     * 转换或解析MainImage。
+     * @param vo vo
+     * @return 视图对象
      */
     private SpuVO resolveMainImage(SpuVO vo) {
         vo.setMainImageUrl(minioUtil.resolvePublicUrl(vo.getMainImageUrl()));
         return vo;
     }
 
+
     /**
-     * 游标分页查询 SPU，按 merchantId/status 等值、title like 过滤，按 ID 倒序，并批量装配 SKU。
-     * @param dto 游标分页查询入参
-     * @return SPU 游标分页结果，含 skus
+     * 分页查询数据。
+     * @param dto dto 参数
+     * @return 处理结果
      */
     @Override
     public CursorPageVO<SpuVO> page(SpuPageDTO dto) {
@@ -243,10 +272,11 @@ public class SpuServiceImpl implements SpuService {
         });
     }
 
+
     /**
-     * 批量查询多个 SPU 下的 SKU，一次 IN 查询替代逐 SPU 的 N 次请求。
-     * @param spuIds SPU 主键集合，允许为空
-     * @return spuId -> SKU 列表
+     * 处理batchSkus。
+     * @param spuIds SPUIds
+     * @return 结果列表
      */
     private Map<Long, List<SkuPO>> batchSkus(List<Long> spuIds) {
         List<Long> ids = spuIds.stream().filter(Objects::nonNull).collect(Collectors.toList());
@@ -257,17 +287,13 @@ public class SpuServiceImpl implements SpuService {
             .collect(Collectors.groupingBy(SkuPO::getSpuId));
     }
 
+
     /**
-     * 按主键更新 SPU，字段为空表示不更新对应列，不存在或非本人商品时抛出 SPU_NOT_FOUND。
-     * 已发布（ON_SALE/OFF_SHELF）或已驳回（REJECTED）商品编辑后必须重新送审：因
-     * SpuUpdateDTO 全部可编辑字段（类目/标题/副标题/主图）均影响前台展示、无法精确圈定
-     * 审核无关字段，故采用稳妥规则——非 DRAFT 状态 update 一律置回 PENDING_AUDIT；
-     * 原在售商品经 syncToEs 覆盖 ES 镜像 saleStatus，即刻退出前台搜索结果，待平台再次
-     * 审核通过后才恢复上架。
-     * @param id SPU 主键 ID
-     * @param merchantId 商家ID，来自可信Header
-     * @param dto 待更新的 SPU 信息
-     * @return 更新是否成功
+     * 更新业务数据。
+     * @param id id 参数
+     * @param merchantId merchantId 参数
+     * @param dto dto 参数
+     * @return 是否处理成功
      */
     @Override
     public boolean update(Long id, Long merchantId, SpuUpdateDTO dto) {
@@ -276,7 +302,7 @@ public class SpuServiceImpl implements SpuService {
             throw new BizException(SpuCodeEnum.SPU_NOT_FOUND);
         }
         checkOwner(existing, merchantId);
-        // 更换店铺时同样要求新店铺存在、归属当前商家且营业中
+        // 更换店铺时同样要求新店铺存在、归属当前商家且营业中；远程校验在事务外完成
         if (dto.getShopId() != null) {
             requireActiveShop(dto.getShopId(), merchantId);
             existing.setShopId(dto.getShopId());
@@ -298,25 +324,42 @@ public class SpuServiceImpl implements SpuService {
             || existing.getStatus() != SpuStatusEnum.DRAFT.statusValue()) {
             existing.setStatus(SpuStatusEnum.PENDING_AUDIT.statusValue());
         }
-        boolean ok = spuManager.updateById(existing);
-        if (ok) {
-            // skus 非空时先同步 SKU 再刷 ES，保证价格区间聚合到最新 SKU
-            if (dto.getSkus() != null) {
-                syncSkus(merchantId, id, dto.getSkus());
+        // SKU 差异与库存远程调整在事务外准备，事务内只落库，避免 RPC 占用数据库事务
+        SkuSyncPlan plan = dto.getSkus() != null
+            ? prepareSkuSync(merchantId, id, dto.getSkus())
+            : SkuSyncPlan.empty();
+        try {
+            boolean ok = Boolean.TRUE.equals(transactionTemplate.execute(status -> {
+                if (!spuManager.updateById(existing)) {
+                    return false;
+                }
+                applySkuSync(plan);
+                afterCommit(() -> {
+                    plan.createdSkus().forEach(sku -> initStockBestEffort(sku, merchantId));
+                    syncToEs(existing);
+                });
+                return true;
+            }));
+            if (!ok) {
+                rollbackStockAdjustments(plan.compensations());
             }
-            syncToEs(existing);
+            return ok;
         }
-        return ok;
+        catch (RuntimeException e) {
+            rollbackStockAdjustments(plan.compensations());
+            throw e;
+        }
     }
 
+
     /**
-     * 按 id 增改、未出现者删除的 SKU 全量同步：已存在 SKU 更新价格/库存/规格，
-     * 无 id 的 SKU 新建，原 SKU 未出现在清单中则删除，防止编辑页改库存不落库。
-     * @param merchantId 商家ID，来自可信Header
-     * @param spuId SPU 主键 ID
-     * @param items 编辑后 SKU 全量清单
+     * 处理prepareSKUSync。
+     * @param merchantId 商户 ID
+     * @param spuId SPU ID
+     * @param items 明细列表
+     * @return 处理结果
      */
-    private void syncSkus(Long merchantId, Long spuId, List<SkuItemDTO> items) {
+    private SkuSyncPlan prepareSkuSync(Long merchantId, Long spuId, List<SkuItemDTO> items) {
         List<SkuPO> existing = skuManager.list(
             Wrappers.lambdaQuery(SkuPO.class).eq(SkuPO::getSpuId, spuId));
         Map<Long, SkuPO> existingById = existing.stream()
@@ -325,6 +368,7 @@ public class SpuServiceImpl implements SpuService {
         Set<Long> keepIds = new HashSet<>();
         List<SkuPO> toCreate = new ArrayList<>();
         List<SkuPO> toUpdate = new ArrayList<>();
+        List<StockAdjustDTO> compensations = new ArrayList<>();
         for (SkuItemDTO it : items) {
             SkuPO sku = existingById.get(it.getId());
             if (sku == null) {
@@ -339,47 +383,138 @@ public class SpuServiceImpl implements SpuService {
             }
             sku.setSkuName(it.getSkuName() == null || it.getSkuName().isBlank() ? "-" : it.getSkuName());
             sku.setPrice(it.getPrice() != null ? it.getPrice() : BigDecimal.ZERO);
-            sku.setStock(it.getStock() != null ? it.getStock() : 0);
-        }
-        if (!toCreate.isEmpty()) {
-            skuManager.saveBatch(toCreate);
-            toCreate.forEach(sku -> initStockBestEffort(sku, merchantId));
-        }
-        if (!toUpdate.isEmpty()) {
-            skuManager.updateBatchById(toUpdate);
+            if (sku.getId() != null && it.getStock() != null
+                && !it.getStock().equals(sku.getStock())) {
+                long currentStock = sku.getStock() == null ? 0L : sku.getStock().longValue();
+                long delta = it.getStock().longValue() - currentStock;
+                try {
+                    adjustStock(sku.getId(), merchantId, delta, "商品规格库存调整");
+                    compensations.add(new StockAdjustDTO(
+                        sku.getId(), merchantId, -delta, "商品规格库存调整回滚"));
+                    sku.setStock(it.getStock());
+                }
+                catch (RuntimeException e) {
+                    rollbackStockAdjustments(compensations);
+                    throw e;
+                }
+            }
+            if (sku.getId() == null) {
+                sku.setStock(it.getStock() != null ? it.getStock() : 0);
+            }
         }
         List<Long> toDelete = existing.stream().map(SkuPO::getId)
-            .filter(id -> id != null && !keepIds.contains(id)).collect(Collectors.toList());
-        if (!toDelete.isEmpty()) {
-            skuManager.removeByIds(toDelete);
+            .filter(id -> id != null && !keepIds.contains(id)).toList();
+        return new SkuSyncPlan(
+            List.copyOf(toCreate), List.copyOf(toUpdate), toDelete, List.copyOf(compensations));
+    }
+
+
+    /**
+     * 执行SKUSync逻辑。
+     * @param plan plan
+     * @throws BizException 业务校验失败时抛出
+     */
+    private void applySkuSync(SkuSyncPlan plan) {
+        if (!plan.toCreate().isEmpty()) {
+            skuManager.saveBatch(plan.toCreate());
+        }
+        if (!plan.toUpdate().isEmpty() && !skuManager.updateBatchById(plan.toUpdate())) {
+            throw new BizException(SkuCodeEnum.STOCK_ADJUST_FAILED);
+        }
+        if (!plan.toDelete().isEmpty()) {
+            skuManager.removeByIds(plan.toDelete());
         }
     }
 
+
     /**
-     * 联动初始化 SKU 库存记录：商品创建只负责建档，stock-service 异常或降级时按 WARN 记录
-     * 不阻断主链路（与 ES 镜像同步一致的策略），后续商家可手动入库兜底。
-     * @param sku 已落库的新建 SKU
-     * @param merchantId 商家ID，来自可信Header
+     * @Author: yirancrazy@gmail.com
+     * @Description: SkuSyncPlan 记录对象，承载不可变数据。
+     * @Version: 1.0
+     * @DateTime: 2026/10/16
+     **/
+    private record SkuSyncPlan(List<SkuPO> toCreate, List<SkuPO> toUpdate, List<Long> toDelete,
+                               List<StockAdjustDTO> compensations) {
+
+
+        /**
+         * 处理empty。
+         * @return 处理结果
+         */
+        static SkuSyncPlan empty() {
+            return new SkuSyncPlan(List.of(), List.of(), List.of(), List.of());
+        }
+
+
+        /**
+         * 创建dSkus。
+         * @return 结果列表
+         */
+        List<SkuPO> createdSkus() {
+            return toCreate;
+        }
+    }
+
+
+    /**
+     * 更新库存。
+     * @param skuId SKU ID
+     * @param merchantId 商户 ID
+     * @param delta delta
+     * @param reason 原因
+     * @throws BizException 业务校验失败时抛出
+     */
+    private void adjustStock(Long skuId, Long merchantId, long delta, String reason) {
+        Result<Void> result = goodsRemoteGateway.adjustStock(
+            new StockAdjustDTO(skuId, merchantId, delta, reason));
+        if (result == null || !CommonCode.SUCCESS.equals(result.getCode())) {
+            throw new BizException(SkuCodeEnum.STOCK_ADJUST_FAILED);
+        }
+    }
+
+
+    /**
+     * 处理rollback库存Adjustments。
+     * @param adjustments adjustments
+     */
+    private void rollbackStockAdjustments(List<StockAdjustDTO> adjustments) {
+        for (StockAdjustDTO adjustment : adjustments) {
+            try {
+                goodsRemoteGateway.adjustStock(adjustment);
+            }
+            catch (Exception e) {
+                log.error("回滚库存调整失败，skuId={}，quantity={}",
+                    adjustment.getSkuId(), adjustment.getQuantity(), e);
+            }
+        }
+    }
+
+
+    /**
+     * 初始化库存BestEffort。
+     * @param sku SKU
+     * @param merchantId 商户 ID
      */
     private void initStockBestEffort(SkuPO sku, Long merchantId) {
         try {
-            Result<Void> r = stockFeignClient.initStock(
+            Result<Void> r = goodsRemoteGateway.initStock(
                 new StockInitDTO(sku.getId(), merchantId, sku.getStock()));
             if (r == null || !CommonCode.SUCCESS.equals(r.getCode())) {
-                log.warn("init stock failed, skuId={}, msg={}", sku.getId(),
-                    r == null ? "no response" : r.getMessage());
+                log.warn("初始化库存失败，skuId={}，msg={}", sku.getId(),
+                    r == null ? "无响应" : r.getMessage());
             }
         }
         catch (Exception e) {
-            log.warn("init stock error, skuId={}", sku.getId(), e);
+            log.warn("初始化库存异常，skuId={}", sku.getId(), e);
         }
     }
 
+
     /**
-     * 按主键删除 SPU，不存在或非本人商品时抛出 SPU_NOT_FOUND；删除成功后同步清理 ES 镜像文档。
-     * @param id SPU 主键 ID
-     * @param merchantId 商家ID，来自可信Header
-     * @return 删除是否成功
+     * 删除业务数据。
+     * @param id id 参数
+     * @param merchantId merchantId 参数
+     * @return 是否处理成功
      */
     @Override
     public boolean delete(Long id, Long merchantId) {
@@ -395,18 +530,19 @@ public class SpuServiceImpl implements SpuService {
                 spuSearchService.deleteById(id);
             }
             catch (Exception e) {
-                log.error("delete spu from ES failed, spuId={}", id, e);
+                log.error("从 ES 删除 spu 失败，spuId={}", id, e);
             }
         }
-        log.info("spu deleted, spuId={}", id);
+        log.info("spu 已删除，spuId={}", id);
         return ok;
     }
 
+
     /**
-     * 商家提交上架审核，仅草稿/下架/驳回状态可提交，提交后进入待审核，由平台审核通过后才会上架。
-     * @param id SPU 主键 ID
-     * @param merchantId 商家ID，来自可信Header
-     * @return 提交是否成功
+     * 执行 onShelf 方法。
+     * @param id id 参数
+     * @param merchantId merchantId 参数
+     * @return 是否处理成功
      */
     @Override
     public boolean onShelf(Long id, Long merchantId) {
@@ -429,15 +565,16 @@ public class SpuServiceImpl implements SpuService {
         if (ok) {
             syncToEs(existing);
         }
-        log.info("spu submit audit, spuId={}, ok={}", id, ok);
+        log.info("spu 已提交审核，spuId={}，ok={}", id, ok);
         return ok;
     }
 
+
     /**
-     * 下架 SPU，仅在售状态可下架，否则抛出 SPU_STATUS_INVALID。
-     * @param id SPU 主键 ID
-     * @param merchantId 商家ID，来自可信Header
-     * @return 下架是否成功
+     * 执行 offShelf 方法。
+     * @param id id 参数
+     * @param merchantId merchantId 参数
+     * @return 是否处理成功
      */
     @Override
     public boolean offShelf(Long id, Long merchantId) {
@@ -455,16 +592,16 @@ public class SpuServiceImpl implements SpuService {
         if (ok) {
             syncToEs(existing);
         }
-        log.info("spu off shelf, spuId={}, ok={}", id, ok);
+        log.info("spu 已下架，spuId={}，ok={}", id, ok);
         return ok;
     }
 
+
     /**
-     * 平台游标分页查询待审核 SPU，按 ID 倒序。
-     * @param dto 游标分页查询入参
-     * @return 待审核 SPU 游标分页结果
+     * 分页查询数据。
+     * @param dto dto 参数
+     * @return 处理结果
      */
-    @Override
     public CursorPageVO<SpuPO> pagePending(SpuPageDTO dto) {
         Long lastId = CursorUtils.decode(dto.getCursor());
         int limit = dto.getLimit();
@@ -476,13 +613,37 @@ public class SpuServiceImpl implements SpuService {
         return CursorPageVO.of(records, limit, SpuPO::getId);
     }
 
+
     /**
-     * 平台审核通过，仅待审核状态可通过，通过后置为在售并记录审核日志。
-     * @param spuId SPU 主键 ID
-     * @param auditorId 审核员账号ID
-     * @return 审核是否成功
+     * 执行 pendingVO 方法。
+     * @param dto dto 参数
+     * @return 处理结果
      */
     @Override
+    public CursorPageVO<SpuVO> pendingVO(SpuPageDTO dto) {
+        return pagePending(dto).map(SpuVO::from);
+    }
+
+
+    /**
+     * 执行 detailVO 方法。
+     * @param spuId spuId 参数
+     * @return 处理结果
+     */
+    @Override
+    public SpuVO detailVO(Long spuId) {
+        return SpuVO.from(getById(spuId));
+    }
+
+
+    /**
+     * 执行 approve 方法。
+     * @param spuId spuId 参数
+     * @param auditorId auditorId 参数
+     * @return 是否处理成功
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
     public boolean approve(Long spuId, Long auditorId) {
         SpuPO existing = spuManager.getById(spuId);
         if (existing == null) {
@@ -496,21 +657,23 @@ public class SpuServiceImpl implements SpuService {
         existing.setPublishAt(LocalDateTime.now());
         boolean ok = spuManager.updateById(existing);
         if (ok) {
-            syncToEs(existing);
+            afterCommit(() -> syncToEs(existing));
         }
         saveAuditRecord(spuId, auditorId, AuditDecisionEnum.APPROVE, null);
-        log.info("spu approved, spuId={}, auditorId={}", spuId, auditorId);
+        log.info("spu 审核通过，spuId={}，auditorId={}", spuId, auditorId);
         return ok;
     }
 
+
     /**
-     * 平台审核驳回，仅待审核状态可驳回，驳回后置为驳回并记录审核日志。
-     * @param spuId SPU 主键 ID
-     * @param auditorId 审核员账号ID
-     * @param reason 驳回原因
-     * @return 审核是否成功
+     * 执行 reject 方法。
+     * @param spuId spuId 参数
+     * @param auditorId auditorId 参数
+     * @param reason reason 参数
+     * @return 是否处理成功
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public boolean reject(Long spuId, Long auditorId, String reason) {
         SpuPO existing = spuManager.getById(spuId);
         if (existing == null) {
@@ -523,19 +686,19 @@ public class SpuServiceImpl implements SpuService {
         existing.setStatus(SpuStatusEnum.REJECTED.statusValue());
         boolean ok = spuManager.updateById(existing);
         if (ok) {
-            syncToEs(existing);
+            afterCommit(() -> syncToEs(existing));
         }
         saveAuditRecord(spuId, auditorId, AuditDecisionEnum.REJECT, reason);
-        log.info("spu rejected, spuId={}, auditorId={}, reason={}", spuId, auditorId, reason);
+        log.info("spu 审核拒绝，spuId={}，auditorId={}，reason={}", spuId, auditorId, reason);
         return ok;
     }
 
+
     /**
-     * 查询指定 SPU 的审核记录列表，按审核时间倒序。
-     * @param spuId SPU 主键 ID
-     * @return 审核记录列表
+     * 查询列表数据。
+     * @param spuId spuId 参数
+     * @return 结果列表
      */
-    @Override
     public List<SpuAuditRecordPO> listAuditRecords(Long spuId) {
         return spuAuditRecordManager.list(
             Wrappers.lambdaQuery(SpuAuditRecordPO.class)
@@ -543,6 +706,24 @@ public class SpuServiceImpl implements SpuService {
                 .orderByDesc(SpuAuditRecordPO::getAuditAt));
     }
 
+
+    /**
+     * 查询列表数据。
+     * @param spuId spuId 参数
+     * @return 结果列表
+     */
+    @Override
+    public List<SpuAuditRecordVO> listAuditRecordsVO(Long spuId) {
+        return listAuditRecords(spuId).stream().map(SpuAuditRecordVO::from).toList();
+    }
+
+    /**
+     * 创建审核记录。
+     * @param spuId SPU ID
+     * @param auditorId auditor ID
+     * @param decision decision
+     * @param reason 原因
+     */
     private void saveAuditRecord(Long spuId, Long auditorId, AuditDecisionEnum decision,
                                  String reason) {
         SpuAuditRecordPO record = new SpuAuditRecordPO();
@@ -554,35 +735,58 @@ public class SpuServiceImpl implements SpuService {
         spuAuditRecordManager.save(record);
     }
 
+
     /**
-     * 重新同步 SPU 文档到 ES：SKU 新增/改价/删除后父 SPU 价格区间可能变化，需刷新镜像。
-     * @param spuId SPU 主键 ID
+     * 处理afterCommit。
+     * @param action action
      */
-    @Override
+    private void afterCommit(Runnable action) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            action.run();
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            /**
+             * 执行 afterCommit 方法。
+             */
+            public void afterCommit() {
+                action.run();
+            }
+        });
+    }
+
+
+    /**
+     * 执行 refreshEsDocument 方法。
+     * @param spuId spuId 参数
+     */
     public void refreshEsDocument(Long spuId) {
         SpuPO spu = spuManager.getById(spuId);
         if (spu == null) {
             // SPU 已删除时 ES 文档由 delete 流程清理，SKU 侧刷新直接忽略
-            log.warn("spu not found when refreshing ES document, spuId={}", spuId);
+            log.warn("刷新 ES 文档时未找到 spu，spuId={}", spuId);
             return;
         }
         syncToEs(spu);
     }
 
+
     /**
-     * 全量重灌 ES 索引：遍历全部在售 SPU 重新同步文档，用于索引重建后补齐数据。
-     * 单条失败由 syncToEs 内部捕获并记录，不阻断其余 SPU 同步。
+     * 执行 rebuildAllEsDocuments 方法。
      */
-    @Override
     public void rebuildAllEsDocuments() {
         List<SpuPO> onSaleList = spuManager.list(
             Wrappers.lambdaQuery(SpuPO.class)
                 .eq(SpuPO::getStatus, SpuStatusEnum.ON_SALE.statusValue()));
-        log.info("rebuild ES documents start, count={}", onSaleList.size());
+        log.info("开始重建 ES 文档，count={}", onSaleList.size());
         onSaleList.forEach(this::syncToEs);
-        log.info("rebuild ES documents done, count={}", onSaleList.size());
+        log.info("重建 ES 文档完成，count={}", onSaleList.size());
     }
 
+    /**
+     * 处理sync转换Es。
+     * @param po 持久化对象
+     */
     private void syncToEs(SpuPO po) {
         // 搜索引擎是只读镜像，同步失败不阻断主链路写入（ES 恢复后由后续写操作补齐）
         try {
@@ -606,14 +810,15 @@ public class SpuServiceImpl implements SpuService {
             spuSearchService.sync(doc);
         }
         catch (Exception e) {
-            log.error("sync spu to ES failed, spuId={}", po.getId(), e);
+            log.error("同步 spu 到 ES 失败，spuId={}", po.getId(), e);
         }
     }
 
+
     /**
-     * 批量查询 SPU 快照：一次 IN 查询替代逐 SPU 的 N 次请求；不存在的 SPU 不放入结果，由调用方兜底降级。
-     * @param spuIds SPU 主键集合，允许为空
-     * @return spuId -> SPU 快照，空入参返回空 Map
+     * 查询列表数据。
+     * @param spuIds spuIds 参数
+     * @return 结果映射
      */
     @Override
     public Map<Long, SpuSnapshotDTO> listSnapshots(List<Long> spuIds) {
@@ -624,5 +829,20 @@ public class SpuServiceImpl implements SpuService {
         return spuManager.list(Wrappers.lambdaQuery(SpuPO.class).in(SpuPO::getId, ids)).stream()
             .collect(Collectors.toMap(SpuPO::getId,
                 spu -> new SpuSnapshotDTO(spu.getId(), spu.getTitle(), spu.getMainImageUrl())));
+    }
+
+
+    /**
+     * 获取相关数据。
+     * @param id id 参数
+     * @return 处理结果
+     */
+    @Override
+    public SpuSnapshotDTO getSnapshot(Long id) {
+        SpuPO spu = spuManager.getById(id);
+        if (spu == null) {
+            return new SpuSnapshotDTO(id, null, null);
+        }
+        return new SpuSnapshotDTO(spu.getId(), spu.getTitle(), spu.getMainImageUrl());
     }
 }

@@ -7,11 +7,12 @@ import lombok.Data;
 import com.yirancrazy.minimall.common.util.MinioUtil;
 import com.yirancrazy.minimall.notify.entity.CommentPO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 商品评价视图对象，对外暴露时不返回 isDeleted/version 等内部字段
+ * @Description: CommentVO 视图对象。
  * @Version: 1.0
- * @DateTime: 2026/08/10
+ * @DateTime: 2026/10/16
  **/
 @Data
 public class CommentVO {
@@ -31,20 +32,22 @@ public class CommentVO {
     private LocalDateTime merchantReplyTime;
     private LocalDateTime createTime;
 
+
     /**
-     * PO → VO 转换，图片 objectKey 原样返回（供内部或无需解析场景使用）。
-     * @param po 评价持久化对象
-     * @return 评价视图对象
+     * 执行 from 方法。
+     * @param po po 参数
+     * @return 处理结果
      */
     public static CommentVO from(CommentPO po) {
         return from(po, null);
     }
 
+
     /**
-     * PO → VO 转换，额外将 images 中逗号分隔的图片 objectKey 逐个解析为可访问 URL（minioUtil 为 null 时原样返回）。
-     * @param po 评价持久化对象
-     * @param minioUtil 对象存储工具，用于生成图片预签名 URL
-     * @return 评价视图对象
+     * 执行 from 方法。
+     * @param po po 参数
+     * @param minioUtil minioUtil 参数
+     * @return 处理结果
      */
     public static CommentVO from(CommentPO po, MinioUtil minioUtil) {
         if (po == null) {
@@ -68,11 +71,12 @@ public class CommentVO {
         return vo;
     }
 
+
     /**
-     * images 为逗号分隔的多个图片 objectKey，统一解析为可访问 URL 后以逗号重新拼接；空值或 blank 原样返回。
-     * @param images 逗号分隔的图片 objectKey 串
-     * @param minioUtil 对象存储工具
-     * @return 解析后的逗号分隔 URL 串
+     * 转换或解析Images。
+     * @param images images
+     * @param minioUtil minioUtil
+     * @return 处理结果
      */
     private static String resolveImages(String images, MinioUtil minioUtil) {
         if (images == null || images.isBlank() || minioUtil == null) {

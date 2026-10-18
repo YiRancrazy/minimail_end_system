@@ -22,11 +22,12 @@ import com.yirancrazy.minimall.goods.search.SpuDocument;
 import com.yirancrazy.minimall.goods.search.SpuSearchService;
 import com.yirancrazy.minimall.goods.vo.SpuSearchVO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 商品搜索服务实现，基于 ElasticsearchOperations 实现全文检索与过滤
+ * @Description: SpuSearchServiceImpl 服务实现，实现相关业务逻辑。
  * @Version: 1.0
- * @DateTime: 2026/08/03
+ * @DateTime: 2026/10/16
  **/
 @Slf4j
 @Service
@@ -35,16 +36,21 @@ public class SpuSearchServiceImpl implements SpuSearchService {
     private final ElasticsearchOperations elasticsearchOperations;
     private final MinioUtil minioUtil;
 
+    /**
+     * 构造 SpuSearchServiceImpl 实例。
+     * @param elasticsearchOperations elasticsearchOperations 参数
+     * @param minioUtil minioUtil 参数
+     */
     public SpuSearchServiceImpl(ElasticsearchOperations elasticsearchOperations, MinioUtil minioUtil) {
         this.elasticsearchOperations = elasticsearchOperations;
         this.minioUtil = minioUtil;
     }
 
+
     /**
-     * ES 商品搜索，支持关键词全文检索 + 分类/价格范围过滤，仅返回在售商品。
-     * 有关键词时按相关性排序，无关键词时按 createTime 降序。
-     * @param dto 搜索入参
-     * @return 搜索结果列表
+     * 执行 search 方法。
+     * @param dto dto 参数
+     * @return 结果列表
      */
     @Override
     public List<SpuSearchVO> search(SpuSearchDTO dto) {
@@ -92,26 +98,33 @@ public class SpuSearchServiceImpl implements SpuSearchService {
             .collect(Collectors.toList());
     }
 
+
     /**
-     * 同步 SPU 文档到 ES 索引。
-     * @param document SPU 文档
+     * 执行 sync 方法。
+     * @param document document 参数
      */
-    @Override
     public void sync(SpuDocument document) {
         elasticsearchOperations.save(document);
-        log.info("spu synced to ES, spuId={}", document.getSpuId());
+        log.info("spu 已同步到 ES，spuId={}", document.getSpuId());
+    }
+
+
+    /**
+     * 删除业务数据。
+     * @param id id 参数
+     */
+    public void deleteById(Long id) {
+        elasticsearchOperations.delete(String.valueOf(id), SpuDocument.class);
+        log.info("spu 已从 ES 删除，spuId={}", id);
     }
 
     /**
-     * 按 SPU 主键删除 ES 索引中的文档。
-     * @param id SPU 主键 ID
+     * 处理configure价格Range。
+     * @param rq rq
+     * @param minPrice min价格
+     * @param maxPrice max价格
+     * @return 处理结果
      */
-    @Override
-    public void deleteById(Long id) {
-        elasticsearchOperations.delete(String.valueOf(id), SpuDocument.class);
-        log.info("spu deleted from ES, spuId={}", id);
-    }
-
     private RangeQuery.Builder configurePriceRange(RangeQuery.Builder rq, Long minPrice, Long maxPrice) {
         rq.field("minPrice");
         if (minPrice != null) {
@@ -123,6 +136,11 @@ public class SpuSearchServiceImpl implements SpuSearchService {
         return rq;
     }
 
+    /**
+     * 转换或解析VO。
+     * @param doc doc
+     * @return 视图对象
+     */
     private SpuSearchVO toVO(SpuDocument doc) {
         return new SpuSearchVO(
             doc.getSpuId(),

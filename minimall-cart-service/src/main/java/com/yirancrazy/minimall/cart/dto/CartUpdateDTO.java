@@ -4,12 +4,13 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import lombok.Data;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 购物车项修改入参，支持部分更新（仅非空字段生效），isSelected 以布尔表达勾选态
- * @Version: 1.2
- * @DateTime: 2026/08/13
- */
+ * @Description: CartUpdateDTO 数据传输对象。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 @Data
 public class CartUpdateDTO {
 

@@ -1,11 +1,12 @@
 package com.yirancrazy.minimall.id.service;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: Snowflake，提供ID生成相关能力
+ * @Description: Snowflake 类型，承载相关业务能力。
  * @Version: 1.0
- * @DateTime: 2026/07/31
- */
+ * @DateTime: 2026/10/16
+ **/
 public class Snowflake {
     private final long epoch = 1700000000000L;                          // 起始时间戳
     private final long datacenterId;                                    // 数据中心ID，一般占5位（0~31），由配置文件或环境变量指定
@@ -18,32 +19,34 @@ public class Snowflake {
     private long lastTs = -1L;                                          // 上次生成ID的时间戳（毫秒），用于判断时钟回拨和计算序列号重置
     private long sequence = 0L;                                         // 当前毫秒内的序列号，从0开始递增，达到最大值后阻塞或重置
 
+
     /**
-     * 构造 Snowflake ID 生成器实例
-     * @param datacenterId 数据中心id
-     * @param workerId 工作机器id
+     * 构造 Snowflake 实例。
+     * @param datacenterId datacenterId 参数
+     * @param workerId workerId 参数
      */
     public Snowflake(long datacenterId, long workerId) {
         if (datacenterId < 0 || datacenterId > 31) {
-            throw new IllegalArgumentException("datacenterId out of range [0,31]");
+            throw new IllegalArgumentException("datacenterId 超出范围 [0,31]");
         }
         if (workerId < 0 || workerId > 31) {
-            throw new IllegalArgumentException("workerId out of range [0,31]");
+            throw new IllegalArgumentException("workerId 超出范围 [0,31]");
         }
         this.datacenterId = datacenterId;
         this.workerId = workerId;
     }
 
+
     /**
-     * 生成下一个雪花 ID，同一毫秒内通过自增序列区分；如时钟回拨则抛出异常，否则自旋至下一毫秒。
-     * @return 生成的分布式唯一 ID
+     * 执行 nextId 方法。
+     * @return 业务数值
      */
     public synchronized long nextId() {
         long ts = System.currentTimeMillis();
 
         // 判断时钟是否回拨
         if (ts < lastTs) {
-            throw new IllegalStateException("clock moved backwards");
+            throw new IllegalStateException("时钟回拨");
         }
 
         // 判断是否为同一毫秒
@@ -65,16 +68,20 @@ public class Snowflake {
             | sequence;
     }
 
+
     /**
-     * 自旋等待下一毫秒
-     * @param last 上次生成ID的时间戳
-     * @return 下一毫秒的时间戳
+     * 处理waitNextMillis。
+     * @param last 最近
+     * @return 处理结果
      */
     private long waitNextMillis(long last) {
         long ts = System.currentTimeMillis();
+
+        // 自旋等待下一毫秒,解决轻微时钟回拨,严重时钟回拨只能被动等待。
         while (ts <= last) {
             ts = System.currentTimeMillis();
         }
+
         return ts;
     }
 }

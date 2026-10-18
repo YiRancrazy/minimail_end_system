@@ -4,12 +4,13 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import com.yirancrazy.minimall.common.base.BaseEnum;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 商品Spu错误码枚举，定义SPU相关错误码（商品域11000-11999）。
+ * @Description: SpuCodeEnum 枚举，定义相关业务状态。
  * @Version: 1.0
- * @DateTime: 2026/08/02
- */
+ * @DateTime: 2026/10/16
+ **/
 @Getter
 @AllArgsConstructor
 public enum SpuCodeEnum implements BaseEnum {

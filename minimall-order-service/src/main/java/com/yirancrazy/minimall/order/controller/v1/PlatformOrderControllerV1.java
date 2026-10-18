@@ -15,19 +15,20 @@ import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.common.util.CsvExporter;
 import com.yirancrazy.minimall.order.dto.OrderPageDTO;
-import com.yirancrazy.minimall.order.entity.OrderPO;
 import com.yirancrazy.minimall.order.service.OrderService;
+import com.yirancrazy.minimall.order.vo.OrderExportVO;
 import com.yirancrazy.minimall.order.vo.OrderStatisticsVO;
 import com.yirancrazy.minimall.order.vo.OrderSummaryVO;
 import com.yirancrazy.minimall.order.vo.OrderTrendVO;
 import com.yirancrazy.minimall.order.vo.OrderVO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 平台端订单控制器，提供平台视角的订单 RESTful API
+ * @Description: PlatformOrderControllerV1 控制器，提供相关接口。
  * @Version: 1.0
- * @DateTime: 2026/08/04
- */
+ * @DateTime: 2026/10/16
+ **/
 @RestController
 @RequestMapping("/api/v1/platform/orders")
 public class PlatformOrderControllerV1 {
@@ -38,43 +39,52 @@ public class PlatformOrderControllerV1 {
 
     private final OrderService orderService;
 
+    /**
+     * 构造 PlatformOrderControllerV1 实例。
+     * @param orderService orderService 参数
+     */
     public PlatformOrderControllerV1(OrderService orderService) {
         this.orderService = orderService;
     }
 
+
     /**
-     * 游标分页查询订单列表，支持按用户/商家/状态过滤。
-     * @param dto 游标分页查询入参
-     * @return 订单游标分页结果
+     * 分页查询数据。
+     * @param dto dto 参数
+     * @return 统一响应结果
      */
     @GetMapping
     public Result<CursorPageVO<OrderVO>> page(@Valid OrderPageDTO dto) {
-        return Result.success(orderService.page(dto).map(OrderVO::from));
+        return Result.success(orderService.pageVO(dto));
     }
 
+
     /**
-     * 查询订单状态。
-     * @param id 订单ID
-     * @return 订单状态
+     * 执行 status 方法。
+     * @param id id 参数
+     * @return 统一响应结果
      */
     @GetMapping("/{id}")
     public Result<Integer> status(@PathVariable("id") Long id) {
         return Result.success(orderService.getStatus(id));
     }
 
+
     /**
-     * 查询订单详情。
-     * @param id 订单ID
-     * @return 订单实体
+     * 执行 detail 方法。
+     * @param id id 参数
+     * @return 统一响应结果
      */
     @GetMapping("/{id}/detail")
     public Result<OrderVO> detail(@PathVariable("id") Long id) {
-        return Result.success(OrderVO.from(orderService.getDetail(id)));
+        return Result.success(orderService.platformDetailVO(id));
     }
 
+
     /**
-     * 平台强制关闭异常订单，仅允许待支付订单关闭并释放库存。
-     * @param orderId 订单ID
+     * 关闭相关资源。
+     * @param orderId orderId 参数
+     * @return 统一响应结果
      */
     @PostMapping("/{orderId}/close")
     public Result<Void> close(@PathVariable Long orderId) {
@@ -82,10 +92,12 @@ public class PlatformOrderControllerV1 {
         return Result.success(null);
     }
 
+
     /**
-     * 平台退款仲裁，强制推进或回退退款状态。
-     * @param orderId 订单ID
-     * @param approved 仲裁是否支持退款
+     * 执行 refundArbitrate 方法。
+     * @param orderId orderId 参数
+     * @param approved approved 参数
+     * @return 统一响应结果
      */
     @PostMapping("/{orderId}/arbitrate")
     public Result<Void> refundArbitrate(@PathVariable Long orderId,
@@ -94,35 +106,37 @@ public class PlatformOrderControllerV1 {
         return Result.success(null);
     }
 
+
     /**
-     * 平台导出全平台订单 CSV。
-     * @param dto 查询入参
-     * @param response HTTP 响应
-     * @throws IOException 写入失败时抛出
+     * 执行 export 方法。
+     * @param dto dto 参数
+     * @param response response 参数
+     * @throws IOException 处理失败时抛出
      */
-    @GetMapping("/export")
     public void export(@Valid OrderPageDTO dto,
                                HttpServletResponse response) throws IOException {
-        List<OrderPO> list = orderService.platformExportList(dto);
+        List<OrderExportVO> list = orderService.platformExportVOList(dto);
         CsvExporter.write(response, "platform-orders.csv", ORDER_HEADERS, toOrderRows(list));
     }
 
+
     /**
-     * 平台订单统计聚合，可选 merchantId/时间范围过滤。
-     * @param dto 查询入参
-     * @return 订单统计VO
+     * 执行 statistics 方法。
+     * @param dto dto 参数
+     * @return 统一响应结果
      */
     @GetMapping("/statistics")
     public Result<OrderStatisticsVO> statistics(@Valid OrderPageDTO dto) {
         return Result.success(orderService.statistics(dto));
     }
 
+
     /**
-     * 平台订单财务汇总：按日期范围与可选商家聚合金额概览。
-     * @param startDate 起始日期（yyyy-MM-dd），可空
-     * @param endDate 截止日期（yyyy-MM-dd），可空
-     * @param merchantId 商家ID，可空
-     * @return 订单财务汇总VO
+     * 执行 summary 方法。
+     * @param startDate startDate 参数
+     * @param endDate endDate 参数
+     * @param merchantId merchantId 参数
+     * @return 统一响应结果
      */
     @GetMapping("/summary")
     public Result<OrderSummaryVO> summary(@RequestParam(required = false) String startDate,
@@ -131,12 +145,13 @@ public class PlatformOrderControllerV1 {
         return Result.success(orderService.orderSummary(startDate, endDate, merchantId));
     }
 
+
     /**
-     * 平台订单趋势：按日聚合区间订单数与已支付金额。
-     * @param startDate 起始日期（yyyy-MM-dd），可空
-     * @param endDate 截止日期（yyyy-MM-dd），可空
-     * @param merchantId 商家ID，可空
-     * @return 订单趋势VO
+     * 执行 trend 方法。
+     * @param startDate startDate 参数
+     * @param endDate endDate 参数
+     * @param merchantId merchantId 参数
+     * @return 统一响应结果
      */
     @GetMapping("/trend")
     public Result<OrderTrendVO> trend(@RequestParam(required = false) String startDate,
@@ -145,18 +160,23 @@ public class PlatformOrderControllerV1 {
         return Result.success(orderService.orderTrend(startDate, endDate, merchantId));
     }
 
-    private List<String[]> toOrderRows(List<OrderPO> list) {
+    /**
+     * 转换或解析订单Rows。
+     * @param list 列表
+     * @return 结果列表
+     */
+    private List<String[]> toOrderRows(List<OrderExportVO> list) {
         List<String[]> rows = new ArrayList<>(list.size());
-        for (OrderPO po : list) {
+        for (OrderExportVO vo : list) {
             rows.add(new String[] {
-                String.valueOf(po.getId()),
-                String.valueOf(po.getUserId()),
-                String.valueOf(po.getMerchantId()),
-                String.valueOf(po.getSkuId()),
-                String.valueOf(po.getQuantity()),
-                po.getAmount() == null ? "" : po.getAmount().toPlainString(),
-                String.valueOf(po.getStatus()),
-                po.getCreateTime() == null ? "" : po.getCreateTime().toString()
+                String.valueOf(vo.getId()),
+                String.valueOf(vo.getUserId()),
+                String.valueOf(vo.getMerchantId()),
+                String.valueOf(vo.getSkuId()),
+                String.valueOf(vo.getQuantity()),
+                vo.getAmount() == null ? "" : vo.getAmount().toPlainString(),
+                String.valueOf(vo.getStatus()),
+                vo.getCreateTime() == null ? "" : vo.getCreateTime().toString()
             });
         }
         return rows;

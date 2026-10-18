@@ -6,47 +6,52 @@ import com.yirancrazy.minimall.auth.dto.LoginDTO;
 import com.yirancrazy.minimall.auth.dto.RegisterDTO;
 import com.yirancrazy.minimall.auth.vo.UserInfoVO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 商家端认证服务，提供商家注册、登录、登出、修改密码能力。
- * @Version: 1.1
- * @DateTime: 2026/08/04
+ * @Description: MerchantAuthService 服务接口，定义相关业务能力。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
  **/
 public interface MerchantAuthService {
 
+
     /**
-     * 商家注册，创建 role=MERCHANT 的账号并签发令牌。
-     * @param dto 注册DTO
-     * @return 令牌VO
-     * @throws com.yirancrazy.minimall.common.exception.BizException 用户名已存在时
+     * 执行 register 方法。
+     * @param dto dto 参数
+     * @return 处理结果
      */
     TokenVO register(RegisterDTO dto);
 
+
     /**
-     * 商家登录，仅允许 role=MERCHANT 的账号通过。
-     * @param dto 登录DTO
-     * @return 令牌VO
+     * 执行 login 方法。
+     * @param dto dto 参数
+     * @return 处理结果
      */
     TokenVO login(LoginDTO dto);
 
+
     /**
-     * 商家登出，失效当前账号所有刷新令牌并拉黑当前 jti。
-     * @param merchantAccountId 商家账号ID
-     * @param jti 令牌唯一标识
+     * 执行 signOut 方法。
+     * @param merchantAccountId merchantAccountId 参数
+     * @param jti jti 参数
      */
     void signOut(Long merchantAccountId, String jti);
 
+
     /**
-     * 商家修改密码，校验旧密码后设置新密码并失效已有刷新令牌。
-     * @param merchantAccountId 商家账号ID
-     * @param dto 修改密码DTO
+     * 执行 changePassword 方法。
+     * @param merchantAccountId merchantAccountId 参数
+     * @param dto dto 参数
      */
     void changePassword(Long merchantAccountId, ChangePasswordDTO dto);
 
+
     /**
-     * 获取当前商家信息。
-     * @param token 访问令牌
-     * @return 用户信息VO
+     * 执行 me 方法。
+     * @param token token 参数
+     * @return 处理结果
      */
     UserInfoVO me(String token);
 }

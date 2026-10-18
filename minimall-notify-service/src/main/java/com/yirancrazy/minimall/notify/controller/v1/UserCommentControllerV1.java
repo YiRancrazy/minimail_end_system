@@ -9,35 +9,38 @@ import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.result.Result;
-import com.yirancrazy.minimall.common.util.MinioUtil;
 import com.yirancrazy.minimall.notify.dto.CommentCreateDTO;
 import com.yirancrazy.minimall.notify.dto.CommentPageDTO;
 import com.yirancrazy.minimall.notify.service.CommentService;
 import com.yirancrazy.minimall.notify.vo.CommentVO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 用户端商品评价控制器，提供提交评价与查询「我的评价」能力
+ * @Description: UserCommentControllerV1 控制器，提供相关接口。
  * @Version: 1.0
- * @DateTime: 2026/08/10
+ * @DateTime: 2026/10/16
  **/
 @RestController
 @RequestMapping("/api/v1/user/comments")
 public class UserCommentControllerV1 {
 
     private final CommentService commentService;
-    private final MinioUtil minioUtil;
-
-    public UserCommentControllerV1(CommentService commentService, MinioUtil minioUtil) {
-        this.commentService = commentService;
-        this.minioUtil = minioUtil;
-    }
 
     /**
-     * 用户提交商品评价。
-     * @param userId 用户ID（Header 注入）
-     * @param dto 创建入参
-     * @return 新评价ID
+     * 构造 UserCommentControllerV1 实例。
+     * @param commentService commentService 参数
+     */
+    public UserCommentControllerV1(CommentService commentService) {
+        this.commentService = commentService;
+    }
+
+
+    /**
+     * 创建业务数据。
+     * @param userId userId 参数
+     * @param dto dto 参数
+     * @return 统一响应结果
      */
     @PostMapping
     public Result<Long> create(@RequestHeader("X-User-Id") Long userId,
@@ -45,16 +48,17 @@ public class UserCommentControllerV1 {
         return Result.success(commentService.create(userId, dto));
     }
 
+
     /**
-     * 用户查询自己的评价列表。
-     * @param userId 用户ID（Header 注入）
-     * @param dto 分页入参
-     * @return 评价分页结果
+     * 分页查询数据。
+     * @param userId userId 参数
+     * @param dto dto 参数
+     * @return 统一响应结果
      */
     @GetMapping
     public Result<CursorPageVO<CommentVO>> page(@RequestHeader("X-User-Id") Long userId,
                                                 @Valid CommentPageDTO dto) {
         dto.setUserId(userId);
-        return Result.success(commentService.page(dto).map(po -> CommentVO.from(po, minioUtil)));
+        return Result.success(commentService.pageVO(dto));
     }
 }

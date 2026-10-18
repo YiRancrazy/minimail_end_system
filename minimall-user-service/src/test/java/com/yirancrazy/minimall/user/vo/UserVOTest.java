@@ -10,18 +10,19 @@ import static org.mockito.Mockito.when;
 import com.yirancrazy.minimall.common.util.MinioUtil;
 import com.yirancrazy.minimall.user.entity.UserPO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: UserVO.from() 单元测试，验证字段映射与敏感数据脱敏逻辑
+ * @Description: UserVOTest 单元测试。
  * @Version: 1.0
- * @DateTime: 2026/08/04
+ * @DateTime: 2026/10/16
  **/
 public class UserVOTest {
 
+
     /**
-     * 验证传入 MinioUtil 时，头像 objectKey 被解析为可访问的预签名 URL。
+     * 执行 from_withMinioUtil_resolvesAvatar 方法。
      */
-    @Test
     public void from_withMinioUtil_resolvesAvatar() {
         UserPO po = new UserPO();
         po.setId(1L);
@@ -34,10 +35,10 @@ public class UserVOTest {
         assertEquals("http://minio/mall-files/a1b2c3.png?token", vo.getAvatar());
     }
 
+
     /**
-     * 验证 from 将所有非敏感字段正确映射。
+     * 执行 from_mapsAllFields 方法。
      */
-    @Test
     public void from_mapsAllFields() {
         UserPO po = new UserPO();
         po.setId(1L);
@@ -62,10 +63,10 @@ public class UserVOTest {
         assertEquals(LocalDateTime.of(2026, 1, 1, 0, 0), vo.getCreateTime());
     }
 
+
     /**
-     * 验证 from 对手机号进行脱敏：前3 + **** + 后4。
+     * 执行 from_masksPhone 方法。
      */
-    @Test
     public void from_masksPhone() {
         UserPO po = new UserPO();
         po.setId(1L);
@@ -76,10 +77,10 @@ public class UserVOTest {
         assertEquals("138****5678", vo.getPhone());
     }
 
+
     /**
-     * 验证 from 对邮箱进行脱敏：前2 + *** + @domain。
+     * 执行 from_masksEmail 方法。
      */
-    @Test
     public void from_masksEmail() {
         UserPO po = new UserPO();
         po.setId(1L);
@@ -90,10 +91,10 @@ public class UserVOTest {
         assertEquals("te***@example.com", vo.getEmail());
     }
 
+
     /**
-     * 验证 from 在 phone 为 null 时不抛 NPE。
+     * 执行 from_nullPhone 方法。
      */
-    @Test
     public void from_nullPhone() {
         UserPO po = new UserPO();
         po.setId(1L);
@@ -104,10 +105,10 @@ public class UserVOTest {
         assertNull(vo.getPhone());
     }
 
+
     /**
-     * 验证 from 在 email 为 null 时不抛 NPE。
+     * 执行 from_nullEmail 方法。
      */
-    @Test
     public void from_nullEmail() {
         UserPO po = new UserPO();
         po.setId(1L);
@@ -118,10 +119,10 @@ public class UserVOTest {
         assertNull(vo.getEmail());
     }
 
+
     /**
-     * 验证 from 在 phone 为空字符串时正确处理。
+     * 执行 from_emptyPhone 方法。
      */
-    @Test
     public void from_emptyPhone() {
         UserPO po = new UserPO();
         po.setId(1L);
@@ -132,10 +133,10 @@ public class UserVOTest {
         assertEquals("", vo.getPhone());
     }
 
+
     /**
-     * 验证 from 对短前缀邮箱（2字符）仍执行脱敏，不原样泄漏。
+     * 执行 from_shortEmail 方法。
      */
-    @Test
     public void from_shortEmail() {
         UserPO po = new UserPO();
         po.setId(1L);
@@ -146,10 +147,10 @@ public class UserVOTest {
         assertEquals("ab***@c.com", vo.getEmail());
     }
 
+
     /**
-     * 验证 from 对单字符前缀邮箱至少保留首字符并遮蔽其余部分。
+     * 执行 from_singleCharPrefixEmail_still_masked 方法。
      */
-    @Test
     public void from_singleCharPrefixEmail_still_masked() {
         UserPO po = new UserPO();
         po.setId(1L);

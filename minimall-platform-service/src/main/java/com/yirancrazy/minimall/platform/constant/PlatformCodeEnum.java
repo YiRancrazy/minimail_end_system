@@ -4,11 +4,12 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import com.yirancrazy.minimall.common.base.BaseEnum;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 平台错误码枚举，code 段位 200xx 为平台业务码
+ * @Description: PlatformCodeEnum 枚举，定义相关业务状态。
  * @Version: 1.0
- * @DateTime: 2026/08/10
+ * @DateTime: 2026/10/16
  **/
 @Getter
 @AllArgsConstructor

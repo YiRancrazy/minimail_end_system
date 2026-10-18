@@ -6,17 +6,21 @@ import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.Ordered;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 注册 {@link TraceIdFilter}，使各服务无论是否经过网关都能注入并透传 traceId。
- *               仅 servlet Web 应用生效（网关为响应式项目，自带 TraceIdGlobalFilter）。
+ * @Description: TraceIdFilterAutoConfiguration 类型，承载相关业务能力。
  * @Version: 1.0
- * @DateTime: 2026/08/13
- */
+ * @DateTime: 2026/10/16
+ **/
 @AutoConfiguration
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 public class TraceIdFilterAutoConfiguration {
 
+    /**
+     * 执行 traceIdFilterRegistration 方法。
+     * @return 处理结果
+     */
     @Bean
     public FilterRegistrationBean<TraceIdFilter> traceIdFilterRegistration() {
         FilterRegistrationBean<TraceIdFilter> registration = new FilterRegistrationBean<>(new TraceIdFilter());

@@ -14,14 +14,15 @@ import jakarta.validation.Valid;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.merchant.dto.ShopCreateDTO;
 import com.yirancrazy.minimall.merchant.dto.ShopUpdateDTO;
-import com.yirancrazy.minimall.merchant.entity.ShopPO;
 import com.yirancrazy.minimall.merchant.service.ShopService;
+import com.yirancrazy.minimall.merchant.vo.ShopVO;
+
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 商户控制器，提供Shop RESTful API
- * @Version: 1.1
- * @DateTime: 2026/08/05
+ * @Description: ShopControllerV1 控制器，提供相关接口。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
  **/
 @RestController
 @RequestMapping("/api/v1/merchant/shops")
@@ -29,44 +30,50 @@ public class ShopControllerV1 {
 
     private final ShopService shopService;
 
+    /**
+     * 构造 ShopControllerV1 实例。
+     * @param shopService shopService 参数
+     */
     public ShopControllerV1(ShopService shopService) {
         this.shopService = shopService;
     }
 
-    /**
-     * 根据主键 ID 查询店铺详情。
-     *
-     * @param merchantId 商家账号 ID（来自网关 X-Merchant-Id）
-     * @param id 店铺主键 ID
-     * @return 店铺详情结果
-     */
-    @GetMapping("/{id}")
-    public Result<ShopPO> get(
-            @RequestHeader("X-Merchant-Id") Long merchantId,
-            @PathVariable("id") Long id) {
-        return Result.success(shopService.getById(merchantId, id));
-    }
 
     /**
-     * 分页查询当前商家名下的店铺列表。
-     *
-     * @param merchantId 商家账号 ID（来自网关 X-Merchant-Id）
-     * @param cursor 上一页最后一条记录的 ID；为空表示首页
-     * @param limit 每页大小，默认 20，最大 100
+     * 获取相关数据。
+     * @param merchantId merchantId 参数
+     * @param id id 参数
+     * @return 统一响应结果
+     */
+    @GetMapping("/{id}")
+    public Result<ShopVO> get(
+            @RequestHeader("X-Merchant-Id") Long merchantId,
+            @PathVariable("id") Long id) {
+        return Result.success(shopService.getVO(merchantId, id));
+    }
+
+
+    /**
+     * 查询列表数据。
+     * @param merchantId merchantId 参数
+     * @param cursor cursor 参数
+     * @param limit limit 参数
+     * @return 统一响应结果
      */
     @GetMapping
-    public Result<java.util.List<ShopPO>> list(
+    public Result<java.util.List<ShopVO>> list(
             @RequestHeader("X-Merchant-Id") Long merchantId,
             @RequestParam(value = "cursor", required = false) String cursor,
             @RequestParam(value = "limit", required = false) Integer limit) {
-        return Result.success(shopService.list(merchantId, cursor, limit));
+        return Result.success(shopService.listVO(merchantId, cursor, limit));
     }
 
+
     /**
-     * 创建店铺，归属绑定到当前商家。
-     * @param merchantId 商家账号 ID（来自网关 X-Merchant-Id）
-     * @param dto 店铺创建DTO
-     * @return 店铺ID
+     * 创建业务数据。
+     * @param merchantId merchantId 参数
+     * @param dto dto 参数
+     * @return 统一响应结果
      */
     @PostMapping
     public Result<Long> create(
@@ -75,13 +82,13 @@ public class ShopControllerV1 {
         return Result.success(shopService.create(merchantId, dto));
     }
 
+
     /**
-     * 根据主键 ID 更新店铺信息，仅允许更新本人名下店铺。
-     *
-     * @param merchantId 商家账号 ID（来自网关 X-Merchant-Id）
-     * @param id 店铺主键 ID
-     * @param dto 待更新的店铺信息
-     * @return 是否更新成功
+     * 更新业务数据。
+     * @param merchantId merchantId 参数
+     * @param id id 参数
+     * @param dto dto 参数
+     * @return 统一响应结果
      */
     @PutMapping("/{id}")
     public Result<Boolean> update(
@@ -91,11 +98,12 @@ public class ShopControllerV1 {
         return Result.success(shopService.update(merchantId, id, dto));
     }
 
+
     /**
-     * 删除店铺，仅允许删除本人名下店铺。
-     * @param merchantId 商家账号 ID（来自网关 X-Merchant-Id）
-     * @param id 店铺ID
-     * @return 删除是否成功
+     * 删除业务数据。
+     * @param merchantId merchantId 参数
+     * @param id id 参数
+     * @return 统一响应结果
      */
     @DeleteMapping("/{id}")
     public Result<Boolean> delete(

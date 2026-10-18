@@ -8,27 +8,31 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 事件总线自动配置，按 rocketmq.enabled 决定注册 LocalEventBus 或 RocketMqEventBus。
- * @Version: 1.1
- * @DateTime: 2026/08/02
- */
+ * @Description: EventBusAutoConfiguration 类型，承载相关业务能力。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 @Configuration
 public class EventBusAutoConfiguration {
 
+    /**
+     * 执行 localEventBus 方法。
+     * @return 处理结果
+     */
     @Bean
     @ConditionalOnMissingBean(LocalEventBus.class)
     public LocalEventBus localEventBus() {
         return new LocalEventBus();
     }
 
+
     /**
-     * Expose the in-process {@link LocalEventBus} as the default {@link EventBus}
-     * bean when no other implementation is registered in the context.
-     *
-     * @param local the always-registered {@link LocalEventBus} candidate bean
-     * @return the same {@link LocalEventBus} instance, to be used as the fallback {@link EventBus}
+     * 执行 defaultEventBus 方法。
+     * @param local local 参数
+     * @return 处理结果
      */
     @Bean
     @ConditionalOnMissingBean(EventBus.class)
@@ -36,15 +40,13 @@ public class EventBusAutoConfiguration {
         return local;
     }
 
+
     /**
-     * Register the RocketMQ-backed {@link EventBus} when rocketmq is enabled.
-     * Marked {@link Primary} so it overrides the local fallback in contexts
-     * that opt in to transactional messaging.
-     *
-     * @param namesrvAddr the RocketMQ name server address
-     * @param topic the event topic
-     * @param outboxProvider optional {@link OutboxStore} for crash-safe callback
-     * @return a configured {@link RocketMqEventBus}
+     * 执行 rocketMqEventBus 方法。
+     * @param namesrvAddr namesrvAddr 参数
+     * @param topic topic 参数
+     * @param outboxProvider outboxProvider 参数
+     * @return 处理结果
      */
     @Bean
     @ConditionalOnProperty(name = "minimall.eventbus.rocketmq.enabled", havingValue = "true")

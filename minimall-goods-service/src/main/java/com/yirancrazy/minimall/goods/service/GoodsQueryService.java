@@ -3,36 +3,50 @@ package com.yirancrazy.minimall.goods.service;
 import java.util.List;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.goods.dto.GoodsPageDTO;
+import com.yirancrazy.minimall.goods.dto.SpuSearchDTO;
 import com.yirancrazy.minimall.goods.vo.SkuVO;
 import com.yirancrazy.minimall.goods.vo.SpuDetailVO;
 import com.yirancrazy.minimall.goods.vo.SpuListVO;
+import com.yirancrazy.minimall.goods.vo.SpuSearchVO;
+
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 用户端商品只读查询服务，仅暴露在售商品
+ * @Description: GoodsQueryService 服务接口，定义相关业务能力。
  * @Version: 1.0
- * @DateTime: 2026/08/02
+ * @DateTime: 2026/10/16
  **/
 public interface GoodsQueryService {
 
+
     /**
-     * 游标分页查询在售商品，支持关键词与分类过滤。
-     * @param dto 游标分页查询入参
-     * @return 在售商品游标分页结果
+     * 分页查询数据。
+     * @param dto dto 参数
+     * @return 处理结果
      */
     CursorPageVO<SpuListVO> pageOnSale(GoodsPageDTO dto);
 
+
     /**
-     * 查询商品详情，聚合 SPU 基础信息与其下 SKU 列表；非在售商品对用户不可见。
-     * @param spuId SPU 主键 ID
-     * @return 商品详情视图
+     * 获取相关数据。
+     * @param spuId spuId 参数
+     * @return 处理结果
      */
     SpuDetailVO getDetail(Long spuId);
 
+
     /**
-     * 查询指定 SPU 下的 SKU 列表；非在售 SPU 对用户不可见。
-     * @param spuId SPU 主键 ID
-     * @return SKU 视图列表
+     * 查询列表数据。
+     * @param spuId spuId 参数
+     * @return 结果列表
      */
     List<SkuVO> listSkus(Long spuId);
+
+
+    /**
+     * 执行 search 方法。
+     * @param dto dto 参数
+     * @return 结果列表
+     */
+    List<SpuSearchVO> search(SpuSearchDTO dto);
 }

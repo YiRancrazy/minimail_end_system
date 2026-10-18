@@ -5,11 +5,12 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import com.yirancrazy.minimall.common.base.BasePO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: Stock持久化对象，映射stock表
+ * @Description: StockPO 持久化对象，对应数据库表。
  * @Version: 1.0
- * @DateTime: 2026/07/31
+ * @DateTime: 2026/10/16
  **/
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -17,9 +18,7 @@ import com.yirancrazy.minimall.common.base.BasePO;
 public class StockPO extends BasePO {
     private Long skuId;
 
-    /**
-     * 库存归属商家ID，商家端越权校验依据；null 表示历史无归属记录（不参与商家端操作）
-     */
+
     private Long merchantId;
     private Long available;
     private Long reserved;

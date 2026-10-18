@@ -6,11 +6,12 @@ import com.yirancrazy.minimall.order.entity.OrderLogisticsPO;
 import com.yirancrazy.minimall.order.manager.OrderLogisticsManager;
 import com.yirancrazy.minimall.order.mapper.OrderLogisticsMapper;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: OrderLogistics 数据访问层实现，封装 t_order_logistics 表 CRUD
+ * @Description: OrderLogisticsManagerImpl 管理器实现，封装数据访问逻辑。
  * @Version: 1.0
- * @DateTime: 2026/08/03
+ * @DateTime: 2026/10/16
  **/
 @Manager
 public class OrderLogisticsManagerImpl extends ServiceImpl<OrderLogisticsMapper, OrderLogisticsPO>

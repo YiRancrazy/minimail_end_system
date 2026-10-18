@@ -5,65 +5,105 @@ import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
+import com.yirancrazy.minimall.api.dto.order.OrderCommentEligibilityDTO;
 import com.yirancrazy.minimall.api.dto.order.OrderExportItemDTO;
+import com.yirancrazy.minimall.api.dto.order.OrderPaySnapshotDTO;
 import com.yirancrazy.minimall.api.dto.order.OrderStatisticsDTO;
+import com.yirancrazy.minimall.api.dto.order.RefundCallbackDTO;
 import com.yirancrazy.minimall.api.fallback.OrderFeignFallbackFactory;
 import com.yirancrazy.minimall.common.result.Result;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: Order Feign 客户端，调用Order服务接口
- * @Version: 1.3
- * @DateTime: 2026/08/02
- */
+ * @Description: OrderFeignClient 接口，定义相关能力。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 @FeignClient(name = "minimall-order-service", fallbackFactory = OrderFeignFallbackFactory.class)
 public interface OrderFeignClient {
+    /**
+     * 执行 status 方法。
+     * @param id id 参数
+     * @return 统一响应结果
+     */
     @GetMapping("/internal/order/{id}")
     Result<Integer> status(@PathVariable("id") Long id);
 
+
     /**
-     * 按订单标识（订单ID或业务单号）解析订单归属商户ID，供支付服务归属收款商户。
-     * @param ref 订单标识
-     * @return 商户ID；订单不存在返回 null，服务不可达时 fallback 返回 SYS_ERROR 失败结果（data 为 null）
+     * 执行 merchantId 方法。
+     * @param ref ref 参数
+     * @return 统一响应结果
      */
     @GetMapping("/internal/order/merchant/{ref}")
     Result<Long> merchantId(@PathVariable("ref") String ref);
 
+
     /**
-     * 推进指定订单为已支付状态。
-     * @param id 订单ID
+     * 执行 paySnapshot 方法。
+     * @param ref ref 参数
+     * @return 统一响应结果
+     */
+    @GetMapping("/internal/order/pay-snapshot/{ref}")
+    Result<OrderPaySnapshotDTO> paySnapshot(@PathVariable("ref") String ref);
+
+
+    /**
+     * 执行 pay 方法。
+     * @param id id 参数
+     * @return 统一响应结果
      */
     @PostMapping("/internal/order/pay/{id}")
     Result<Void> pay(@PathVariable("id") Long id);
 
+
     /**
-     * 按业务单号推进订单为已支付状态，供支付回调（C 端携带业务单号）使用。
-     * @param orderNo 业务单号
+     * 执行 payByOrderNo 方法。
+     * @param orderNo orderNo 参数
+     * @return 统一响应结果
      */
     @PostMapping("/internal/order/pay-by-order-no/{orderNo}")
     Result<Void> payByOrderNo(@PathVariable("orderNo") String orderNo);
 
-    /**
-     * Notify the order service of a refund result so it can advance status.
-     * @param id the order id
-     * @param success whether the refund succeeded
-     */
-    @PostMapping("/internal/order/refund-callback/{id}")
-    Result<Void> refundCallback(@PathVariable("id") Long id, @RequestParam("success") boolean success);
 
     /**
-     * 全平台订单统计（订单总数/总金额/退款金额/各状态计数），供平台经营报表使用。
-     * @return 订单统计；服务不可用时由 fallback 返回空统计
+     * 执行 refundCallback 方法。
+     * @param dto dto 参数
+     * @return 统一响应结果
+     */
+    @PostMapping("/internal/order/refund-callback")
+    Result<Void> refundCallback(@RequestBody RefundCallbackDTO dto);
+
+
+    /**
+     * 执行 statistics 方法。
+     * @return 统一响应结果
      */
     @GetMapping("/internal/order/statistics")
     Result<OrderStatisticsDTO> statistics();
 
+
     /**
-     * 全平台订单导出列表，按创建时间倒序，服务端限制最大导出行数。
-     * @param startDate 起始日期（yyyy-MM-dd），null 表示不限制
-     * @param endDate 结束日期（yyyy-MM-dd），null 表示不限制
-     * @return 订单导出项列表；服务不可用时由 fallback 返回空列表
+     * 执行 commentEligibility 方法。
+     * @param orderNo orderNo 参数
+     * @param userId userId 参数
+     * @param spuId spuId 参数
+     * @return 统一响应结果
+     */
+    @GetMapping("/internal/order/comment-eligibility")
+    Result<OrderCommentEligibilityDTO> commentEligibility(@RequestParam("orderNo") String orderNo,
+                                                          @RequestParam("userId") Long userId,
+                                                          @RequestParam("spuId") Long spuId);
+
+
+    /**
+     * 执行 exportList 方法。
+     * @param startDate startDate 参数
+     * @param endDate endDate 参数
+     * @return 统一响应结果
      */
     @GetMapping("/internal/order/export-list")
     Result<List<OrderExportItemDTO>> exportList(

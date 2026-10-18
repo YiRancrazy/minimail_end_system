@@ -13,48 +13,50 @@ import com.yirancrazy.minimall.api.fallback.MerchantFeignFallbackFactory;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.result.Result;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: Merchant Feign 客户端，调用Merchant服务接口
- * @Version: 1.3
- * @DateTime: 2026/08/10
- */
+ * @Description: MerchantFeignClient 接口，定义相关能力。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 @FeignClient(name = "minimall-merchant-service", fallbackFactory = MerchantFeignFallbackFactory.class)
 public interface MerchantFeignClient {
 
+
     /**
-     * 查询店铺快照信息。
-     * @param id 店铺ID
-     * @return 店铺快照；服务不可用时由 fallback 返回哨兵值
+     * 执行 shopSnapshot 方法。
+     * @param id id 参数
+     * @return 统一响应结果
      */
     @GetMapping("/internal/merchant/shop/{id}")
     Result<ShopSnapshotDTO> shopSnapshot(@PathVariable("id") Long id);
 
+
     /**
-     * 平台商家管理分页查询。
-     * Internal: 仅内网调用，禁止 Gateway 暴露。
-     * @param query 通用分页查询
-     * @return 商家管理分页结果；服务不可用时由 fallback 返回空分页
+     * 分页查询数据。
+     * @param query query 参数
+     * @return 统一响应结果
      */
     @GetMapping("/internal/merchant/manage")
     Result<CursorPageVO<MerchantManageVO>> pageManage(@SpringQueryMap InternalPageQuery query);
 
+
     /**
-     * 平台商家详情。
-     * Internal: 仅内网调用，禁止 Gateway 暴露。
-     * @param merchantId 商家ID
-     * @return 商家管理视图；服务不可用时由 fallback 返回 null
+     * 执行 detail 方法。
+     * @param merchantId merchantId 参数
+     * @return 统一响应结果
      */
     @GetMapping("/internal/merchant/manage/{merchantId}")
     Result<MerchantManageVO> detail(@PathVariable("merchantId") Long merchantId);
 
+
     /**
-     * 平台审核商家资质，仅允许 PENDING 状态审核；驳回时 reason 必填。
-     * Internal: 仅内网调用，禁止 Gateway 暴露。
-     * @param merchantId 商家主体ID
-     * @param approved 是否通过
-     * @param reason 驳回原因，approved=false 时必填
-     * @return 空成功响应；服务不可用时由 fallback 返回 SYS_ERROR 失败结果
+     * 执行 audit 方法。
+     * @param merchantId merchantId 参数
+     * @param approved approved 参数
+     * @param reason reason 参数
+     * @return 统一响应结果
      */
     @PostMapping("/internal/merchant/manage/{merchantId}/audit")
     Result<Void> audit(@PathVariable("merchantId") Long merchantId,

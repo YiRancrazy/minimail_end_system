@@ -20,11 +20,12 @@ import com.yirancrazy.minimall.auth.vo.UserInfoVO;
 import com.yirancrazy.minimall.common.result.Result;
 
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: AuthControllerV1 类。
+ * @Description: AuthControllerV1 控制器，提供相关接口。
  * @Version: 1.0
- * @DateTime: 2026/7/31
+ * @DateTime: 2026/10/16
  **/
 @RestController
 @RequestMapping("/api/v1/user/auth")
@@ -32,45 +33,53 @@ public class AuthControllerV1 {
 
     private final AuthService authService;
 
+    /**
+     * 构造 AuthControllerV1 实例。
+     * @param authService authService 参数
+     */
     public AuthControllerV1(AuthService authService) {
         this.authService = authService;
     }
 
+
     /**
-     * 用户注册。
-     * @param dto 注册DTO
-     * @return 令牌VO
+     * 执行 register 方法。
+     * @param dto dto 参数
+     * @return 统一响应结果
      */
     @PostMapping("/register")
     public Result<TokenVO> register(@Valid @RequestBody RegisterDTO dto) {
         return Result.success(authService.register(dto));
     }
 
+
     /**
-     * 用户登录。
-     * @param dto 登录DTO
-     * @return 令牌VO
+     * 执行 login 方法。
+     * @param dto dto 参数
+     * @return 统一响应结果
      */
     @PostMapping("/login")
     public Result<TokenVO> login(@Valid @RequestBody LoginDTO dto) {
         return Result.success(authService.login(dto));
     }
 
+
     /**
-     * 刷新令牌。
-     * @param dto 刷新令牌DTO
-     * @return 新的令牌VO
+     * 执行 refreshToken 方法。
+     * @param dto dto 参数
+     * @return 统一响应结果
      */
     @PostMapping("/token/refresh")
     public Result<TokenVO> refreshToken(@Valid @RequestBody RefreshTokenDTO dto) {
         return Result.success(authService.refreshToken(dto.getRefreshToken()));
     }
 
+
     /**
-     * 用户登出。
-     * @param userId 用户ID
-     * @param jti 令牌唯一标识
-     * @return 无返回值
+     * 执行 logout 方法。
+     * @param userId userId 参数
+     * @param jti jti 参数
+     * @return 统一响应结果
      */
     @PostMapping("/logout")
     public Result<Void> logout(@RequestHeader("X-User-Id") Long userId,
@@ -79,10 +88,11 @@ public class AuthControllerV1 {
         return Result.success();
     }
 
+
     /**
-     * 获取当前用户信息。
-     * @param authorization 授权头
-     * @return 用户信息VO
+     * 执行 me 方法。
+     * @param authorization authorization 参数
+     * @return 统一响应结果
      */
     @GetMapping("/me")
     public Result<UserInfoVO> me(@RequestHeader("Authorization") String authorization) {
@@ -91,11 +101,12 @@ public class AuthControllerV1 {
         return Result.success(authService.me(token));
     }
 
+
     /**
-     * 修改密码，需登录态校验旧密码。
-     * @param userId 用户ID
-     * @param dto 修改密码DTO
-     * @return 无返回值
+     * 执行 changePassword 方法。
+     * @param userId userId 参数
+     * @param dto dto 参数
+     * @return 统一响应结果
      */
     @PutMapping("/password")
     public Result<Void> changePassword(@RequestHeader("X-User-Id") Long userId,
@@ -104,10 +115,11 @@ public class AuthControllerV1 {
         return Result.success();
     }
 
+
     /**
-     * 发送重置密码验证码。
-     * @param dto 发送验证码DTO
-     * @return 无返回值
+     * 发送业务消息。
+     * @param dto dto 参数
+     * @return 统一响应结果
      */
     @PostMapping("/password/reset/request")
     public Result<Void> sendResetCode(@Valid @RequestBody SendResetCodeDTO dto) {
@@ -115,10 +127,11 @@ public class AuthControllerV1 {
         return Result.success();
     }
 
+
     /**
-     * 重置密码，校验验证码后设置新密码。
-     * @param dto 重置密码DTO
-     * @return 无返回值
+     * 执行 resetPassword 方法。
+     * @param dto dto 参数
+     * @return 统一响应结果
      */
     @PostMapping("/password/reset/confirm")
     public Result<Void> resetPassword(@Valid @RequestBody ResetPasswordDTO dto) {

@@ -4,25 +4,28 @@ import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.platform.dto.PlatformUserPageDTO;
 import com.yirancrazy.minimall.platform.vo.PlatformUserVO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 平台用户服务接口；当前契约由 user-service 提供，本端作为契约入口。
+ * @Description: PlatformUserService 服务接口，定义相关业务能力。
  * @Version: 1.0
- * @DateTime: 2026/08/10
+ * @DateTime: 2026/10/16
  **/
 public interface PlatformUserService {
 
+
     /**
-     * 分页查询用户列表，支持按用户名/昵称过滤。
-     * @param dto 分页入参
-     * @return 用户游标分页结果
+     * 分页查询数据。
+     * @param dto dto 参数
+     * @return 处理结果
      */
     CursorPageVO<PlatformUserVO> page(PlatformUserPageDTO dto);
 
+
     /**
-     * 查询用户详情，不存在时抛 PLATFORM_USER_NOT_FOUND。
-     * @param userId 用户ID
-     * @return 用户视图
+     * 执行 detail 方法。
+     * @param userId userId 参数
+     * @return 处理结果
      */
     PlatformUserVO detail(Long userId);
 }

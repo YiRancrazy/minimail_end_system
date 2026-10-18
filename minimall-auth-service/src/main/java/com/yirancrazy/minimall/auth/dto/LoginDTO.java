@@ -5,14 +5,15 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-/**
- * @Author: yirancrazy@gmail.com
- * @Description: Login数据传输对象，用于Login相关数据传输
- * @Version: 1.0
- * @DateTime: 2026/08/04
- */
+
 @Data
 
+/**
+ * @Author: yirancrazy@gmail.com
+ * @Description: LoginDTO 数据传输对象。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 @NoArgsConstructor
 public class LoginDTO {
     @NotBlank
@@ -21,10 +22,11 @@ public class LoginDTO {
     @NotBlank
     private String password;
 
+
     /**
-     * 便利构造函数。
-     * @param account 登录账号
-     * @param password 密码
+     * 构造 LoginDTO 实例。
+     * @param account account 参数
+     * @param password password 参数
      */
     public LoginDTO(String account, String password) {
         this.account = account;

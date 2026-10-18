@@ -8,19 +8,21 @@ import java.util.Map;
 import java.util.Set;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 角色-权限映射表（简化版 RBAC），硬编码各角色拥有的权限集合。
+ * @Description: RolePermissionMapping 类型，承载相关业务能力。
  * @Version: 1.0
- * @DateTime: 2026/08/03
+ * @DateTime: 2026/10/16
  **/
 public final class RolePermissionMapping {
 
-    /**
-     * Redis 角色权限覆盖集 key 前缀，完整 key 为 {prefix}{roleCode}，写入与读取共用。
-     */
+
     public static final String KEY_PREFIX = "platform:role-permissions:";
 
+    /**
+     * 构造 RolePermissionMapping 实例。
+     */
     private RolePermissionMapping() {
     }
 
@@ -63,10 +65,11 @@ public final class RolePermissionMapping {
         )
     );
 
+
     /**
-     * 获取指定角色的全部权限集合（不可变）。
-     * @param role 角色枚举
-     * @return 权限集合，未知角色返回空集
+     * 执行 permissionsOf 方法。
+     * @param role role 参数
+     * @return 结果列表
      */
     public static Set<PermissionEnum> permissionsOf(RoleEnum role) {
         if (role == null) {
@@ -75,11 +78,12 @@ public final class RolePermissionMapping {
         return Collections.unmodifiableSet(MAPPING.getOrDefault(role, Collections.emptySet()));
     }
 
+
     /**
-     * 判断角色是否拥有指定权限。
-     * @param role 角色枚举
-     * @param permission 权限枚举
-     * @return true 表示拥有
+     * 执行 hasPermission 方法。
+     * @param role role 参数
+     * @param permission permission 参数
+     * @return 是否处理成功
      */
     public static boolean hasPermission(RoleEnum role, PermissionEnum permission) {
         if (role == null || permission == null) {
@@ -88,11 +92,12 @@ public final class RolePermissionMapping {
         return MAPPING.getOrDefault(role, Collections.emptySet()).contains(permission);
     }
 
+
     /**
-     * 获取角色生效权限集合，优先读 Redis，无则 fallback 到硬编码映射。
-     * @param role 角色枚举
-     * @param redisTemplate 可为 null，为 null 时直接 fallback
-     * @return 权限集合
+     * 获取相关数据。
+     * @param role role 参数
+     * @param redisTemplate redisTemplate 参数
+     * @return 结果列表
      */
     public static Set<PermissionEnum> getEffectivePermissions(
             RoleEnum role, StringRedisTemplate redisTemplate) {
@@ -108,10 +113,11 @@ public final class RolePermissionMapping {
         return permissionsOf(role);
     }
 
+
     /**
-     * 解析 Redis 中存储的权限码 JSON 数组字符串为权限枚举集合，非法权限码自动跳过。
-     * @param json 权限码数组字符串，如 ["GOODS_VIEW","GOODS_MANAGE"]
-     * @return 权限枚举集合
+     * 执行 parsePermissions 方法。
+     * @param json json 参数
+     * @return 结果列表
      */
     public static Set<PermissionEnum> parsePermissions(String json) {
         Set<PermissionEnum> perms = new HashSet<>();
@@ -126,26 +132,26 @@ public final class RolePermissionMapping {
         return perms;
     }
 
+
     /**
-     * 更新角色权限映射到 Redis，仅允许修改 MERCHANT 和 PLATFORM 角色。
-     * @param role 角色枚举
-     * @param permissionCodes 权限编码列表
-     * @param redisTemplate Redis 操作模板
-     * @throws IllegalArgumentException 尝试修改 USER 角色时
+     * 更新业务数据。
+     * @param role role 参数
+     * @param permissionCodes permissionCodes 参数
+     * @param redisTemplate redisTemplate 参数
      */
     public static void updatePermissions(
             RoleEnum role, List<String> permissionCodes, StringRedisTemplate redisTemplate) {
         if (role == RoleEnum.USER) {
-            throw new IllegalArgumentException("USER role permissions are not modifiable");
+            throw new IllegalArgumentException("USER 角色权限不可修改");
         }
-        // Validate all permission codes
+        // 校验所有权限码
         for (String code : permissionCodes) {
             try {
                 PermissionEnum.valueOf(code);
             }
             catch (IllegalArgumentException e) {
                 throw new IllegalArgumentException(
-                    "Invalid permission code: " + code);
+                    "权限码非法：" + code);
             }
         }
         String json = "[" + permissionCodes.stream()

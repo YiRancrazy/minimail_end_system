@@ -9,19 +9,24 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import com.yirancrazy.minimall.common.aspect.IdempotentAspect;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 幂等切面自动装配，仅在服务具备 Redis（StringRedisTemplate）时注册，
- *               无 Redis 的服务（如部分单测/直连场景）自动跳过，不影响启动。
+ * @Description: IdempotentAutoConfiguration 类型，承载相关业务能力。
  * @Version: 1.0
- * @DateTime: 2026/08/13
- */
+ * @DateTime: 2026/10/16
+ **/
 @AutoConfiguration
 @ConditionalOnClass(StringRedisTemplate.class)
 @ConditionalOnBean(StringRedisTemplate.class)
 @AutoConfigureAfter(RedisAutoConfiguration.class)
 public class IdempotentAutoConfiguration {
 
+    /**
+     * 执行 idempotentAspect 方法。
+     * @param redisTemplate redisTemplate 参数
+     * @return 处理结果
+     */
     @Bean
     public IdempotentAspect idempotentAspect(StringRedisTemplate redisTemplate) {
         return new IdempotentAspect(redisTemplate);

@@ -19,29 +19,35 @@ import com.yirancrazy.minimall.notify.manager.PreferenceManager;
 import com.yirancrazy.minimall.notify.service.PreferenceService;
 import com.yirancrazy.minimall.notify.vo.PreferenceVO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 通知偏好领域服务实现
+ * @Description: PreferenceServiceImpl 服务实现，实现相关业务逻辑。
  * @Version: 1.0
- * @DateTime: 2026/08/10
+ * @DateTime: 2026/10/16
  **/
 @Slf4j
 @Service
 public class PreferenceServiceImpl implements PreferenceService {
 
-    /** 默认开关值（全开） */
+
     private static final int DEFAULT_ENABLED = 1;
 
     private final PreferenceManager preferenceManager;
 
+    /**
+     * 构造 PreferenceServiceImpl 实例。
+     * @param preferenceManager preferenceManager 参数
+     */
     public PreferenceServiceImpl(PreferenceManager preferenceManager) {
         this.preferenceManager = preferenceManager;
     }
 
+
     /**
-     * 查询用户偏好：返回数据库已有的偏好记录 + 缺失类别的默认值，确保返回全量类别。
-     * @param userId 用户ID
-     * @return 偏好视图列表
+     * 查询列表数据。
+     * @param userId userId 参数
+     * @return 结果列表
      */
     @Override
     public List<PreferenceVO> listByUser(Long userId) {
@@ -63,12 +69,12 @@ public class PreferenceServiceImpl implements PreferenceService {
         return result;
     }
 
+
     /**
-     * 批量更新偏好：按 (userId, categoryCode) upsert。
-     * @param userId 用户ID
-     * @param items 更新项列表
+     * 更新业务数据。
+     * @param userId userId 参数
+     * @param items items 参数
      */
-    @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateBatch(Long userId, List<PreferenceUpdateDTO> items) {
         for (PreferenceUpdateDTO item : items) {
@@ -88,15 +94,16 @@ public class PreferenceServiceImpl implements PreferenceService {
                 preferenceManager.updateById(existing);
             }
         }
-        log.info("preferences batch updated, userId={}, count={}", userId, items.size());
+        log.info("通知偏好批量更新完成，userId={}，count={}", userId, items.size());
     }
 
+
     /**
-     * 判断是否启用：未设置偏好时按默认（启用）处理。
-     * @param userId 用户ID
-     * @param categoryCode 类别编码
-     * @param channel 渠道
-     * @return true=启用
+     * 执行 isChannelEnabled 方法。
+     * @param userId userId 参数
+     * @param categoryCode categoryCode 参数
+     * @param channel channel 参数
+     * @return 是否处理成功
      */
     @Override
     public boolean isChannelEnabled(Long userId, String categoryCode, String channel) {
@@ -117,6 +124,11 @@ public class PreferenceServiceImpl implements PreferenceService {
         };
     }
 
+    /**
+     * 构建或生成Default。
+     * @param categoryCode category编码
+     * @return 视图对象
+     */
     private PreferenceVO buildDefault(String categoryCode) {
         PreferenceVO vo = new PreferenceVO();
         vo.setCategoryCode(categoryCode);
@@ -126,6 +138,12 @@ public class PreferenceServiceImpl implements PreferenceService {
         return vo;
     }
 
+    /**
+     * 加载Existing。
+     * @param userId 用户 ID
+     * @param categoryCode category编码
+     * @return 查询结果
+     */
     private PreferencePO findExisting(Long userId, String categoryCode) {
         LambdaQueryWrapper<PreferencePO> wrapper = Wrappers.lambdaQuery(PreferencePO.class);
         wrapper.eq(PreferencePO::getUserId, userId);
@@ -133,11 +151,13 @@ public class PreferenceServiceImpl implements PreferenceService {
         return preferenceManager.getOne(wrapper);
     }
 
+
     /**
-     * 仅修改指定渠道的开关，其它渠道保留原值；新建记录时其它渠道使用默认值。
-     * @param po 偏好记录
-     * @param channel 渠道
-     * @param enabled 开关值
+     * 执行Channel逻辑。
+     * @param po 持久化对象
+     * @param channel channel
+     * @param enabled enabled
+     * @throws BizException 业务校验失败时抛出
      */
     private void applyChannel(PreferencePO po, String channel, int enabled) {
         switch (channel) {
@@ -151,6 +171,11 @@ public class PreferenceServiceImpl implements PreferenceService {
         if (po.getEmailEnabled() == null) po.setEmailEnabled(DEFAULT_ENABLED);
     }
 
+    /**
+     * 校验Category。
+     * @param code 编码
+     * @throws BizException 业务校验失败时抛出
+     */
     private void validateCategory(String code) {
         boolean valid = Arrays.stream(NotifyCategoryEnum.values())
                 .anyMatch(c -> c.getCode().equals(code));

@@ -5,24 +5,29 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Locale;
 import org.springframework.context.ApplicationContextInitializer;
 import org.springframework.context.ConfigurableApplicationContext;
 import lombok.extern.slf4j.Slf4j;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: Load .env file and set as system properties, only from file not system env.
- * @Version: 1.1
- * @DateTime: 2026/08/01
- */
+ * @Description: DotenvConfig 配置类。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 @Slf4j
 public class DotenvConfig implements ApplicationContextInitializer {
 
-    @Override
+    /**
+     * 初始化相关资源。
+     * @param applicationContext applicationContext 参数
+     */
     public void initialize(ConfigurableApplicationContext applicationContext) {
         Path envFile = findEnvFile();
         if (envFile == null) {
-            log.info(".env file not found, skipping");
+            log.info(".env 文件不存在，已跳过");
             return;
         }
 
@@ -40,24 +45,28 @@ public class DotenvConfig implements ApplicationContextInitializer {
                 }
                 String key = line.substring(0, eq).trim();
                 String value = line.substring(eq + 1).trim();
-                // remove surrounding quotes
+            // 去掉首尾引号
                 if ((value.startsWith("\"") && value.endsWith("\""))
                         || (value.startsWith("'") && value.endsWith("'"))) {
                     value = value.substring(1, value.length() - 1);
                 }
                 System.setProperty(key, value);
                 count++;
-                log.debug("Loaded .env: {}={}", key, key.contains("PASSWORD") ? "***" : value);
+                log.debug("已加载 .env: {}={}", key, redactedValue(key, value));
             }
-            log.info("Loaded {} entries from .env file", count);
+            log.info("已从 .env 文件加载 {} 条配置", count);
         }
         catch (IOException e) {
-            log.warn("Failed to read .env file: {}", e.getMessage());
+            log.warn("读取 .env 文件失败: {}", e.getMessage());
         }
     }
 
+    /**
+     * 加载环境文件。
+     * @return 查询结果
+     */
     private Path findEnvFile() {
-        // search from working dir up to 3 levels
+        // 从工作目录向上最多搜索 3 层
         Path dir = Paths.get(System.getProperty("user.dir"));
         for (int i = 0; i < 4; i++) {
             Path env = dir.resolve(".env");
@@ -70,5 +79,25 @@ public class DotenvConfig implements ApplicationContextInitializer {
             }
         }
         return null;
+    }
+
+
+    /**
+     * 处理脱敏值。
+     * @param key 键
+     * @param value 值
+     * @return 处理结果
+     */
+    static String redactedValue(String key, String value) {
+        String normalizedKey = key == null ? "" : key.toUpperCase(Locale.ROOT);
+        if (normalizedKey.contains("PASSWORD")
+            || normalizedKey.contains("SECRET")
+            || normalizedKey.contains("TOKEN")
+            || normalizedKey.contains("PRIVATE_KEY")
+            || normalizedKey.contains("ACCESS_KEY")
+            || normalizedKey.contains("AES_KEY")) {
+            return "***";
+        }
+        return value;
     }
 }

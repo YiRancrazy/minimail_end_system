@@ -3,12 +3,13 @@ package com.yirancrazy.minimall.common.exception;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.context.annotation.Import;
 
+
 /**
- * Registers {@link GlobalExceptionHandler} so that controllers throw
- * {@link com.yirancrazy.minimall.common.exception.BizException} and the handler
- * is picked up regardless of which {@code @SpringBootApplication} package the
- * service starts in.
- */
+ * @Author: yirancrazy@gmail.com
+ * @Description: WebExceptionHandlerAutoConfiguration 类型，承载相关业务能力。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 @AutoConfiguration
 @Import(GlobalExceptionHandler.class)
 public class WebExceptionHandlerAutoConfiguration {

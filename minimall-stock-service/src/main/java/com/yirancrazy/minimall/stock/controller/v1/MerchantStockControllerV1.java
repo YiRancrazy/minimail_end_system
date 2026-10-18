@@ -14,15 +14,16 @@ import jakarta.servlet.http.HttpServletResponse;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.common.util.CsvExporter;
 import com.yirancrazy.minimall.stock.constant.StockJournalTypeEnum;
-import com.yirancrazy.minimall.stock.entity.StockJournalPO;
 import com.yirancrazy.minimall.stock.service.StockService;
+import com.yirancrazy.minimall.stock.vo.StockJournalVO;
+
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 商家端库存控制器，提供商家视角的库存 RESTful API
+ * @Description: MerchantStockControllerV1 控制器，提供相关接口。
  * @Version: 1.0
- * @DateTime: 2026/08/04
- */
+ * @DateTime: 2026/10/16
+ **/
 @RestController
 @RequestMapping("/api/v1/merchant/stock")
 public class MerchantStockControllerV1 {
@@ -33,16 +34,20 @@ public class MerchantStockControllerV1 {
 
     private final StockService stockService;
 
+    /**
+     * 构造 MerchantStockControllerV1 实例。
+     * @param stockService stockService 参数
+     */
     public MerchantStockControllerV1(StockService stockService) {
         this.stockService = stockService;
     }
 
+
     /**
-     * 按 SKU 标识查询当前可用库存数量，库存记录不存在或非本商家归属时返回错误。
-     *
-     * @param merchantId 商家ID（来自网关 X-Merchant-Id）
-     * @param skuId SKU 标识
-     * @return 统一响应体，数据为该 SKU 的可用库存数量
+     * 获取相关数据。
+     * @param merchantId merchantId 参数
+     * @param skuId skuId 参数
+     * @return 统一响应结果
      */
     @GetMapping("/{skuId}")
     public Result<Long> get(@RequestHeader("X-Merchant-Id") Long merchantId,
@@ -50,13 +55,13 @@ public class MerchantStockControllerV1 {
         return Result.success(stockService.query(skuId, merchantId));
     }
 
+
     /**
-     * 设置库存预警阈值。
-     *
-     * @param merchantId 商家ID（来自网关 X-Merchant-Id）
-     * @param skuId     SKU 标识
-     * @param threshold 预警阈值，必须 >= 0
-     * @return 统一响应体
+     * 设置相关数据。
+     * @param merchantId merchantId 参数
+     * @param skuId skuId 参数
+     * @param threshold threshold 参数
+     * @return 统一响应结果
      */
     @PostMapping("/{skuId}/threshold")
     public Result<Void> setThreshold(@RequestHeader("X-Merchant-Id") Long merchantId,
@@ -66,14 +71,14 @@ public class MerchantStockControllerV1 {
         return Result.success(null);
     }
 
+
     /**
-     * 手动调整库存数量。
-     *
-     * @param merchantId 商家ID（来自网关 X-Merchant-Id）
-     * @param skuId    SKU 标识
-     * @param quantity 调整数量，正数增加、负数扣减，不能为0
-     * @param reason   调整原因
-     * @return 统一响应体
+     * 执行 adjustStock 方法。
+     * @param merchantId merchantId 参数
+     * @param skuId skuId 参数
+     * @param quantity quantity 参数
+     * @param reason reason 参数
+     * @return 统一响应结果
      */
     @PostMapping("/{skuId}/adjust")
     public Result<Void> adjustStock(@RequestHeader("X-Merchant-Id") Long merchantId,
@@ -84,50 +89,60 @@ public class MerchantStockControllerV1 {
         return Result.success(null);
     }
 
-    /**
-     * 查询指定SKU的库存流水记录。
-     *
-     * @param merchantId 商家ID（来自网关 X-Merchant-Id）
-     * @param skuId SKU 标识
-     * @return 统一响应体，数据为库存流水列表
-     */
-    @GetMapping("/{skuId}/journal")
-    public Result<List<StockJournalPO>> queryJournal(
-        @RequestHeader("X-Merchant-Id") Long merchantId, @PathVariable Long skuId) {
-        return Result.success(stockService.queryJournal(skuId, merchantId));
-    }
 
     /**
-     * 导出指定SKU的库存流水CSV，最多10000行。
-     * @param merchantId 商家ID（来自网关 X-Merchant-Id）
-     * @param skuId SKU标识
-     * @param response HTTP响应
-     * @throws IOException 写入失败时抛出
+     * 执行 queryJournal 方法。
+     * @param merchantId merchantId 参数
+     * @param skuId skuId 参数
+     * @return 统一响应结果
      */
-    @GetMapping("/{skuId}/journal/export")
+    @GetMapping("/{skuId}/journal")
+    public Result<List<StockJournalVO>> queryJournal(
+        @RequestHeader("X-Merchant-Id") Long merchantId, @PathVariable Long skuId) {
+        return Result.success(stockService.queryJournalVO(skuId, merchantId));
+    }
+
+
+    /**
+     * 执行 exportJournal 方法。
+     * @param merchantId merchantId 参数
+     * @param skuId skuId 参数
+     * @param response response 参数
+     * @throws IOException 处理失败时抛出
+     */
     public void exportJournal(@RequestHeader("X-Merchant-Id") Long merchantId,
                               @PathVariable Long skuId,
                               HttpServletResponse response) throws IOException {
-        List<StockJournalPO> list = stockService.exportJournal(skuId, merchantId);
+        List<StockJournalVO> list = stockService.exportJournalVO(skuId, merchantId);
         CsvExporter.write(response, "stock-journal.csv", JOURNAL_HEADERS, toJournalRows(list));
     }
 
-    private List<String[]> toJournalRows(List<StockJournalPO> list) {
+    /**
+     * 转换或解析JournalRows。
+     * @param list 列表
+     * @return 结果列表
+     */
+    private List<String[]> toJournalRows(List<StockJournalVO> list) {
         List<String[]> rows = new ArrayList<>(list.size());
-        for (StockJournalPO po : list) {
+        for (StockJournalVO vo : list) {
             rows.add(new String[] {
-                String.valueOf(po.getId()),
-                String.valueOf(po.getSkuId()),
-                String.valueOf(po.getQuantity()),
-                journalTypeText(po.getType()),
-                po.getReason() == null ? "" : po.getReason(),
-                po.getOrderNo() == null ? "" : po.getOrderNo(),
-                po.getCreateTime() == null ? "" : po.getCreateTime().toString()
+                String.valueOf(vo.getId()),
+                String.valueOf(vo.getSkuId()),
+                String.valueOf(vo.getQuantity()),
+                journalTypeText(vo.getType()),
+                vo.getReason() == null ? "" : vo.getReason(),
+                vo.getOrderNo() == null ? "" : vo.getOrderNo(),
+                vo.getCreateTime() == null ? "" : vo.getCreateTime().toString()
             });
         }
         return rows;
     }
 
+    /**
+     * 处理journalTypeText。
+     * @param type 类型
+     * @return 处理结果
+     */
     private static String journalTypeText(Integer type) {
         if (type == null) {
             return "";

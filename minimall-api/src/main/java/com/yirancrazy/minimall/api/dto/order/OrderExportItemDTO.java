@@ -6,11 +6,12 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 订单导出项跨服务 DTO，供平台端订单导出 CSV 使用。
+ * @Description: OrderExportItemDTO 数据传输对象。
  * @Version: 1.0
- * @DateTime: 2026/08/16
+ * @DateTime: 2026/10/16
  **/
 @Data
 @NoArgsConstructor

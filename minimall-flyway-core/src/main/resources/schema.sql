@@ -77,13 +77,18 @@ CREATE TABLE IF NOT EXISTS t_auth_role_permission (
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='角色权限关联表';
 
 CREATE TABLE IF NOT EXISTS t_auth_token_blacklist (
-                                                      jti             CHAR(32)        NOT NULL COMMENT '令牌唯一标识（JWT ID）',
+    id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    jti             CHAR(32)        NOT NULL COMMENT '令牌唯一标识（JWT ID）',
     user_id         BIGINT UNSIGNED NOT NULL COMMENT '用户ID',
     expires_at      DATETIME(3)     NOT NULL COMMENT '令牌过期时间',
     revoked_at      DATETIME(3)     NOT NULL COMMENT '撤销时间',
     reason          VARCHAR(64)     NULL COMMENT '撤销原因',
+    is_deleted      TINYINT         DEFAULT 0 COMMENT '是否删除：0=未删除 1=已删除（允许NULL）',
+    create_time     DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
+    update_time     DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '更新时间',
     version         INT             NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
-    PRIMARY KEY (jti),
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_token_bl_jti (jti),
     KEY idx_token_bl_user (user_id),
     KEY idx_token_bl_expires (expires_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='令牌黑名单表';
@@ -268,6 +273,8 @@ CREATE TABLE IF NOT EXISTS t_order (
     quantity                INT             NULL COMMENT '总数量（冗余）',
     amount                  DECIMAL(12,2)   DEFAULT 0 COMMENT '商品总额（原价）',
     refund_amount           DECIMAL(12,2)   NULL COMMENT '实际退款金额（元），部分退款时记录',
+    total_refunded_amount   DECIMAL(12,2)   NOT NULL DEFAULT 0 COMMENT '累计已退款金额（元）',
+    refund_request_no       VARCHAR(64)     NULL COMMENT '退款请求幂等键',
     total_amount            DECIMAL(12,2)   NOT NULL DEFAULT 0 COMMENT '应付总额（含运费）',
     pay_amount              DECIMAL(12,2)   NOT NULL DEFAULT 0 COMMENT '实付金额',
     freight_amount          DECIMAL(12,2)   NOT NULL DEFAULT 0 COMMENT '运费',
@@ -409,10 +416,12 @@ CREATE TABLE IF NOT EXISTS t_stock_journal (
                                                reason          VARCHAR(255)    NULL COMMENT '变动原因',
     order_no        VARCHAR(32)     NULL COMMENT '关联订单号',
     is_deleted      TINYINT         DEFAULT 0 COMMENT '是否删除：0=未删除 1=已删除（允许NULL）',
-    created_at      DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
-    updated_at      DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '更新时间',
+    create_time     DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
+    update_time     DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '更新时间',
+    version         INT             NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
     PRIMARY KEY (id),
-    INDEX idx_journal_sku_id (sku_id)
+    INDEX idx_journal_sku_id (sku_id),
+    UNIQUE KEY uk_stock_journal_release_idem (sku_id, order_no, type, is_deleted)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='库存流水表';
 
 CREATE TABLE IF NOT EXISTS t_stock_transfer (
@@ -458,6 +467,7 @@ CREATE TABLE IF NOT EXISTS t_pay_transaction (
                                                  payment_no          VARCHAR(32)     NOT NULL COMMENT '支付流水号（唯一）',
     trade_no            VARCHAR(64)     DEFAULT NULL COMMENT '第三方交易号',
     order_no            VARCHAR(32)     NOT NULL COMMENT '关联订单号',
+    active_order_no     VARCHAR(32)     NULL COMMENT '活跃支付订单唯一键',
     user_id             BIGINT UNSIGNED NOT NULL COMMENT '付款用户ID',
     merchant_id         BIGINT UNSIGNED NOT NULL COMMENT '收款商家ID',
     amount              DECIMAL(12,2)   NOT NULL COMMENT '支付金额(元)',
@@ -474,14 +484,16 @@ CREATE TABLE IF NOT EXISTS t_pay_transaction (
     update_time         DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '更新时间',
     PRIMARY KEY (id),
     UNIQUE KEY uk_pay_transaction_payment_no (payment_no, is_deleted),
+    UNIQUE KEY uk_pay_transaction_active_order (active_order_no, is_deleted),
     INDEX idx_pay_transaction_order_no (order_no),
     INDEX idx_pay_transaction_user_id (user_id),
     INDEX idx_pay_transaction_merchant_id (merchant_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='支付流水表';
 
 CREATE TABLE IF NOT EXISTS t_pay_refund (
-                                            id                  BIGINT UNSIGNED NOT NULL COMMENT '主键ID',
-                                            refund_no           VARCHAR(32)     NOT NULL COMMENT '退款流水号（唯一）',
+    id                  BIGINT UNSIGNED NOT NULL COMMENT '主键ID',
+    refund_no           VARCHAR(32)     NOT NULL COMMENT '退款流水号（唯一）',
+    refund_request_no   VARCHAR(64)     NOT NULL COMMENT '退款请求幂等键',
     payment_no          VARCHAR(32)     NOT NULL COMMENT '关联支付流水号',
     refund_trade_no     VARCHAR(64)     DEFAULT NULL COMMENT '第三方退款交易号',
     amount              DECIMAL(12,2)   NOT NULL COMMENT '退款金额(元)',
@@ -489,13 +501,17 @@ CREATE TABLE IF NOT EXISTS t_pay_refund (
     status              TINYINT         NOT NULL DEFAULT 0 COMMENT '状态：0=待退款 1=已退款 2=失败',
     notified_at         DATETIME(3)     DEFAULT NULL COMMENT '退款通知时间',
     idempotency_key     VARCHAR(64)     DEFAULT NULL COMMENT '幂等键',
+    retry_count         INT             NOT NULL DEFAULT 0 COMMENT '退款补偿重试次数',
+    next_retry_at       DATETIME(3)     DEFAULT NULL COMMENT '下次退款补偿时间',
     version             INT             NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
     is_deleted          TINYINT         DEFAULT 0 COMMENT '是否删除：0=未删除 1=已删除（允许NULL）',
     create_time         DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
     update_time         DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '更新时间',
     PRIMARY KEY (id),
     UNIQUE KEY uk_pay_refund_refund_no (refund_no, is_deleted),
-    INDEX idx_pay_refund_payment_no (payment_no)
+    UNIQUE KEY uk_pay_refund_request_no (refund_request_no, is_deleted),
+    INDEX idx_pay_refund_payment_no (payment_no),
+    INDEX idx_pay_refund_status_retry (status, next_retry_at, is_deleted)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='退款流水表';
 
 -- ============================================================
@@ -566,7 +582,8 @@ CREATE TABLE IF NOT EXISTS t_notify_comment (
     INDEX idx_spu (spu_id, status),
     INDEX idx_notify_comment_user (user_id),
     INDEX idx_merchant (merchant_id),
-    INDEX idx_notify_comment_order (order_no)
+    INDEX idx_notify_comment_order (order_no),
+    UNIQUE KEY uk_notify_comment_order_spu_user (order_no, spu_id, user_id, is_deleted)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='商品评价表';
 
 CREATE TABLE IF NOT EXISTS t_notify_preference (
@@ -621,6 +638,7 @@ INSERT IGNORE INTO t_id_segment (id, biz_tag, current_max, step, version) VALUES
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS `undo_log` (
+                                          `id`            BIGINT      NOT NULL AUTO_INCREMENT,
                                           `branch_id`     BIGINT      NOT NULL COMMENT '分支事务ID',
                                           `xid`           VARCHAR(128) NOT NULL COMMENT '全局事务ID',
     `context`       VARCHAR(128) NOT NULL COMMENT 'undo log 上下文（如序列化方式）',
@@ -628,7 +646,8 @@ CREATE TABLE IF NOT EXISTS `undo_log` (
     `log_status`    INT         NOT NULL COMMENT '状态：0=正常 1=防御',
     `log_created`   DATETIME(6) NOT NULL COMMENT '创建时间',
     `log_modified`  DATETIME(6) NOT NULL COMMENT '修改时间',
+    PRIMARY KEY (`id`),
     UNIQUE KEY `ux_undo_log` (`xid`, `branch_id`)
-    ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COMMENT='AT事务模式undo日志表';
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AT事务模式undo日志表';
 
 SET FOREIGN_KEY_CHECKS = 1;

@@ -11,23 +11,24 @@ import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.goods.search.SpuDocument;
 import com.yirancrazy.minimall.goods.service.SpuService;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: Elasticsearch 配置类，启用 ES Repository 支持并确保索引 mapping 与全量数据就绪
- * @Version: 1.1
- * @DateTime: 2026/08/19
+ * @Description: ElasticsearchConfig 配置类。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
  **/
 @Slf4j
 @Configuration
 @EnableElasticsearchRepositories(basePackages = "com.yirancrazy.minimall.goods.search")
 public class ElasticsearchConfig {
 
+
     /**
-     * 启动后初始化 ES 索引：索引缺失或 title 未按 ik 分词时重建 mapping，
-     * 随后全量重灌在售 SPU 文档。避免首次建索引时 Spring Data 沿用默认 standard 分词导致中文搜不到。
-     * @param elasticsearchOperations ES 操作入口
-     * @param spuService 商品领域服务，提供全量重灌能力
-     * @return 应用启动完成后的初始化任务
+     * 执行 esIndexInitializer 方法。
+     * @param elasticsearchOperations elasticsearchOperations 参数
+     * @param spuService spuService 参数
+     * @return 处理结果
      */
     @Bean
     public ApplicationRunner esIndexInitializer(ElasticsearchOperations elasticsearchOperations,
@@ -35,28 +36,29 @@ public class ElasticsearchConfig {
         return args -> {
             IndexOperations ops = elasticsearchOperations.indexOps(SpuDocument.class);
             if (ops.exists() && hasIkAnalyzer(ops)) {
-                log.info("ES index {} already has ik analyzer, skip recreate",
+                log.info("ES 索引 {} 已包含 ik 分词器，跳过重建",
                     SpuDocument.class.getSimpleName());
             }
             else {
                 // 索引缺失或缺 ik 分词器 → 重建，保证 title 中文分词生效
                 if (ops.exists()) {
                     ops.delete();
-                    log.warn("ES index recreated due to missing ik analyzer");
+                    log.warn("ES 索引缺少 ik 分词器，已重建");
                 }
                 ops = elasticsearchOperations.indexOps(SpuDocument.class);
                 ops.create();
                 ops.putMapping(ops.createMapping());
-                log.info("ES index created with ik mapping");
+                log.info("ES 索引已使用 ik mapping 创建");
             }
             spuService.rebuildAllEsDocuments();
         };
     }
 
+
     /**
-     * 判断现有索引的 title 字段是否已按 ik_max_word 分词。
-     * @param ops 索引操作入口
-     * @return true 表示 title 已配置 ik 分析器
+     * 校验IkAnalyzer。
+     * @param ops ops
+     * @return 是否满足条件
      */
     private boolean hasIkAnalyzer(IndexOperations ops) {
         Map<String, Object> mapping = ops.getMapping();

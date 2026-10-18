@@ -5,11 +5,12 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 投诉创建 DTO，用于提交投诉入参校验
+ * @Description: ComplaintCreateDTO 数据传输对象。
  * @Version: 1.0
- * @DateTime: 2026/08/03
+ * @DateTime: 2026/10/16
  **/
 @Data
 public class ComplaintCreateDTO {
@@ -17,7 +18,7 @@ public class ComplaintCreateDTO {
     @NotNull(message = "complainantType cannot be null")
     private Integer complainantType;
 
-    /** 投诉方ID，由 Controller 从 X-User-Id 覆盖，DTO 中仅作占位 */
+
     private Long complainantId;
 
     @NotNull(message = "defendantType cannot be null")

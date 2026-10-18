@@ -38,11 +38,12 @@ import com.yirancrazy.minimall.auth.util.JwtUtil;
 import com.yirancrazy.minimall.auth.vo.UserInfoVO;
 import com.yirancrazy.minimall.common.exception.BizException;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: MerchantAuthServiceImpl 的单元测试类，覆盖注册/登录/登出/修改密码的正常与失败场景。
- * @Version: 2.0
- * @DateTime: 2026/08/04
+ * @Description: MerchantAuthServiceImplTest 单元测试。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
  **/
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)

@@ -7,26 +7,42 @@ import com.yirancrazy.minimall.cart.manager.CartItemManager;
 import com.yirancrazy.minimall.cart.mapper.CartItemMapper;
 import com.yirancrazy.minimall.common.annotation.Manager;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: CartItem数据访问层实现，封装CartItem表 CRUD 操作
+ * @Description: CartItemManagerImpl 管理器实现，封装数据访问逻辑。
  * @Version: 1.0
- * @DateTime: 2026/07/31
- */
+ * @DateTime: 2026/10/16
+ **/
 @Manager
 public class CartItemManagerImpl extends ServiceImpl<CartItemMapper, CartItemPO>
     implements CartItemManager {
 
+
     /**
-     * 根据用户ID和SKU ID查询购物车条目。
-     * @param userId 用户ID，来自网关X-User-Id可信头
-     * @param skuId SKU ID
-     * @return 购物车条目；不存在返回 null
+     * 获取相关数据。
+     * @param userId userId 参数
+     * @param skuId skuId 参数
+     * @return 处理结果
      */
     @Override
     public CartItemPO getByUserIdAndSkuId(Long userId, Long skuId) {
         return getOne(Wrappers.lambdaQuery(CartItemPO.class)
             .eq(CartItemPO::getUserId, userId)
             .eq(CartItemPO::getSkuId, skuId));
+    }
+
+    /**
+     * 执行 upsertQuantity 方法。
+     * @param id id 参数
+     * @param userId userId 参数
+     * @param skuId skuId 参数
+     * @param quantity quantity 参数
+     * @param selected selected 参数
+     * @return 业务数值
+     */
+    @Override
+    public int upsertQuantity(Long id, Long userId, Long skuId, Integer quantity, Integer selected) {
+        return baseMapper.upsertQuantity(id, userId, skuId, quantity, selected);
     }
 }

@@ -9,7 +9,6 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.api.dto.goods.SkuSnapshotDTO;
 import com.yirancrazy.minimall.api.dto.goods.SpuSnapshotDTO;
-import com.yirancrazy.minimall.api.feign.GoodsFeignClient;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.util.CursorUtils;
@@ -17,38 +16,45 @@ import com.yirancrazy.minimall.common.util.MinioUtil;
 import com.yirancrazy.minimall.user.constant.UserCodeEnum;
 import com.yirancrazy.minimall.user.dto.FavoritePageDTO;
 import com.yirancrazy.minimall.user.entity.UserFavoritePO;
+import com.yirancrazy.minimall.user.gateway.FavoriteRemoteGateway;
 import com.yirancrazy.minimall.user.manager.UserFavoriteManager;
 import com.yirancrazy.minimall.user.service.FavoriteService;
 import com.yirancrazy.minimall.user.vo.FavoriteVO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 用户收藏领域服务实现，实现商品收藏增删查业务逻辑
- * @Version: 2.0
- * @DateTime: 2026/08/20
- */
+ * @Description: FavoriteServiceImpl 服务实现，实现相关业务逻辑。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 @Slf4j
 @Service
 public class FavoriteServiceImpl implements FavoriteService {
 
     private final UserFavoriteManager userFavoriteManager;
-    private final GoodsFeignClient goodsFeignClient;
+    private final FavoriteRemoteGateway favoriteRemoteGateway;
     private final MinioUtil minioUtil;
 
-    public FavoriteServiceImpl(UserFavoriteManager userFavoriteManager, GoodsFeignClient goodsFeignClient,
+    /**
+     * 构造 FavoriteServiceImpl 实例。
+     * @param userFavoriteManager userFavoriteManager 参数
+     * @param favoriteRemoteGateway favoriteRemoteGateway 参数
+     * @param minioUtil minioUtil 参数
+     */
+    public FavoriteServiceImpl(UserFavoriteManager userFavoriteManager, FavoriteRemoteGateway favoriteRemoteGateway,
                                MinioUtil minioUtil) {
         this.userFavoriteManager = userFavoriteManager;
-        this.goodsFeignClient = goodsFeignClient;
+        this.favoriteRemoteGateway = favoriteRemoteGateway;
         this.minioUtil = minioUtil;
     }
 
+
     /**
-     * 收藏商品，已存在则幂等返回。
-     *
-     * @param userId 用户ID，必须 > 0
-     * @param skuId 商品SKU ID，必须 > 0
+     * 执行 addFavorite 方法。
+     * @param userId userId 参数
+     * @param skuId skuId 参数
      */
-    @Override
     public void addFavorite(Long userId, Long skuId) {
         if (userId == null || userId <= 0 || skuId == null || skuId <= 0) {
             throw new BizException(UserCodeEnum.PARAM_INVALID);
@@ -57,23 +63,22 @@ public class FavoriteServiceImpl implements FavoriteService {
             .eq(UserFavoritePO::getUserId, userId)
             .eq(UserFavoritePO::getSkuId, skuId));
         if (exists > 0) {
-            log.info("favorite already exists, userId={}, skuId={}", userId, skuId);
+            log.info("收藏已存在，userId={}，skuId={}", userId, skuId);
             return;
         }
         UserFavoritePO po = new UserFavoritePO();
         po.setUserId(userId);
         po.setSkuId(skuId);
         userFavoriteManager.save(po);
-        log.info("favorite added, userId={}, skuId={}", userId, skuId);
+        log.info("收藏已添加，userId={}，skuId={}", userId, skuId);
     }
 
+
     /**
-     * 取消收藏，不存在则幂等返回。
-     *
-     * @param userId 用户ID，必须 > 0
-     * @param skuId 商品SKU ID，必须 > 0
+     * 删除业务数据。
+     * @param userId userId 参数
+     * @param skuId skuId 参数
      */
-    @Override
     public void removeFavorite(Long userId, Long skuId) {
         if (userId == null || userId <= 0 || skuId == null || skuId <= 0) {
             throw new BizException(UserCodeEnum.PARAM_INVALID);
@@ -81,15 +86,15 @@ public class FavoriteServiceImpl implements FavoriteService {
         userFavoriteManager.remove(Wrappers.lambdaQuery(UserFavoritePO.class)
             .eq(UserFavoritePO::getUserId, userId)
             .eq(UserFavoritePO::getSkuId, skuId));
-        log.info("favorite removed, userId={}, skuId={}", userId, skuId);
+        log.info("收藏已移除，userId={}，skuId={}", userId, skuId);
     }
 
+
     /**
-     * 分页查询用户收藏列表，按收藏时间倒序。
-     *
-     * @param userId 用户ID
-     * @param dto 分页入参
-     * @return 收藏分页结果
+     * 分页查询数据。
+     * @param userId userId 参数
+     * @param dto dto 参数
+     * @return 处理结果
      */
     @Override
     public CursorPageVO<FavoriteVO> pageFavorites(Long userId, FavoritePageDTO dto) {
@@ -112,21 +117,38 @@ public class FavoriteServiceImpl implements FavoriteService {
         return page.map(po -> toVO(po, skuMap, spuMap));
     }
 
+    /**
+     * 处理fetchSKUMap。
+     * @param skuIds SKU ID 列表
+     * @return 结果映射
+     */
     private Map<Long, SkuSnapshotDTO> fetchSkuMap(List<Long> skuIds) {
         if (skuIds == null || skuIds.isEmpty()) {
             return Map.of();
         }
         // 商品服务不可用或返回异常时由 fallback 兜底为空 Map，收藏记录仍可展示（商品字段留空）
-        return Optional.ofNullable(goodsFeignClient.batchSkuSnapshot(skuIds).getData()).orElseGet(Map::of);
+        return Optional.ofNullable(favoriteRemoteGateway.batchSkuSnapshot(skuIds).getData()).orElseGet(Map::of);
     }
 
+    /**
+     * 处理fetchSPUMap。
+     * @param spuIds SPUIds
+     * @return 结果映射
+     */
     private Map<Long, SpuSnapshotDTO> fetchSpuMap(List<Long> spuIds) {
         if (spuIds == null || spuIds.isEmpty()) {
             return Map.of();
         }
-        return Optional.ofNullable(goodsFeignClient.batchSpuSnapshot(spuIds).getData()).orElseGet(Map::of);
+        return Optional.ofNullable(favoriteRemoteGateway.batchSpuSnapshot(spuIds).getData()).orElseGet(Map::of);
     }
 
+    /**
+     * 转换或解析VO。
+     * @param po 持久化对象
+     * @param skuMap SKUMap
+     * @param spuMap SPUMap
+     * @return 视图对象
+     */
     private FavoriteVO toVO(UserFavoritePO po, Map<Long, SkuSnapshotDTO> skuMap,
                             Map<Long, SpuSnapshotDTO> spuMap) {
         FavoriteVO vo = new FavoriteVO();
@@ -150,11 +172,11 @@ public class FavoriteServiceImpl implements FavoriteService {
         return vo;
     }
 
+
     /**
-     * 统计用户收藏数量。
-     *
-     * @param userId 用户ID
-     * @return 收藏数量
+     * 统计业务数据。
+     * @param userId userId 参数
+     * @return 业务数值
      */
     @Override
     public int countFavorites(Long userId) {

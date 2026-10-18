@@ -6,15 +6,20 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.core.task.TaskDecorator;
 import com.yirancrazy.minimall.common.support.MdcTaskDecorator;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: traceId 全链路传播自动装配，注册 MDC 透传装饰器供 Spring 异步线程池使用。
+ * @Description: TraceIdPropagationAutoConfiguration 类型，承载相关业务能力。
  * @Version: 1.0
- * @DateTime: 2026/08/16
- */
+ * @DateTime: 2026/10/16
+ **/
 @AutoConfiguration
 public class TraceIdPropagationAutoConfiguration {
 
+    /**
+     * 执行 mdcTaskDecorator 方法。
+     * @return 处理结果
+     */
     @Bean
     @ConditionalOnMissingBean
     public TaskDecorator mdcTaskDecorator() {

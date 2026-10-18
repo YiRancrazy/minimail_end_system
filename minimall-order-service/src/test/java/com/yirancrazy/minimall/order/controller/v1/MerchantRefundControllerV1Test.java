@@ -12,11 +12,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import com.yirancrazy.minimall.order.service.OrderService;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: MerchantRefundControllerV1 MockMvc 单元测试，验证商家端退款路由（发起/同意/驳回）与可信 Header 注入。
+ * @Description: MerchantRefundControllerV1Test 单元测试。
  * @Version: 1.0
- * @DateTime: 2026/08/22
+ * @DateTime: 2026/10/16
  **/
 class MerchantRefundControllerV1Test {
 
@@ -29,9 +30,7 @@ class MerchantRefundControllerV1Test {
         mockMvc = MockMvcBuilders.standaloneSetup(new MerchantRefundControllerV1(service)).build();
     }
 
-    /**
-     * 验证 POST /api/v1/merchant/refunds/{no}/execute 发起商家主动退款。
-     */
+
     @Test
     void execute_refund_invokes_service() throws Exception {
         String body = "{\"refundAmount\":\"5.00\",\"reason\":\"部分退货\"}";
@@ -41,24 +40,20 @@ class MerchantRefundControllerV1Test {
                 .content(body))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.code").value("00000"));
-        verify(service).merchantInitiateRefund(99L, 1L, "5.00", "部分退货");
+        verify(service).merchantInitiateRefundByNo("R99", 1L, "5.00", "部分退货");
     }
 
-    /**
-     * 验证 POST /api/v1/merchant/refunds/{no}/approve 同意退款。
-     */
+
     @Test
     void approve_refund_invokes_service() throws Exception {
         mockMvc.perform(post("/api/v1/merchant/refunds/R99/approve")
                 .header("X-Merchant-Id", 1L))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.code").value("00000"));
-        verify(service).reviewRefund(99L, true, 1L, null);
+        verify(service).reviewRefundByNo("R99", true, 1L, null);
     }
 
-    /**
-     * 验证 POST /api/v1/merchant/refunds/{no}/reject 带 reason 驳回退款。
-     */
+
     @Test
     void reject_refund_invokes_service_with_reason() throws Exception {
         mockMvc.perform(post("/api/v1/merchant/refunds/R99/reject")
@@ -66,6 +61,6 @@ class MerchantRefundControllerV1Test {
                 .param("reason", "证据不足"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.code").value("00000"));
-        verify(service).reviewRefund(99L, false, 1L, "证据不足");
+        verify(service).reviewRefundByNo("R99", false, 1L, "证据不足");
     }
 }

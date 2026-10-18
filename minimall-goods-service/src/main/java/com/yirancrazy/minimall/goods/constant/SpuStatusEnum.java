@@ -4,12 +4,13 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import com.yirancrazy.minimall.common.base.BaseEnum;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 商品SPU状态枚举，定义SPU生命周期状态，code持久化为TINYINT。
+ * @Description: SpuStatusEnum 枚举，定义相关业务状态。
  * @Version: 1.0
- * @DateTime: 2026/08/02
- */
+ * @DateTime: 2026/10/16
+ **/
 @Getter
 @AllArgsConstructor
 public enum SpuStatusEnum implements BaseEnum {
@@ -23,9 +24,10 @@ public enum SpuStatusEnum implements BaseEnum {
     private final String alias;
     private final String message;
 
+
     /**
-     * 获取持久化用的整型状态值。
-     * @return 状态码整数值
+     * 执行 statusValue 方法。
+     * @return 业务数值
      */
     public int statusValue() {
         return Integer.parseInt(code);

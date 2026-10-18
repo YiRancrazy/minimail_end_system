@@ -6,11 +6,12 @@ import java.util.List;
 import lombok.Data;
 import com.yirancrazy.minimall.goods.entity.SpuPO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 商品SPU VO，用于Controller边界输出，隐藏内部字段
- * @Version: 1.1
- * @DateTime: 2026/08/04
+ * @Description: SpuVO 视图对象。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
  **/
 @Data
 public class SpuVO {
@@ -25,13 +26,14 @@ public class SpuVO {
     private Integer status;
     private LocalDateTime publishAt;
     private LocalDateTime createTime;
-    /** 关联 SKU 列表，由分页查询批量装配，单查场景为空 */
+
     private List<SkuVO> skus = new ArrayList<>();
 
+
     /**
-     * 将 SpuPO 转换为 SpuVO。
-     * @param po SPU持久化对象
-     * @return SPU VO
+     * 执行 from 方法。
+     * @param po po 参数
+     * @return 处理结果
      */
     public static SpuVO from(SpuPO po) {
         SpuVO vo = new SpuVO();

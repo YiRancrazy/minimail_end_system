@@ -1,69 +1,124 @@
 package com.yirancrazy.minimall.user.service;
 
+import com.yirancrazy.minimall.api.dto.common.InternalPageQuery;
+import com.yirancrazy.minimall.api.dto.user.UserManageVO;
+import com.yirancrazy.minimall.api.dto.user.UserSnapshotDTO;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.user.dto.UserCreateDTO;
 import com.yirancrazy.minimall.user.dto.UserPageDTO;
 import com.yirancrazy.minimall.user.dto.UserProfileDTO;
 import com.yirancrazy.minimall.user.dto.UserUpdateDTO;
 import com.yirancrazy.minimall.user.entity.UserPO;
+import com.yirancrazy.minimall.user.vo.UserVO;
+
 
 /**
- * 用户领域服务接口，定义用户查询、创建、更新、删除与个人资料管理业务契约。
  * @Author: yirancrazy@gmail.com
- * @Description: 用户服务接口，提供用户 CRUD、游标分页查询与个人资料管理业务契约。
- * @Version: 1.3
- * @DateTime: 2026/08/04
- */
+ * @Description: UserService 服务接口，定义相关业务能力。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 public interface UserService {
-    /**
-     * 根据 ID 查询用户。
-     * @param id 用户ID
-     * @return 用户PO
-     */
-    UserPO getById(Long id);
+
 
     /**
-     * 创建用户。
-     * @param dto 用户创建DTO
-     * @return 用户ID
+     * 获取相关数据。
+     * @param id id 参数
+     * @return 处理结果
+     */
+    UserPO getById(Long id);
+    /**
+     * 获取相关数据。
+     * @param id id 参数
+     * @return 处理结果
+     */
+    UserSnapshotDTO getSnapshot(Long id);
+
+
+    /**
+     * 分页查询数据。
+     * @param dto dto 参数
+     * @return 处理结果
+     */
+    CursorPageVO<UserPO> page(UserPageDTO dto);
+    /**
+     * 创建业务数据。
+     * @param dto dto 参数
+     * @return 业务数值
      */
     Long create(UserCreateDTO dto);
 
+
     /**
-     * 更新用户。
-     * @param id 用户ID
-     * @param dto 用户更新DTO
-     * @return 更新是否成功
+     * 更新业务数据。
+     * @param id id 参数
+     * @param dto dto 参数
+     * @return 是否处理成功
      */
     boolean update(Long id, UserUpdateDTO dto);
 
+
     /**
-     * 删除用户。
-     * @param id 用户ID
-     * @return 删除是否成功
+     * 删除业务数据。
+     * @param id id 参数
+     * @return 是否处理成功
      */
     boolean delete(Long id);
 
-    /**
-     * 游标分页查询用户，keyword 非空时按用户名/昵称模糊匹配。
-     * @param dto 游标分页查询入参
-     * @return 用户游标分页结果
-     */
-    CursorPageVO<UserPO> page(UserPageDTO dto);
+
 
     /**
-     * 查询当前用户个人资料。
-     * @param userId 用户ID
-     * @return 用户PO
-     * @throws com.yirancrazy.minimall.common.exception.BizException 用户不存在时
+     * 分页查询数据。
+     * @param dto dto 参数
+     * @return 处理结果
+     */
+    CursorPageVO<UserVO> pageVO(UserPageDTO dto);
+
+
+    /**
+     * 获取相关数据。
+     * @param id id 参数
+     * @return 处理结果
+     */
+    UserVO getVO(Long id);
+
+
+    /**
+     * 分页查询数据。
+     * @param query query 参数
+     * @return 处理结果
+     */
+    CursorPageVO<UserManageVO> pageManage(InternalPageQuery query);
+
+
+    /**
+     * 获取相关数据。
+     * @param userId userId 参数
+     * @return 处理结果
      */
     UserPO getProfile(Long userId);
+    /**
+     * 获取相关数据。
+     * @param userId userId 参数
+     * @return 处理结果
+     */
+    UserManageVO getManageDetail(Long userId);
+
+
 
     /**
-     * 更新个人资料，仅修改 nickname、avatar、gender 字段，null 字段不覆盖。
-     * @param userId 用户ID
-     * @param dto 个人资料更新入参
-     * @return 更新是否成功
+     * 获取相关数据。
+     * @param userId userId 参数
+     * @return 处理结果
+     */
+    UserVO getProfileVO(Long userId);
+
+
+    /**
+     * 更新业务数据。
+     * @param userId userId 参数
+     * @param dto dto 参数
+     * @return 是否处理成功
      */
     boolean updateProfile(Long userId, UserProfileDTO dto);
 }

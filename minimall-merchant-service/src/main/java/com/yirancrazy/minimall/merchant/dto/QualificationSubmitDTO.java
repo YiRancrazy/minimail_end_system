@@ -5,11 +5,12 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 商家资质提交入参，含敏感字段（服务层加密落库，出参脱敏）。
- * @Version: 1.1
- * @DateTime: 2026/08/13
+ * @Description: QualificationSubmitDTO 数据传输对象。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
  **/
 @Data
 public class QualificationSubmitDTO {

@@ -2,6 +2,7 @@ package com.yirancrazy.minimall.common.event;
 
 import java.lang.reflect.Field;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 import org.apache.rocketmq.client.producer.LocalTransactionState;
 import org.apache.rocketmq.client.producer.TransactionMQProducer;
 import org.apache.rocketmq.client.producer.TransactionSendResult;
@@ -13,16 +14,18 @@ import org.mockito.Mockito;
 import org.slf4j.MDC;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.yirancrazy.minimall.common.filter.TraceIdFilter;
 import com.yirancrazy.minimall.common.result.Result;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: RocketMqEventBus traceId 透传的单元测试类，验证生产者将 MDC traceId 写入消息属性。
+ * @Description: RocketMqEventBusTest 单元测试。
  * @Version: 1.0
- * @DateTime: 2026/08/16
- */
+ * @DateTime: 2026/10/16
+ **/
 class RocketMqEventBusTest {
 
     @AfterEach
@@ -73,10 +76,69 @@ class RocketMqEventBusTest {
         RocketMqEventBus bus = new RocketMqEventBus("127.0.0.1:9876", "minimall-events");
         setProducer(bus, mockProducer);
 
-        bus.publishInTx(new DummyEvent("x"), () -> { }, e -> Boolean.TRUE);
+        bus.publishInTx(new DummyEvent("x"), tx -> { }, e -> Boolean.TRUE);
 
         assertTrue(getFieldMap(bus, "checkers").isEmpty());
         assertTrue(getFieldMap(bus, "tagTypes").isEmpty());
+    }
+
+    @Test
+    void publishInTx_passesTransactionIdToLocalTx() throws Exception {
+        TransactionMQProducer mockProducer = Mockito.mock(TransactionMQProducer.class);
+        TransactionSendResult result = new TransactionSendResult();
+        result.setLocalTransactionState(LocalTransactionState.COMMIT_MESSAGE);
+        AtomicReference<String> captured = new AtomicReference<>();
+        Mockito.when(mockProducer.sendMessageInTransaction(Mockito.any(), Mockito.any()))
+            .thenAnswer(inv -> {
+                Message msg = inv.getArgument(0);
+                msg.setTransactionId("tx-100");
+                java.util.function.Consumer<String> tx = inv.getArgument(1);
+                tx.accept("tx-100");
+                return result;
+            });
+        RocketMqEventBus bus = new RocketMqEventBus("127.0.0.1:9876", "minimall-events");
+        setProducer(bus, mockProducer);
+
+        bus.publishInTx(new DummyEvent("x"), captured::set, e -> Boolean.TRUE);
+
+        assertEquals("tx-100", captured.get());
+    }
+
+    @Test
+    void publish_withoutProducer_throws() {
+        RocketMqEventBus bus = new RocketMqEventBus("127.0.0.1:9876", "minimall-events");
+
+        assertThrows(IllegalStateException.class, () -> bus.publish(new DummyEvent("x")));
+    }
+
+    @Test
+    void publishInTx_sendFailure_throws() throws Exception {
+        TransactionMQProducer mockProducer = Mockito.mock(TransactionMQProducer.class);
+        Mockito.when(mockProducer.sendMessageInTransaction(Mockito.any(), Mockito.any()))
+            .thenThrow(new RuntimeException("broker down"));
+        RocketMqEventBus bus = new RocketMqEventBus("127.0.0.1:9876", "minimall-events");
+        setProducer(bus, mockProducer);
+
+        assertThrows(IllegalStateException.class,
+            () -> bus.publishInTx(new DummyEvent("x"), tx -> { }, e -> Boolean.TRUE));
+    }
+
+    @Test
+    void mapOutboxStatus_pending_thenUnknown() {
+        assertEquals(LocalTransactionState.UNKNOW,
+            RocketMqEventBus.toLocalTransactionState(OutboxStore.CommitStatus.PENDING));
+    }
+
+    @Test
+    void mapOutboxStatus_committed_thenCommit() {
+        assertEquals(LocalTransactionState.COMMIT_MESSAGE,
+            RocketMqEventBus.toLocalTransactionState(OutboxStore.CommitStatus.COMMITTED));
+    }
+
+    @Test
+    void mapOutboxStatus_rolledBack_thenRollback() {
+        assertEquals(LocalTransactionState.ROLLBACK_MESSAGE,
+            RocketMqEventBus.toLocalTransactionState(OutboxStore.CommitStatus.ROLLED_BACK));
     }
 
     private static void setProducer(RocketMqEventBus bus, TransactionMQProducer producer) throws Exception {
@@ -92,6 +154,12 @@ class RocketMqEventBusTest {
         return (Map<String, ?>) field.get(bus);
     }
 
+    /**
+     * @Author: yirancrazy@gmail.com
+     * @Description: DummyEvent 类型，承载相关业务能力。
+     * @Version: 1.0
+     * @DateTime: 2026/10/16
+     **/
     static class DummyEvent {
         private final String value;
 
@@ -99,6 +167,10 @@ class RocketMqEventBusTest {
             this.value = value;
         }
 
+        /**
+         * 获取相关数据。
+         * @return 处理结果
+         */
         public String getValue() {
             return value;
         }

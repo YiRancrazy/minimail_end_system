@@ -49,11 +49,12 @@ import com.yirancrazy.minimall.auth.vo.UserInfoVO;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: PlatformAuthServiceImpl 的单元测试类，覆盖登录/登出与平台管理员 CRUD 的正常、失败、边界场景。
- * @Version: 2.0
- * @DateTime: 2026/08/04
+ * @Description: PlatformAuthServiceImplTest 单元测试。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
  **/
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -165,9 +166,7 @@ class PlatformAuthServiceImplTest {
         verify(tokenBlacklistManager).save(any());
     }
 
-    /**
-     * 验证 adminCreate 正常创建管理员并返回 ID。
-     */
+
     @Test
     void adminCreate_persists_and_returns_id() {
         when(authUserManager.getOne(any())).thenReturn(null);
@@ -183,9 +182,7 @@ class PlatformAuthServiceImplTest {
         verify(authUserManager).save(any(AuthUserPO.class));
     }
 
-    /**
-     * 验证 adminCreate 账号重复时抛出 ADMIN_USERNAME_EXISTS。
-     */
+
     @Test
     void adminCreate_throws_on_duplicate_account() {
         AuthUserPO existing = new AuthUserPO();
@@ -202,9 +199,7 @@ class PlatformAuthServiceImplTest {
         verify(authUserManager, never()).save(any(AuthUserPO.class));
     }
 
-    /**
-     * 验证 adminCreate 设置 accountType=3 且密码 BCrypt 加密。
-     */
+
     @Test
     void adminCreate_sets_platform_type_and_encrypts_password() {
         when(authUserManager.getOne(any())).thenReturn(null);
@@ -218,9 +213,7 @@ class PlatformAuthServiceImplTest {
         verify(authUserManager).save(any(AuthUserPO.class));
     }
 
-    /**
-     * 验证 adminPage 游标分页查询委托给 manager。
-     */
+
     @Test
     void adminPage_delegates_to_manager() {
         AdminPageDTO dto = new AdminPageDTO();
@@ -235,9 +228,7 @@ class PlatformAuthServiceImplTest {
         verify(authUserManager).list(any(Wrapper.class));
     }
 
-    /**
-     * 验证 adminUpdate 仅更新 nickname 字段。
-     */
+
     @Test
     void adminUpdate_updates_nickname_only() {
         AuthUserPO po = new AuthUserPO();
@@ -257,9 +248,7 @@ class PlatformAuthServiceImplTest {
         verify(authUserManager).updateById(po);
     }
 
-    /**
-     * 验证 adminUpdate 管理员不存在时抛出 USER_NOT_FOUND。
-     */
+
     @Test
     void adminUpdate_throws_when_not_found() {
         when(authUserManager.getById(999L)).thenReturn(null);
@@ -270,9 +259,7 @@ class PlatformAuthServiceImplTest {
         assertThrows(BizException.class, () -> service.adminUpdate(999L, dto));
     }
 
-    /**
-     * 验证 adminDelete 正常逻辑删除。
-     */
+
     @Test
     void adminDelete_succeeds() {
         AuthUserPO po = new AuthUserPO();
@@ -287,18 +274,14 @@ class PlatformAuthServiceImplTest {
         verify(authUserManager).removeById(2L);
     }
 
-    /**
-     * 验证 adminDelete 不能删除自己，抛出 CANNOT_DELETE_SELF。
-     */
+
     @Test
     void adminDelete_throws_on_delete_self() {
         assertThrows(BizException.class, () -> service.adminDelete(1L, 1L));
         verify(authUserManager, never()).removeById(anyLong());
     }
 
-    /**
-     * 验证 adminDelete 管理员不存在时抛出 USER_NOT_FOUND。
-     */
+
     @Test
     void adminDelete_throws_when_not_found() {
         when(authUserManager.getById(999L)).thenReturn(null);
@@ -306,9 +289,7 @@ class PlatformAuthServiceImplTest {
         assertThrows(BizException.class, () -> service.adminDelete(1L, 999L));
     }
 
-    /**
-     * 验证 me 从令牌声明解析当前管理员信息。
-     */
+
     @Test
     void me_validToken_returnsUserInfo() {
         Claims claims = mock(Claims.class);
@@ -326,9 +307,7 @@ class PlatformAuthServiceImplTest {
         assertEquals(3L, vo.getRoleId());
     }
 
-    /**
-     * 验证 me 令牌无效时抛出 TOKEN_INVALID。
-     */
+
     @Test
     void me_invalidToken_throws() {
         when(jwtUtil.parse("bad-token")).thenThrow(new JwtException("expired"));
@@ -337,9 +316,7 @@ class PlatformAuthServiceImplTest {
         assertEquals(AuthCodeEnum.TOKEN_INVALID.getCode(), ex.getCode());
     }
 
-    /**
-     * 验证 adminCreate 写入 contact 并按 roleCode 解析 roleId。
-     */
+
     @Test
     void adminCreate_sets_contact_and_resolves_role() {
         when(authUserManager.getOne(any())).thenReturn(null);
@@ -362,9 +339,7 @@ class PlatformAuthServiceImplTest {
         assertEquals(7L, captor.getValue().getRoleId());
     }
 
-    /**
-     * 验证分配角色成功更新 roleId。
-     */
+
     @Test
     void adminAssignRole_success_updates_roleId() {
         AuthUserPO po = new AuthUserPO();
@@ -383,9 +358,7 @@ class PlatformAuthServiceImplTest {
         verify(authUserManager).updateById(po);
     }
 
-    /**
-     * 验证角色不存在时分配角色抛出 ROLE_NOT_FOUND。
-     */
+
     @Test
     void adminAssignRole_roleNotFound_throws() {
         AuthUserPO po = new AuthUserPO();
@@ -396,9 +369,7 @@ class PlatformAuthServiceImplTest {
         assertThrows(BizException.class, () -> service.adminAssignRole(5L, adminRole("NOPE")));
     }
 
-    /**
-     * 验证平台管理员修改密码成功并失效刷新令牌。
-     */
+
     @Test
     void changePassword_success_updates_and_invalidates_refresh() {
         String salt = "testsalt";
@@ -415,9 +386,7 @@ class PlatformAuthServiceImplTest {
         verify(redisTemplate).delete(Set.of("refresh:5:abc"));
     }
 
-    /**
-     * 验证平台管理员修改密码账号不存在时抛出 USER_NOT_FOUND。
-     */
+
     @Test
     void changePassword_accountNotFound_throws() {
         when(authUserManager.getById(999L)).thenReturn(null);
@@ -425,9 +394,7 @@ class PlatformAuthServiceImplTest {
             () -> service.changePassword(999L, new ChangePasswordDTO("old", "newpass123")));
     }
 
-    /**
-     * 验证平台管理员修改密码旧密码错误时抛出 PWD_INVALID。
-     */
+
     @Test
     void changePassword_oldPwdInvalid_throws() {
         String salt = "testsalt";

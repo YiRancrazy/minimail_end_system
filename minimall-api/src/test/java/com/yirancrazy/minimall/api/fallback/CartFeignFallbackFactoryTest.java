@@ -6,11 +6,12 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import com.yirancrazy.minimall.api.feign.CartFeignClient;
 
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: CartFeignFallbackFactory 的单元测试类。
+ * @Description: CartFeignFallbackFactoryTest 单元测试。
  * @Version: 1.0
- * @DateTime: 2026/7/31
+ * @DateTime: 2026/10/16
  **/
 class CartFeignFallbackFactoryTest {
 

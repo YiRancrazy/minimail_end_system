@@ -4,11 +4,12 @@ import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 角色权限视图对象，用于平台端展示角色及其拥有的权限列表。
+ * @Description: RoleVO 视图对象。
  * @Version: 1.0
- * @DateTime: 2026/08/03
+ * @DateTime: 2026/10/16
  **/
 @Data
 @AllArgsConstructor

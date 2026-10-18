@@ -7,11 +7,12 @@ import lombok.EqualsAndHashCode;
 import com.yirancrazy.minimall.common.base.BasePO;
 import com.yirancrazy.minimall.common.security.EncryptedStringTypeHandler;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: User 持久化对象，映射 t_user 表。phone和email字段使用AES-256-GCM字段级加密，phoneMasked存储脱敏值用于模糊查询。
- * @Version: 1.2
- * @DateTime: 2026/08/04
+ * @Description: UserPO 持久化对象，对应数据库表。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
  **/
 @Data
 @EqualsAndHashCode(callSuper = true)

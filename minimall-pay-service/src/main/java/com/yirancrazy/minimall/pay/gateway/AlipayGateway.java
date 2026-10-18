@@ -7,20 +7,23 @@ import com.alibaba.fastjson.JSONObject;
 import com.alipay.api.AlipayApiException;
 import com.alipay.api.AlipayClient;
 import com.alipay.api.internal.util.AlipaySignature;
+import com.alipay.api.request.AlipayTradeFastpayRefundQueryRequest;
 import com.alipay.api.request.AlipayTradePagePayRequest;
 import com.alipay.api.request.AlipayTradeQueryRequest;
 import com.alipay.api.request.AlipayTradeRefundRequest;
+import com.alipay.api.response.AlipayTradeFastpayRefundQueryResponse;
 import com.alipay.api.response.AlipayTradeQueryResponse;
 import com.alipay.api.response.AlipayTradeRefundResponse;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.pay.config.AlipayConfig;
 
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: AlipayGateway 类。
+ * @Description: AlipayGateway 类型，承载相关业务能力。
  * @Version: 1.0
- * @DateTime: 2026/7/31
+ * @DateTime: 2026/10/16
  **/
 @Slf4j
 @Component
@@ -29,25 +32,30 @@ public class AlipayGateway implements PayGateway {
     private final AlipayClient alipayClient;    // 支付宝支付客户端
     private final AlipayConfig config;          // 支付宝支付配置
 
+    /**
+     * 构造 AlipayGateway 实例。
+     * @param alipayClient alipayClient 参数
+     * @param config config 参数
+     */
     public AlipayGateway(AlipayClient alipayClient, AlipayConfig config) {
         this.alipayClient = alipayClient;
         this.config = config;
     }
 
+
     /**
-     * 创建电脑网站支付单（alipay.trade.page.pay）。
-     * @param paymentNo 支付单号，作为 out_trade_no
-     * @param amount 支付金额，单位元，必须大于 0
-     * @param subject 订单标题
-     * @param expireTime 绝对过期时间，格式 yyyy-MM-dd HH:mm:ss
-     * @return 自动提交的收银台表单 HTML，前端写入页面后浏览器跳转支付宝收银台
-     * @throws RuntimeException 支付宝网关不可达或参数非法时抛出
+     * 创建业务数据。
+     * @param paymentNo paymentNo 参数
+     * @param amount amount 参数
+     * @param subject subject 参数
+     * @param expireTime expireTime 参数
+     * @return 处理结果
      */
     @Override
     public String createPagePayment(String paymentNo, BigDecimal amount, String subject, String expireTime) {
 
         if (paymentNo == null || paymentNo.isBlank() || amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Invalid payment parameters");
+            throw new IllegalArgumentException("支付参数非法");
         }
 
         AlipayTradePagePayRequest request = new AlipayTradePagePayRequest();
@@ -70,15 +78,16 @@ public class AlipayGateway implements PayGateway {
             return alipayClient.pageExecute(request).getBody();
         }
         catch (AlipayApiException e) {
-            log.error("create page payment failed, paymentNo={}", paymentNo, e);
-            throw new RuntimeException("Alipay create page payment failed", e);
+            log.error("创建支付宝页面支付失败，paymentNo={}", paymentNo, e);
+            throw new RuntimeException("支付宝创建页面支付失败", e);
         }
     }
 
+
     /**
-     * 验证支付回调
-     * @param params 支付回调参数
-     * @return 支付订单号
+     * 执行 verifyCallback 方法。
+     * @param params params 参数
+     * @return 处理结果
      */
     @Override
     public String verifyCallback(Map<String, String> params) {
@@ -86,20 +95,21 @@ public class AlipayGateway implements PayGateway {
             boolean verified = AlipaySignature.rsaCheckV1(
                 params, config.getAlipayPublicKey(), config.getCharset(), config.getSignType());
             if (!verified) {
-                throw new RuntimeException("Alipay callback signature verification failed");
+                throw new RuntimeException("支付宝回调验签失败");
             }
             return params.get("trade_no");
         }
         catch (AlipayApiException e) {
-            log.error("verify callback failed", e);
-            throw new RuntimeException("Alipay callback verification failed", e);
+            log.error("回调验签失败", e);
+            throw new RuntimeException("支付宝回调验证失败", e);
         }
     }
 
+
     /**
-     * 查询支付订单
-     * @param paymentNo 支付订单号
-     * @return 支付订单状态
+     * 执行 queryPayment 方法。
+     * @param paymentNo paymentNo 参数
+     * @return 处理结果
      */
     @Override
     public String queryPayment(String paymentNo) {
@@ -113,18 +123,19 @@ public class AlipayGateway implements PayGateway {
             return null;
         }
         catch (AlipayApiException e) {
-            log.error("query payment failed, paymentNo={}", paymentNo, e);
+            log.error("查询支付失败，paymentNo={}", paymentNo, e);
             return null;
         }
     }
 
+
     /**
-     * 申请退款
-     * @param paymentNo 支付订单号
-     * @param refundNo 退款订单号
-     * @param amount 退款金额
-     * @param reason 退款原因
-     * @return 退款订单号
+     * 执行 refund 方法。
+     * @param paymentNo paymentNo 参数
+     * @param refundNo refundNo 参数
+     * @param amount amount 参数
+     * @param reason reason 参数
+     * @return 处理结果
      */
     @Override
     public String refund(String paymentNo, String refundNo, BigDecimal amount, String reason) {
@@ -137,11 +148,65 @@ public class AlipayGateway implements PayGateway {
             if (response.isSuccess()) {
                 return response.getTradeNo();
             }
-            throw new RuntimeException("Alipay refund failed: " + response.getSubMsg());
+            throw new RuntimeException("支付宝退款失败：" + response.getSubMsg());
         }
         catch (AlipayApiException e) {
-            log.error("refund failed, paymentNo={}, refundNo={}", paymentNo, refundNo, e);
-            throw new RuntimeException("Alipay refund failed", e);
+            log.error("退款失败，paymentNo={}，refundNo={}", paymentNo, refundNo, e);
+            throw new RuntimeException("支付宝退款失败", e);
         }
+    }
+
+
+    /**
+     * 执行 queryRefund 方法。
+     * @param paymentNo paymentNo 参数
+     * @param refundNo refundNo 参数
+     * @return 处理结果
+     */
+    @Override
+    public RefundQueryStatus queryRefund(String paymentNo, String refundNo) {
+        if (paymentNo == null || paymentNo.isBlank() || refundNo == null || refundNo.isBlank()) {
+            return RefundQueryStatus.FAILED;
+        }
+        AlipayTradeFastpayRefundQueryRequest request = new AlipayTradeFastpayRefundQueryRequest();
+        JSONObject bizContent = new JSONObject();
+        bizContent.put("out_trade_no", paymentNo);
+        bizContent.put("out_request_no", refundNo);
+        request.setBizContent(bizContent.toJSONString());
+        try {
+            AlipayTradeFastpayRefundQueryResponse response = alipayClient.execute(request);
+            if (response.isSuccess()) {
+                String refundAmount = response.getRefundAmount();
+                if (refundAmount == null || refundAmount.isBlank()) {
+                    return RefundQueryStatus.NOT_FOUND;
+                }
+                if ("REFUND_SUCCESS".equals(response.getRefundStatus())
+                    || response.getGmtRefundPay() != null) {
+                    return RefundQueryStatus.SUCCESS;
+                }
+                return RefundQueryStatus.PENDING;
+            }
+            if (isRefundNotFound(response.getSubCode())) {
+                return RefundQueryStatus.NOT_FOUND;
+            }
+            log.warn("查询退款失败，paymentNo={}，refundNo={}，subCode={}，subMsg={}",
+                paymentNo, refundNo, response.getSubCode(), response.getSubMsg());
+            return RefundQueryStatus.FAILED;
+        }
+        catch (AlipayApiException e) {
+            log.error("查询退款失败，paymentNo={}，refundNo={}", paymentNo, refundNo, e);
+            return RefundQueryStatus.FAILED;
+        }
+    }
+
+    /**
+     * 校验退款NotFound。
+     * @param subCode sub编码
+     * @return 是否满足条件
+     */
+    private static boolean isRefundNotFound(String subCode) {
+        return "ACQ.TRADE_NOT_EXIST".equals(subCode)
+            || "ACQ.REFUND_NOT_EXIST".equals(subCode)
+            || "TRADE_NOT_EXIST".equals(subCode);
     }
 }

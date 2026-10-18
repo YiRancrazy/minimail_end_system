@@ -6,12 +6,13 @@ import com.yirancrazy.minimall.notify.entity.NotifyMessagePO;
 import com.yirancrazy.minimall.notify.manager.NotifyManager;
 import com.yirancrazy.minimall.notify.mapper.NotifyMessageMapper;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: Notify数据访问层实现，封装Notify表 CRUD 操作
+ * @Description: NotifyManagerImpl 管理器实现，封装数据访问逻辑。
  * @Version: 1.0
- * @DateTime: 2026/07/31
- */
+ * @DateTime: 2026/10/16
+ **/
 @Manager
 public class NotifyManagerImpl extends ServiceImpl<NotifyMessageMapper, NotifyMessagePO>
     implements NotifyManager {

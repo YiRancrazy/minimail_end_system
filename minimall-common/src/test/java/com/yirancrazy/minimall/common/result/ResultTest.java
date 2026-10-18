@@ -6,11 +6,12 @@ import org.slf4j.MDC;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: Result 的单元测试类。
+ * @Description: ResultTest 单元测试。
  * @Version: 1.0
- * @DateTime: 2026/7/31
+ * @DateTime: 2026/10/16
  **/
 class ResultTest {
 

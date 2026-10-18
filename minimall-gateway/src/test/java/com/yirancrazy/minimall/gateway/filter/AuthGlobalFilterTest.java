@@ -17,6 +17,7 @@ import org.springframework.mock.web.server.MockServerWebExchange;
 import org.springframework.web.server.ServerWebExchange;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
@@ -26,11 +27,12 @@ import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 import com.yirancrazy.minimall.gateway.config.JwtVerifier;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: AuthGlobalFilter 的单元测试类，覆盖JWT鉴权、内部接口隔离、幂等键校验和防重放。
- * @Version: 2.0
- * @DateTime: 2026/08/04
+ * @Description: AuthGlobalFilterTest 单元测试。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
  **/
 @ExtendWith(MockitoExtension.class)
 class AuthGlobalFilterTest {
@@ -69,6 +71,35 @@ class AuthGlobalFilterTest {
         StepVerifier.create(filter.filter(ex, e -> Mono.empty()))
             .verifyComplete();
         assertEquals(HttpStatus.UNAUTHORIZED, ex.getResponse().getStatusCode());
+    }
+
+    @Test
+    void anonymous_goods_comments_are_whitelisted() {
+        ServerWebExchange ex = MockServerWebExchange.from(
+            MockServerHttpRequest.get("/api/v1/goods/comments/1001"));
+        StepVerifier.create(filter.filter(ex, e -> Mono.empty())).verifyComplete();
+        assertNull(ex.getResponse().getStatusCode());
+    }
+
+    @Test
+    void user_token_can_reach_notify_endpoint() {
+        String token = buildToken("42", "USER", "jti-sse");
+        when(redisTemplate.hasKey(anyString())).thenReturn(Mono.just(false));
+
+        ServerWebExchange ex = MockServerWebExchange.from(
+            MockServerHttpRequest.get("/api/v1/notify/sse")
+                .header("Authorization", "Bearer " + token));
+        StepVerifier.create(filter.filter(ex, e -> Mono.empty())).verifyComplete();
+        assertEquals("42", ex.getRequest().getHeaders().getFirst("X-User-Id"));
+    }
+
+    @Test
+    void merchant_token_cannot_reach_notify_endpoint() {
+        ServerWebExchange ex = MockServerWebExchange.from(
+            MockServerHttpRequest.get("/api/v1/notify/sse")
+                .header("Authorization", "Bearer " + token("200", "MERCHANT")));
+        StepVerifier.create(filter.filter(ex, e -> Mono.empty())).verifyComplete();
+        assertEquals(HttpStatus.FORBIDDEN, ex.getResponse().getStatusCode());
     }
 
     @Test
@@ -118,6 +149,28 @@ class AuthGlobalFilterTest {
         assertEquals("200", ex.getRequest().getHeaders().getFirst("X-User-Id"));
         assertEquals("MERCHANT", ex.getRequest().getHeaders().getFirst("X-User-Role"));
         assertEquals("200", ex.getRequest().getHeaders().getFirst("X-Merchant-Id"));
+    }
+
+    @Test
+    void merchant_token_cannot_access_user_path() {
+        ServerWebExchange ex = MockServerWebExchange.from(
+            MockServerHttpRequest.get("/api/v1/user/users/42")
+                .header("Authorization", "Bearer " + token("42", "MERCHANT")));
+
+        StepVerifier.create(filter.filter(ex, e -> Mono.empty())).verifyComplete();
+
+        assertEquals(HttpStatus.FORBIDDEN, ex.getResponse().getStatusCode());
+    }
+
+    @Test
+    void platform_token_cannot_access_merchant_path() {
+        ServerWebExchange ex = MockServerWebExchange.from(
+            MockServerHttpRequest.get("/api/v1/merchant/orders")
+                .header("Authorization", "Bearer " + token("9", "PLATFORM")));
+
+        StepVerifier.create(filter.filter(ex, e -> Mono.empty())).verifyComplete();
+
+        assertEquals(HttpStatus.FORBIDDEN, ex.getResponse().getStatusCode());
     }
 
     @Test
@@ -257,6 +310,18 @@ class AuthGlobalFilterTest {
             .subject(subject)
             .claim("role", role)
             .claim("jti", jti)
+            .issuedAt(new Date())
+            .expiration(new Date(System.currentTimeMillis() + 3600_000))
+            .signWith(key)
+            .compact();
+    }
+
+    private String token(String subject, String role) {
+        SecretKey key = Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8));
+        return Jwts.builder()
+            .subject(subject)
+            .claim("role", role)
+            .claim("jti", "test-" + role)
             .issuedAt(new Date())
             .expiration(new Date(System.currentTimeMillis() + 3600_000))
             .signWith(key)

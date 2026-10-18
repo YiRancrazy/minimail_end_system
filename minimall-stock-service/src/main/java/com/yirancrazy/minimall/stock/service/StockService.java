@@ -1,6 +1,7 @@
 package com.yirancrazy.minimall.stock.service;
 
 import java.util.List;
+import com.yirancrazy.minimall.api.dto.stock.StockReserveDTO;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.stock.dto.StockCountTaskCompleteDTO;
 import com.yirancrazy.minimall.stock.dto.StockCountTaskCreateDTO;
@@ -12,193 +13,270 @@ import com.yirancrazy.minimall.stock.entity.StockCountTaskPO;
 import com.yirancrazy.minimall.stock.entity.StockJournalPO;
 import com.yirancrazy.minimall.stock.entity.StockPO;
 import com.yirancrazy.minimall.stock.entity.StockTransferPO;
+import com.yirancrazy.minimall.stock.vo.StockCountTaskVO;
+import com.yirancrazy.minimall.stock.vo.StockJournalVO;
 import com.yirancrazy.minimall.stock.vo.StockStatisticsVO;
+import com.yirancrazy.minimall.stock.vo.StockTransferVO;
+import com.yirancrazy.minimall.stock.vo.StockVO;
+
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 库存领域服务接口，定义Stock相关业务契约
- * @Version: 1.1
- * @DateTime: 2026/08/03
- */
+ * @Description: StockService 服务接口，定义相关业务能力。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 public interface StockService {
+
     /**
-     * 预占库存。
-     * @param skuId 商品SKU ID
-     * @param quantity 预占数量
-     * @return 预占是否成功
+     * 执行 reserve 方法。
+     * @param skuId skuId 参数
+     * @param quantity quantity 参数
+     * @return 是否处理成功
      */
     boolean reserve(Long skuId, Integer quantity);
 
-    /**
-     * 释放库存。
-     * @param skuId 商品SKU ID
-     * @param quantity 释放数量
-     * @return 释放是否成功
-     */
-    boolean release(Long skuId, Integer quantity);
 
     /**
-     * 初始化SKU库存记录，商品服务创建SKU时联动调用，幂等。
-     * @param skuId SKU标识
-     * @param merchantId 库存归属商家ID
-     * @param initialQuantity 初始可用数量，null或负数按0处理
+     * 执行 exportJournal 方法。
+     * @param skuId skuId 参数
+     * @return 结果列表
+     */
+    List<StockJournalPO> exportJournal(Long skuId);
+    /**
+     * 执行 reserveBatch 方法。
+     * @param items items 参数
+     * @return 是否处理成功
+     */
+    boolean reserveBatch(List<StockReserveDTO> items);
+
+
+    /**
+     * 执行 release 方法。
+     * @param skuId skuId 参数
+     * @param quantity quantity 参数
+     * @return 是否处理成功
+     */
+    default boolean release(Long skuId, Integer quantity) {
+        return release(skuId, quantity, null);
+    }
+
+
+    /**
+     * 执行 release 方法。
+     * @param skuId skuId 参数
+     * @param quantity quantity 参数
+     * @param orderNo orderNo 参数
+     * @return 是否处理成功
+     */
+    boolean release(Long skuId, Integer quantity, String orderNo);
+
+
+    /**
+     * 初始化相关资源。
+     * @param skuId skuId 参数
+     * @param merchantId merchantId 参数
+     * @param initialQuantity initialQuantity 参数
      */
     void initStock(Long skuId, Long merchantId, Integer initialQuantity);
 
+
     /**
-     * 查询可用库存。
-     * @param skuId 商品SKU ID
-     * @return 可用库存数量
+     * 执行 queryJournal 方法。
+     * @param skuId skuId 参数
+     * @return 结果列表
+     */
+    List<StockJournalPO> queryJournal(Long skuId);
+    /**
+     * 执行 query 方法。
+     * @param skuId skuId 参数
+     * @return 业务数值
      */
     long query(Long skuId);
 
+
     /**
-     * 商家视角查询可用库存，校验该 SKU 库存归属当前商家；无归属记录视为不存在。
-     * @param skuId 商品SKU ID
-     * @param merchantId 商家ID（来自网关 X-Merchant-Id）
-     * @return 可用库存数量
-     * @throws com.yirancrazy.minimall.common.exception.BizException 库存归属与商家不匹配时
+     * 执行 queryJournal 方法。
+     * @param skuId skuId 参数
+     * @param merchantId merchantId 参数
+     * @return 结果列表
+     */
+    List<StockJournalPO> queryJournal(Long skuId, Long merchantId);
+    /**
+     * 执行 query 方法。
+     * @param skuId skuId 参数
+     * @param merchantId merchantId 参数
+     * @return 业务数值
      */
     long query(Long skuId, Long merchantId);
 
+
     /**
-     * 设置库存预警阈值。
-     * @param skuId 商品SKU ID
-     * @param threshold 预警阈值，必须 >= 0
-     * @throws com.yirancrazy.minimall.common.exception.BizException 当阈值非法时
+     * 设置相关数据。
+     * @param skuId skuId 参数
+     * @param threshold threshold 参数
      */
     void setThreshold(Long skuId, Long threshold);
 
+
     /**
-     * 商家视角设置库存预警阈值，校验库存归属；记录不存在时以该商家归属创建。
-     * @param skuId 商品SKU ID
-     * @param threshold 预警阈值，必须 >= 0
-     * @param merchantId 商家ID（来自网关 X-Merchant-Id）
-     * @throws com.yirancrazy.minimall.common.exception.BizException 阈值非法或库存归属不匹配时
+     * 设置相关数据。
+     * @param skuId skuId 参数
+     * @param threshold threshold 参数
+     * @param merchantId merchantId 参数
      */
     void setThreshold(Long skuId, Long threshold, Long merchantId);
 
+
     /**
-     * 手动调整库存数量。
-     * @param skuId 商品SKU ID
-     * @param quantity 调整数量，正数增加、负数扣减，不能为0
-     * @param reason 调整原因
-     * @throws com.yirancrazy.minimall.common.exception.BizException 当调整数量为0时
+     * 执行 adjustStock 方法。
+     * @param skuId skuId 参数
+     * @param quantity quantity 参数
+     * @param reason reason 参数
      */
     void adjustStock(Long skuId, Long quantity, String reason);
 
+
     /**
-     * 商家视角手动调整库存数量，校验库存归属；记录不存在时以该商家归属创建。
-     * @param skuId 商品SKU ID
-     * @param quantity 调整数量，正数增加、负数扣减，不能为0
-     * @param reason 调整原因
-     * @param merchantId 商家ID（来自网关 X-Merchant-Id）
-     * @throws com.yirancrazy.minimall.common.exception.BizException 调整数量非法或库存归属不匹配时
+     * 执行 adjustStock 方法。
+     * @param skuId skuId 参数
+     * @param quantity quantity 参数
+     * @param reason reason 参数
+     * @param merchantId merchantId 参数
      */
     void adjustStock(Long skuId, Long quantity, String reason, Long merchantId);
 
-    /**
-     * 查询指定SKU的库存流水记录。
-     * @param skuId 商品SKU ID
-     * @return 库存流水列表，按ID降序
-     */
-    List<StockJournalPO> queryJournal(Long skuId);
+
+
 
     /**
-     * 商家视角查询指定SKU的库存流水记录，校验库存归属后返回。
-     * @param skuId 商品SKU ID
-     * @param merchantId 商家ID（来自网关 X-Merchant-Id）
-     * @return 库存流水列表，按ID降序
-     * @throws com.yirancrazy.minimall.common.exception.BizException 库存不存在或归属不匹配时
+     * 执行 exportJournal 方法。
+     * @param skuId skuId 参数
+     * @param merchantId merchantId 参数
+     * @return 结果列表
      */
-    List<StockJournalPO> queryJournal(Long skuId, Long merchantId);
+    List<StockJournalPO> exportJournal(Long skuId, Long merchantId);
+    /**
+     * 执行 queryJournalVO 方法。
+     * @param skuId skuId 参数
+     * @param merchantId merchantId 参数
+     * @return 结果列表
+     */
+    List<StockJournalVO> queryJournalVO(Long skuId, Long merchantId);
+
+
 
     /**
-     * 平台分页查询全平台库存，可选按 SKU 过滤或仅查预警库存。
-     * @param dto 分页查询入参
-     * @return 库存分页结果
+     * 分页查询数据。
+     * @param dto dto 参数
+     * @return 处理结果
      */
     CursorPageVO<StockPO> page(StockPageDTO dto);
+    /**
+     * 分页查询数据。
+     * @param dto dto 参数
+     * @return 处理结果
+     */
+    CursorPageVO<StockVO> pageVO(StockPageDTO dto);
+
 
     /**
-     * 全平台库存统计聚合，返回SKU总数、可用/预占总量、预警SKU数及预警比例。
-     * @return 库存统计VO
+     * 查询列表数据。
+     * @return 结果列表
+     */
+    List<StockPO> listAbnormalStock();
+    /**
+     * 执行 platformStatistics 方法。
+     * @return 处理结果
      */
     StockStatisticsVO platformStatistics();
 
-    /**
-     * 导出指定SKU的库存流水，最多 10000 行，按ID降序。
-     * @param skuId SKU标识
-     * @return 库存流水列表
-     */
-    List<StockJournalPO> exportJournal(Long skuId);
+
+
 
     /**
-     * 商家视角导出指定SKU的库存流水，先校验库存归属当前商家，防止越权导出其他商家流水。
-     * @param skuId SKU标识
-     * @param merchantId 商家ID（来自网关 X-Merchant-Id）
-     * @return 库存流水列表，按ID降序，最多 10000 行
-     * @throws com.yirancrazy.minimall.common.exception.BizException 库存不存在或归属不匹配时
+     * 执行 exportJournalVO 方法。
+     * @param skuId skuId 参数
+     * @param merchantId merchantId 参数
+     * @return 结果列表
      */
-    List<StockJournalPO> exportJournal(Long skuId, Long merchantId);
+    List<StockJournalVO> exportJournalVO(Long skuId, Long merchantId);
+
 
     /**
-     * 跨商家库存调拨：扣减源SKU库存、增加目标SKU库存、记录调拨流水与调拨记录。
-     * @param dto 调拨入参，含源/目标SKU、数量、原因、操作人
-     * @throws com.yirancrazy.minimall.common.exception.BizException 源/目标SKU相同、源库存不足或目标不存在时
+     * 执行 transfer 方法。
+     * @param dto dto 参数
      */
     void transfer(StockTransferDTO dto);
 
-    /**
-     * 分页查询调拨记录，可选按源/目标SKU过滤，按ID降序返回。
-     * @param dto 分页查询入参
-     * @return 调拨记录分页结果
-     */
-    CursorPageVO<StockTransferPO> transferPage(StockTransferPageDTO dto);
+
 
     /**
-     * 下发库存盘点任务，查询当前可用库存作为期望数量。
-     * @param dto 创建入参，含SKU与操作人
-     * @return 盘点任务ID
-     * @throws com.yirancrazy.minimall.common.exception.BizException SKU库存不存在时
+     * 执行 transferPage 方法。
+     * @param dto dto 参数
+     * @return 处理结果
+     */
+    CursorPageVO<StockTransferPO> transferPage(StockTransferPageDTO dto);
+    /**
+     * 执行 transferPageVO 方法。
+     * @param dto dto 参数
+     * @return 处理结果
+     */
+    CursorPageVO<StockTransferVO> transferPageVO(StockTransferPageDTO dto);
+
+
+    /**
+     * 统计业务数据。
+     * @param dto dto 参数
+     * @return 处理结果
+     */
+    CursorPageVO<StockCountTaskPO> countTaskPage(StockCountTaskPageDTO dto);
+    /**
+     * 创建业务数据。
+     * @param dto dto 参数
+     * @return 业务数值
      */
     Long createCountTask(StockCountTaskCreateDTO dto);
 
-    /**
-     * 分页查询盘点任务，可选按SKU和状态过滤。
-     * @param dto 分页查询入参
-     * @return 盘点任务分页结果
-     */
-    CursorPageVO<StockCountTaskPO> countTaskPage(StockCountTaskPageDTO dto);
+
 
     /**
-     * 完成盘点任务，计算差异并调整库存。
-     * @param id 任务ID
-     * @param dto 完成入参，含实际盘点数量
-     * @throws com.yirancrazy.minimall.common.exception.BizException 任务不存在或非待盘点状态时
+     * 统计业务数据。
+     * @param dto dto 参数
+     * @return 处理结果
+     */
+    CursorPageVO<StockCountTaskVO> countTaskPageVO(StockCountTaskPageDTO dto);
+
+
+    /**
+     * 执行 completeCountTask 方法。
+     * @param id id 参数
+     * @param dto dto 参数
      */
     void completeCountTask(Long id, StockCountTaskCompleteDTO dto);
 
+
     /**
-     * 取消盘点任务。
-     * @param id 任务ID
-     * @param operatorId 操作人ID
-     * @throws com.yirancrazy.minimall.common.exception.BizException 任务不存在或非待盘点状态时
+     * 执行 cancelCountTask 方法。
+     * @param id id 参数
+     * @param operatorId operatorId 参数
      */
     void cancelCountTask(Long id, Long operatorId);
 
-    /**
-     * 查询异常库存记录（available &lt; 0 或 reserved &lt; 0）。
-     * @return 异常库存列表
-     */
-    List<StockPO> listAbnormalStock();
+
 
     /**
-     * 纠正指定SKU的库存至指定值，记录CORRECT类型流水。
-     * @param skuId SKU标识
-     * @param correctQuantity 纠正后的目标可用库存值，必须 &gt;= 0
-     * @param reason 纠正原因
-     * @throws com.yirancrazy.minimall.common.exception.BizException 当库存不存在或纠正数量非法时
+     * 查询列表数据。
+     * @return 结果列表
+     */
+    List<StockVO> listAbnormalStockVO();
+
+
+    /**
+     * 执行 correctStock 方法。
+     * @param skuId skuId 参数
+     * @param correctQuantity correctQuantity 参数
+     * @param reason reason 参数
      */
     void correctStock(Long skuId, Long correctQuantity, String reason);
 }

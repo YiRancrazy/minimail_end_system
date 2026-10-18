@@ -22,15 +22,16 @@ import com.yirancrazy.minimall.stock.dto.StockCountTaskCompleteDTO;
 import com.yirancrazy.minimall.stock.dto.StockCountTaskCreateDTO;
 import com.yirancrazy.minimall.stock.dto.StockPageDTO;
 import com.yirancrazy.minimall.stock.dto.StockTransferDTO;
-import com.yirancrazy.minimall.stock.entity.StockPO;
 import com.yirancrazy.minimall.stock.service.StockService;
 import com.yirancrazy.minimall.stock.vo.StockStatisticsVO;
+import com.yirancrazy.minimall.stock.vo.StockVO;
+
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: PlatformStockControllerV1 MockMvc 单元测试，验证平台库存分页、统计、调拨、盘点与纠正端点。
+ * @Description: PlatformStockControllerV1Test 单元测试。
  * @Version: 1.0
- * @DateTime: 2026/08/05
+ * @DateTime: 2026/10/16
  **/
 class PlatformStockControllerV1Test {
 
@@ -44,21 +45,17 @@ class PlatformStockControllerV1Test {
         mockMvc = MockMvcBuilders.standaloneSetup(new PlatformStockControllerV1(stockService)).build();
     }
 
-    /**
-     * 验证 GET /api/v1/platform/stock/page 返回平台库存游标分页结果。
-     */
+
     @Test
     void page_returns_cursor_result() throws Exception {
-        when(stockService.page(any(StockPageDTO.class)))
+        when(stockService.pageVO(any(StockPageDTO.class)))
             .thenReturn(new CursorPageVO<>(Collections.emptyList(), null, false, 20));
         mockMvc.perform(get("/api/v1/platform/stock/page"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.code").value("00000"));
     }
 
-    /**
-     * 验证 GET /api/v1/platform/stock/statistics 返回库存统计 VO。
-     */
+
     @Test
     void statistics_returns_vo() throws Exception {
         when(stockService.platformStatistics())
@@ -69,9 +66,7 @@ class PlatformStockControllerV1Test {
             .andExpect(jsonPath("$.data.totalSkuCount").value(10));
     }
 
-    /**
-     * 验证 POST /api/v1/platform/stock/transfer 通过 X-User-Id 注入操作人并调用 service。
-     */
+
     @Test
     void transfer_with_header_invokes_service() throws Exception {
         StockTransferDTO dto = new StockTransferDTO();
@@ -88,9 +83,7 @@ class PlatformStockControllerV1Test {
         verify(stockService).transfer(any(StockTransferDTO.class));
     }
 
-    /**
-     * 验证 POST /api/v1/platform/stock/count-tasks 下发盘点任务并返回任务 ID。
-     */
+
     @Test
     void createCountTask_returns_task_id() throws Exception {
         when(stockService.createCountTask(any(StockCountTaskCreateDTO.class))).thenReturn(99L);
@@ -106,9 +99,7 @@ class PlatformStockControllerV1Test {
             .andExpect(jsonPath("$.data").value(99));
     }
 
-    /**
-     * 验证 POST /api/v1/platform/stock/count-tasks/{id}/complete 完成盘点任务。
-     */
+
     @Test
     void completeCountTask_invokes_service() throws Exception {
         StockCountTaskCompleteDTO dto = new StockCountTaskCompleteDTO();
@@ -122,9 +113,7 @@ class PlatformStockControllerV1Test {
         verify(stockService).completeCountTask(any(Long.class), any(StockCountTaskCompleteDTO.class));
     }
 
-    /**
-     * 验证 POST /api/v1/platform/stock/{skuId}/correct 通过 X-User-Id 注入操作人并纠正库存。
-     */
+
     @Test
     void correct_with_header_invokes_service() throws Exception {
         StockCorrectDTO dto = new StockCorrectDTO();
@@ -139,16 +128,14 @@ class PlatformStockControllerV1Test {
         verify(stockService).correctStock(any(Long.class), any(Long.class), any());
     }
 
-    /**
-     * 验证 GET /api/v1/platform/stock/abnormal 返回异常库存列表。
-     */
+
     @Test
     void listAbnormal_returns_list() throws Exception {
-        StockPO po = new StockPO();
-        po.setId(1L);
-        po.setSkuId(99L);
-        po.setAvailable(-5L);
-        when(stockService.listAbnormalStock()).thenReturn(java.util.List.of(po));
+        StockVO vo = new StockVO();
+        vo.setId(1L);
+        vo.setSkuId(99L);
+        vo.setAvailable(-5L);
+        when(stockService.listAbnormalStockVO()).thenReturn(java.util.List.of(vo));
         mockMvc.perform(get("/api/v1/platform/stock/abnormal"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.code").value("00000"))

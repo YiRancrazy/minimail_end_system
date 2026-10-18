@@ -1,5 +1,8 @@
 server:
   port: 8201
+feign:
+  sentinel:
+    enabled: true
 spring:
   application:
     name: minimall-auth-service
@@ -10,13 +13,23 @@ spring:
     locations: classpath:db/migration
     baseline-on-migrate: true
   cloud:
+    inetutils:
+      # 注册一个可路由地址（Docker bridge 或局域网）；默认选择
+      # 第一个非回环地址时可能得到 169.254.x.x，网关无法访问。
+      preferred-networks: ${MINIMALL_PREFERRED_NETWORKS:172.,192.168.,10.}
     nacos:
       discovery:
         server-addr: ${NACOS_HOST:127.0.0.1}:${NACOS_PORT:8848}
+    openfeign:
+      client:
+        config:
+          default:
+            connect-timeout: 1000
+            read-timeout: 3000
   datasource:
     url: jdbc:mysql://${MYSQL_HOST:127.0.0.1}:${MYSQL_PORT:3306}/minimall_db?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC&createDatabaseIfNotExist=true
     username: ${MYSQL_USER:root}
-    password: ${MYSQL_PASSWORD:root}
+    password: ${MYSQL_PASSWORD:${MYSQL_ROOT_PASSWORD:root}}
   data:
     redis:
       host: ${REDIS_HOST:127.0.0.1}

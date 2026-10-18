@@ -5,11 +5,12 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import com.yirancrazy.minimall.common.dto.CursorPageDTO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 订单游标分页查询入参，支持按用户/商家/状态/时间范围过滤
- * @Version: 2.0
- * @DateTime: 2026/08/04
+ * @Description: OrderPageDTO 数据传输对象。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
  **/
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -17,7 +18,7 @@ public class OrderPageDTO extends CursorPageDTO {
 
     private Long userId;
     private Long merchantId;
-    /** 订单状态过滤，使用枚举别名（如 PENDING），由服务层转状态码 */
+
     private String status;
     private LocalDateTime startTime;
     private LocalDateTime endTime;

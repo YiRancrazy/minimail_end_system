@@ -25,12 +25,13 @@ import com.yirancrazy.minimall.common.annotation.Idempotent;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CommonCode;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: IdempotentAspect 单元测试，验证首次放行、重复拦截、失败释放键与 SpEL/字面量 key 解析。
+ * @Description: IdempotentAspectTest 单元测试。
  * @Version: 1.0
- * @DateTime: 2026/08/13
- */
+ * @DateTime: 2026/10/16
+ **/
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class IdempotentAspectTest {
@@ -44,6 +45,12 @@ class IdempotentAspectTest {
 
     private IdempotentAspect aspect;
 
+    /**
+     * @Author: yirancrazy@gmail.com
+     * @Description: Dto 类型，承载相关业务能力。
+     * @Version: 1.0
+     * @DateTime: 2026/10/16
+     **/
     static class Dto {
         private final String orderNo;
 
@@ -51,22 +58,45 @@ class IdempotentAspectTest {
             this.orderNo = orderNo;
         }
 
+        /**
+         * 获取相关数据。
+         * @return 处理结果
+         */
         public String getOrderNo() {
             return orderNo;
         }
     }
 
+    /**
+     * @Author: yirancrazy@gmail.com
+     * @Description: Target 类型，承载相关业务能力。
+     * @Version: 1.0
+     * @DateTime: 2026/10/16
+     **/
     static class Target {
+        /**
+         * 执行 headerOnly 方法。
+         * @return 处理结果
+         */
         @Idempotent
         public Object headerOnly() {
             return "ok";
         }
 
+        /**
+         * 执行 spelKey 方法。
+         * @param dto dto 参数
+         * @return 处理结果
+         */
         @Idempotent(key = "#dto.orderNo")
         public Object spelKey(Dto dto) {
             return "ok";
         }
 
+        /**
+         * 执行 literalKey 方法。
+         * @return 处理结果
+         */
         @Idempotent(key = "fixed-key")
         public Object literalKey() {
             return "ok";

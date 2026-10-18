@@ -15,12 +15,13 @@ import com.yirancrazy.minimall.user.dto.FavoritePageDTO;
 import com.yirancrazy.minimall.user.service.FavoriteService;
 import com.yirancrazy.minimall.user.vo.FavoriteVO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 用户收藏控制器，提供商品收藏增删查 RESTful API
+ * @Description: FavoriteControllerV1 控制器，提供相关接口。
  * @Version: 1.0
- * @DateTime: 2026/08/03
- */
+ * @DateTime: 2026/10/16
+ **/
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/user/favorites")
@@ -28,15 +29,20 @@ public class FavoriteControllerV1 {
 
     private final FavoriteService favoriteService;
 
+    /**
+     * 构造 FavoriteControllerV1 实例。
+     * @param favoriteService favoriteService 参数
+     */
     public FavoriteControllerV1(FavoriteService favoriteService) {
         this.favoriteService = favoriteService;
     }
 
+
     /**
-     * 收藏指定商品。
-     * @param userId 用户ID，来自网关X-User-Id头
-     * @param skuId 商品SKU ID
-     * @return 无业务数据的成功响应
+     * 执行 add 方法。
+     * @param userId userId 参数
+     * @param skuId skuId 参数
+     * @return 统一响应结果
      */
     @PostMapping("/{skuId}")
     public Result<Void> add(@RequestHeader("X-User-Id") Long userId, @PathVariable("skuId") Long skuId) {
@@ -44,11 +50,12 @@ public class FavoriteControllerV1 {
         return Result.success(null);
     }
 
+
     /**
-     * 取消收藏指定商品。
-     * @param userId 用户ID，来自网关X-User-Id头
-     * @param skuId 商品SKU ID
-     * @return 无业务数据的成功响应
+     * 删除业务数据。
+     * @param userId userId 参数
+     * @param skuId skuId 参数
+     * @return 统一响应结果
      */
     @DeleteMapping("/{skuId}")
     public Result<Void> remove(@RequestHeader("X-User-Id") Long userId, @PathVariable("skuId") Long skuId) {
@@ -56,21 +63,23 @@ public class FavoriteControllerV1 {
         return Result.success(null);
     }
 
+
     /**
-     * 分页查询当前用户收藏列表，按收藏时间倒序。
-     * @param userId 用户ID，来自网关X-User-Id头
-     * @param dto 分页入参
-     * @return 收藏分页结果
+     * 分页查询数据。
+     * @param userId userId 参数
+     * @param dto dto 参数
+     * @return 统一响应结果
      */
     @GetMapping
     public Result<CursorPageVO<FavoriteVO>> page(@RequestHeader("X-User-Id") Long userId, @Valid FavoritePageDTO dto) {
         return Result.success(favoriteService.pageFavorites(userId, dto));
     }
 
+
     /**
-     * 统计当前用户收藏数量。
-     * @param userId 用户ID，来自网关X-User-Id头
-     * @return 收藏数量
+     * 统计业务数据。
+     * @param userId userId 参数
+     * @return 统一响应结果
      */
     @GetMapping("/count")
     public Result<Integer> count(@RequestHeader("X-User-Id") Long userId) {

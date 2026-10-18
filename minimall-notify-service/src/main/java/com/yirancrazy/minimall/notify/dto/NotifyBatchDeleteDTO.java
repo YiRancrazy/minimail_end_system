@@ -5,11 +5,12 @@ import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 批量删除站内信入参，支持一次性软删除多条消息
+ * @Description: NotifyBatchDeleteDTO 数据传输对象。
  * @Version: 1.0
- * @DateTime: 2026/08/03
+ * @DateTime: 2026/10/16
  **/
 @Data
 public class NotifyBatchDeleteDTO {

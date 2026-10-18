@@ -5,15 +5,20 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.context.annotation.Bean;
 import feign.RequestInterceptor;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: Feign 请求拦截器自动装配，向使用 OpenFeign 的服务提供 traceId 跨服务透传能力。
+ * @Description: TraceIdFeignAutoConfiguration 类型，承载相关业务能力。
  * @Version: 1.0
- * @DateTime: 2026/08/16
- */
+ * @DateTime: 2026/10/16
+ **/
 @AutoConfiguration
 public class TraceIdFeignAutoConfiguration {
 
+    /**
+     * 执行 traceIdFeignInterceptor 方法。
+     * @return 处理结果
+     */
     @Bean
     @ConditionalOnMissingBean
     public RequestInterceptor traceIdFeignInterceptor() {

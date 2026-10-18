@@ -19,11 +19,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.yirancrazy.minimall.common.filter.TraceIdFilter;
 import com.yirancrazy.minimall.common.result.Result;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: RocketMqEventConsumer 的单元测试类。
+ * @Description: RocketMqEventConsumerTest 单元测试。
  * @Version: 1.0
- * @DateTime: 2026/7/31
+ * @DateTime: 2026/10/16
  **/
 @ExtendWith(OutputCaptureExtension.class)
 class RocketMqEventConsumerTest {
@@ -35,7 +36,7 @@ class RocketMqEventConsumerTest {
         consumer.start();
 
         assertThat(output).contains(
-            "RocketMqEventConsumer.start() called with no handlers registered; events will not be consumed");
+            "RocketMqEventConsumer.start() 调用时未注册 handler，事件将不会被消费");
     }
 
     @Test
@@ -114,6 +115,12 @@ class RocketMqEventConsumerTest {
         return message;
     }
 
+    /**
+     * @Author: yirancrazy@gmail.com
+     * @Description: SampleEvent 记录对象，承载不可变数据。
+     * @Version: 1.0
+     * @DateTime: 2026/10/16
+     **/
     private record SampleEvent(String payload) {
     }
 }

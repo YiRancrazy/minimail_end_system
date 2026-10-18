@@ -20,61 +20,69 @@ import com.yirancrazy.minimall.cart.service.CartService;
 import com.yirancrazy.minimall.cart.vo.CartItemVO;
 import com.yirancrazy.minimall.common.result.Result;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 购物车控制器，提供Cart RESTful API
- * @Version: 1.2
- * @DateTime: 2026/08/03
- */
+ * @Description: CartControllerV1 控制器，提供相关接口。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 @RestController
 @RequestMapping("/api/v1/user/cart")
 public class CartControllerV1 {
 
     private final CartService cartService;
 
+    /**
+     * 构造 CartControllerV1 实例。
+     * @param cartService cartService 参数
+     */
     public CartControllerV1(CartService cartService) {
         this.cartService = cartService;
     }
 
+
     /**
-     * 按当前登录用户查询其购物车全部条目，用户ID来自网关X-User-Id可信头。
-     * @param userId 用户ID，来自网关X-User-Id头
-     * @return 该用户购物车条目列表
+     * 查询列表数据。
+     * @param userId userId 参数
+     * @return 统一响应结果
      */
     @GetMapping
     public Result<List<CartItemVO>> list(@RequestHeader("X-User-Id") Long userId) {
         return Result.success(cartService.listByUser(userId));
     }
 
+
     /**
-     * 添加购物车项，用户ID来自网关X-User-Id可信头。
-     * @param userId 用户ID，来自网关X-User-Id头
-     * @param dto 购物车添加DTO
-     * @return 购物车项ID
+     * 执行 add 方法。
+     * @param userId userId 参数
+     * @param dto dto 参数
+     * @return 统一响应结果
      */
     @PostMapping
     public Result<Long> add(@RequestHeader("X-User-Id") Long userId, @Valid @RequestBody CartItemAddDTO dto) {
         return Result.success(cartService.add(userId, dto));
     }
 
+
     /**
-     * 根据购物车项 ID 逻辑删除该条目，仅允许删除当前登录用户自己的条目。
-     *
-     * @param id 购物车项 ID
-     * @param userId 用户ID，来自网关X-User-Id头
-     * @return 是否删除成功
+     * 删除业务数据。
+     * @param id id 参数
+     * @param userId userId 参数
+     * @return 统一响应结果
      */
     @DeleteMapping("/{id}")
     public Result<Boolean> delete(@PathVariable("id") Long id, @RequestHeader("X-User-Id") Long userId) {
         return Result.success(cartService.delete(id, userId));
     }
 
+
     /**
-     * 部分更新购物车项，支持同时修改数量和勾选状态，仅允许更新当前登录用户自己的条目。
-     * @param id 购物车项ID
-     * @param userId 用户ID，来自网关X-User-Id头
-     * @param dto 更新入参，仅非空字段生效
-     * @return 更新是否成功
+     * 更新业务数据。
+     * @param id id 参数
+     * @param userId userId 参数
+     * @param dto dto 参数
+     * @return 统一响应结果
      */
     @PatchMapping("/{id}")
     public Result<Boolean> update(@PathVariable("id") Long id, @RequestHeader("X-User-Id") Long userId,
@@ -82,11 +90,12 @@ public class CartControllerV1 {
         return Result.success(cartService.update(id, userId, dto));
     }
 
+
     /**
-     * 全选或取消全选当前登录用户的购物车项，用户ID来自网关X-User-Id可信头。
-     * @param userId 用户ID，来自网关X-User-Id头
-     * @param dto 全选入参
-     * @return 更新是否成功
+     * 执行 selectAll 方法。
+     * @param userId userId 参数
+     * @param dto dto 参数
+     * @return 统一响应结果
      */
     @PutMapping("/select-all")
     public Result<Boolean> selectAll(@RequestHeader("X-User-Id") Long userId,
@@ -95,21 +104,23 @@ public class CartControllerV1 {
             userId, dto.getIsSelected() ? 1 : 0));
     }
 
+
     /**
-     * 清空当前登录用户的购物车，用户ID来自网关X-User-Id可信头。
-     * @param userId 用户ID，来自网关X-User-Id头
-     * @return 清空是否成功
+     * 执行 clear 方法。
+     * @param userId userId 参数
+     * @return 统一响应结果
      */
     @DeleteMapping
     public Result<Boolean> clear(@RequestHeader("X-User-Id") Long userId) {
         return Result.success(cartService.clear(userId));
     }
 
+
     /**
-     * 将指定购物车条目移入收藏夹：按条目 ID 收藏并删除，收藏与删除在同一事务内。
-     * @param userId 用户ID，来自网关X-User-Id头
-     * @param dto 待移入收藏夹的购物车条目 ID 列表
-     * @return 无业务数据的成功响应
+     * 执行 moveToFavorite 方法。
+     * @param userId userId 参数
+     * @param dto dto 参数
+     * @return 统一响应结果
      */
     @PostMapping("/move-to-favorite")
     public Result<Void> moveToFavorite(@RequestHeader("X-User-Id") Long userId,

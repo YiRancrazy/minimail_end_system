@@ -29,9 +29,13 @@ import com.yirancrazy.minimall.notify.entity.ComplaintPO;
 import com.yirancrazy.minimall.notify.manager.ComplaintManager;
 import com.yirancrazy.minimall.notify.service.impl.ComplaintServiceImpl;
 
+
 /**
- * ComplaintServiceImpl 单元测试，覆盖投诉提交、分页查询、处理的正常、失败、边界路径。
- */
+ * @Author: yirancrazy@gmail.com
+ * @Description: ComplaintServiceImplTest 单元测试。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 public class ComplaintServiceImplTest {
 
     private ComplaintManager complaintManager;
@@ -39,7 +43,7 @@ public class ComplaintServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        // Initialize TableInfo so LambdaQueryWrapper can resolve lambda cache
+        // 初始化 TableInfo，便于 LambdaQueryWrapper 解析 lambda 缓存
         MybatisConfiguration configuration = new MybatisConfiguration();
         MapperBuilderAssistant assistant = new MapperBuilderAssistant(configuration, "");
         assistant.setCurrentNamespace("com.yirancrazy.minimall.notify.mapper.ComplaintMapper");
@@ -57,10 +61,10 @@ public class ComplaintServiceImplTest {
         service = new ComplaintServiceImpl(complaintManager);
     }
 
+
     /**
-     * 验证 create 正常提交投诉并返回 ID。
+     * 创建业务数据。
      */
-    @Test
     public void create_persists_and_returns_id() {
         ComplaintCreateDTO dto = new ComplaintCreateDTO();
         dto.setComplainantType(1);
@@ -78,10 +82,10 @@ public class ComplaintServiceImplTest {
         verify(complaintManager).save(any(ComplaintPO.class));
     }
 
+
     /**
-     * 验证 create 使用 X-User-Id 作为 complainantId，忽略 DTO 中的 complainantId。
+     * 创建业务数据。
      */
-    @Test
     public void create_uses_header_complainant_id() {
         ComplaintCreateDTO dto = new ComplaintCreateDTO();
         dto.setComplainantType(1);
@@ -97,10 +101,10 @@ public class ComplaintServiceImplTest {
         verify(complaintManager).save(any(ComplaintPO.class));
     }
 
+
     /**
-     * 验证 page 分页查询委托给 manager。
+     * 分页查询数据。
      */
-    @Test
     public void page_delegates_to_manager() {
         ComplaintPageDTO dto = new ComplaintPageDTO();
         dto.setLimit(10);
@@ -114,10 +118,10 @@ public class ComplaintServiceImplTest {
         verify(complaintManager).list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class));
     }
 
+
     /**
-     * 验证 page 按 status 和 orderNo 过滤。
+     * 分页查询数据。
      */
-    @Test
     public void page_filters_by_status_and_order_no() {
         ComplaintPageDTO dto = new ComplaintPageDTO();
         dto.setLimit(10);
@@ -133,10 +137,10 @@ public class ComplaintServiceImplTest {
         verify(complaintManager).list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class));
     }
 
+
     /**
-     * 验证 handle 正常处理投诉：PENDING → PROCESSING，采用条件更新推进状态。
+     * 处理业务事件。
      */
-    @Test
     public void handle_pending_to_processing() {
         ComplaintPO po = new ComplaintPO();
         po.setId(1L);
@@ -154,10 +158,10 @@ public class ComplaintServiceImplTest {
         verify(complaintManager, never()).updateById(any(ComplaintPO.class));
     }
 
+
     /**
-     * 验证 handle 正常处理投诉：PROCESSING → RESOLVED。
+     * 处理业务事件。
      */
-    @Test
     public void handle_processing_to_resolved() {
         ComplaintPO po = new ComplaintPO();
         po.setId(1L);
@@ -174,10 +178,10 @@ public class ComplaintServiceImplTest {
         verify(complaintManager).update(any(Wrapper.class));
     }
 
+
     /**
-     * 验证 handle 正常处理投诉：PROCESSING → REJECTED。
+     * 处理业务事件。
      */
-    @Test
     public void handle_processing_to_rejected() {
         ComplaintPO po = new ComplaintPO();
         po.setId(1L);
@@ -194,10 +198,10 @@ public class ComplaintServiceImplTest {
         verify(complaintManager).update(any(Wrapper.class));
     }
 
+
     /**
-     * 验证 handle 条件更新影响 0 行（并发下状态已被推进）时抛 COMPLAINT_STATUS_INVALID。
+     * 处理业务事件。
      */
-    @Test
     public void handle_throws_when_conditional_update_affects_zero_rows() {
         ComplaintPO po = new ComplaintPO();
         po.setId(1L);
@@ -212,10 +216,10 @@ public class ComplaintServiceImplTest {
         assertThrows(BizException.class, () -> service.handle(1L, 10L, dto));
     }
 
+
     /**
-     * 验证 handle 在状态非法转换时抛出 COMPLAINT_STATUS_INVALID。
+     * 处理业务事件。
      */
-    @Test
     public void handle_throws_on_invalid_transition() {
         ComplaintPO po = new ComplaintPO();
         po.setId(1L);
@@ -230,10 +234,10 @@ public class ComplaintServiceImplTest {
         verify(complaintManager, never()).update(any(Wrapper.class));
     }
 
+
     /**
-     * 验证 handle 在投诉不存在时抛出 COMPLAINT_NOT_FOUND。
+     * 处理业务事件。
      */
-    @Test
     public void handle_throws_when_not_found() {
         when(complaintManager.getById(999L)).thenReturn(null);
 
@@ -244,10 +248,10 @@ public class ComplaintServiceImplTest {
         assertThrows(BizException.class, () -> service.handle(999L, 10L, dto));
     }
 
+
     /**
-     * 验证 handle 不允许 PENDING 直接跳到 RESOLVED。
+     * 处理业务事件。
      */
-    @Test
     public void handle_throws_on_pending_to_resolved() {
         ComplaintPO po = new ComplaintPO();
         po.setId(1L);
@@ -261,10 +265,10 @@ public class ComplaintServiceImplTest {
         assertThrows(BizException.class, () -> service.handle(1L, 10L, dto));
     }
 
+
     /**
-     * 验证 handle 不允许 PENDING 直接跳到 REJECTED。
+     * 处理业务事件。
      */
-    @Test
     public void handle_throws_on_pending_to_rejected() {
         ComplaintPO po = new ComplaintPO();
         po.setId(1L);
@@ -278,10 +282,10 @@ public class ComplaintServiceImplTest {
         assertThrows(BizException.class, () -> service.handle(1L, 10L, dto));
     }
 
+
     /**
-     * 验证 detail 正常返回投诉实体。
+     * 执行 detail_returns_po 方法。
      */
-    @Test
     public void detail_returns_po() {
         ComplaintPO po = new ComplaintPO();
         po.setId(7L);
@@ -292,13 +296,39 @@ public class ComplaintServiceImplTest {
         assertEquals(7L, got.getId());
     }
 
+
     /**
-     * 验证 detail 在投诉不存在时抛 COMPLAINT_NOT_FOUND。
+     * 执行 detail_throws_when_not_found 方法。
      */
-    @Test
     public void detail_throws_when_not_found() {
         when(complaintManager.getById(99L)).thenReturn(null);
 
         assertThrows(BizException.class, () -> service.detail(99L));
+    }
+
+
+    /**
+     * 执行 detailForUser_returns_own_complaint 方法。
+     */
+    public void detailForUser_returns_own_complaint() {
+        ComplaintPO po = new ComplaintPO();
+        po.setId(7L);
+        po.setComplainantId(100L);
+        when(complaintManager.getById(7L)).thenReturn(po);
+
+        assertEquals(7L, service.detailForUser(7L, 100L).getId());
+    }
+
+
+    /**
+     * 执行 detailForUser_throws_when_not_owner 方法。
+     */
+    public void detailForUser_throws_when_not_owner() {
+        ComplaintPO po = new ComplaintPO();
+        po.setId(7L);
+        po.setComplainantId(200L);
+        when(complaintManager.getById(7L)).thenReturn(po);
+
+        assertThrows(BizException.class, () -> service.detailForUser(7L, 100L));
     }
 }

@@ -11,11 +11,12 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: CSV 导出工具，UTF-8 BOM 编码，支持字段转义。
+ * @Description: CsvExporter 类型，承载相关业务能力。
  * @Version: 1.0
- * @DateTime: 2026/08/03
+ * @DateTime: 2026/10/16
  **/
 @Slf4j
 public final class CsvExporter {
@@ -24,16 +25,20 @@ public final class CsvExporter {
     private static final String CONTENT_TYPE = "text/csv; charset=UTF-8";
     private static final int MAX_EXPORT_ROWS = 10000;
 
+    /**
+     * 构造 CsvExporter 实例。
+     */
     private CsvExporter() {
     }
 
+
     /**
-     * 写入 CSV 到响应流，含 UTF-8 BOM 头与表头。
-     * @param response HTTP 响应
-     * @param filename 下载文件名
-     * @param headers 表头数组
-     * @param rows 数据行列表，每行为字段数组
-     * @throws IOException 写入失败时抛出
+     * 执行 write 方法。
+     * @param response response 参数
+     * @param filename filename 参数
+     * @param headers headers 参数
+     * @param rows rows 参数
+     * @throws IOException 处理失败时抛出
      */
     public static void write(HttpServletResponse response, String filename,
                              String[] headers, List<String[]> rows) throws IOException {
@@ -47,22 +52,23 @@ public final class CsvExporter {
                 writeRow(writer, row);
             }
         }
-        log.info("csv exported, filename={}, rows={}", filename, rows.size());
+        log.info("csv 导出完成，filename={}，rows={}", filename, rows.size());
     }
 
+
     /**
-     * 获取导出最大行数限制。
-     * @return 最大行数
+     * 执行 maxExportRows 方法。
+     * @return 业务数值
      */
     public static int maxExportRows() {
         return MAX_EXPORT_ROWS;
     }
 
+
     /**
-     * 构造 Content-Disposition 头：按 RFC 5987 对文件名做 UTF-8 百分号编码，
-     * 并剔除 CR/LF/引号，防止文件名注入响应头。
-     * @param filename 原始文件名
-     * @return Content-Disposition 头值
+     * 构建或生成ContentDisposition。
+     * @param filename filename
+     * @return 处理结果
      */
     private static String buildContentDisposition(String filename) {
         String safe = filename.replace("\r", "").replace("\n", "").replace("\"", "");
@@ -70,6 +76,12 @@ public final class CsvExporter {
         return "attachment; filename*=UTF-8''" + encoded;
     }
 
+    /**
+     * 处理writeRow。
+     * @param writer writer
+     * @param fields fields
+     * @throws IOException 处理失败时抛出
+     */
     private static void writeRow(Writer writer, String[] fields) throws IOException {
         for (int i = 0; i < fields.length; i++) {
             if (i > 0) {
@@ -80,9 +92,34 @@ public final class CsvExporter {
         writer.write("\n");
     }
 
-    private static String escape(String field) {
-        if (field.contains(",") || field.contains("\"") || field.contains("\n")) {
-            return "\"" + field.replace("\"", "\"\"") + "\"";
+
+    /**
+     * 处理escape。
+     * @param field field
+     * @return 处理结果
+     */
+    static String escape(String field) {
+        String safe = neutralizeFormula(field);
+        if (safe.contains(",") || safe.contains("\"") || safe.contains("\n")) {
+            return "\"" + safe.replace("\"", "\"\"") + "\"";
+        }
+        return safe;
+    }
+
+
+    /**
+     * 处理neutralizeFormula。
+     * @param field field
+     * @return 处理结果
+     */
+    private static String neutralizeFormula(String field) {
+        if (field.isEmpty()) {
+            return field;
+        }
+        char first = field.charAt(0);
+        if (first == '=' || first == '+' || first == '-' || first == '@'
+            || first == '\t' || first == '\r') {
+            return "'" + field;
         }
         return field;
     }

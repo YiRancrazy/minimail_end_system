@@ -2,12 +2,16 @@ package com.yirancrazy.minimall.stock.service.impl;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.extern.slf4j.Slf4j;
+import com.yirancrazy.minimall.api.dto.stock.StockReserveDTO;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CommonCode;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
@@ -19,6 +23,7 @@ import com.yirancrazy.minimall.stock.dto.StockCountTaskCompleteDTO;
 import com.yirancrazy.minimall.stock.dto.StockCountTaskCreateDTO;
 import com.yirancrazy.minimall.stock.dto.StockCountTaskPageDTO;
 import com.yirancrazy.minimall.stock.dto.StockPageDTO;
+import com.yirancrazy.minimall.stock.dto.StockStatisticsDTO;
 import com.yirancrazy.minimall.stock.dto.StockTransferDTO;
 import com.yirancrazy.minimall.stock.dto.StockTransferPageDTO;
 import com.yirancrazy.minimall.stock.entity.StockCountTaskPO;
@@ -29,47 +34,55 @@ import com.yirancrazy.minimall.stock.manager.StockCountTaskManager;
 import com.yirancrazy.minimall.stock.manager.StockJournalManager;
 import com.yirancrazy.minimall.stock.manager.StockManager;
 import com.yirancrazy.minimall.stock.manager.StockTransferManager;
-import com.yirancrazy.minimall.stock.mapper.StockMapper;
 import com.yirancrazy.minimall.stock.service.StockService;
+import com.yirancrazy.minimall.stock.vo.StockCountTaskVO;
+import com.yirancrazy.minimall.stock.vo.StockJournalVO;
 import com.yirancrazy.minimall.stock.vo.StockStatisticsVO;
+import com.yirancrazy.minimall.stock.vo.StockTransferVO;
+import com.yirancrazy.minimall.stock.vo.StockVO;
+
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 库存领域服务实现，实现Stock相关业务逻辑
- * @Version: 1.1
- * @DateTime: 2026/08/03
- */
+ * @Description: StockServiceImpl 服务实现，实现相关业务逻辑。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 @Slf4j
 @Service
 public class StockServiceImpl implements StockService {
 
     private static final int EXPORT_MAX_ROWS = 10000;
     private static final int QUERY_MAX_ROWS = 200;
+    private static final int MAX_RESERVE_BATCH_SIZE = 100;
 
     private final StockManager stockManager;
     private final StockJournalManager journalManager;
-    private final StockMapper stockMapper;
     private final StockTransferManager transferManager;
     private final StockCountTaskManager countTaskManager;
 
+    /**
+     * 构造 StockServiceImpl 实例。
+     * @param stockManager stockManager 参数
+     * @param journalManager journalManager 参数
+     * @param transferManager transferManager 参数
+     * @param countTaskManager countTaskManager 参数
+     */
     public StockServiceImpl(StockManager stockManager, StockJournalManager journalManager,
-                            StockMapper stockMapper, StockTransferManager transferManager,
+                            StockTransferManager transferManager,
                             StockCountTaskManager countTaskManager) {
         this.stockManager = stockManager;
         this.journalManager = journalManager;
-        this.stockMapper = stockMapper;
         this.transferManager = transferManager;
         this.countTaskManager = countTaskManager;
     }
 
+
     /**
-     * 预占指定 SKU 的库存：原子扣减可用数量并等额增加预占数量。库存记录不存在时抛出
-     * STOCK_NOT_FOUND，可用数量不足或并发下扣减未命中时抛出 STOCK_INSUFFICIENT。
-     *
-     * @param skuId    SKU 标识
-     * @param quantity 预占数量，必须 > 0
-     * @return 库存记录更新成功返回 true
-     * @throws BizException 当 quantity 非法、库存不存在或库存不足时
+     * 执行 reserve 方法。
+     * @param skuId skuId 参数
+     * @param quantity quantity 参数
+     * @return 是否处理成功
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -79,7 +92,7 @@ public class StockServiceImpl implements StockService {
         }
         StockPO s = getStock(skuId);
         // 原子扣减：条件内嵌可用量校验，避免读-判-写的超卖窗口
-        if (stockMapper.deductAvailable(skuId, quantity.longValue()) <= 0) {
+        if (stockManager.deductAvailable(skuId, quantity.longValue()) <= 0) {
             throw new BizException(StockCodeEnum.STOCK_INSUFFICIENT);
         }
         s.setAvailable(s.getAvailable() - quantity.longValue());
@@ -90,37 +103,84 @@ public class StockServiceImpl implements StockService {
         return true;
     }
 
+
     /**
-     * 释放指定 SKU 的预占库存：原子扣减预占数量并等额回补可用数量。库存记录不存在、
-     * 预占数量不足以释放或数量非法时直接返回 false，不抛出异常，保证回滚链路幂等安全。
-     *
-     * @param skuId    SKU 标识
-     * @param quantity 释放数量，必须 > 0
-     * @return 库存记录更新成功返回 true，否则返回 false
+     * 执行 reserveBatch 方法。
+     * @param items items 参数
+     * @return 是否处理成功
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public boolean release(Long skuId, Integer quantity) {
-        if (quantity == null || quantity <= 0) {
-            return false;
+    public boolean reserveBatch(List<StockReserveDTO> items) {
+        if (items == null || items.isEmpty()) {
+            throw new BizException(CommonCode.PARAM_INVALID, "预占明细不能为空");
         }
-        // 原子释放：未命中（记录不存在或预占不足）按失败处理
-        if (stockMapper.restoreReserved(skuId, quantity.longValue()) <= 0) {
-            return false;
+        Map<Long, Long> quantityBySku = new LinkedHashMap<>(items.size() * 2);
+        for (StockReserveDTO item : items) {
+            if (item == null || item.getSkuId() == null || item.getQuantity() == null
+                || item.getQuantity() <= 0) {
+                throw new BizException(CommonCode.PARAM_INVALID, "预占数量必须大于0");
+            }
+            if (!quantityBySku.containsKey(item.getSkuId())
+                && quantityBySku.size() >= MAX_RESERVE_BATCH_SIZE) {
+                throw new BizException(CommonCode.PARAM_INVALID, "单次最多预占100个SKU");
+            }
+            long merged = quantityBySku.getOrDefault(item.getSkuId(), 0L) + item.getQuantity();
+            if (merged > Integer.MAX_VALUE) {
+                throw new BizException(CommonCode.PARAM_INVALID, "预占数量超出范围");
+            }
+            quantityBySku.put(item.getSkuId(), merged);
         }
-
-        recordJournal(skuId, quantity.longValue(), StockJournalTypeEnum.RELEASE, null, null);
+        for (Map.Entry<Long, Long> entry : quantityBySku.entrySet()) {
+            reserve(entry.getKey(), entry.getValue().intValue());
+        }
         return true;
     }
 
+
     /**
-     * 商品服务创建 SKU 时联动建档：无库存记录则按初始数量创建并绑定归属商家，记录已存在
-     * （商家已入库/重复调用）则跳过，避免覆盖真实库存。库存服务不可用时由商品端降级处理。
-     * @param skuId SKU 标识
-     * @param merchantId 库存归属商家ID
-     * @param initialQuantity 初始可用数量，null 或负数按 0 处理
+     * 执行 release 方法。
+     * @param skuId skuId 参数
+     * @param quantity quantity 参数
+     * @param orderNo orderNo 参数
+     * @return 是否处理成功
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean release(Long skuId, Integer quantity, String orderNo) {
+        if (quantity == null || quantity <= 0) {
+            return false;
+        }
+        if (orderNo != null && !orderNo.isBlank()) {
+            try {
+                recordJournal(skuId, quantity.longValue(), StockJournalTypeEnum.RELEASE, null, orderNo);
+            }
+            catch (DuplicateKeyException e) {
+                log.info("库存释放已记录，skuId={}，orderNo={}", skuId, orderNo);
+                return true;
+            }
+        }
+        // 原子释放：未命中（记录不存在或预占不足）按失败处理
+        if (stockManager.restoreReserved(skuId, quantity.longValue()) <= 0) {
+            if (orderNo != null && !orderNo.isBlank()) {
+                throw new BizException(StockCodeEnum.STOCK_INSUFFICIENT);
+            }
+            return false;
+        }
+
+        if (orderNo == null || orderNo.isBlank()) {
+            recordJournal(skuId, quantity.longValue(), StockJournalTypeEnum.RELEASE, null, orderNo);
+        }
+        return true;
+    }
+
+
+    /**
+     * 初始化相关资源。
+     * @param skuId skuId 参数
+     * @param merchantId merchantId 参数
+     * @param initialQuantity initialQuantity 参数
+     */
     @Transactional(rollbackFor = Exception.class)
     public void initStock(Long skuId, Long merchantId, Integer initialQuantity) {
         if (skuId == null) {
@@ -141,14 +201,14 @@ public class StockServiceImpl implements StockService {
         if (initQty > 0) {
             recordJournal(skuId, initQty, StockJournalTypeEnum.ADJUST, "商品创建初始库存", null);
         }
-        log.info("stock initialized, skuId={}, merchantId={}, initial={}", skuId, merchantId, initQty);
+        log.info("库存已初始化，skuId={}，merchantId={}，initial={}", skuId, merchantId, initQty);
     }
 
+
     /**
-     * 查询指定 SKU 的当前可用库存数量，库存记录不存在时返回 0 而非抛出异常。
-     *
-     * @param skuId SKU 标识
-     * @return 该 SKU 的可用库存数量
+     * 执行 query 方法。
+     * @param skuId skuId 参数
+     * @return 业务数值
      */
     @Override
     public long query(Long skuId) {
@@ -157,12 +217,12 @@ public class StockServiceImpl implements StockService {
         return s == null ? 0L : s.getAvailable();
     }
 
+
     /**
-     * 商家视角查询可用库存，先校验库存归属当前商家，防止越权读取其他商家 SKU。
-     * @param skuId SKU 标识
-     * @param merchantId 商家ID（来自网关 X-Merchant-Id）
-     * @return 该 SKU 的可用库存数量
-     * @throws BizException 库存归属与商家不匹配时
+     * 执行 query 方法。
+     * @param skuId skuId 参数
+     * @param merchantId merchantId 参数
+     * @return 业务数值
      */
     @Override
     public long query(Long skuId, Long merchantId) {
@@ -175,13 +235,12 @@ public class StockServiceImpl implements StockService {
         return s.getAvailable();
     }
 
+
     /**
-     * 设置库存预警阈值。库存记录不存在时自动创建（初始可用 0）。
-     * @param skuId 商品SKU ID
-     * @param threshold 预警阈值，必须 >= 0
-     * @throws BizException 当阈值非法时
+     * 设置相关数据。
+     * @param skuId skuId 参数
+     * @param threshold threshold 参数
      */
-    @Override
     @Transactional(rollbackFor = Exception.class)
     public void setThreshold(Long skuId, Long threshold) {
         if (threshold == null || threshold < 0) {
@@ -189,18 +248,19 @@ public class StockServiceImpl implements StockService {
         }
         StockPO po = getOrCreateStock(skuId);
         po.setAlertThreshold(threshold);
-        stockManager.updateById(po);
-        log.info("threshold set, skuId={}, threshold={}", skuId, threshold);
+        if (!stockManager.updateById(po)) {
+            throw new BizException(StockCodeEnum.STOCK_CONCURRENT_UPDATE);
+        }
+        log.info("库存阈值已设置，skuId={}，threshold={}", skuId, threshold);
     }
 
+
     /**
-     * 商家视角设置预警阈值，校验库存归属；记录不存在时以该商家归属创建。
-     * @param skuId 商品SKU ID
-     * @param threshold 预警阈值，必须 >= 0
-     * @param merchantId 商家ID（来自网关 X-Merchant-Id）
-     * @throws BizException 当阈值非法或库存归属不匹配时
+     * 设置相关数据。
+     * @param skuId skuId 参数
+     * @param threshold threshold 参数
+     * @param merchantId merchantId 参数
      */
-    @Override
     @Transactional(rollbackFor = Exception.class)
     public void setThreshold(Long skuId, Long threshold, Long merchantId) {
         if (threshold == null || threshold < 0) {
@@ -208,20 +268,20 @@ public class StockServiceImpl implements StockService {
         }
         StockPO po = getOrCreateMerchantStock(skuId, merchantId);
         po.setAlertThreshold(threshold);
-        stockManager.updateById(po);
-        log.info("threshold set, skuId={}, merchantId={}, threshold={}",
+        if (!stockManager.updateById(po)) {
+            throw new BizException(StockCodeEnum.STOCK_CONCURRENT_UPDATE);
+        }
+        log.info("库存阈值已设置，skuId={}，merchantId={}，threshold={}",
             skuId, merchantId, threshold);
     }
 
+
     /**
-     * 手动调整库存数量。库存记录不存在时自动创建（初始可用 0），保证商家首次入库可用。
-     * 负向调整不允许把可用库存调成负值。
-     * @param skuId 商品SKU ID
-     * @param quantity 调整数量，正数增加、负数扣减，不能为0
-     * @param reason 调整原因
-     * @throws BizException 当调整数量为0或负向调整超过可用库存时
+     * 执行 adjustStock 方法。
+     * @param skuId skuId 参数
+     * @param quantity quantity 参数
+     * @param reason reason 参数
      */
-    @Override
     @Transactional(rollbackFor = Exception.class)
     public void adjustStock(Long skuId, Long quantity, String reason) {
         if (quantity == null || quantity == 0) {
@@ -234,23 +294,22 @@ public class StockServiceImpl implements StockService {
         }
         po.setAvailable(po.getAvailable() + quantity);
         if (!stockManager.updateById(po)) {
-            throw new BizException(StockCodeEnum.STOCK_NOT_FOUND);
+            throw new BizException(StockCodeEnum.STOCK_CONCURRENT_UPDATE);
         }
 
         recordJournal(skuId, quantity, StockJournalTypeEnum.ADJUST, reason, null);
         checkAlert(po);
-        log.info("stock adjusted, skuId={}, quantity={}", skuId, quantity);
+        log.info("库存已调整，skuId={}，quantity={}", skuId, quantity);
     }
 
+
     /**
-     * 商家视角手动调整库存，校验库存归属；记录不存在时以该商家归属创建（首次入库）。
-     * @param skuId 商品SKU ID
-     * @param quantity 调整数量，正数增加、负数扣减，不能为0
-     * @param reason 调整原因
-     * @param merchantId 商家ID（来自网关 X-Merchant-Id）
-     * @throws BizException 当调整数量为0、负向调整超库存或库存归属不匹配时
+     * 执行 adjustStock 方法。
+     * @param skuId skuId 参数
+     * @param quantity quantity 参数
+     * @param reason reason 参数
+     * @param merchantId merchantId 参数
      */
-    @Override
     @Transactional(rollbackFor = Exception.class)
     public void adjustStock(Long skuId, Long quantity, String reason, Long merchantId) {
         if (quantity == null || quantity == 0) {
@@ -263,21 +322,21 @@ public class StockServiceImpl implements StockService {
         }
         po.setAvailable(po.getAvailable() + quantity);
         if (!stockManager.updateById(po)) {
-            throw new BizException(StockCodeEnum.STOCK_NOT_FOUND);
+            throw new BizException(StockCodeEnum.STOCK_CONCURRENT_UPDATE);
         }
 
         recordJournal(skuId, quantity, StockJournalTypeEnum.ADJUST, reason, null);
         checkAlert(po);
-        log.info("stock adjusted, skuId={}, merchantId={}, quantity={}",
+        log.info("库存已调整，skuId={}，merchantId={}，quantity={}",
             skuId, merchantId, quantity);
     }
 
+
     /**
-     * 查询指定SKU的库存流水记录，最多返回 200 条。
-     * @param skuId 商品SKU ID
-     * @return 库存流水列表，按ID降序
+     * 执行 queryJournal 方法。
+     * @param skuId skuId 参数
+     * @return 结果列表
      */
-    @Override
     public List<StockJournalPO> queryJournal(Long skuId) {
         return journalManager.list(
             Wrappers.lambdaQuery(StockJournalPO.class)
@@ -286,14 +345,13 @@ public class StockServiceImpl implements StockService {
                 .last("LIMIT " + QUERY_MAX_ROWS));
     }
 
+
     /**
-     * 商家视角查询库存流水，先校验库存归属当前商家，防止越权读取其他商家流水。
-     * @param skuId 商品SKU ID
-     * @param merchantId 商家ID（来自网关 X-Merchant-Id）
-     * @return 库存流水列表，按ID降序
-     * @throws BizException 当库存不存在或归属不匹配时
+     * 执行 queryJournal 方法。
+     * @param skuId skuId 参数
+     * @param merchantId merchantId 参数
+     * @return 结果列表
      */
-    @Override
     public List<StockJournalPO> queryJournal(Long skuId, Long merchantId) {
         checkMerchantOwnership(getStock(skuId), merchantId);
         return journalManager.list(
@@ -303,12 +361,24 @@ public class StockServiceImpl implements StockService {
                 .last("LIMIT " + QUERY_MAX_ROWS));
     }
 
+
     /**
-     * 平台分页查询全平台库存，可选按 SKU 过滤或仅查预警库存，按ID降序返回。
-     * @param dto 分页查询入参
-     * @return 库存分页结果
+     * 执行 queryJournalVO 方法。
+     * @param skuId skuId 参数
+     * @param merchantId merchantId 参数
+     * @return 结果列表
      */
     @Override
+    public List<StockJournalVO> queryJournalVO(Long skuId, Long merchantId) {
+        return queryJournal(skuId, merchantId).stream().map(StockJournalVO::from).toList();
+    }
+
+
+    /**
+     * 分页查询数据。
+     * @param dto dto 参数
+     * @return 处理结果
+     */
     public CursorPageVO<StockPO> page(StockPageDTO dto) {
         Long lastId = CursorUtils.decode(dto.getCursor());
         int limit = dto.getLimit();
@@ -327,31 +397,43 @@ public class StockServiceImpl implements StockService {
         return CursorPageVO.of(records, limit, StockPO::getId);
     }
 
+
     /**
-     * 全平台库存统计聚合，委托 Mapper 聚合后计算预警比例；无库存记录时返回零值。
-     * @return 库存统计VO
+     * 分页查询数据。
+     * @param dto dto 参数
+     * @return 处理结果
+     */
+    @Override
+    public CursorPageVO<StockVO> pageVO(StockPageDTO dto) {
+        return page(dto).map(StockVO::from);
+    }
+
+
+    /**
+     * 执行 platformStatistics 方法。
+     * @return 处理结果
      */
     @Override
     public StockStatisticsVO platformStatistics() {
-        StockStatisticsVO vo = stockMapper.statistics();
-        if (vo == null) {
+        StockStatisticsDTO result = stockManager.statistics();
+        if (result == null) {
             return new StockStatisticsVO(0L, 0L, 0L, 0L, BigDecimal.ZERO);
         }
-        long total = vo.getTotalSkuCount() == null ? 0L : vo.getTotalSkuCount();
-        long alert = vo.getAlertSkuCount() == null ? 0L : vo.getAlertSkuCount();
+        long total = result.getTotalSkuCount() == null ? 0L : result.getTotalSkuCount();
+        long alert = result.getAlertSkuCount() == null ? 0L : result.getAlertSkuCount();
         BigDecimal ratio = total == 0L
             ? BigDecimal.ZERO
             : BigDecimal.valueOf(alert).divide(BigDecimal.valueOf(total), 2, RoundingMode.HALF_UP);
-        vo.setAlertRatio(ratio);
-        return vo;
+        return new StockStatisticsVO(result.getTotalSkuCount(), result.getTotalAvailable(),
+            result.getTotalReserved(), result.getAlertSkuCount(), ratio);
     }
 
+
     /**
-     * 导出指定SKU的库存流水，最多 10000 行，按ID降序。
-     * @param skuId SKU标识
-     * @return 库存流水列表
+     * 执行 exportJournal 方法。
+     * @param skuId skuId 参数
+     * @return 结果列表
      */
-    @Override
     public List<StockJournalPO> exportJournal(Long skuId) {
         return journalManager.list(
             Wrappers.lambdaQuery(StockJournalPO.class)
@@ -360,14 +442,13 @@ public class StockServiceImpl implements StockService {
                 .last("LIMIT " + EXPORT_MAX_ROWS));
     }
 
+
     /**
-     * 商家视角导出库存流水，先校验库存归属当前商家，防止越权导出其他商家流水。
-     * @param skuId SKU标识
-     * @param merchantId 商家ID（来自网关 X-Merchant-Id）
-     * @return 库存流水列表，按ID降序，最多 10000 行
-     * @throws BizException 库存不存在或归属不匹配时
+     * 执行 exportJournal 方法。
+     * @param skuId skuId 参数
+     * @param merchantId merchantId 参数
+     * @return 结果列表
      */
-    @Override
     public List<StockJournalPO> exportJournal(Long skuId, Long merchantId) {
         checkMerchantOwnership(getStock(skuId), merchantId);
         return journalManager.list(
@@ -377,12 +458,23 @@ public class StockServiceImpl implements StockService {
                 .last("LIMIT " + EXPORT_MAX_ROWS));
     }
 
+
     /**
-     * 跨商家库存调拨：扣减源SKU库存、增加目标SKU库存、记录调拨流水与调拨记录。
-     * @param dto 调拨入参，含源/目标SKU、数量、原因、操作人
-     * @throws BizException 源/目标SKU相同、源库存不足或目标不存在时
+     * 执行 exportJournalVO 方法。
+     * @param skuId skuId 参数
+     * @param merchantId merchantId 参数
+     * @return 结果列表
      */
     @Override
+    public List<StockJournalVO> exportJournalVO(Long skuId, Long merchantId) {
+        return exportJournal(skuId, merchantId).stream().map(StockJournalVO::from).toList();
+    }
+
+
+    /**
+     * 执行 transfer 方法。
+     * @param dto dto 参数
+     */
     @Transactional(rollbackFor = Exception.class)
     public void transfer(StockTransferDTO dto) {
         if (dto.getFromSkuId().equals(dto.getToSkuId())) {
@@ -395,10 +487,10 @@ public class StockServiceImpl implements StockService {
             throw new BizException(StockCodeEnum.STOCK_TRANSFER_TARGET_NOT_FOUND);
         }
         // 源扣减与目标增加均走原子 SQL，任一未命中即回滚，避免并发下源库存被重复调拨
-        if (stockMapper.deductAvailable(dto.getFromSkuId(), dto.getQuantity()) <= 0) {
+        if (stockManager.deductAvailable(dto.getFromSkuId(), dto.getQuantity()) <= 0) {
             throw new BizException(StockCodeEnum.STOCK_TRANSFER_INSUFFICIENT);
         }
-        if (stockMapper.increaseAvailable(dto.getToSkuId(), dto.getQuantity()) <= 0) {
+        if (stockManager.increaseAvailable(dto.getToSkuId(), dto.getQuantity()) <= 0) {
             throw new BizException(StockCodeEnum.STOCK_TRANSFER_TARGET_NOT_FOUND);
         }
         from.setAvailable(from.getAvailable() - dto.getQuantity());
@@ -419,16 +511,16 @@ public class StockServiceImpl implements StockService {
 
         checkAlert(from);
         checkAlert(to);
-        log.info("stock transfer, from={}, to={}, quantity={}",
+        log.info("库存已调拨，from={}，to={}，quantity={}",
             dto.getFromSkuId(), dto.getToSkuId(), dto.getQuantity());
     }
 
+
     /**
-     * 分页查询调拨记录，可选按源/目标SKU过滤，按ID降序返回。
-     * @param dto 分页查询入参
-     * @return 调拨记录分页结果
+     * 执行 transferPage 方法。
+     * @param dto dto 参数
+     * @return 处理结果
      */
-    @Override
     public CursorPageVO<StockTransferPO> transferPage(StockTransferPageDTO dto) {
         Long lastId = CursorUtils.decode(dto.getCursor());
         int limit = dto.getLimit();
@@ -446,11 +538,22 @@ public class StockServiceImpl implements StockService {
         return CursorPageVO.of(records, limit, StockTransferPO::getId);
     }
 
+
     /**
-     * 下发库存盘点任务，查询当前可用库存作为期望数量。
-     * @param dto 创建入参，含SKU与操作人
-     * @return 盘点任务ID
-     * @throws BizException SKU库存不存在时
+     * 执行 transferPageVO 方法。
+     * @param dto dto 参数
+     * @return 处理结果
+     */
+    @Override
+    public CursorPageVO<StockTransferVO> transferPageVO(StockTransferPageDTO dto) {
+        return transferPage(dto).map(StockTransferVO::from);
+    }
+
+
+    /**
+     * 创建业务数据。
+     * @param dto dto 参数
+     * @return 业务数值
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -463,17 +566,17 @@ public class StockServiceImpl implements StockService {
         task.setRemark(dto.getRemark());
         task.setOperatorId(dto.getOperatorId());
         countTaskManager.save(task);
-        log.info("count task created, id={}, skuId={}, expected={}",
+        log.info("盘点任务已创建，id={}，skuId={}，expected={}",
             task.getId(), dto.getSkuId(), po.getAvailable());
         return task.getId();
     }
 
+
     /**
-     * 分页查询盘点任务，可选按SKU和状态过滤，按ID降序返回。
-     * @param dto 分页查询入参
-     * @return 盘点任务分页结果
+     * 统计业务数据。
+     * @param dto dto 参数
+     * @return 处理结果
      */
-    @Override
     public CursorPageVO<StockCountTaskPO> countTaskPage(StockCountTaskPageDTO dto) {
         Long lastId = CursorUtils.decode(dto.getCursor());
         int limit = dto.getLimit();
@@ -492,13 +595,23 @@ public class StockServiceImpl implements StockService {
         return CursorPageVO.of(records, limit, StockCountTaskPO::getId);
     }
 
+
     /**
-     * 完成盘点任务，计算差异并在有差异时调整库存。
-     * @param id 任务ID
-     * @param dto 完成入参，含实际盘点数量
-     * @throws BizException 任务不存在或非待盘点状态时
+     * 统计业务数据。
+     * @param dto dto 参数
+     * @return 处理结果
      */
     @Override
+    public CursorPageVO<StockCountTaskVO> countTaskPageVO(StockCountTaskPageDTO dto) {
+        return countTaskPage(dto).map(StockCountTaskVO::from);
+    }
+
+
+    /**
+     * 执行 completeCountTask 方法。
+     * @param id id 参数
+     * @param dto dto 参数
+     */
     @Transactional(rollbackFor = Exception.class)
     public void completeCountTask(Long id, StockCountTaskCompleteDTO dto) {
         StockCountTaskPO task = countTaskManager.getById(id);
@@ -524,17 +637,16 @@ public class StockServiceImpl implements StockService {
         if (diffQuantity != 0) {
             adjustStock(task.getSkuId(), diffQuantity, "盘点差异调整");
         }
-        log.info("count task completed, id={}, skuId={}, diff={}",
+        log.info("盘点任务已完成，id={}，skuId={}，diff={}",
             id, task.getSkuId(), diffQuantity);
     }
 
+
     /**
-     * 取消盘点任务，校验状态为PENDING后推进为CANCELLED。
-     * @param id 任务ID
-     * @param operatorId 操作人ID
-     * @throws BizException 任务不存在或非待盘点状态时
+     * 执行 cancelCountTask 方法。
+     * @param id id 参数
+     * @param operatorId operatorId 参数
      */
-    @Override
     @Transactional(rollbackFor = Exception.class)
     public void cancelCountTask(Long id, Long operatorId) {
         StockCountTaskPO task = countTaskManager.getById(id);
@@ -550,14 +662,14 @@ public class StockServiceImpl implements StockService {
             throw new BizException(StockCodeEnum.STOCK_COUNT_TASK_NOT_PENDING);
         }
         task.setStatus(StockCountTaskStatusEnum.CANCELLED.intCode());
-        log.info("count task cancelled, id={}, operator={}", id, operatorId);
+        log.info("盘点任务已取消，id={}，operator={}", id, operatorId);
     }
 
+
     /**
-     * 查询异常库存记录（available &lt; 0 或 reserved &lt; 0），最多返回 200 条。
-     * @return 异常库存列表
+     * 查询列表数据。
+     * @return 结果列表
      */
-    @Override
     public List<StockPO> listAbnormalStock() {
         return stockManager.list(
             Wrappers.lambdaQuery(StockPO.class)
@@ -567,14 +679,23 @@ public class StockServiceImpl implements StockService {
                 .last("LIMIT " + QUERY_MAX_ROWS));
     }
 
+
     /**
-     * 纠正指定SKU的库存至指定值，记录CORRECT类型流水。
-     * @param skuId SKU标识
-     * @param correctQuantity 纠正后的目标可用库存值，必须 &gt;= 0
-     * @param reason 纠正原因
-     * @throws BizException 当库存不存在或纠正数量非法时
+     * 查询列表数据。
+     * @return 结果列表
      */
     @Override
+    public List<StockVO> listAbnormalStockVO() {
+        return listAbnormalStock().stream().map(StockVO::from).toList();
+    }
+
+
+    /**
+     * 执行 correctStock 方法。
+     * @param skuId skuId 参数
+     * @param correctQuantity correctQuantity 参数
+     * @param reason reason 参数
+     */
     @Transactional(rollbackFor = Exception.class)
     public void correctStock(Long skuId, Long correctQuantity, String reason) {
         if (correctQuantity == null || correctQuantity < 0) {
@@ -584,12 +705,21 @@ public class StockServiceImpl implements StockService {
         long oldAvailable = po.getAvailable();
         long delta = correctQuantity - oldAvailable;
         po.setAvailable(correctQuantity);
-        stockManager.updateById(po);
+        if (!stockManager.updateById(po)) {
+            throw new BizException(StockCodeEnum.STOCK_CONCURRENT_UPDATE);
+        }
 
         recordJournal(skuId, delta, StockJournalTypeEnum.CORRECT, reason, null);
-        log.info("stock corrected, skuId={}, from={}, to={}", skuId, oldAvailable, correctQuantity);
+        log.info("库存已修正，skuId={}，from={}，to={}", skuId, oldAvailable, correctQuantity);
     }
 
+
+    /**
+     * 获取库存。
+     * @param skuId SKU ID
+     * @return 查询结果
+     * @throws BizException 业务校验失败时抛出
+     */
     private StockPO getStock(Long skuId) {
         StockPO po = stockManager.getOne(
             Wrappers.lambdaQuery(StockPO.class).eq(StockPO::getSkuId, skuId));
@@ -599,11 +729,11 @@ public class StockServiceImpl implements StockService {
         return po;
     }
 
+
     /**
-     * 查询库存记录；不存在则创建初始记录（可用 0）。仅用于商家调整/设阈值这类
-     * 允许"首次建立库存"的入口；订单预占等场景仍用 getStock 强制要求记录存在。
-     * ponytail: 简单 select-then-insert，商家手动操作低频，并发冲突概率可忽略；
-     * 若后续出现并发建记录冲突，再引入 skuId 唯一索引 + 冲突重查。
+     * 获取Or创建库存。
+     * @param skuId SKU ID
+     * @return 查询结果
      */
     private StockPO getOrCreateStock(Long skuId) {
         StockPO po = stockManager.getOne(
@@ -619,9 +749,12 @@ public class StockServiceImpl implements StockService {
         return po;
     }
 
+
     /**
-     * 商家视角获取库存记录：存在时校验归属，不存在时以该商家归属创建初始记录。
-     * 存量 merchant_id 为空的历史记录视为无归属，不允许商家认领（由运营脚本回填）。
+     * 获取Or创建商户库存。
+     * @param skuId SKU ID
+     * @param merchantId 商户 ID
+     * @return 查询结果
      */
     private StockPO getOrCreateMerchantStock(Long skuId, Long merchantId) {
         StockPO po = stockManager.getOne(
@@ -639,9 +772,12 @@ public class StockServiceImpl implements StockService {
         return po;
     }
 
+
     /**
-     * 校验库存归属：无归属（存量数据未回填）或归属商家与当前商家不一致时，
-     * 统一按 SKU 不存在抛错，避免向越权商家泄露 SKU 存在性与归属信息。
+     * 校验商户Ownership。
+     * @param po 持久化对象
+     * @param merchantId 商户 ID
+     * @throws BizException 业务校验失败时抛出
      */
     private void checkMerchantOwnership(StockPO po, Long merchantId) {
         if (po.getMerchantId() == null || !po.getMerchantId().equals(merchantId)) {
@@ -649,6 +785,16 @@ public class StockServiceImpl implements StockService {
         }
     }
 
+
+    /**
+     * 处理记录Journal。
+     * @param skuId SKU ID
+     * @param quantity 数量
+     * @param type 类型
+     * @param reason 原因
+     * @param orderNo 订单编号
+     * @throws BizException 业务校验失败时抛出
+     */
     private void recordJournal(Long skuId, Long quantity, StockJournalTypeEnum type,
                                String reason, String orderNo) {
         StockJournalPO journal = new StockJournalPO();
@@ -657,12 +803,19 @@ public class StockServiceImpl implements StockService {
         journal.setType(type.intCode());
         journal.setReason(reason);
         journal.setOrderNo(orderNo);
-        journalManager.save(journal);
+        if (!journalManager.save(journal)) {
+            throw new BizException(StockCodeEnum.STOCK_JOURNAL_SAVE_FAIL);
+        }
     }
 
+
+    /**
+     * 校验Alert。
+     * @param po 持久化对象
+     */
     private void checkAlert(StockPO po) {
         if (po.getAlertThreshold() != null && po.getAvailable() <= po.getAlertThreshold()) {
-            log.warn("stock alert, skuId={}, available={}, threshold={}",
+            log.warn("库存告警，skuId={}，available={}，threshold={}",
                 po.getSkuId(), po.getAvailable(), po.getAlertThreshold());
         }
     }

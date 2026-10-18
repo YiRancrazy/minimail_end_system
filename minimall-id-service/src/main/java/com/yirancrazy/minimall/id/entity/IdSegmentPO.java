@@ -5,12 +5,13 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import com.yirancrazy.minimall.common.base.BasePO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: IdSegment持久化对象，映射idsegment表
+ * @Description: IdSegmentPO 持久化对象，对应数据库表。
  * @Version: 1.0
- * @DateTime: 2026/07/31
- */
+ * @DateTime: 2026/10/16
+ **/
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName("t_id_segment")

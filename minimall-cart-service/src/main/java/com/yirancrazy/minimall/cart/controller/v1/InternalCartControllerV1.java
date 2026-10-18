@@ -8,27 +8,32 @@ import com.yirancrazy.minimall.cart.dto.CartCountDTO;
 import com.yirancrazy.minimall.cart.service.CartService;
 import com.yirancrazy.minimall.common.result.Result;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 购物车内部控制器，提供Cart相关内部接口，供网关内 CartFeignClient 调用
- * @Version: 1.1
- * @DateTime: 2026/07/31
- */
+ * @Description: InternalCartControllerV1 控制器，提供相关接口。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 @RestController
 @RequestMapping("/internal/cart")
 public class InternalCartControllerV1 {
 
     private final CartService cartService;
 
+    /**
+     * 构造 InternalCartControllerV1 实例。
+     * @param cartService cartService 参数
+     */
     public InternalCartControllerV1(CartService cartService) {
         this.cartService = cartService;
     }
 
+
     /**
-     * 统计指定用户的购物车条目数量。
-     *
-     * @param dto 查询条件
-     * @return 该用户购物车条目数量
+     * 统计业务数据。
+     * @param dto dto 参数
+     * @return 统一响应结果
      */
     @GetMapping("/count")
     public Result<Long> count(@Valid CartCountDTO dto) {

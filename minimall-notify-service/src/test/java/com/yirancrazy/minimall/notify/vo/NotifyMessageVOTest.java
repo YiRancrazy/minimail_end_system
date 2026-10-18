@@ -7,18 +7,19 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import com.yirancrazy.minimall.notify.entity.NotifyMessagePO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: NotifyMessageVO 单元测试，覆盖 from 转换方法的字段映射与可选字段空值场景。
+ * @Description: NotifyMessageVOTest 单元测试。
  * @Version: 1.0
- * @DateTime: 2026/08/04
+ * @DateTime: 2026/10/16
  **/
 public class NotifyMessageVOTest {
 
+
     /**
-     * 验证 from 方法正确映射 NotifyMessagePO 的所有字段。
+     * 执行 from_mapsAllFields 方法。
      */
-    @Test
     public void from_mapsAllFields() {
         NotifyMessagePO po = new NotifyMessagePO();
         po.setId(1L);
@@ -44,10 +45,10 @@ public class NotifyMessageVOTest {
         assertEquals(now, vo.getCreateTime());
     }
 
+
     /**
-     * 验证 from 方法在可选字段为 null 时正确映射已设置的字段并保留空值。
+     * 执行 from_nullOptionalFields 方法。
      */
-    @Test
     public void from_nullOptionalFields() {
         NotifyMessagePO po = new NotifyMessagePO();
         po.setId(1L);

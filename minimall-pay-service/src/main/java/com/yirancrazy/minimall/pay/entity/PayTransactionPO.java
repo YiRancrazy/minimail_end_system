@@ -10,11 +10,12 @@ import com.yirancrazy.minimall.common.base.BasePO;
 import com.yirancrazy.minimall.common.security.EncryptedStringTypeHandler;
 
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 持久化对象，对应数据库表结构。channelResponse 为支付宝回调报文，AES-256-GCM 加密存储。
- * @Version: 1.1
- * @DateTime: 2026/08/13
+ * @Description: PayTransactionPO 持久化对象，对应数据库表。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
  **/
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -23,6 +24,7 @@ public class PayTransactionPO extends BasePO {
     private String paymentNo;
     private String tradeNo;
     private String orderNo;
+    private String activeOrderNo;
     private Long userId;
     private Long merchantId;
     private BigDecimal amount;

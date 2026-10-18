@@ -10,14 +10,18 @@ import org.springframework.stereotype.Service;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 数据访问层，继承 IService，提供基础 CRUD 操作。
+ * @Description: Manager 管理器接口，封装数据访问能力。
  * @Version: 1.0
- * @DateTime: 2026/7/31
+ * @DateTime: 2026/10/16
  **/
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Service
 public @interface Manager {
+    /**
+     * 获取管理器名称。
+     * @return 管理器名称
+     */
     String value() default "";
 }

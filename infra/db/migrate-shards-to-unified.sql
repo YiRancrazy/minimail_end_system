@@ -1,7 +1,7 @@
 -- ============================================================
 -- 薄荷商城（mini_mail_system）分库 → 统一库迁移脚本
 -- 用途：将原 11 个分库（auth_db / user_db / merchant_db / goods_db
---       / cart_db / stock_db / pay_db / order_db / notify_db / id_db）
+
 --       中的历史数据迁移到 minimall_db
 -- 前置：所有分库仍在同一 MySQL 实例中存在，且 minimall_db 已由
 --       V1__init_minimall.sql 完成表结构初始化

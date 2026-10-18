@@ -7,18 +7,19 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import com.yirancrazy.minimall.goods.entity.SpuPO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: SpuVO 单元测试，覆盖 from 转换方法的字段映射与空值场景。
+ * @Description: SpuVOTest 单元测试。
  * @Version: 1.0
- * @DateTime: 2026/08/04
+ * @DateTime: 2026/10/16
  **/
 public class SpuVOTest {
 
+
     /**
-     * 验证 from 方法正确映射 SpuPO 的所有字段。
+     * 执行 from_mapsAllFields 方法。
      */
-    @Test
     public void from_mapsAllFields() {
         SpuPO po = new SpuPO();
         po.setId(1L);
@@ -49,10 +50,10 @@ public class SpuVOTest {
         assertEquals(createTime, vo.getCreateTime());
     }
 
+
     /**
-     * 验证 from 方法在 PO 字段为 null 时保留 null 值。
+     * 执行 from_nullFields 方法。
      */
-    @Test
     public void from_nullFields() {
         SpuPO po = new SpuPO();
         po.setId(1L);

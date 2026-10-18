@@ -4,44 +4,46 @@ import lombok.Data;
 import com.yirancrazy.minimall.common.util.MinioUtil;
 import com.yirancrazy.minimall.order.entity.OrderItemPO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 订单商品明细VO，用于订单详情页展示商品名称、图片、单价与数量。
+ * @Description: OrderItemVO 视图对象。
  * @Version: 1.0
- * @DateTime: 2026/08/20
+ * @DateTime: 2026/10/16
  **/
 @Data
 public class OrderItemVO {
 
     private Long spuId;
     private Long skuId;
-    /** 商品标题（SPU 标题，出参实时解析，非下单快照） */
+
     private String spuName;
-    /** 商品名称（SKU 快照名） */
+
     private String skuName;
-    /** 商品主图地址 */
+
     private String skuImageUrl;
     private Integer quantity;
-    /** 商品单价（元），字符串避免前端浮点精度问题 */
+
     private String unitPrice;
-    /** 商品行小计（元），字符串 */
+
     private String amount;
 
+
     /**
-     * 将订单明细持久化对象转换为 VO，金额一律转换为字符串避免浮点精度问题。
-     * @param po 订单明细持久化对象
-     * @return 订单明细VO
+     * 执行 from 方法。
+     * @param po po 参数
+     * @return 处理结果
      */
     public static OrderItemVO from(OrderItemPO po) {
         return from(po, null);
     }
 
+
     /**
-     * 与单参版本一致，额外将商品图 skuImageUrl 的 objectKey 解析为可访问 URL（minioUtil 为 null 时原样返回）。
-     * 落库的 skuImageUrl 为快照 objectKey，须在出参边界实时转预签名，避免过期 URL 被持久化。
-     * @param po 订单明细持久化对象
-     * @param minioUtil 对象存储工具，用于生成商品图预签名 URL
-     * @return 订单明细VO
+     * 执行 from 方法。
+     * @param po po 参数
+     * @param minioUtil minioUtil 参数
+     * @return 处理结果
      */
     public static OrderItemVO from(OrderItemPO po, MinioUtil minioUtil) {
         OrderItemVO vo = new OrderItemVO();

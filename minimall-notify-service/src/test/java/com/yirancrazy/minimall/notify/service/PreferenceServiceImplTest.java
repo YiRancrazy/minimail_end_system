@@ -26,9 +26,13 @@ import com.yirancrazy.minimall.notify.manager.PreferenceManager;
 import com.yirancrazy.minimall.notify.service.impl.PreferenceServiceImpl;
 import com.yirancrazy.minimall.notify.vo.PreferenceVO;
 
+
 /**
- * PreferenceServiceImpl 单元测试，覆盖列表查询、批量更新、渠道校验的正常、失败、边界路径。
- */
+ * @Author: yirancrazy@gmail.com
+ * @Description: PreferenceServiceImplTest 单元测试。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 public class PreferenceServiceImplTest {
 
     private PreferenceManager preferenceManager;
@@ -57,10 +61,10 @@ public class PreferenceServiceImplTest {
         service = new PreferenceServiceImpl(preferenceManager);
     }
 
+
     /**
-     * 验证 listByUser 在无存储偏好时按默认值返回全量类别。
+     * 查询列表数据。
      */
-    @Test
     public void list_returns_defaults_when_empty() {
         List<PreferenceVO> list = service.listByUser(1L);
 
@@ -72,10 +76,10 @@ public class PreferenceServiceImplTest {
         }
     }
 
+
     /**
-     * 验证 listByUser 合并已存储偏好与缺失类别的默认值。
+     * 查询列表数据。
      */
-    @Test
     public void list_merges_stored_and_default() {
         PreferencePO orderPref = buildPreference(1L, "ORDER", 1, 0, 1);
         when(preferenceManager.list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class)))
@@ -90,10 +94,10 @@ public class PreferenceServiceImplTest {
         assertEquals(1, payVo.getSiteEnabled());
     }
 
+
     /**
-     * 验证 updateBatch 在不存在偏好记录时新建。
+     * 更新业务数据。
      */
-    @Test
     public void update_creates_new_when_not_exists() {
         PreferenceUpdateDTO dto = new PreferenceUpdateDTO();
         dto.setCategoryCode("ORDER");
@@ -105,10 +109,10 @@ public class PreferenceServiceImplTest {
         verify(preferenceManager).save(any(PreferencePO.class));
     }
 
+
     /**
-     * 验证 updateBatch 在已存在偏好记录时按渠道修改并 updateById。
+     * 更新业务数据。
      */
-    @Test
     public void update_modifies_existing() {
         PreferencePO existing = buildPreference(1L, "ORDER", 1, 1, 1);
         when(preferenceManager.getOne(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class)))
@@ -126,10 +130,10 @@ public class PreferenceServiceImplTest {
         verify(preferenceManager).updateById(existing);
     }
 
+
     /**
-     * 验证非法类别抛 PREFERENCE_CATEGORY_INVALID。
+     * 更新业务数据。
      */
-    @Test
     public void update_throws_on_invalid_category() {
         PreferenceUpdateDTO dto = new PreferenceUpdateDTO();
         dto.setCategoryCode("UNKNOWN");
@@ -140,10 +144,10 @@ public class PreferenceServiceImplTest {
         verify(preferenceManager, never()).save(any(PreferencePO.class));
     }
 
+
     /**
-     * 验证 enabled 字段被规范化为 0/1。
+     * 更新业务数据。
      */
-    @Test
     public void update_normalizes_enabled_value() {
         PreferenceUpdateDTO dto = new PreferenceUpdateDTO();
         dto.setCategoryCode("PAYMENT");
@@ -155,18 +159,18 @@ public class PreferenceServiceImplTest {
         verify(preferenceManager).save(any(PreferencePO.class));
     }
 
+
     /**
-     * 验证 isChannelEnabled 无记录时默认返回 true。
+     * 执行 is_enabled_returns_true_when_not_stored 方法。
      */
-    @Test
     public void is_enabled_returns_true_when_not_stored() {
         assertTrue(service.isChannelEnabled(1L, "ORDER", "SITE"));
     }
 
+
     /**
-     * 验证 isChannelEnabled 按存储偏好判定。
+     * 执行 is_enabled_respects_stored_value 方法。
      */
-    @Test
     public void is_enabled_respects_stored_value() {
         PreferencePO existing = buildPreference(1L, "ORDER", 0, 1, 1);
         when(preferenceManager.getOne(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class)))
@@ -176,18 +180,18 @@ public class PreferenceServiceImplTest {
         assertTrue(service.isChannelEnabled(1L, "ORDER", "SMS"));
     }
 
+
     /**
-     * 验证非法渠道抛 PREFERENCE_CHANNEL_INVALID。
+     * 执行 is_enabled_throws_on_invalid_channel 方法。
      */
-    @Test
     public void is_enabled_throws_on_invalid_channel() {
         assertThrows(BizException.class, () -> service.isChannelEnabled(1L, "ORDER", "PUSH"));
     }
 
+
     /**
-     * 验证 updateBatch 处理多条记录混合场景。
+     * 更新业务数据。
      */
-    @Test
     public void update_batch_handles_multiple_items() {
         when(preferenceManager.getOne(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class)))
                 .thenReturn(null);

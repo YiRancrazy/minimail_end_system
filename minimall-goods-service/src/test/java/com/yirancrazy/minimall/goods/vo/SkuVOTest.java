@@ -8,18 +8,19 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import com.yirancrazy.minimall.goods.entity.SkuPO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: SkuVO 单元测试，覆盖 from 转换方法的字段映射与空值场景。
+ * @Description: SkuVOTest 单元测试。
  * @Version: 1.0
- * @DateTime: 2026/08/04
+ * @DateTime: 2026/10/16
  **/
 public class SkuVOTest {
 
+
     /**
-     * 验证 from 方法正确映射 SkuPO 的所有字段。
+     * 执行 from_mapsAllFields 方法。
      */
-    @Test
     public void from_mapsAllFields() {
         SkuPO po = new SkuPO();
         po.setId(1L);
@@ -41,10 +42,10 @@ public class SkuVOTest {
         assertEquals(now, vo.getCreateTime());
     }
 
+
     /**
-     * 验证 from 方法在 PO 字段为 null 时保留 null 值。
+     * 执行 from_nullFields 方法。
      */
-    @Test
     public void from_nullFields() {
         SkuPO po = new SkuPO();
         po.setId(1L);

@@ -4,11 +4,12 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import com.yirancrazy.minimall.common.dto.CursorPageDTO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 用户端商品分页查询入参，仅检索在售商品，支持关键词与分类过滤
- * @Version: 2.0
- * @DateTime: 2026/08/04
+ * @Description: GoodsPageDTO 数据传输对象。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
  **/
 @Data
 @EqualsAndHashCode(callSuper = true)

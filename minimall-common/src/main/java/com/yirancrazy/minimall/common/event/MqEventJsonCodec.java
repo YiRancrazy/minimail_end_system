@@ -4,58 +4,59 @@ import java.io.IOException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+
 /**
- * JSON codec for RocketMQ message bodies. Tags use event simpleName;
- * keys use the same convention.
- */
+ * @Author: yirancrazy@gmail.com
+ * @Description: MqEventJsonCodec 类型，承载相关业务能力。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 public final class MqEventJsonCodec {
     private static final ObjectMapper M = new ObjectMapper().findAndRegisterModules();
 
+    /**
+     * 构造 MqEventJsonCodec 实例。
+     */
     private MqEventJsonCodec() {
     }
 
+
     /**
-     * Serialize the given event object into a JSON byte array suitable for use
-     * as a RocketMQ message body. Jackson modules are auto-registered.
-     *
-     * @param event the domain event to serialize; must not be {@code null}
-     * @return the UTF-8 JSON encoding of {@code event}
-     * @throws IllegalStateException if Jackson fails to serialize the event
+     * 执行 encode 方法。
+     * @param event event 参数
+     * @return 结果列表
      */
     public static byte[] encode(Object event) {
         try {
             return M.writeValueAsBytes(event);
         }
         catch (JsonProcessingException e) {
-            throw new IllegalStateException("encode failed: " + event.getClass(), e);
+            throw new IllegalStateException("事件编码失败：" + event.getClass(), e);
         }
     }
 
+
     /**
-     * Deserialize the given RocketMQ message body into an instance of the
-     * target event type.
-     *
-     * @param body the raw message bytes received from RocketMQ
-     * @param type the target event {@link Class} to decode into
-     * @param <T> the target event type
-     * @return a populated instance of {@code type}
-     * @throws IllegalStateException if Jackson fails to read or bind the body
+     * 执行 decode 方法。
+     * @param <T> 泛型参数
+     * @param body body 参数
+     * @param type type 参数
+     * @return 处理结果
      */
     public static <T> T decode(byte[] body, Class<T> type) {
         try {
             return M.readValue(body, type);
         }
         catch (IOException e) {
-            throw new IllegalStateException("decode failed: " + type, e);
+            throw new IllegalStateException("事件解码失败：" + type, e);
         }
     }
 
+
     /**
-     * Derive the RocketMQ routing tag for an event type. The convention is the
-     * simple class name, matching the producer side in {@link #encode(Object)}.
-     *
-     * @param eventType the event {@link Class} to derive the tag for
-     * @return the simple class name of {@code eventType}, used as the RocketMQ tag
+     * 执行 tagFor 方法。
+     * @param eventType eventType 参数
+     * @return 处理结果
      */
     public static String tagFor(Class<?> eventType) {
         return eventType.getSimpleName();

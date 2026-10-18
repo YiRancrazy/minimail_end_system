@@ -8,12 +8,13 @@ import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.api.dto.order.OrderPaidDTO;
 import com.yirancrazy.minimall.notify.service.NotifyService;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: OrderPaid监听器，监听OrderPaid相关事件并落库站内信
- * @Version: 1.2
- * @DateTime: 2026/08/03
- */
+ * @Description: OrderPaidListener 类型，承载相关业务能力。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 @Slf4j
 @Component
 public class OrderPaidListener {
@@ -23,17 +24,21 @@ public class OrderPaidListener {
     private final NotifyService notifyService;
     private final StringRedisTemplate redis;
 
+    /**
+     * 构造 OrderPaidListener 实例。
+     * @param notifyService notifyService 参数
+     * @param redis redis 参数
+     */
     public OrderPaidListener(NotifyService notifyService, StringRedisTemplate redis) {
         this.notifyService = notifyService;
         this.redis = redis;
     }
 
+
     /**
-     * 订阅 in-process LocalEventBus（订单服务在同一进程 publish 时才会触发）。
-     * 双通道去重：与 OrderPaidMqConsumer 共享同一 SETNX 幂等键 notify:order:paid:{orderId}，
-     * 本地事件与 MQ 同时到达时仅第一个通道落库，第二个被 SETNX 跳过；落库失败删除幂等键允许重投。
+     * 执行 onOrderPaid 方法。
+     * @param event event 参数
      */
-    @EventListener
     public void onOrderPaid(OrderPaidDTO event) {
         if (event == null || event.getOrderId() == null) {
             return;
@@ -41,14 +46,14 @@ public class OrderPaidListener {
         String key = "notify:order:paid:" + event.getOrderId();
         Boolean first = redis.opsForValue().setIfAbsent(key, "1", IDEMPOTENT_TTL);
         if (Boolean.FALSE.equals(first)) {
-            log.info("duplicate order paid event skipped, orderId={}", event.getOrderId());
+            log.info("重复订单支付事件已跳过，orderId={}", event.getOrderId());
             return;
         }
         try {
             String title = "订单支付成功";
             String content = "订单 " + event.getOrderId() + " 已支付，金额 " + event.getAmount();
             notifyService.push(event.getUserId(), title, content);
-            log.info("notified user {} of order {}", event.getUserId(), event.getOrderId());
+            log.info("已通知用户 {} 订单 {}", event.getUserId(), event.getOrderId());
         }
         catch (Exception e) {
             // DB 落库失败时删除幂等键：否则事件重投会被 SETNX 挡掉，支付成功通知永久丢失

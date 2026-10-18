@@ -4,107 +4,185 @@ import java.math.BigDecimal;
 import java.util.List;
 import com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
+import com.yirancrazy.minimall.pay.dto.AlipayCallbackDTO;
 import com.yirancrazy.minimall.pay.dto.PayCallbackDTO;
 import com.yirancrazy.minimall.pay.dto.PayPageDTO;
 import com.yirancrazy.minimall.pay.dto.PayStatementDTO;
 import com.yirancrazy.minimall.pay.entity.PayTransactionPO;
 import com.yirancrazy.minimall.pay.vo.PayStatementVO;
 import com.yirancrazy.minimall.pay.vo.PayStatisticsVO;
+import com.yirancrazy.minimall.pay.vo.PayTransactionVO;
 import com.yirancrazy.minimall.pay.vo.PaymentParamsVO;
 import com.yirancrazy.minimall.pay.vo.RefundVO;
 
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 业务服务接口，定义核心业务逻辑。
- * @Version: 1.1
- * @DateTime: 2026/7/31
+ * @Description: PayService 服务接口，定义相关业务能力。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
  **/
 public interface PayService {
+
     /**
-     * 创建支付流水，channel 为空时默认 ALIPAY，不支持渠道抛出 PAY_CHANNEL_UNSUPPORTED。
-     * @param orderNo 订单号
-     * @param userId 用户ID
-     * @param merchantId 商户ID
-     * @param amount 支付金额
-     * @param channel 支付渠道 code，null 默认 ALIPAY
-     * @return 支付流水ID
+     * 创建业务数据。
+     * @param orderNo orderNo 参数
+     * @param userId userId 参数
+     * @param merchantId merchantId 参数
+     * @param amount amount 参数
+     * @param channel channel 参数
+     * @return 业务数值
      */
     Long createPayment(String orderNo, Long userId, Long merchantId, BigDecimal amount, Integer channel);
 
+
     /**
-     * 处理支付回调。
-     * @param dto 支付回调DTO
+     * 处理业务事件。
+     * @param dto dto 参数
      */
     void handleCallback(PayCallbackDTO dto);
 
+
     /**
-     * 创建退款。
-     * @param dto 退款创建DTO
-     * @return 退款VO
+     * 执行 platformPage 方法。
+     * @param dto dto 参数
+     * @return 处理结果
+     */
+    CursorPageVO<PayTransactionPO> platformPage(PayPageDTO dto);
+    /**
+     * 处理业务事件。
+     * @param dto dto 参数
+     * @return 是否处理成功
+     */
+    boolean handleAlipayCallback(AlipayCallbackDTO dto);
+
+
+    /**
+     * 执行 exportTransactions 方法。
+     * @param dto dto 参数
+     * @return 结果列表
+     */
+    List<PayTransactionPO> exportTransactions(PayPageDTO dto);
+    /**
+     * 创建业务数据。
+     * @param dto dto 参数
+     * @return 处理结果
      */
     RefundVO createRefund(RefundCreateDTO dto);
 
-    /**
-     * 按订单号查询支付流水，不存在时抛出 PAY_NOT_FOUND。
-     * @param orderNo 订单号
-     * @return 支付流水实体
-     */
-    PayTransactionPO getByOrderNo(String orderNo);
+
 
     /**
-     * 按支付单号查询支付参数，供前端调起渠道 SDK，不存在时抛出 PAY_NOT_FOUND。
-     * @param paymentNo 支付单号
-     * @return 支付参数VO
+     * 获取相关数据。
+     * @param orderNo orderNo 参数
+     * @param userId userId 参数
+     * @return 处理结果
      */
-    PaymentParamsVO getPaymentParams(String paymentNo);
+    PayTransactionPO getByOrderNo(String orderNo, Long userId);
+    /**
+     * 获取相关数据。
+     * @param orderNo orderNo 参数
+     * @param userId userId 参数
+     * @return 处理结果
+     */
+    PayTransactionVO getStatusVO(String orderNo, Long userId);
+
 
     /**
-     * 商家资金流水游标分页查询，merchantId 强制绑定，支持按状态与时间范围过滤。
-     * @param merchantId 商家ID
-     * @param dto 游标分页查询入参
-     * @return 支付流水游标分页结果
+     * 获取相关数据。
+     * @param paymentNo paymentNo 参数
+     * @param userId userId 参数
+     * @return 处理结果
+     */
+    PaymentParamsVO getPaymentParams(String paymentNo, Long userId);
+
+
+
+    /**
+     * 分页查询数据。
+     * @param merchantId merchantId 参数
+     * @param dto dto 参数
+     * @return 处理结果
      */
     CursorPageVO<PayTransactionPO> page(Long merchantId, PayPageDTO dto);
-
     /**
-     * 平台全平台交易流水游标分页查询，不绑定 merchantId。
-     * @param dto 游标分页查询入参
-     * @return 支付流水游标分页结果
+     * 分页查询数据。
+     * @param merchantId merchantId 参数
+     * @param dto dto 参数
+     * @return 处理结果
      */
-    CursorPageVO<PayTransactionPO> platformPage(PayPageDTO dto);
+    CursorPageVO<PayTransactionVO> pageVO(Long merchantId, PayPageDTO dto);
+
+
 
     /**
-     * 资金统计聚合查询，merchantId 为空时统计全平台。
-     * @param merchantId 商家ID，null 表示全平台
-     * @param dto 分页查询入参（复用时间范围字段）
-     * @return 统计VO
+     * 执行 platformPageVO 方法。
+     * @param dto dto 参数
+     * @return 处理结果
+     */
+    CursorPageVO<PayTransactionVO> platformPageVO(PayPageDTO dto);
+
+
+    /**
+     * 执行 statistics 方法。
+     * @param merchantId merchantId 参数
+     * @param dto dto 参数
+     * @return 处理结果
      */
     PayStatisticsVO statistics(Long merchantId, PayPageDTO dto);
 
+
     /**
-     * 异常支付冻结，将支付单状态置为 FROZEN，不存在时抛出 PAY_NOT_FOUND。
-     * @param paymentNo 支付单号
+     * 执行 freeze 方法。
+     * @param paymentNo paymentNo 参数
      */
     void freeze(String paymentNo);
 
-    /**
-     * 导出全平台交易流水对账单，最多 10000 行。
-     * @param dto 查询入参（复用状态与时间范围字段）
-     * @return 支付流水列表
-     */
-    List<PayTransactionPO> exportTransactions(PayPageDTO dto);
+
 
     /**
-     * 对账单聚合查询，按状态分组统计交易笔数与金额。
-     * @param dto 对账单查询入参（含起止日期）
-     * @return 对账单 VO
+     * 执行 exportTransactionVOs 方法。
+     * @param dto dto 参数
+     * @return 结果列表
+     */
+    List<PayTransactionVO> exportTransactionVOs(PayPageDTO dto);
+
+
+    /**
+     * 执行 exportTransactionVOs 方法。
+     * @param startDate startDate 参数
+     * @param endDate endDate 参数
+     * @return 结果列表
+     */
+    List<PayTransactionVO> exportTransactionVOs(String startDate, String endDate);
+
+
+    /**
+     * 执行 statement 方法。
+     * @param dto dto 参数
+     * @return 处理结果
      */
     PayStatementVO statement(PayStatementDTO dto);
 
+
     /**
-     * 扫描支付成功但订单状态仍为 PENDING 的流水（paid_at + 30s < NOW()），主动调 Order RPC 兜底推进。
-     * @return 处理的流水数
+     * 扫描并处理待办数据。
+     * @return 业务数值
      */
     int scanPaidButOrderPending();
+
+
+    /**
+     * 扫描并处理待办数据。
+     * @return 业务数值
+     */
+    int scanUnnotifiedRefunds();
+
+
+    /**
+     * 扫描并处理待办数据。
+     * @return 业务数值
+     */
+    int scanPendingRefunds();
 }

@@ -35,61 +35,65 @@ import com.yirancrazy.minimall.notify.dto.NotifySystemAlertDTO;
 import com.yirancrazy.minimall.notify.dto.NotifyViolationWarningDTO;
 import com.yirancrazy.minimall.notify.dto.SystemAlertPageDTO;
 import com.yirancrazy.minimall.notify.entity.NotifyMessagePO;
+import com.yirancrazy.minimall.notify.gateway.NotifyPushGateway;
 import com.yirancrazy.minimall.notify.manager.NotifyManager;
 import com.yirancrazy.minimall.notify.service.impl.NotifyServiceImpl;
-import com.yirancrazy.minimall.notify.sse.SseHub;
+
 
 /**
- * NotifyServiceImpl 单元测试，覆盖站内信发送、分页、已读标记、删除与广播的正常及异常路径。
- */
+ * @Author: yirancrazy@gmail.com
+ * @Description: NotifyServiceImplTest 单元测试。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 public class NotifyServiceImplTest {
 
     private NotifyManager notifyManager;
-    private SseHub sseHub;
+    private NotifyPushGateway notifyPushGateway;
     private NotifyServiceImpl service;
 
     @BeforeEach
     void setUp() {
-        // Initialize TableInfo so LambdaUpdateWrapper can resolve lambda cache
+        // 初始化 TableInfo，便于 LambdaUpdateWrapper 解析 lambda 缓存
         MybatisConfiguration configuration = new MybatisConfiguration();
         MapperBuilderAssistant assistant = new MapperBuilderAssistant(configuration, "");
         assistant.setCurrentNamespace("com.yirancrazy.minimall.notify.mapper.NotifyMessageMapper");
         TableInfoHelper.initTableInfo(assistant, NotifyMessagePO.class);
 
         notifyManager = mock(NotifyManager.class);
-        sseHub = mock(SseHub.class);
+        notifyPushGateway = mock(NotifyPushGateway.class);
         lenient().when(notifyManager.save(any(NotifyMessagePO.class))).thenReturn(true);
         lenient().when(notifyManager.updateById(any(NotifyMessagePO.class))).thenReturn(true);
         lenient().when(notifyManager.removeById(99L)).thenReturn(true);
-        service = new NotifyServiceImpl(notifyManager, sseHub);
+        service = new NotifyServiceImpl(notifyManager, notifyPushGateway);
     }
 
+
     /**
-     * 验证 push 成功时返回 true 并通过 SSE 推送。
+     * 执行 push_persists_unread_message 方法。
      */
-    @Test
     public void push_persists_unread_message() {
         boolean ok = service.push(7L, "订单支付成功", "订单 99 已支付");
         assertTrue(ok);
         verify(notifyManager).save(any(NotifyMessagePO.class));
-        verify(sseHub).send(7L, "订单支付成功");
+        verify(notifyPushGateway).send(7L, "订单支付成功");
     }
 
+
     /**
-     * 验证 save 失败时 push 返回 false 且不推送 SSE。
+     * 执行 push_returns_false_when_save_fails 方法。
      */
-    @Test
     public void push_returns_false_when_save_fails() {
         when(notifyManager.save(any(NotifyMessagePO.class))).thenReturn(false);
         boolean ok = service.push(7L, "title", "content");
         assertFalse(ok);
-        verify(sseHub, never()).send(any(), any());
+        verify(notifyPushGateway, never()).send(any(), any());
     }
 
+
     /**
-     * 验证 listByUser 返回指定用户的消息列表。
+     * 查询列表数据。
      */
-    @Test
     public void listByUser_returns_messages() {
         NotifyMessagePO m = new NotifyMessagePO();
         m.setUserId(7L);
@@ -103,10 +107,10 @@ public class NotifyServiceImplTest {
         assertEquals(7L, result.get(0).getUserId());
     }
 
+
     /**
-     * 验证用户无消息时返回空列表。
+     * 查询列表数据。
      */
-    @Test
     public void listByUser_returns_empty_when_no_messages() {
         when(notifyManager.list(any(Wrapper.class))).thenReturn(Collections.emptyList());
 
@@ -117,10 +121,10 @@ public class NotifyServiceImplTest {
         assertTrue(result.isEmpty());
     }
 
+
     /**
-     * 验证 page 委托给 manager.page 并返回结果。
+     * 分页查询数据。
      */
-    @Test
     public void page_delegates_to_manager() {
         NotifyListDTO dto = new NotifyListDTO();
         dto.setLimit(10);
@@ -134,10 +138,10 @@ public class NotifyServiceImplTest {
         verify(notifyManager).list(any(Wrapper.class));
     }
 
+
     /**
-     * 验证 page 查询并入 userId=0 + recipientType=ALL 的公告/广播占位记录，否则公告对用户不可见。
+     * 分页查询数据。
      */
-    @Test
     public void page_includes_announcement_placeholder() {
         NotifyListDTO dto = new NotifyListDTO();
         dto.setLimit(10);
@@ -158,10 +162,10 @@ public class NotifyServiceImplTest {
         assertTrue(params.containsValue(RecipientTypeEnum.ALL.intCode()));
     }
 
+
     /**
-     * 验证 broadcast 全端广播（无 targetId）落库 userId=0 占位记录，供用户 page 查询命中。
+     * 执行 broadcast_all_placeholder_persists 方法。
      */
-    @Test
     public void broadcast_all_placeholder_persists() {
         NotifyBroadcastDTO dto = new NotifyBroadcastDTO();
         dto.setRecipientType(RecipientTypeEnum.ALL.intCode());
@@ -175,13 +179,13 @@ public class NotifyServiceImplTest {
         verify(notifyManager).save(cap.capture());
         assertEquals(0L, cap.getValue().getUserId());
         assertEquals(RecipientTypeEnum.ALL.intCode(), cap.getValue().getRecipientType());
-        verify(sseHub, never()).send(any(), any());
+        verify(notifyPushGateway, never()).send(any(), any());
     }
 
+
     /**
-     * 验证 unreadCount 委托给 manager.count。
+     * 执行 unreadCount_delegates_to_manager 方法。
      */
-    @Test
     public void unreadCount_delegates_to_manager() {
         when(notifyManager.count(any(Wrapper.class))).thenReturn(5L);
 
@@ -190,10 +194,10 @@ public class NotifyServiceImplTest {
         verify(notifyManager).count(any(Wrapper.class));
     }
 
+
     /**
-     * 验证 markRead 将未读消息更新为已读。
+     * 执行 markRead_updates_flag 方法。
      */
-    @Test
     public void markRead_updates_flag() {
         NotifyMessagePO m = buildOwnedMessage(99L, 0);
         when(notifyManager.getById(99L)).thenReturn(m);
@@ -203,10 +207,10 @@ public class NotifyServiceImplTest {
         verify(notifyManager).updateById(m);
     }
 
+
     /**
-     * 验证 markRead 对已读消息幂等返回，不重复更新。
+     * 执行 markRead_already_read_idempotent 方法。
      */
-    @Test
     public void markRead_already_read_idempotent() {
         NotifyMessagePO m = buildOwnedMessage(99L, 1);
         when(notifyManager.getById(99L)).thenReturn(m);
@@ -215,29 +219,29 @@ public class NotifyServiceImplTest {
         verify(notifyManager, never()).updateById(any(NotifyMessagePO.class));
     }
 
+
     /**
-     * 验证 markRead 在消息不存在时抛出 BizException。
+     * 执行 markRead_missing_throws 方法。
      */
-    @Test
     public void markRead_missing_throws() {
         when(notifyManager.getById(99L)).thenReturn(null);
         assertThrows(BizException.class,
             () -> service.markRead(99L, RecipientTypeEnum.USER.intCode(), 7L));
     }
 
+
     /**
-     * 验证 markAllRead 委托给 manager.update 批量更新。
+     * 执行 markAllRead_delegates_to_update 方法。
      */
-    @Test
     public void markAllRead_delegates_to_update() {
         service.markAllRead(RecipientTypeEnum.USER.intCode(), 7L);
         verify(notifyManager).update(any());
     }
 
+
     /**
-     * 验证 delete 删除归属匹配的消息。
+     * 删除业务数据。
      */
-    @Test
     public void delete_removes_owned_message() {
         NotifyMessagePO m = buildOwnedMessage(99L, 0);
         when(notifyManager.getById(99L)).thenReturn(m);
@@ -246,20 +250,20 @@ public class NotifyServiceImplTest {
         verify(notifyManager).removeById(99L);
     }
 
+
     /**
-     * 验证 delete 在消息不存在时抛出 BizException。
+     * 删除业务数据。
      */
-    @Test
     public void delete_missing_throws() {
         when(notifyManager.getById(99L)).thenReturn(null);
         assertThrows(BizException.class,
             () -> service.delete(99L, RecipientTypeEnum.USER.intCode(), 7L));
     }
 
+
     /**
-     * 验证 broadcast 指定 targetId 时落库并 SSE 推送。
+     * 执行 broadcast_targetId_saves_and_sse 方法。
      */
-    @Test
     public void broadcast_targetId_saves_and_sse() {
         NotifyBroadcastDTO dto = new NotifyBroadcastDTO();
         dto.setRecipientType(RecipientTypeEnum.USER.intCode());
@@ -270,13 +274,13 @@ public class NotifyServiceImplTest {
 
         service.broadcast(dto);
         verify(notifyManager).save(any(NotifyMessagePO.class));
-        verify(sseHub).send(7L, "公告");
+        verify(notifyPushGateway).send(7L, "公告");
     }
 
+
     /**
-     * 验证 broadcast 非法接收方类型时抛出 BizException。
+     * 执行 broadcast_invalid_recipient_type_throws 方法。
      */
-    @Test
     public void broadcast_invalid_recipient_type_throws() {
         NotifyBroadcastDTO dto = new NotifyBroadcastDTO();
         dto.setRecipientType(99);
@@ -287,10 +291,10 @@ public class NotifyServiceImplTest {
         assertThrows(BizException.class, () -> service.broadcast(dto));
     }
 
+
     /**
-     * 验证 batchDelete 成功删除归属匹配的批量消息。
+     * 执行 batchDelete_succeeds 方法。
      */
-    @Test
     public void batchDelete_succeeds() {
         List<Long> ids = List.of(1L, 2L);
         NotifyMessagePO m1 = buildOwnedMessage(1L, 0);
@@ -302,20 +306,20 @@ public class NotifyServiceImplTest {
         verify(notifyManager).removeByIds(ids);
     }
 
+
     /**
-     * 验证 batchDelete 空ID列表时抛出 BizException。
+     * 执行 batchDelete_empty_ids_throws 方法。
      */
-    @Test
     public void batchDelete_empty_ids_throws() {
         assertThrows(BizException.class,
             () -> service.batchDelete(Collections.emptyList(),
                 RecipientTypeEnum.USER.intCode(), 7L));
     }
 
+
     /**
-     * 验证 batchDelete 超过100条时抛出 BizException。
+     * 执行 batchDelete_too_many_throws 方法。
      */
-    @Test
     public void batchDelete_too_many_throws() {
         List<Long> ids = new ArrayList<>(101);
         for (long i = 1; i <= 101; i++) {
@@ -325,10 +329,10 @@ public class NotifyServiceImplTest {
             () -> service.batchDelete(ids, RecipientTypeEnum.USER.intCode(), 7L));
     }
 
+
     /**
-     * 验证 batchDelete 存在非本人消息时抛出 BizException。
+     * 执行 batchDelete_not_owned_throws 方法。
      */
-    @Test
     public void batchDelete_not_owned_throws() {
         NotifyMessagePO m = buildOwnedMessage(1L, 0);
         m.setUserId(999L);
@@ -347,10 +351,10 @@ public class NotifyServiceImplTest {
         return m;
     }
 
+
     /**
-     * 验证营销推送指定用户列表时批量落库并 SSE 推送。
+     * 执行 marketingPush_with_userIds_batch_saves_and_sse 方法。
      */
-    @Test
     public void marketingPush_with_userIds_batch_saves_and_sse() {
         NotifyMarketingPushDTO dto = new NotifyMarketingPushDTO();
         dto.setTitle("促销");
@@ -365,14 +369,14 @@ public class NotifyServiceImplTest {
         assertEquals(1L, cap.getValue().get(0).getUserId());
         assertEquals(2L, cap.getValue().get(1).getUserId());
         verify(notifyManager, never()).save(any(NotifyMessagePO.class));
-        verify(sseHub).send(1L, "促销");
-        verify(sseHub).send(2L, "促销");
+        verify(notifyPushGateway).send(1L, "促销");
+        verify(notifyPushGateway).send(2L, "促销");
     }
 
+
     /**
-     * 验证营销推送全量广播（userIds=null）时落库一条 userId=0 的占位记录。
+     * 执行 marketingPush_broadcast_saves_placeholder 方法。
      */
-    @Test
     public void marketingPush_broadcast_saves_placeholder() {
         NotifyMarketingPushDTO dto = new NotifyMarketingPushDTO();
         dto.setTitle("促销");
@@ -381,13 +385,13 @@ public class NotifyServiceImplTest {
         service.marketingPush(dto);
 
         verify(notifyManager).save(any(NotifyMessagePO.class));
-        verify(sseHub, never()).send(any(), any());
+        verify(notifyPushGateway, never()).send(any(), any());
     }
 
+
     /**
-     * 验证违规警告通知向商家落库 VIOLATION 类型消息并 SSE 推送。
+     * 执行 violationWarning_saves_and_sse 方法。
      */
-    @Test
     public void violationWarning_saves_and_sse() {
         NotifyViolationWarningDTO dto = new NotifyViolationWarningDTO();
         dto.setMerchantId(100L);
@@ -398,13 +402,13 @@ public class NotifyServiceImplTest {
         service.violationWarning(dto);
 
         verify(notifyManager).save(any(NotifyMessagePO.class));
-        verify(sseHub).send(100L, "违规警告");
+        verify(notifyPushGateway).send(100L, "违规警告");
     }
 
+
     /**
-     * 验证系统告警通知向平台落库 SYSTEM 类型消息。
+     * 执行 systemAlert_saves_message 方法。
      */
-    @Test
     public void systemAlert_saves_message() {
         NotifySystemAlertDTO dto = new NotifySystemAlertDTO();
         dto.setTitle("系统告警");
@@ -416,10 +420,10 @@ public class NotifyServiceImplTest {
         verify(notifyManager).save(any(NotifyMessagePO.class));
     }
 
+
     /**
-     * 验证 alertPage 返回平台系统告警分页结果。
+     * 执行 alertPage_returns_platform_system_alerts 方法。
      */
-    @Test
     public void alertPage_returns_platform_system_alerts() {
         NotifyMessagePO alert = new NotifyMessagePO();
         alert.setId(1L);
@@ -438,10 +442,10 @@ public class NotifyServiceImplTest {
         verify(notifyManager).list(any(Wrapper.class));
     }
 
+
     /**
-     * 验证 alertPage 在无告警时返回空分页。
+     * 执行 alertPage_returns_empty_when_no_alerts 方法。
      */
-    @Test
     public void alertPage_returns_empty_when_no_alerts() {
         List<NotifyMessagePO> records = Collections.emptyList();
         when(notifyManager.list(any(Wrapper.class))).thenReturn(records);
@@ -453,10 +457,10 @@ public class NotifyServiceImplTest {
         assertEquals(0, result.getRecords().size());
     }
 
+
     /**
-     * 验证 publishAnnouncement 落库为 messageType=ANNOUNCEMENT, recipientType=ALL 的站内信。
+     * 执行 publishAnnouncement_success 方法。
      */
-    @Test
     public void publishAnnouncement_success() {
         AnnouncementCreateDTO dto = new AnnouncementCreateDTO();
         dto.setTitle("系统升级公告");

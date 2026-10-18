@@ -12,11 +12,12 @@ import com.yirancrazy.minimall.pay.service.PayService;
 import com.yirancrazy.minimall.pay.vo.PayStatisticsVO;
 import com.yirancrazy.minimall.pay.vo.PayTransactionVO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 商家端支付控制器，提供商家资金流水分页与交易汇总统计。
+ * @Description: MerchantPayControllerV1 控制器，提供相关接口。
  * @Version: 1.0
- * @DateTime: 2026/08/04
+ * @DateTime: 2026/10/16
  **/
 @RestController
 @RequestMapping("/api/v1/merchant/pay")
@@ -24,27 +25,33 @@ public class MerchantPayControllerV1 {
 
     private final PayService payService;
 
+    /**
+     * 构造 MerchantPayControllerV1 实例。
+     * @param payService payService 参数
+     */
     public MerchantPayControllerV1(PayService payService) {
         this.payService = payService;
     }
 
+
     /**
-     * 商家资金流水游标分页查询，merchantId 由可信 Header 注入。
-     * @param merchantId 商家ID
-     * @param dto 游标分页查询入参
-     * @return 支付流水游标分页结果
+     * 执行 transactions 方法。
+     * @param merchantId merchantId 参数
+     * @param dto dto 参数
+     * @return 统一响应结果
      */
     @GetMapping("/transactions")
     public Result<CursorPageVO<PayTransactionVO>> transactions(
         @RequestHeader("X-Merchant-Id") Long merchantId, @Valid PayPageDTO dto) {
-        return Result.success(payService.page(merchantId, dto).map(PayTransactionVO::from));
+        return Result.success(payService.pageVO(merchantId, dto));
     }
 
+
     /**
-     * 商家交易汇总统计，merchantId 由可信 Header 注入。
-     * @param merchantId 商家ID
-     * @param dto 分页查询入参（复用时间范围字段）
-     * @return 统计VO
+     * 执行 statistics 方法。
+     * @param merchantId merchantId 参数
+     * @param dto dto 参数
+     * @return 统一响应结果
      */
     @GetMapping("/statistics")
     public Result<PayStatisticsVO> statistics(@RequestHeader("X-Merchant-Id") Long merchantId,

@@ -4,11 +4,12 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import com.yirancrazy.minimall.common.base.BaseEnum;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 通知消息类型枚举，覆盖订单/物流/退款/营销/公告/系统/违规场景
+ * @Description: NotifyMessageTypeEnum 枚举，定义相关业务状态。
  * @Version: 1.0
- * @DateTime: 2026/08/03
+ * @DateTime: 2026/10/16
  **/
 @Getter
 @AllArgsConstructor
@@ -25,14 +26,19 @@ public enum NotifyMessageTypeEnum implements BaseEnum {
     private final String alias;
     private final String message;
 
+    /**
+     * 获取相关数据。
+     * @return 处理结果
+     */
     @Override
     public String getCode() {
         return String.valueOf(code);
     }
 
+
     /**
-     * Get the integer code for persistence.
-     * @return the integer code value
+     * 执行 intCode 方法。
+     * @return 业务数值
      */
     public int intCode() {
         return code;

@@ -6,11 +6,12 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 视图对象，用于返回响应数据。
+ * @Description: RefundVO 视图对象。
  * @Version: 1.0
- * @DateTime: 2026/7/31
+ * @DateTime: 2026/10/16
  **/
 @Data
 @NoArgsConstructor

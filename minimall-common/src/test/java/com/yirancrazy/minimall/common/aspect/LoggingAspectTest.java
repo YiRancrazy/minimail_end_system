@@ -13,9 +13,13 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+
 /**
- * LoggingAspect 单元测试，验证 service 与 controller 切面在正常返回时透传结果、异常时原样重抛。
- */
+ * @Author: yirancrazy@gmail.com
+ * @Description: LoggingAspectTest 单元测试。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 class LoggingAspectTest {
 
     private LoggingAspect aspect;

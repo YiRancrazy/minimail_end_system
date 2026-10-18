@@ -3,11 +3,12 @@ package com.yirancrazy.minimall.notify.dto;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 系统告警通知入参，向平台管理员发送系统异常/故障预警站内信
+ * @Description: NotifySystemAlertDTO 数据传输对象。
  * @Version: 1.0
- * @DateTime: 2026/08/03
+ * @DateTime: 2026/10/16
  **/
 @Data
 public class NotifySystemAlertDTO {
@@ -18,6 +19,6 @@ public class NotifySystemAlertDTO {
     @NotBlank(message = "content cannot be blank")
     private String content;
 
-    /** 告警级别，如 INFO/WARN/CRITICAL */
+
     private String alertLevel;
 }

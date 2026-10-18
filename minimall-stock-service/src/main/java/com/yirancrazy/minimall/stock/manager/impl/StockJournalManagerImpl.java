@@ -6,12 +6,13 @@ import com.yirancrazy.minimall.stock.entity.StockJournalPO;
 import com.yirancrazy.minimall.stock.manager.StockJournalManager;
 import com.yirancrazy.minimall.stock.mapper.StockJournalMapper;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: StockJournal数据访问层实现，封装t_stock_journal表 CRUD 操作
+ * @Description: StockJournalManagerImpl 管理器实现，封装数据访问逻辑。
  * @Version: 1.0
- * @DateTime: 2026/08/02
- */
+ * @DateTime: 2026/10/16
+ **/
 @Manager
 public class StockJournalManagerImpl extends ServiceImpl<StockJournalMapper, StockJournalPO>
     implements StockJournalManager {

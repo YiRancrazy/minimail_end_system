@@ -16,20 +16,24 @@ import com.yirancrazy.minimall.common.util.MinioUtil;
 import com.yirancrazy.minimall.goods.constant.SpuCodeEnum;
 import com.yirancrazy.minimall.goods.constant.SpuStatusEnum;
 import com.yirancrazy.minimall.goods.dto.GoodsPageDTO;
+import com.yirancrazy.minimall.goods.dto.SpuSearchDTO;
 import com.yirancrazy.minimall.goods.entity.SkuPO;
 import com.yirancrazy.minimall.goods.entity.SpuPO;
 import com.yirancrazy.minimall.goods.manager.SkuManager;
 import com.yirancrazy.minimall.goods.manager.SpuManager;
+import com.yirancrazy.minimall.goods.search.SpuSearchService;
 import com.yirancrazy.minimall.goods.service.GoodsQueryService;
 import com.yirancrazy.minimall.goods.vo.SkuVO;
 import com.yirancrazy.minimall.goods.vo.SpuDetailVO;
 import com.yirancrazy.minimall.goods.vo.SpuListVO;
+import com.yirancrazy.minimall.goods.vo.SpuSearchVO;
+
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 用户端商品只读查询服务实现，固定检索在售 SPU 并聚合 SKU
+ * @Description: GoodsQueryServiceImpl 服务实现，实现相关业务逻辑。
  * @Version: 1.0
- * @DateTime: 2026/08/02
+ * @DateTime: 2026/10/16
  **/
 @Slf4j
 @Service
@@ -37,28 +41,49 @@ public class GoodsQueryServiceImpl implements GoodsQueryService {
 
     private final SpuManager spuManager;
     private final SkuManager skuManager;
+    private final SpuSearchService spuSearchService;
     private final MinioUtil minioUtil;
 
-    public GoodsQueryServiceImpl(SpuManager spuManager, SkuManager skuManager, MinioUtil minioUtil) {
+    /**
+     * 构造 GoodsQueryServiceImpl 实例。
+     * @param spuManager spuManager 参数
+     * @param skuManager skuManager 参数
+     * @param spuSearchService spuSearchService 参数
+     * @param minioUtil minioUtil 参数
+     */
+    public GoodsQueryServiceImpl(SpuManager spuManager, SkuManager skuManager,
+                                 SpuSearchService spuSearchService, MinioUtil minioUtil) {
         this.spuManager = spuManager;
         this.skuManager = skuManager;
+        this.spuSearchService = spuSearchService;
         this.minioUtil = minioUtil;
     }
 
     /**
-     * 图片 objectKey 统一转可访问 URL，避免用户端拿到裸 objectKey 导致图片不可显示。
-     * @param objectKey MinIO 对象键
-     * @return 可访问的图片 URL；空值返回 null
+     * 执行 search 方法。
+     * @param dto dto 参数
+     * @return 结果列表
+     */
+    @Override
+    public List<SpuSearchVO> search(SpuSearchDTO dto) {
+        return spuSearchService.search(dto);
+    }
+
+
+    /**
+     * 转换或解析ImageUrl。
+     * @param objectKey objectKey
+     * @return 处理结果
      */
     private String resolveImageUrl(String objectKey) {
         return minioUtil.resolvePublicUrl(objectKey);
     }
 
+
     /**
-     * 游标分页查询在售商品，keyword 非空时按标题模糊匹配，categoryId 非空时等值过滤，按 ID 倒序。
-     * 列表聚合各 SPU 最低售价，避免前端逐卡调详情形成 N+1。
-     * @param dto 游标分页查询入参
-     * @return 在售商品游标分页结果，含 minPrice（元）
+     * 分页查询数据。
+     * @param dto dto 参数
+     * @return 处理结果
      */
     @Override
     public CursorPageVO<SpuListVO> pageOnSale(GoodsPageDTO dto) {
@@ -80,10 +105,11 @@ public class GoodsQueryServiceImpl implements GoodsQueryService {
                 minPriceMap.get(po.getId())));
     }
 
+
     /**
-     * 批量查询多个 SPU 的最低售价，一次 IN 查询替代逐 SPU 的 N 次详情请求。
-     * @param spuIds SPU 主键集合，允许为空
-     * @return spuId -> 最低售价（元）；无 SKU 或全空价 SKU 的 SPU 不在结果中（调用方按 null 兜底）
+     * 处理batchMin价格。
+     * @param spuIds SPUIds
+     * @return 结果映射
      */
     private Map<Long, BigDecimal> batchMinPrice(List<Long> spuIds) {
         if (spuIds == null || spuIds.isEmpty()) {
@@ -102,10 +128,11 @@ public class GoodsQueryServiceImpl implements GoodsQueryService {
                 e -> e.getValue().orElse(null)));
     }
 
+
     /**
-     * 查询商品详情，非在售 SPU 视为不存在，聚合其下全部 SKU。
-     * @param spuId SPU 主键 ID
-     * @return 商品详情视图
+     * 获取相关数据。
+     * @param spuId spuId 参数
+     * @return 处理结果
      */
     @Override
     public SpuDetailVO getDetail(Long spuId) {
@@ -115,16 +142,17 @@ public class GoodsQueryServiceImpl implements GoodsQueryService {
             throw new BizException(SpuCodeEnum.SPU_NOT_FOUND);
         }
         List<SkuVO> skus = listSkusInternal(spuId);
-        log.info("goods detail queried, spuId={}, skuCount={}", spuId, skus.size());
+        log.info("商品详情查询完成，spuId={}，skuCount={}", spuId, skus.size());
         return new SpuDetailVO(po.getId(), po.getSpuNo(), po.getTitle(), po.getSubtitle(),
             resolveImageUrl(po.getMainImageUrl()), po.getMerchantId(), po.getCategoryId(),
             Boolean.TRUE, skus);
     }
 
+
     /**
-     * 查询指定 SPU 下的 SKU 列表，非在售 SPU 视为不存在。
-     * @param spuId SPU 主键 ID
-     * @return SKU 视图列表
+     * 查询列表数据。
+     * @param spuId spuId 参数
+     * @return 结果列表
      */
     @Override
     public List<SkuVO> listSkus(Long spuId) {
@@ -136,10 +164,11 @@ public class GoodsQueryServiceImpl implements GoodsQueryService {
         return listSkusInternal(spuId);
     }
 
+
     /**
-     * 内部方法，查询指定 SPU 下的 SKU 列表，非在售 SPU 视为不存在。
-     * @param spuId SPU 主键 ID
-     * @return SKU 视图列表
+     * 查询SkusInternal。
+     * @param spuId SPU ID
+     * @return 结果列表
      */
     private List<SkuVO> listSkusInternal(Long spuId) {
         List<SkuPO> skuPos = skuManager.list(

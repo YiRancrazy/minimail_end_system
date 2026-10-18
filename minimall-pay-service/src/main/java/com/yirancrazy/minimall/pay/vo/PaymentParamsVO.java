@@ -7,11 +7,12 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 支付参数视图对象，前端据此调起对应渠道 SDK。
+ * @Description: PaymentParamsVO 视图对象。
  * @Version: 1.0
- * @DateTime: 2026/08/03
+ * @DateTime: 2026/10/16
  **/
 @Data
 @NoArgsConstructor
@@ -24,6 +25,6 @@ public class PaymentParamsVO {
     private Integer channel;
     private String subject;
     private LocalDateTime expireAt;
-    /** 支付宝电脑网站支付表单 HTML（page.pay），前端写入当前页后自动跳转支付宝收银台 */
+
     private String payForm;
 }

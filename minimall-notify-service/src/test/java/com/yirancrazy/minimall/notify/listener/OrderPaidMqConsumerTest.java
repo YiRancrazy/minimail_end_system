@@ -18,11 +18,12 @@ import com.yirancrazy.minimall.api.dto.order.OrderPaidDTO;
 import com.yirancrazy.minimall.notify.service.NotifyService;
 
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: OrderPaidMqConsumer 的单元测试类。
- * @Version: 1.2
- * @DateTime: 2026/08/03
+ * @Description: OrderPaidMqConsumerTest 单元测试。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
  **/
 class OrderPaidMqConsumerTest {
 
@@ -71,9 +72,7 @@ class OrderPaidMqConsumerTest {
         verifyNoInteractions(notifyService);
     }
 
-    /**
-     * 验证 SETNX 返回 false（重复事件）时跳过通知。
-     */
+
     @Test
     void onPaid_givenDuplicateEvent_thenSkipsNotification() {
         when(valueOps.setIfAbsent(anyString(), anyString(), any(Duration.class)))
@@ -86,9 +85,7 @@ class OrderPaidMqConsumerTest {
         verifyNoInteractions(notifyService);
     }
 
-    /**
-     * 验证 push 落库失败时删除幂等键并重抛异常：否则 RocketMQ 重投会被 SETNX 挡掉，通知永久丢失。
-     */
+
     @Test
     void onPaid_givenPushFailure_thenRemovesIdempotencyKeyAndRethrows() {
         when(notifyService.push(any(Long.class), anyString(), anyString()))

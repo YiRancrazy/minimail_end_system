@@ -23,18 +23,22 @@ import static org.mockito.Mockito.when;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.yirancrazy.minimall.api.dto.order.OrderPaidDTO;
 import com.yirancrazy.minimall.notify.entity.NotifyMessagePO;
+import com.yirancrazy.minimall.notify.gateway.NotifyPushGateway;
 import com.yirancrazy.minimall.notify.manager.NotifyManager;
 import com.yirancrazy.minimall.notify.service.NotifyService;
 import com.yirancrazy.minimall.notify.service.impl.NotifyServiceImpl;
-import com.yirancrazy.minimall.notify.sse.SseHub;
+
 
 /**
-* OrderPaidListener 单元测试，验证事件触发后消息持久化、SSE 推送与 Redis SETNX 幂等去重的协作逻辑。
- */
+ * @Author: yirancrazy@gmail.com
+ * @Description: OrderPaidListenerTest 单元测试。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 public class OrderPaidListenerTest {
 
     private NotifyManager manager;
-    private SseHub sseHub;
+    private NotifyPushGateway notifyPushGateway;
     private StringRedisTemplate redis;
     @SuppressWarnings("unchecked")
     private final ValueOperations<String, String> valueOps = mock(ValueOperations.class);
@@ -44,7 +48,7 @@ public class OrderPaidListenerTest {
     @BeforeEach
     void setUp() {
         manager = mock(NotifyManager.class);
-        sseHub = mock(SseHub.class);
+        notifyPushGateway = mock(NotifyPushGateway.class);
         redis = mock(StringRedisTemplate.class);
         lenient().when(redis.opsForValue()).thenReturn(valueOps);
         lenient().when(valueOps.setIfAbsent(anyString(), anyString(), any(Duration.class)))
@@ -57,14 +61,14 @@ public class OrderPaidListenerTest {
             }
             return true;
         }).when(manager).save(any(NotifyMessagePO.class));
-        notifyService = new NotifyServiceImpl(manager, sseHub);
+        notifyService = new NotifyServiceImpl(manager, notifyPushGateway);
         listener = new OrderPaidListener(notifyService, redis);
     }
 
+
     /**
-     * 订单已支付事件触发后，应保存一条 notify 消息且用户 ID 正确，并向对应用户推送一次 SSE。
+     * 执行 on_order_paid_saves_message_and_pushes_sse 方法。
      */
-    @Test
     public void on_order_paid_saves_message_and_pushes_sse() {
         OrderPaidDTO ev = new OrderPaidDTO(99L, 7L, new BigDecimal("100.00"), "2026-07-29T10:00:00");
         listener.onOrderPaid(ev);
@@ -75,13 +79,13 @@ public class OrderPaidListenerTest {
         assertNotNull(cap.getValue().getTitle());
         assertNotNull(cap.getValue().getContent());
 
-        verify(sseHub, times(1)).send(eq(7L), anyString());
+        verify(notifyPushGateway, times(1)).send(eq(7L), anyString());
     }
 
+
     /**
-     * SETNX 返回 false（本地事件与 MQ 双通道均到达，另一通道已消费）时跳过通知，避免重复落库。
+     * 执行 on_order_paid_duplicate_skips_notification 方法。
      */
-    @Test
     public void on_order_paid_duplicate_skips_notification() {
         when(valueOps.setIfAbsent(anyString(), anyString(), any(Duration.class)))
             .thenReturn(Boolean.FALSE);
@@ -90,13 +94,13 @@ public class OrderPaidListenerTest {
         listener.onOrderPaid(ev);
 
         verify(manager, never()).save(any(NotifyMessagePO.class));
-        verify(sseHub, never()).send(any(), any());
+        verify(notifyPushGateway, never()).send(any(), any());
     }
 
+
     /**
-     * 落库失败时删除幂等键并重抛异常，保证事件重投可再次消费。
+     * 执行 on_order_paid_push_failure_removes_key_and_rethrows 方法。
      */
-    @Test
     public void on_order_paid_push_failure_removes_key_and_rethrows() {
         doAnswer(inv -> {
             throw new RuntimeException("db unavailable");

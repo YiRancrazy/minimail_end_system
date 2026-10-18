@@ -18,11 +18,12 @@ import com.yirancrazy.minimall.common.constant.RolePermissionMapping;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CommonCode;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 权限校验切面，拦截 @RequirePermission 注解方法，依据网关注入的 X-User-Role 头进行 RBAC 校验。
+ * @Description: PermissionAspect 类型，承载相关业务能力。
  * @Version: 1.0
- * @DateTime: 2026/08/03
+ * @DateTime: 2026/10/16
  **/
 @Slf4j
 @Aspect
@@ -33,20 +34,22 @@ public class PermissionAspect {
 
     private final StringRedisTemplate redisTemplate;
 
+
     /**
-     * 权限切面构造器。
-     * @param redisTemplate Redis 模板；为空时无法读取动态权限，受保护操作默认拒绝
+     * 构造 PermissionAspect 实例。
+     * @param redisTemplate redisTemplate 参数
      */
     public PermissionAspect(StringRedisTemplate redisTemplate) {
         this.redisTemplate = redisTemplate;
     }
 
+
     /**
-     * 拦截标注 @RequirePermission 的方法，校验当前请求角色是否具备所需权限。
-     * @param pjp 连接点
-     * @param requirePermission 权限注解（由参数绑定自动注入）
-     * @return 目标方法返回值
-     * @throws Throwable 目标方法抛出的异常或权限校验失败抛出的 BizException
+     * 校验业务条件。
+     * @param pjp pjp 参数
+     * @param requirePermission requirePermission 参数
+     * @return 处理结果
+     * @throws Throwable 处理失败时抛出
      */
     @Around("@annotation(requirePermission)")
     public Object checkPermission(ProceedingJoinPoint pjp, RequirePermission requirePermission) throws Throwable {
@@ -71,6 +74,10 @@ public class PermissionAspect {
         return pjp.proceed();
     }
 
+    /**
+     * 提取角色编码。
+     * @return 编号或编码
+     */
     private String extractRoleCode() {
         ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
         if (attrs == null) {
@@ -80,11 +87,12 @@ public class PermissionAspect {
         return request.getHeader(HEADER_USER_ROLE);
     }
 
+
     /**
-     * 解析角色生效权限集：仅信任 Redis 中的动态覆盖集，读取失败或无覆盖时返回空集。
+     * 转换或解析有效Permissions。
      * @param role 角色
-     * @param method 受保护方法签名
-     * @return 生效权限集
+     * @param method method
+     * @return 结果列表
      */
     private Set<PermissionEnum> resolveEffectivePermissions(RoleEnum role, String method) {
         if (redisTemplate == null) {
@@ -112,6 +120,12 @@ public class PermissionAspect {
         return permissions;
     }
 
+    /**
+     * 校验任一权限。
+     * @param effective 有效
+     * @param required required
+     * @return 是否满足条件
+     */
     private boolean hasAnyPermission(Set<PermissionEnum> effective, PermissionEnum[] required) {
         for (PermissionEnum p : required) {
             if (effective.contains(p)) {
@@ -121,6 +135,12 @@ public class PermissionAspect {
         return false;
     }
 
+    /**
+     * 校验全部Permissions。
+     * @param effective 有效
+     * @param required required
+     * @return 是否满足条件
+     */
     private boolean hasAllPermissions(Set<PermissionEnum> effective, PermissionEnum[] required) {
         for (PermissionEnum p : required) {
             if (!effective.contains(p)) {

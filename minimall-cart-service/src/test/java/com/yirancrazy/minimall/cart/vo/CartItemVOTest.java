@@ -14,18 +14,19 @@ import com.yirancrazy.minimall.api.dto.goods.SpuSnapshotDTO;
 import com.yirancrazy.minimall.cart.entity.CartItemPO;
 import com.yirancrazy.minimall.common.util.MinioUtil;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: CartItemVO 单元测试，覆盖 from 转换方法的字段映射、勾选状态转换与快照空值场景。
- * @Version: 1.1
- * @DateTime: 2026/08/13
+ * @Description: CartItemVOTest 单元测试。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
  **/
 public class CartItemVOTest {
 
+
     /**
-     * 验证 from 方法正确叠加 SKU 与 SPU 快照字段。
+     * 执行 from_mergesSkuAndSpu 方法。
      */
-    @Test
     public void from_mergesSkuAndSpu() {
         CartItemPO po = new CartItemPO();
         po.setId(1L);
@@ -50,10 +51,10 @@ public class CartItemVOTest {
         assertEquals("http://img/a.jpg", vo.getMainImage());
     }
 
+
     /**
-     * 验证 selected 为 0 时 isSelected 转换为 false。
+     * 执行 from_selectedZero_mapsToFalse 方法。
      */
-    @Test
     public void from_selectedZero_mapsToFalse() {
         CartItemPO po = new CartItemPO();
         po.setId(1L);
@@ -70,10 +71,10 @@ public class CartItemVOTest {
         assertNull(vo.getStock());
     }
 
+
     /**
-     * 验证四参版本传入 MinioUtil 时，主图 objectKey 被解析为可访问的预签名 URL。
+     * 执行 from_withMinioUtil_resolvesMainImage 方法。
      */
-    @Test
     public void from_withMinioUtil_resolvesMainImage() {
         CartItemPO po = new CartItemPO();
         po.setId(1L);
@@ -89,10 +90,10 @@ public class CartItemVOTest {
         assertEquals("http://minio/mall-files/a1b2c3.png?token", vo.getMainImage());
     }
 
+
     /**
-     * 验证 from 方法在 PO 字段为 null 时保留 null 值且勾选态为 false。
+     * 执行 from_nullFields 方法。
      */
-    @Test
     public void from_nullFields() {
         CartItemPO po = new CartItemPO();
         po.setId(1L);

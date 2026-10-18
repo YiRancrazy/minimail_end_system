@@ -21,11 +21,12 @@ import com.yirancrazy.minimall.merchant.vo.MerchantAuditLogVO;
 import com.yirancrazy.minimall.merchant.vo.MerchantInfoVO;
 import com.yirancrazy.minimall.merchant.vo.MerchantQualificationVO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 商家资质控制器，提供资质提交、查询与平台审核 RESTful API。
+ * @Description: MerchantControllerV1 控制器，提供相关接口。
  * @Version: 1.0
- * @DateTime: 2026/08/03
+ * @DateTime: 2026/10/16
  **/
 @Slf4j
 @RestController
@@ -34,15 +35,20 @@ public class MerchantControllerV1 {
 
     private final MerchantService merchantService;
 
+    /**
+     * 构造 MerchantControllerV1 实例。
+     * @param merchantService merchantService 参数
+     */
     public MerchantControllerV1(MerchantService merchantService) {
         this.merchantService = merchantService;
     }
 
+
     /**
-     * 商家提交或更新资质，merchantId 由可信 Header 注入。
-     * @param merchantId 商家ID
-     * @param dto 资质提交入参
-     * @return 资质VO
+     * 执行 submitQualification 方法。
+     * @param merchantId merchantId 参数
+     * @param dto dto 参数
+     * @return 统一响应结果
      */
     @PostMapping("/qualification")
     public Result<MerchantQualificationVO> submitQualification(@RequestHeader("X-Merchant-Id") Long merchantId,
@@ -50,23 +56,25 @@ public class MerchantControllerV1 {
         return Result.success(merchantService.submitQualification(merchantId, dto));
     }
 
+
     /**
-     * 查询商家资质状态。
-     * @param merchantId 商家ID
-     * @return 资质VO
+     * 获取相关数据。
+     * @param merchantId merchantId 参数
+     * @return 统一响应结果
      */
     @GetMapping("/qualification")
     public Result<MerchantQualificationVO> getQualification(@RequestHeader("X-Merchant-Id") Long merchantId) {
         return Result.success(merchantService.getQualification(merchantId));
     }
 
+
     /**
-     * 平台审核商家资质，仅允许待审核状态审核；非 PLATFORM 角色一律拒绝；驳回时必须填写原因。
-     * @param id 商家主体ID
-     * @param approved 是否通过
-     * @param reason 驳回原因，approved=false 时必填
-     * @param role 网关注入的角色码（X-User-Role 头）
-     * @throws BizException 非 PLATFORM 角色访问时抛出 FORBIDDEN；驳回缺原因时抛出 PARAM_INVALID
+     * 执行 audit 方法。
+     * @param id id 参数
+     * @param approved approved 参数
+     * @param reason reason 参数
+     * @param role role 参数
+     * @return 统一响应结果
      */
     @PostMapping("/{id}/audit")
     public Result<Void> audit(@PathVariable Long id,
@@ -81,30 +89,33 @@ public class MerchantControllerV1 {
         return Result.success(null);
     }
 
+
     /**
-     * 商家获取自身信息，merchantId 由可信 Header 注入。
-     * @param merchantId 商家ID
-     * @return 商家信息VO
+     * 获取相关数据。
+     * @param merchantId merchantId 参数
+     * @return 统一响应结果
      */
     @GetMapping("/me")
     public Result<MerchantInfoVO> getMerchantInfo(@RequestHeader("X-Merchant-Id") Long merchantId) {
         return Result.success(merchantService.getMerchantInfo(merchantId));
     }
 
+
     /**
-     * 商家查看审核记录，包含资质审核与商品审核日志。
-     * @param merchantId 商家ID
-     * @return 审核记录列表
+     * 查询列表数据。
+     * @param merchantId merchantId 参数
+     * @return 统一响应结果
      */
     @GetMapping("/audit-log")
     public Result<List<MerchantAuditLogVO>> listAuditLog(@RequestHeader("X-Merchant-Id") Long merchantId) {
         return Result.success(merchantService.listAuditLog(merchantId));
     }
 
+
     /**
-     * 校验当前角色为平台管理员；网关按 JWT role claim 注入 X-User-Role 头，客户端伪造头会被网关移除。
-     * @param role 网关注入的角色码
-     * @throws BizException 非 PLATFORM 角色访问时抛出 FORBIDDEN(20003)
+     * 处理require平台。
+     * @param role 角色
+     * @throws BizException 业务校验失败时抛出
      */
     private void requirePlatform(String role) {
         if (!RoleEnum.PLATFORM.getCode().equals(role)) {

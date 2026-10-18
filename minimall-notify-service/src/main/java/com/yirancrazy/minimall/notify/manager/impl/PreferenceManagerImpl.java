@@ -6,11 +6,12 @@ import com.yirancrazy.minimall.notify.entity.PreferencePO;
 import com.yirancrazy.minimall.notify.manager.PreferenceManager;
 import com.yirancrazy.minimall.notify.mapper.PreferenceMapper;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 通知偏好数据访问层实现，封装 t_notify_preference 表 CRUD 操作
+ * @Description: PreferenceManagerImpl 管理器实现，封装数据访问逻辑。
  * @Version: 1.0
- * @DateTime: 2026/08/10
+ * @DateTime: 2026/10/16
  **/
 @Manager
 public class PreferenceManagerImpl extends ServiceImpl<PreferenceMapper, PreferencePO>

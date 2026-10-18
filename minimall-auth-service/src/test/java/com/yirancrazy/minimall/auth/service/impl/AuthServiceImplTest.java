@@ -48,11 +48,12 @@ import com.yirancrazy.minimall.auth.vo.UserInfoVO;
 import com.yirancrazy.minimall.common.exception.BizException;
 
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: AuthServiceImpl 的单元测试类。
- * @Version: 2.0
- * @DateTime: 2026/08/04
+ * @Description: AuthServiceImplTest 单元测试。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
  **/
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)

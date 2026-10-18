@@ -21,18 +21,24 @@ import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.util.CursorUtils;
+import com.yirancrazy.minimall.common.util.MinioUtil;
 import com.yirancrazy.minimall.notify.constant.CommentStatusEnum;
 import com.yirancrazy.minimall.notify.dto.CommentPageDTO;
 import com.yirancrazy.minimall.notify.entity.CommentPO;
 import com.yirancrazy.minimall.notify.manager.CommentManager;
 import com.yirancrazy.minimall.notify.service.impl.PlatformCommentServiceImpl;
 
+
 /**
- * PlatformCommentServiceImpl 单元测试。
- */
+ * @Author: yirancrazy@gmail.com
+ * @Description: PlatformCommentServiceImplTest 单元测试。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 public class PlatformCommentServiceImplTest {
 
     private CommentManager commentManager;
+    private MinioUtil minioUtil;
     private PlatformCommentServiceImpl service;
 
     @BeforeEach
@@ -46,13 +52,14 @@ public class PlatformCommentServiceImplTest {
         lenient().when(commentManager.list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class)))
                 .thenReturn(Collections.emptyList());
         lenient().when(commentManager.updateById(any(CommentPO.class))).thenReturn(true);
-        service = new PlatformCommentServiceImpl(commentManager);
+        minioUtil = mock(MinioUtil.class);
+        service = new PlatformCommentServiceImpl(commentManager, minioUtil);
     }
 
+
     /**
-     * 验证 page 委托 manager.list。
+     * 分页查询数据。
      */
-    @Test
     public void page_delegates() {
         CommentPageDTO dto = new CommentPageDTO();
         dto.setLimit(20);
@@ -62,10 +69,10 @@ public class PlatformCommentServiceImplTest {
         verify(commentManager).list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class));
     }
 
+
     /**
-     * 验证 page 解码游标后追加 id < lastId 条件，翻页不再永远返回第一页。
+     * 分页查询数据。
      */
-    @Test
     public void page_applies_cursor_condition() {
         CommentPageDTO dto = new CommentPageDTO();
         dto.setLimit(10);
@@ -83,10 +90,10 @@ public class PlatformCommentServiceImplTest {
         assertTrue(cap.getValue().getParamNameValuePairs().containsValue(100L));
     }
 
+
     /**
-     * 验证 approve 正常状态置为 NORMAL。
+     * 执行 approve_normalizes_status 方法。
      */
-    @Test
     public void approve_normalizes_status() {
         CommentPO po = new CommentPO();
         po.setId(1L);
@@ -99,10 +106,10 @@ public class PlatformCommentServiceImplTest {
         verify(commentManager).updateById(po);
     }
 
+
     /**
-     * 验证 approve 在 NORMAL 状态下幂等返回。
+     * 执行 approve_idempotent_when_already_normal 方法。
      */
-    @Test
     public void approve_idempotent_when_already_normal() {
         CommentPO po = new CommentPO();
         po.setId(1L);
@@ -114,10 +121,10 @@ public class PlatformCommentServiceImplTest {
         verify(commentManager, never()).updateById(any(CommentPO.class));
     }
 
+
     /**
-     * 验证 hide 正常置为 HIDDEN。
+     * 执行 hide_sets_hidden 方法。
      */
-    @Test
     public void hide_sets_hidden() {
         CommentPO po = new CommentPO();
         po.setId(2L);
@@ -130,10 +137,10 @@ public class PlatformCommentServiceImplTest {
         verify(commentManager).updateById(po);
     }
 
+
     /**
-     * 验证 reply 写入回复内容与时间。
+     * 执行 reply_writes_reply 方法。
      */
-    @Test
     public void reply_writes_reply() {
         CommentPO po = new CommentPO();
         po.setId(3L);
@@ -145,10 +152,10 @@ public class PlatformCommentServiceImplTest {
         assertEquals(po.getMerchantReplyTime() != null, true);
     }
 
+
     /**
-     * 验证 evaluate 不存在时抛错。
+     * 执行 approve_throws_when_not_found 方法。
      */
-    @Test
     public void approve_throws_when_not_found() {
         when(commentManager.getById(99L)).thenReturn(null);
         assertThrows(BizException.class, () -> service.approve(99L));

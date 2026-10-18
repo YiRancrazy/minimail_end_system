@@ -20,14 +20,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.goods.dto.SkuCreateDTO;
 import com.yirancrazy.minimall.goods.dto.SkuUpdateDTO;
-import com.yirancrazy.minimall.goods.entity.SkuPO;
 import com.yirancrazy.minimall.goods.service.SkuService;
+import com.yirancrazy.minimall.goods.vo.SkuVO;
+
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: SkuControllerV1 MockMvc 单元测试，验证 SKU CRUD 端点的 HTTP 路由、参数绑定与 Result 包装。
+ * @Description: SkuControllerV1Test 单元测试。
  * @Version: 1.0
- * @DateTime: 2026/08/05
+ * @DateTime: 2026/10/16
  **/
 class SkuControllerV1Test {
 
@@ -41,30 +42,26 @@ class SkuControllerV1Test {
         mockMvc = MockMvcBuilders.standaloneSetup(new SkuControllerV1(skuService)).build();
     }
 
-    /**
-     * 验证 GET /{id} 返回 SKU 详情。
-     */
+
     @Test
     void get_returns_sku() throws Exception {
-        SkuPO po = new SkuPO();
-        po.setId(99L);
-        po.setSpuId(1L);
-        po.setSkuName("薄荷洗发水");
-        po.setPrice(java.math.BigDecimal.TEN);
-        po.setStock(100);
-        when(skuService.getById(99L, 7L)).thenReturn(po);
+        SkuVO vo = new SkuVO();
+        vo.setId(99L);
+        vo.setSpuId(1L);
+        vo.setSkuName("薄荷洗发水");
+        vo.setPrice(java.math.BigDecimal.TEN);
+        vo.setStock(100);
+        when(skuService.getVO(99L, 7L)).thenReturn(vo);
         mockMvc.perform(get("/api/v1/merchant/goods/skus/99")
                 .header("X-Merchant-Id", "7"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.code").value("00000"))
             .andExpect(jsonPath("$.data.id").value(99))
             .andExpect(jsonPath("$.data.skuName").value("薄荷洗发水"));
-        verify(skuService).getById(99L, 7L);
+        verify(skuService).getVO(99L, 7L);
     }
 
-    /**
-     * 验证 POST / 创建 SKU 并返回 ID。
-     */
+
     @Test
     void create_returns_id() throws Exception {
         when(skuService.create(eq(7L), any(SkuCreateDTO.class))).thenReturn(100L);
@@ -83,23 +80,19 @@ class SkuControllerV1Test {
         verify(skuService).create(eq(7L), any(SkuCreateDTO.class));
     }
 
-    /**
-     * 验证 GET / 返回游标分页结果。
-     */
+
     @Test
     void page_returns_cursor_result() throws Exception {
-        when(skuService.page(any(com.yirancrazy.minimall.goods.dto.SkuPageDTO.class)))
+        when(skuService.pageVO(any(com.yirancrazy.minimall.goods.dto.SkuPageDTO.class)))
             .thenReturn(new CursorPageVO<>(java.util.Collections.emptyList(), null, false, 20));
         mockMvc.perform(get("/api/v1/merchant/goods/skus")
                 .header("X-Merchant-Id", "7"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.code").value("00000"));
-        verify(skuService).page(any(com.yirancrazy.minimall.goods.dto.SkuPageDTO.class));
+        verify(skuService).pageVO(any(com.yirancrazy.minimall.goods.dto.SkuPageDTO.class));
     }
 
-    /**
-     * 验证 PUT /{id} 更新 SKU 并返回成功。
-     */
+
     @Test
     void update_returns_boolean() throws Exception {
         when(skuService.update(eq(99L), eq(7L), any(SkuUpdateDTO.class))).thenReturn(true);
@@ -117,9 +110,7 @@ class SkuControllerV1Test {
         verify(skuService).update(eq(99L), eq(7L), any(SkuUpdateDTO.class));
     }
 
-    /**
-     * 验证 DELETE /{id} 删除 SKU 并返回成功。
-     */
+
     @Test
     void delete_returns_boolean() throws Exception {
         when(skuService.delete(99L, 7L)).thenReturn(true);

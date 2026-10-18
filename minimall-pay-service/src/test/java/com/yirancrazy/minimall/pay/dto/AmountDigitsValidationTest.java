@@ -10,11 +10,12 @@ import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 金额 DTO 校验测试，校验 @Digits(integer=10, fraction=2) 拒绝超过两位小数的金额。
+ * @Description: AmountDigitsValidationTest 单元测试。
  * @Version: 1.0
- * @DateTime: 2026/09/23
+ * @DateTime: 2026/10/16
  **/
 class AmountDigitsValidationTest {
 

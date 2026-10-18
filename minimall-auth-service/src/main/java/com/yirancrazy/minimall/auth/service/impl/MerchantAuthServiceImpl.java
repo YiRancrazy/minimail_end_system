@@ -27,11 +27,12 @@ import com.yirancrazy.minimall.auth.util.JwtUtil;
 import com.yirancrazy.minimall.auth.vo.UserInfoVO;
 import com.yirancrazy.minimall.common.exception.BizException;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 商家端认证服务实现，复用 t_auth_user 表与一致的密码、令牌、Redis 约定。
- * @Version: 2.0
- * @DateTime: 2026/08/04
+ * @Description: MerchantAuthServiceImpl 服务实现，实现相关业务逻辑。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
  **/
 @Slf4j
 @Service
@@ -52,6 +53,16 @@ public class MerchantAuthServiceImpl implements MerchantAuthService {
     private final long ttlSeconds;
     private final long refreshTtlSeconds;
 
+    /**
+     * 构造 MerchantAuthServiceImpl 实例。
+     * @param authUserManager authUserManager 参数
+     * @param authRoleManager authRoleManager 参数
+     * @param tokenBlacklistManager tokenBlacklistManager 参数
+     * @param jwtUtil jwtUtil 参数
+     * @param redisTemplate redisTemplate 参数
+     * @param ttlSeconds ttlSeconds 参数
+     * @param refreshTtlSeconds refreshTtlSeconds 参数
+     */
     public MerchantAuthServiceImpl(AuthUserManager authUserManager,
                                    AuthRoleManager authRoleManager,
                                    AuthTokenBlacklistManager tokenBlacklistManager,
@@ -68,10 +79,11 @@ public class MerchantAuthServiceImpl implements MerchantAuthService {
         this.refreshTtlSeconds = refreshTtlSeconds;
     }
 
+
     /**
-     * 商家注册，创建 accountType=MERCHANT 的账号并签发令牌。
-     * @param dto 注册DTO
-     * @return 令牌VO
+     * 执行 register 方法。
+     * @param dto dto 参数
+     * @return 处理结果
      */
     @Override
     public TokenVO register(RegisterDTO dto) {
@@ -94,10 +106,11 @@ public class MerchantAuthServiceImpl implements MerchantAuthService {
         return issueTokens(po.getId(), po.getAccount(), po.getRoleId());
     }
 
+
     /**
-     * 商家登录，仅允许 accountType=MERCHANT 且 status=1 的账号通过。
-     * @param dto 登录DTO
-     * @return 令牌VO
+     * 执行 login 方法。
+     * @param dto dto 参数
+     * @return 处理结果
      */
     @Override
     public TokenVO login(LoginDTO dto) {
@@ -121,12 +134,12 @@ public class MerchantAuthServiceImpl implements MerchantAuthService {
         return issueTokens(po.getId(), po.getAccount(), po.getRoleId());
     }
 
+
     /**
-     * 商家登出，失效当前账号所有刷新令牌并拉黑当前 jti。
-     * @param merchantAccountId 商家账号ID
-     * @param jti 令牌唯一标识
+     * 执行 signOut 方法。
+     * @param merchantAccountId merchantAccountId 参数
+     * @param jti jti 参数
      */
-    @Override
     public void signOut(Long merchantAccountId, String jti) {
         var keys = redisTemplate.keys(REFRESH_KEY_PREFIX + merchantAccountId + ":*");
         if (keys != null) {
@@ -136,12 +149,12 @@ public class MerchantAuthServiceImpl implements MerchantAuthService {
         log.info("商家已退出登录，accountId={}", merchantAccountId);
     }
 
+
     /**
-     * 商家修改密码，校验旧密码后设置新密码并失效已有刷新令牌。
-     * @param merchantAccountId 商家账号ID
-     * @param dto 修改密码DTO
+     * 执行 changePassword 方法。
+     * @param merchantAccountId merchantAccountId 参数
+     * @param dto dto 参数
      */
-    @Override
     public void changePassword(Long merchantAccountId, ChangePasswordDTO dto) {
         AuthUserPO po = authUserManager.getById(merchantAccountId);
         if (po == null) {
@@ -155,10 +168,11 @@ public class MerchantAuthServiceImpl implements MerchantAuthService {
         log.info("商家密码已修改，accountId={}", merchantAccountId);
     }
 
+
     /**
-     * 获取当前商家信息，直接从令牌声明解析，不落库。
-     * @param token 访问令牌
-     * @return 用户信息VO
+     * 执行 me 方法。
+     * @param token token 参数
+     * @return 处理结果
      */
     @Override
     public UserInfoVO me(String token) {
@@ -177,6 +191,11 @@ public class MerchantAuthServiceImpl implements MerchantAuthService {
             c.get("roleId", Long.class));
     }
 
+    /**
+     * 执行新密码逻辑。
+     * @param po 持久化对象
+     * @param newPassword 新密码
+     */
     private void applyNewPassword(AuthUserPO po, String newPassword) {
         String salt = UUID.randomUUID().toString().replace("-", "");
         String hash = BCrypt.hashpw(newPassword + salt, BCrypt.gensalt(BCRYPT_COST));
@@ -185,6 +204,10 @@ public class MerchantAuthServiceImpl implements MerchantAuthService {
         authUserManager.updateById(po);
     }
 
+    /**
+     * 使刷新Token失效。
+     * @param merchantAccountId 商户账号 ID
+     */
     private void invalidateRefreshTokens(Long merchantAccountId) {
         var keys = redisTemplate.keys(REFRESH_KEY_PREFIX + merchantAccountId + ":*");
         if (keys != null && !keys.isEmpty()) {
@@ -192,6 +215,12 @@ public class MerchantAuthServiceImpl implements MerchantAuthService {
         }
     }
 
+    /**
+     * 吊销Token。
+     * @param jti JWT ID
+     * @param userId 用户 ID
+     * @param reason 原因
+     */
     private void revokeToken(String jti, Long userId, String reason) {
         AuthTokenBlacklistPO bl = new AuthTokenBlacklistPO();
         bl.setJti(jti);
@@ -204,6 +233,11 @@ public class MerchantAuthServiceImpl implements MerchantAuthService {
             BLACKLIST_KEY_PREFIX + jti, "1", ttlSeconds, TimeUnit.SECONDS);
     }
 
+    /**
+     * 转换或解析角色编码。
+     * @param roleId 角色 ID
+     * @return 编号或编码
+     */
     private String resolveRoleCode(Long roleId) {
         if (roleId == null) {
             return "MERCHANT";
@@ -212,6 +246,13 @@ public class MerchantAuthServiceImpl implements MerchantAuthService {
         return role != null ? role.getRoleCode() : "MERCHANT";
     }
 
+    /**
+     * 签发Token。
+     * @param accountId 账号 ID
+     * @param account 账号
+     * @param roleId 角色 ID
+     * @return Token 信息
+     */
     private TokenVO issueTokens(Long accountId, String account, Long roleId) {
         String roleCode = resolveRoleCode(roleId);
         String jti = UUID.randomUUID().toString().replace("-", "");

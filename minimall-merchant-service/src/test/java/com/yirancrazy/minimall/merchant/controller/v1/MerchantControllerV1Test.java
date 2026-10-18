@@ -16,11 +16,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.yirancrazy.minimall.common.exception.GlobalExceptionHandler;
 import com.yirancrazy.minimall.merchant.service.MerchantService;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: MerchantControllerV1 MockMvc 单元测试，验证资质审核端点的角色权限控制与 Result 包装。
+ * @Description: MerchantControllerV1Test 单元测试。
  * @Version: 1.0
- * @DateTime: 2026/08/16
+ * @DateTime: 2026/10/16
  **/
 class MerchantControllerV1Test {
 
@@ -35,9 +36,7 @@ class MerchantControllerV1Test {
             .build();
     }
 
-    /**
-     * 验证 PLATFORM 角色 POST /{id}/audit 审核通过时返回成功并进入 service。
-     */
+
     @Test
     void audit_platform_role_succeeds() throws Exception {
         mockMvc.perform(post("/api/v1/merchant/merchants/99/audit")
@@ -48,9 +47,7 @@ class MerchantControllerV1Test {
         verify(merchantService).audit(99L, true, null);
     }
 
-    /**
-     * 验证 MERCHANT 角色调用审核端点时返回 FORBIDDEN(20003) 且不进入 service。
-     */
+
     @Test
     void audit_rejects_merchant_role() throws Exception {
         mockMvc.perform(post("/api/v1/merchant/merchants/99/audit")
@@ -61,9 +58,7 @@ class MerchantControllerV1Test {
         verify(merchantService, never()).audit(anyLong(), anyBoolean(), any());
     }
 
-    /**
-     * 验证 PLATFORM 角色驳回但不填原因时返回 PARAM_INVALID(20001) 且不进入 service。
-     */
+
     @Test
     void audit_reject_missing_reason_returns_param_invalid() throws Exception {
         mockMvc.perform(post("/api/v1/merchant/merchants/99/audit")
@@ -74,9 +69,7 @@ class MerchantControllerV1Test {
         verify(merchantService, never()).audit(anyLong(), anyBoolean(), any());
     }
 
-    /**
-     * 验证 PLATFORM 角色驳回且填写原因时进入 service。
-     */
+
     @Test
     void audit_reject_with_reason_succeeds() throws Exception {
         mockMvc.perform(post("/api/v1/merchant/merchants/99/audit")

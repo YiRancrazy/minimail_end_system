@@ -1,11 +1,12 @@
 package com.yirancrazy.minimall.id.service;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: Snowflake，提供ID生成相关能力
+ * @Description: Snowflake 类型，承载相关业务能力。
  * @Version: 1.0
- * @DateTime: 2026/07/31
- */
+ * @DateTime: 2026/10/16
+ **/
 public class Snowflake {
     private final long epoch = 1700000000000L;                          // 起始时间戳
     private final long datacenterId;                                    // 数据中心ID，一般占5位（0~31），由配置文件或环境变量指定
@@ -18,10 +19,11 @@ public class Snowflake {
     private long lastTs = -1L;                                          // 上次生成ID的时间戳（毫秒），用于判断时钟回拨和计算序列号重置
     private long sequence = 0L;                                         // 当前毫秒内的序列号，从0开始递增，达到最大值后阻塞或重置
 
+
     /**
-     * 构造 Snowflake ID 生成器实例
-     * @param datacenterId 数据中心id
-     * @param workerId 工作机器id
+     * 构造 Snowflake 实例。
+     * @param datacenterId datacenterId 参数
+     * @param workerId workerId 参数
      */
     public Snowflake(long datacenterId, long workerId) {
         if (datacenterId < 0 || datacenterId > 31) {
@@ -34,9 +36,10 @@ public class Snowflake {
         this.workerId = workerId;
     }
 
+
     /**
-     * 生成下一个雪花 ID，同一毫秒内通过自增序列区分；如时钟回拨则抛出异常，否则自旋至下一毫秒。
-     * @return 生成的分布式唯一 ID
+     * 执行 nextId 方法。
+     * @return 业务数值
      */
     public synchronized long nextId() {
         long ts = System.currentTimeMillis();
@@ -65,10 +68,11 @@ public class Snowflake {
             | sequence;
     }
 
+
     /**
-     * 自旋等待下一毫秒
-     * @param last 上次生成ID的时间戳
-     * @return 下一毫秒的时间戳
+     * 处理waitNextMillis。
+     * @param last 最近
+     * @return 处理结果
      */
     private long waitNextMillis(long last) {
         long ts = System.currentTimeMillis();

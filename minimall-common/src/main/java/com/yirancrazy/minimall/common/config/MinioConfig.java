@@ -8,11 +8,12 @@ import io.minio.MinioClient;
 import com.yirancrazy.minimall.common.service.ChunkUploadService;
 import com.yirancrazy.minimall.common.util.MinioUtil;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: MinIO 自动装配，当 minimall.minio.endpoint 配置存在时注册 MinioClient 与 MinioUtil。
+ * @Description: MinioConfig 配置类。
  * @Version: 1.0
- * @DateTime: 2026/08/05
+ * @DateTime: 2026/10/16
  **/
 @Configuration
 @ConditionalOnProperty(name = "minimall.minio.endpoint")
@@ -33,9 +34,10 @@ public class MinioConfig {
     @Value("${minimall.minio.public-endpoint:}")
     private String publicEndpoint;
 
+
     /**
-     * 构建用于对象存储操作的 MinioClient Bean。
-     * @return MinioClient 实例
+     * 执行 minioClient 方法。
+     * @return 处理结果
      */
     @Bean
     public MinioClient minioClient() {
@@ -45,18 +47,20 @@ public class MinioConfig {
             .build();
     }
 
+
     /**
-     * 构建用于预签名 URL 生成的 MinioUtil Bean。
-     * @return MinioUtil 实例
+     * 执行 minioUtil 方法。
+     * @return 处理结果
      */
     @Bean
     public MinioUtil minioUtil() {
         return new MinioUtil(minioClient(), bucket, publicEndpoint, accessKey, secretKey);
     }
 
+
     /**
-     * 构建用于分片上传支持的 ChunkUploadService Bean。
-     * @return ChunkUploadService 实例
+     * 执行 chunkUploadService 方法。
+     * @return 处理结果
      */
     @Bean
     public ChunkUploadService chunkUploadService() {

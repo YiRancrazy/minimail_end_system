@@ -6,25 +6,29 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.yirancrazy.minimall.id.service.impl.IdServiceImpl;
 
+
 /**
- * IdServiceImpl 单元测试，覆盖 nextId 的正常、唯一性与 bizTag 透传路径。
- */
+ * @Author: yirancrazy@gmail.com
+ * @Description: IdServiceImplTest 单元测试。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 public class IdServiceImplTest {
 
+
     /**
-     * 验证 nextId 返回正数。
+     * 执行 nextId_returns_positive_value 方法。
      */
-    @Test
     public void nextId_returns_positive_value() {
         IdServiceImpl service = new IdServiceImpl("1", "1");
         long id = service.nextId("ORDER");
         assertTrue(id > 0L);
     }
 
+
     /**
-     * 验证连续调用 nextId 返回递增且不同的 ID。
+     * 执行 nextId_returns_increasing_values 方法。
      */
-    @Test
     public void nextId_returns_increasing_values() {
         IdServiceImpl service = new IdServiceImpl("1", "1");
         long a = service.nextId("ORDER");
@@ -34,10 +38,10 @@ public class IdServiceImplTest {
         assertTrue(c > b);
     }
 
+
     /**
-     * 验证不同 bizTag 也走同一 Snowflake，ID 仍递增。
+     * 执行 nextId_ignores_bizTag_and_keeps_increasing 方法。
      */
-    @Test
     public void nextId_ignores_bizTag_and_keeps_increasing() {
         IdServiceImpl service = new IdServiceImpl("1", "1");
         long a = service.nextId("ORDER");
@@ -49,20 +53,20 @@ public class IdServiceImplTest {
         assertNotEquals(b, c);
     }
 
+
     /**
-     * 验证 null bizTag 不影响 ID 生成。
+     * 执行 nextId_handles_null_bizTag 方法。
      */
-    @Test
     public void nextId_handles_null_bizTag() {
         IdServiceImpl service = new IdServiceImpl("1", "1");
         long id = service.nextId(null);
         assertTrue(id > 0L);
     }
 
+
     /**
-     * 验证连续两次调用返回的 ID 不同且均为正数。
+     * 执行 nextId_consecutive_calls_distinct_and_positive 方法。
      */
-    @Test
     public void nextId_consecutive_calls_distinct_and_positive() {
         IdServiceImpl service = new IdServiceImpl("1", "1");
         long a = service.nextId("ORDER");
@@ -72,19 +76,19 @@ public class IdServiceImplTest {
         assertNotEquals(a, b);
     }
 
+
     /**
-     * 验证节点编号缺失时构造失败。
+     * 执行 constructor_missing_node_id_throws 方法。
      */
-    @Test
     public void constructor_missing_node_id_throws() {
         assertThrows(IllegalStateException.class, () -> new IdServiceImpl("", "1"));
         assertThrows(IllegalStateException.class, () -> new IdServiceImpl("1", ""));
     }
 
+
     /**
-     * 验证节点编号越界时构造失败。
+     * 执行 constructor_out_of_range_node_id_throws 方法。
      */
-    @Test
     public void constructor_out_of_range_node_id_throws() {
         assertThrows(IllegalArgumentException.class, () -> new IdServiceImpl("32", "1"));
         assertThrows(IllegalArgumentException.class, () -> new IdServiceImpl("1", "32"));

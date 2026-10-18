@@ -32,11 +32,12 @@ import com.yirancrazy.minimall.auth.vo.UserInfoVO;
 import com.yirancrazy.minimall.common.exception.BizException;
 
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 业务服务实现，处理核心业务逻辑。
- * @Version: 2.0
- * @DateTime: 2026/08/04
+ * @Description: AuthServiceImpl 服务实现，实现相关业务逻辑。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
  **/
 @Slf4j
 @Service
@@ -72,6 +73,16 @@ public class AuthServiceImpl implements AuthService {
     private final long ttlSeconds;
     private final long refreshTtlSeconds;
 
+    /**
+     * 构造 AuthServiceImpl 实例。
+     * @param authUserManager authUserManager 参数
+     * @param authRoleManager authRoleManager 参数
+     * @param tokenBlacklistManager tokenBlacklistManager 参数
+     * @param jwtUtil jwtUtil 参数
+     * @param redisTemplate redisTemplate 参数
+     * @param ttlSeconds ttlSeconds 参数
+     * @param refreshTtlSeconds refreshTtlSeconds 参数
+     */
     public AuthServiceImpl(AuthUserManager authUserManager,
                            AuthRoleManager authRoleManager,
                            AuthTokenBlacklistManager tokenBlacklistManager,
@@ -88,10 +99,11 @@ public class AuthServiceImpl implements AuthService {
         this.refreshTtlSeconds = refreshTtlSeconds;
     }
 
+
     /**
-     * 用户注册。
-     * @param dto 注册DTO
-     * @return 令牌VO
+     * 执行 register 方法。
+     * @param dto dto 参数
+     * @return 处理结果
      */
     @Override
     public TokenVO register(RegisterDTO dto) {
@@ -114,10 +126,11 @@ public class AuthServiceImpl implements AuthService {
         return issueTokens(po.getId(), po.getAccount(), roleCode, po.getRoleId());
     }
 
+
     /**
-     * 用户登录。
-     * @param dto 登录DTO
-     * @return 令牌VO
+     * 执行 login 方法。
+     * @param dto dto 参数
+     * @return 处理结果
      */
     @Override
     public TokenVO login(LoginDTO dto) {
@@ -150,10 +163,11 @@ public class AuthServiceImpl implements AuthService {
         return issueTokens(po.getId(), po.getAccount(), roleCode, po.getRoleId());
     }
 
+
     /**
-     * 刷新令牌。
-     * @param refreshToken 刷新令牌
-     * @return 新的令牌VO
+     * 执行 refreshToken 方法。
+     * @param refreshToken refreshToken 参数
+     * @return 处理结果
      */
     @Override
     public TokenVO refreshToken(String refreshToken) {
@@ -185,12 +199,12 @@ public class AuthServiceImpl implements AuthService {
         return issueTokens(po.getId(), po.getAccount(), roleCode, po.getRoleId());
     }
 
+
     /**
-     * 用户登出。
-     * @param userId 用户ID
-     * @param jti 令牌唯一标识
+     * 执行 signOut 方法。
+     * @param userId userId 参数
+     * @param jti jti 参数
      */
-    @Override
     public void signOut(Long userId, String jti) {
         var keys = redisTemplate.keys(REFRESH_KEY_PREFIX + userId + ":*");
         if (keys != null) {
@@ -200,10 +214,11 @@ public class AuthServiceImpl implements AuthService {
         log.info("用户已退出登录，userId={}", userId);
     }
 
+
     /**
-     * 获取当前用户信息。
-     * @param token 令牌
-     * @return 用户信息VO
+     * 执行 me 方法。
+     * @param token token 参数
+     * @return 处理结果
      */
     @Override
     public UserInfoVO me(String token) {
@@ -222,12 +237,12 @@ public class AuthServiceImpl implements AuthService {
             c.get("roleId", Long.class));
     }
 
+
     /**
-     * 修改密码，需校验旧密码，成功后失效已有刷新令牌。
-     * @param userId 用户ID
-     * @param dto 修改密码DTO
+     * 执行 changePassword 方法。
+     * @param userId userId 参数
+     * @param dto dto 参数
      */
-    @Override
     public void changePassword(Long userId, ChangePasswordDTO dto) {
         AuthUserPO po = authUserManager.getById(userId);
         if (po == null) {
@@ -241,11 +256,11 @@ public class AuthServiceImpl implements AuthService {
         log.info("密码已修改，userId={}", userId);
     }
 
+
     /**
-     * 发送重置密码验证码，首期短信通道未接入时验证码通过日志输出用于联调。
-     * @param dto 发送验证码DTO
+     * 发送业务消息。
+     * @param dto dto 参数
      */
-    @Override
     public void sendResetCode(SendResetCodeDTO dto) {
         AuthUserPO po = authUserManager.getOne(
             Wrappers.lambdaQuery(AuthUserPO.class).eq(AuthUserPO::getAccount, dto.getAccount()));
@@ -267,11 +282,11 @@ public class AuthServiceImpl implements AuthService {
         log.info("重置验证码已生成，account={}", dto.getAccount());
     }
 
+
     /**
-     * 重置密码，校验验证码后设置新密码，成功后失效已有刷新令牌。
-     * @param dto 重置密码DTO
+     * 执行 resetPassword 方法。
+     * @param dto dto 参数
      */
-    @Override
     public void resetPassword(ResetPasswordDTO dto) {
         AuthUserPO po = authUserManager.getOne(
             Wrappers.lambdaQuery(AuthUserPO.class).eq(AuthUserPO::getAccount, dto.getAccount()));
@@ -297,6 +312,11 @@ public class AuthServiceImpl implements AuthService {
         log.info("密码已重置，userId={}", po.getId());
     }
 
+    /**
+     * 执行新密码逻辑。
+     * @param po 持久化对象
+     * @param newPassword 新密码
+     */
     private void applyNewPassword(AuthUserPO po, String newPassword) {
         String salt = UUID.randomUUID().toString().replace("-", "");
         String hash = BCrypt.hashpw(newPassword + salt, BCrypt.gensalt(BCRYPT_COST));
@@ -305,11 +325,19 @@ public class AuthServiceImpl implements AuthService {
         authUserManager.updateById(po);
     }
 
+    /**
+     * 更新最近登录时间。
+     * @param po 持久化对象
+     */
     private void updateLastLoginAt(AuthUserPO po) {
         po.setLastLoginAt(LocalDateTime.now());
         authUserManager.updateById(po);
     }
 
+    /**
+     * 使刷新Token失效。
+     * @param userId 用户 ID
+     */
     private void invalidateRefreshTokens(Long userId) {
         var keys = redisTemplate.keys(REFRESH_KEY_PREFIX + userId + ":*");
         if (keys != null && !keys.isEmpty()) {
@@ -317,6 +345,12 @@ public class AuthServiceImpl implements AuthService {
         }
     }
 
+    /**
+     * 吊销Token。
+     * @param jti JWT ID
+     * @param userId 用户 ID
+     * @param reason 原因
+     */
     private void revokeToken(String jti, Long userId, String reason) {
         // 持久化到 DB，作为可信数据源
         AuthTokenBlacklistPO bl = new AuthTokenBlacklistPO();
@@ -331,6 +365,11 @@ public class AuthServiceImpl implements AuthService {
             BLACKLIST_KEY_PREFIX + jti, "1", ttlSeconds, TimeUnit.SECONDS);
     }
 
+    /**
+     * 转换或解析角色编码。
+     * @param roleId 角色 ID
+     * @return 编号或编码
+     */
     private String resolveRoleCode(Long roleId) {
         if (roleId == null) {
             return "USER";
@@ -339,6 +378,14 @@ public class AuthServiceImpl implements AuthService {
         return role != null ? role.getRoleCode() : "USER";
     }
 
+    /**
+     * 签发Token。
+     * @param userId 用户 ID
+     * @param account 账号
+     * @param roleCode 角色编码
+     * @param roleId 角色 ID
+     * @return Token 信息
+     */
     private TokenVO issueTokens(Long userId, String account, String roleCode, Long roleId) {
         String jti = UUID.randomUUID().toString().replace("-", "");
         String accessToken = jwtUtil.sign(userId, account, roleCode, roleId, jti);

@@ -20,11 +20,12 @@ import com.yirancrazy.minimall.platform.service.RolePermissionService;
 import com.yirancrazy.minimall.platform.vo.PermissionVO;
 import com.yirancrazy.minimall.platform.vo.RoleVO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: PlatformRoleControllerV1 单元测试，验证角色权限查询与修改接口的薄控制器行为。
- * @Version: 1.1
- * @DateTime: 2026/08/13
+ * @Description: PlatformRoleControllerV1Test 单元测试。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
  **/
 @ExtendWith(MockitoExtension.class)
 class PlatformRoleControllerV1Test {

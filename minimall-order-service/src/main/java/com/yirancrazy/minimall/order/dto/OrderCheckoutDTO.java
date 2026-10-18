@@ -5,12 +5,13 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import lombok.Data;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 购物车结算DTO，支持多SKU批量下单。
+ * @Description: OrderCheckoutDTO 数据传输对象。
  * @Version: 1.0
- * @DateTime: 2026/08/03
- */
+ * @DateTime: 2026/10/16
+ **/
 @Data
 public class OrderCheckoutDTO {
 
@@ -18,7 +19,7 @@ public class OrderCheckoutDTO {
     @Valid
     private List<OrderCheckoutItemDTO> items;
 
-    /** 收货人信息，序列化为快照落库；未传则不记录收货信息 */
+
     @Valid
     private ReceiverDTO receiver;
 }

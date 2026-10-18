@@ -8,26 +8,31 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: JwtVerifier，提供网关相关能力
+ * @Description: JwtVerifier 类型，承载相关业务能力。
  * @Version: 1.0
- * @DateTime: 2026/07/31
- */
+ * @DateTime: 2026/10/16
+ **/
 @Component
 public class JwtVerifier {
 
     private final SecretKey key;
 
+    /**
+     * 构造 JwtVerifier 实例。
+     * @param secret secret 参数
+     */
     public JwtVerifier(@Value("${minimall.jwt.secret}") String secret) {
         this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
 
+
     /**
-     * 验签 JWT 并返回 Claims 载荷，供网关过滤器读取用户身份信息。
-     *
-     * @param token 客户端 Authorization 头中的 JWT 字符串
-     * @return 解析后的 Claims 载荷，包含 subject 与自定义声明
+     * 执行 verify 方法。
+     * @param token token 参数
+     * @return 处理结果
      */
     public Claims verify(String token) {
         return Jwts.parser()

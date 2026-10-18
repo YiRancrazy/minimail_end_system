@@ -4,12 +4,13 @@ import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 平台管理员视图对象，用于管理员列表输出
+ * @Description: AdminVO 视图对象。
  * @Version: 1.0
- * @DateTime: 2026/08/04
- */
+ * @DateTime: 2026/10/16
+ **/
 @Data
 @AllArgsConstructor
 public class AdminVO {

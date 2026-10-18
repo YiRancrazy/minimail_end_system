@@ -21,11 +21,12 @@ import com.yirancrazy.minimall.order.dto.OrderPageDTO;
 import com.yirancrazy.minimall.order.service.OrderService;
 import com.yirancrazy.minimall.order.vo.OrderVO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: MerchantOrderControllerV1 MockMvc 单元测试，验证商家端订单 HTTP 路由、可信 Header 注入与 Result 包装。
+ * @Description: MerchantOrderControllerV1Test 单元测试。
  * @Version: 1.0
- * @DateTime: 2026/08/05
+ * @DateTime: 2026/10/16
  **/
 class MerchantOrderControllerV1Test {
 
@@ -38,9 +39,7 @@ class MerchantOrderControllerV1Test {
         mockMvc = MockMvcBuilders.standaloneSetup(new MerchantOrderControllerV1(service)).build();
     }
 
-    /**
-     * 验证 GET /api/v1/merchant/orders 带 X-Merchant-Id 返回游标分页结果。
-     */
+
     @Test
     void page_returns_cursor_result() throws Exception {
         when(service.merchantPageVO(any(OrderPageDTO.class)))
@@ -50,9 +49,7 @@ class MerchantOrderControllerV1Test {
             .andExpect(jsonPath("$.code").value("00000"));
     }
 
-    /**
-     * 验证 POST /api/v1/merchant/orders/{id}/ship 带 X-User-Id 调用 service。
-     */
+
     @Test
     void ship_invokes_service() throws Exception {
         String body = "{\"carrier\":\"顺丰\",\"trackingNo\":\"SF12345678\"}";
@@ -65,9 +62,7 @@ class MerchantOrderControllerV1Test {
         verify(service).ship(eq(99L), eq(1L), eq("顺丰"), eq("SF12345678"));
     }
 
-    /**
-     * 验证 POST /api/v1/merchant/orders/{id}/close 带 X-Merchant-Id 调用 service。
-     */
+
     @Test
     void close_invokes_service() throws Exception {
         mockMvc.perform(post("/api/v1/merchant/orders/99/close").header("X-Merchant-Id", 1L))
@@ -76,9 +71,7 @@ class MerchantOrderControllerV1Test {
         verify(service).merchantClose(99L, 1L);
     }
 
-    /**
-     * 验证 GET /api/v1/merchant/orders/_count 返回商家待处理订单数。
-     */
+
     @Test
     void pending_count_returns_long() throws Exception {
         when(service.pendingCount(anyLong())).thenReturn(5L);
@@ -87,9 +80,7 @@ class MerchantOrderControllerV1Test {
             .andExpect(jsonPath("$.data").value(5));
     }
 
-    /**
-     * 验证 POST /api/v1/merchant/orders/{id}/refund-review?approved=true 调用 service。
-     */
+
     @Test
     void refund_review_invokes_service() throws Exception {
         mockMvc.perform(post("/api/v1/merchant/orders/99/refund-review")

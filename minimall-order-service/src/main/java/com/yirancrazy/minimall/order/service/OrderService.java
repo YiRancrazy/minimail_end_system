@@ -9,6 +9,7 @@ import com.yirancrazy.minimall.order.dto.OrderCheckoutItemDTO;
 import com.yirancrazy.minimall.order.dto.OrderPageDTO;
 import com.yirancrazy.minimall.order.dto.ReceiverDTO;
 import com.yirancrazy.minimall.order.entity.OrderPO;
+import com.yirancrazy.minimall.order.vo.OrderExportVO;
 import com.yirancrazy.minimall.order.vo.OrderItemVO;
 import com.yirancrazy.minimall.order.vo.OrderLogisticsVO;
 import com.yirancrazy.minimall.order.vo.OrderStatisticsVO;
@@ -17,303 +18,427 @@ import com.yirancrazy.minimall.order.vo.OrderSummaryVO;
 import com.yirancrazy.minimall.order.vo.OrderTrendVO;
 import com.yirancrazy.minimall.order.vo.OrderVO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 订单领域服务接口，定义Order相关业务契约
- * @Version: 1.2
- * @DateTime: 2026/08/03
- */
+ * @Description: OrderService 服务接口，定义相关业务能力。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 public interface OrderService {
+    /**
+     * 创建业务数据。
+     * @param userId userId 参数
+     * @param skuId skuId 参数
+     * @param quantity quantity 参数
+     * @return 业务数值
+     */
     Long create(Long userId, Long skuId, Integer quantity);
 
+
     /**
-     * 创建订单并携带收货人信息，序列化为快照落库。
-     * @param userId 用户ID
-     * @param receiver 收货人信息，可为 null（不记录收货信息）
-     * @return 订单ID
+     * 创建业务数据。
+     * @param userId userId 参数
+     * @param skuId skuId 参数
+     * @param quantity quantity 参数
+     * @param receiver receiver 参数
+     * @return 业务数值
      */
     Long create(Long userId, Long skuId, Integer quantity, ReceiverDTO receiver);
 
+
     /**
-     * 多SKU结算下单：批量获取商品快照、锁库存、创建订单头与明细行、初始化支付流水。
-     * @param userId 用户ID
-     * @param items 结算明细列表
-     * @return 订单ID
+     * 校验业务条件。
+     * @param userId userId 参数
+     * @param items items 参数
+     * @return 业务数值
      */
     Long checkout(Long userId, List<OrderCheckoutItemDTO> items);
 
+
     /**
-     * 多SKU结算下单并携带收货人信息，序列化为快照落库。
-     * @param userId 用户ID
-     * @param items 结算明细列表
-     * @param receiver 收货人信息，可为 null（不记录收货信息）
-     * @return 订单ID
+     * 校验业务条件。
+     * @param userId userId 参数
+     * @param items items 参数
+     * @param receiver receiver 参数
+     * @return 业务数值
      */
     Long checkout(Long userId, List<OrderCheckoutItemDTO> items, ReceiverDTO receiver);
 
+
     /**
-     * 内部推进订单为已支付（支付服务回调/事务消息场景），不校验用户归属。
-     * @param orderId 订单ID
+     * 执行 pay 方法。
+     * @param orderId orderId 参数
      */
     void pay(Long orderId);
 
+
     /**
-     * 按业务单号推进订单为已支付，供支付回调使用（C 端支付回调携带业务单号而非订单ID）。
-     * @param orderNo 业务单号
+     * 执行 payByOrderNo 方法。
+     * @param orderNo orderNo 参数
      */
     void payByOrderNo(String orderNo);
 
+    /**
+     * 执行 cancel 方法。
+     * @param orderId orderId 参数
+     * @param userId userId 参数
+     */
     void cancel(Long orderId, Long userId);
 
+    /**
+     * 执行 ship 方法。
+     * @param orderId orderId 参数
+     * @param merchantId merchantId 参数
+     * @param carrier carrier 参数
+     * @param trackingNo trackingNo 参数
+     */
     void ship(Long orderId, Long merchantId, String carrier, String trackingNo);
 
+    /**
+     * 执行 confirm 方法。
+     * @param orderId orderId 参数
+     * @param userId userId 参数
+     */
     void confirm(Long orderId, Long userId);
 
+
     /**
-     * 用户申请退款：校验订单归属后仅置 REFUNDING 并记录原状态，不发起真实支付退款；
-     * 真实退款由商家审核通过后调用支付网关触发，状态由支付回调驱动。
-     * @param orderId 订单ID
-     * @param userId 用户ID（归属校验，来自可信 Header）
+     * 执行 refund 方法。
+     * @param orderId orderId 参数
+     * @param userId userId 参数
      */
     void refund(Long orderId, Long userId);
 
+
     /**
-     * 商家主动发起退款，仅允许 PAID/SHIPPED/COMPLETED 三种状态的订单。
-     * 退款走与用户申请退款相同的链路，但默认直接置 REFUNDING，由商家审核后再到 REFUNDED。
-     * @param orderId   订单ID
-     * @param merchantId 商家ID（归属校验）
-     * @param refundAmount 退款金额（字符串由调用方决定精度，内部转 BigDecimal）
-     * @param reason 退款原因
+     * 执行 merchantInitiateRefund 方法。
+     * @param orderId orderId 参数
+     * @param merchantId merchantId 参数
+     * @param refundAmount refundAmount 参数
+     * @param reason reason 参数
      */
     void merchantInitiateRefund(Long orderId, Long merchantId, String refundAmount, String reason);
 
+
     /**
-     * 商家主动发起退款并携带稳定退款请求号。
-     * @param orderId 订单ID
-     * @param merchantId 商家ID
-     * @param refundAmount 退款金额
-     * @param reason 退款原因
-     * @param refundRequestNo 退款请求幂等键
+     * 执行 merchantInitiateRefund 方法。
+     * @param orderId orderId 参数
+     * @param merchantId merchantId 参数
+     * @param refundAmount refundAmount 参数
+     * @param reason reason 参数
+     * @param refundRequestNo refundRequestNo 参数
      */
     void merchantInitiateRefund(Long orderId, Long merchantId, String refundAmount, String reason,
                                 String refundRequestNo);
 
+
     /**
-     * 接收支付服务退款结果回调，按累计退款金额决定部分退款回退或全额退款终态。
-     * @param dto 退款结果回调
+     * 执行 merchantInitiateRefundByNo 方法。
+     * @param refundNo refundNo 参数
+     * @param merchantId merchantId 参数
+     * @param refundAmount refundAmount 参数
+     * @param reason reason 参数
+     */
+    void merchantInitiateRefundByNo(String refundNo, Long merchantId, String refundAmount, String reason);
+
+
+    /**
+     * 处理业务事件。
+     * @param dto dto 参数
      */
     void handleRefundCallback(RefundCallbackDTO dto);
 
+
     /**
-     * 校验订单评价资格：订单存在、归属该用户、包含该 SPU 且处于已购买状态，并返回订单快照商家ID。
-     * @param orderNo 订单号
-     * @param userId 评价用户ID
-     * @param spuId 商品SPU ID
-     * @return 评价资格快照；任何条件不满足时 eligible=false
+     * 执行 commentEligibility 方法。
+     * @param orderNo orderNo 参数
+     * @param userId userId 参数
+     * @param spuId spuId 参数
+     * @return 处理结果
      */
     OrderCommentEligibilityDTO commentEligibility(String orderNo, Long userId, Long spuId);
 
+
     /**
-     * 查询订单状态，校验归属，非本人订单抛出 ORDER_NOT_FOUND。
-     * @param orderId 订单ID
-     * @param userId 用户ID（归属校验，来自可信 Header）
-     * @return 订单状态码
+     * 获取相关数据。
+     * @param orderId orderId 参数
+     * @param userId userId 参数
+     * @return 处理结果
+     */
+    OrderPO getDetail(Long orderId, Long userId);
+    /**
+     * 获取相关数据。
+     * @param orderId orderId 参数
+     * @param userId userId 参数
+     * @return 业务数值
      */
     Integer getStatus(Long orderId, Long userId);
 
+
     /**
-     * 查询订单状态（内部/平台入口），不校验用户归属。
-     * @param orderId 订单ID
-     * @return 订单状态码
+     * 获取相关数据。
+     * @param orderId orderId 参数
+     * @return 处理结果
+     */
+    OrderPO getDetail(Long orderId);
+    /**
+     * 获取相关数据。
+     * @param orderId orderId 参数
+     * @return 业务数值
      */
     Integer getStatus(Long orderId);
 
+
     /**
-     * 按订单标识（订单ID或业务单号）解析订单归属商户ID，供支付服务归属收款商户。
-     * @param ref 订单标识
-     * @return 商户ID；订单不存在时返回 null
+     * 执行 resolveMerchantId 方法。
+     * @param ref ref 参数
+     * @return 业务数值
      */
     Long resolveMerchantId(String ref);
 
+
     /**
-     * 查询订单支付快照，供支付服务校验支付人、应付金额和订单状态。
-     * @param ref 订单标识（订单ID或业务单号）
-     * @return 订单支付快照
-     * @throws com.yirancrazy.minimall.common.exception.BizException 订单不存在时
+     * 获取相关数据。
+     * @param ref ref 参数
+     * @return 处理结果
      */
     OrderPaySnapshotDTO getPaySnapshot(String ref);
 
-    /**
-     * 查询订单详情，校验归属，非本人订单抛出 ORDER_NOT_FOUND。
-     * @param orderId 订单ID
-     * @param userId 用户ID（归属校验，来自可信 Header）
-     * @return 订单持久化实体
-     */
-    OrderPO getDetail(Long orderId, Long userId);
+
+
 
     /**
-     * 查询订单详情（平台/内部入口），不校验用户归属。
-     * @param orderId 订单ID
-     * @return 订单持久化实体
-     */
-    OrderPO getDetail(Long orderId);
-
-    /**
-     * 查询订单商品明细行，供订单详情页展示；无明细时返回空列表。
-     * @param orderId 订单ID
-     * @return 商品明细VO列表
+     * 查询列表数据。
+     * @param orderId orderId 参数
+     * @return 结果列表
      */
     List<OrderItemVO> listItemVO(Long orderId);
 
+
     /**
-     * 商家关闭订单，仅允许 PENDING 状态关闭并释放库存，归属不符时抛出 ORDER_NOT_FOUND。
-     * @param orderId 订单ID
-     * @param merchantId 商家ID
+     * 执行 merchantClose 方法。
+     * @param orderId orderId 参数
+     * @param merchantId merchantId 参数
      */
     void merchantClose(Long orderId, Long merchantId);
 
+
     /**
-     * 用户删除订单，仅允许终态（CANCELED/COMPLETED/REFUNDED）删除，归属不符抛出 ORDER_NOT_FOUND。
-     * @param orderId 订单ID
-     * @param userId 用户ID
+     * 删除业务数据。
+     * @param orderId orderId 参数
+     * @param userId userId 参数
      */
     void delete(Long orderId, Long userId);
 
+
     /**
-     * 平台强制关闭异常订单，仅允许 PENDING 状态关闭并释放库存。
-     * @param orderId 订单ID
+     * 执行 platformClose 方法。
+     * @param orderId orderId 参数
      */
     void platformClose(Long orderId);
 
+
     /**
-     * 商家待处理订单数量统计，包含 PENDING/PAID/REFUNDING 三种状态。
-     * @param merchantId 商家ID
-     * @return 待处理订单总数
+     * 执行 pendingCount 方法。
+     * @param merchantId merchantId 参数
+     * @return 业务数值
      */
     long pendingCount(Long merchantId);
 
-    /**
-     * 游标分页查询订单，支持按用户/商家/状态过滤。
-     * @param dto 游标分页查询入参
-     * @return 订单游标分页结果
-     */
-    CursorPageVO<OrderPO> page(OrderPageDTO dto);
+
 
     /**
-     * 商家端游标分页查询订单并装配展示字段（商品名、驳回原因），返回 Controller 边界 VO。
-     * @param dto 游标分页查询入参
-     * @return 订单 VO 游标分页结果
+     * 分页查询数据。
+     * @param dto dto 参数
+     * @return 处理结果
+     */
+    CursorPageVO<OrderPO> page(OrderPageDTO dto);
+    /**
+     * 分页查询数据。
+     * @param dto dto 参数
+     * @return 处理结果
+     */
+    CursorPageVO<OrderVO> pageVO(OrderPageDTO dto);
+
+
+    /**
+     * 执行 detailVO 方法。
+     * @param orderId orderId 参数
+     * @param userId userId 参数
+     * @return 处理结果
+     */
+    OrderVO detailVO(Long orderId, Long userId);
+
+
+    /**
+     * 执行 platformDetailVO 方法。
+     * @param orderId orderId 参数
+     * @return 处理结果
+     */
+    OrderVO platformDetailVO(Long orderId);
+
+
+    /**
+     * 执行 platformExportList 方法。
+     * @param dto dto 参数
+     * @return 结果列表
+     */
+    List<OrderPO> platformExportList(OrderPageDTO dto);
+    /**
+     * 执行 merchantPageVO 方法。
+     * @param dto dto 参数
+     * @return 处理结果
      */
     CursorPageVO<OrderVO> merchantPageVO(OrderPageDTO dto);
 
+
     /**
-     * 商家端查询单个订单详情并装配展示字段，校验订单归属当前商家。
-     * @param orderId 订单ID
-     * @param merchantId 商家ID，来自可信 Header
-     * @return 订单 VO
-     * @throws com.yirancrazy.minimall.common.exception.BizException 订单不存在或不属于该商家时
+     * 执行 merchantDetailVO 方法。
+     * @param orderId orderId 参数
+     * @param merchantId merchantId 参数
+     * @return 处理结果
      */
     OrderVO merchantDetailVO(Long orderId, Long merchantId);
 
+
     /**
-     * 商家审核退款，仅允许 REFUNDING 状态订单；approved=true 发起真实支付退款（状态由回调驱动到 REFUNDED），
-     * false 回退到 refundFromStatus 并将驳回原因写入状态日志。
-     * @param orderId 订单ID
-     * @param approved 是否同意退款
-     * @param merchantId 商家ID，来自可信 Header
-     * @param reason 驳回原因，仅 approved=false 时有效；同意退款或无需驳回原因时传 null
+     * 执行 reviewRefund 方法。
+     * @param orderId orderId 参数
+     * @param approved approved 参数
+     * @param merchantId merchantId 参数
+     * @param reason reason 参数
      */
     void reviewRefund(Long orderId, boolean approved, Long merchantId, String reason);
 
+
     /**
-     * 商家审核退款并携带稳定退款请求号。
-     * @param orderId 订单ID
-     * @param approved 是否同意退款
-     * @param merchantId 商家ID
-     * @param reason 驳回原因
-     * @param refundRequestNo 退款请求幂等键
+     * 执行 reviewRefund 方法。
+     * @param orderId orderId 参数
+     * @param approved approved 参数
+     * @param merchantId merchantId 参数
+     * @param reason reason 参数
+     * @param refundRequestNo refundRequestNo 参数
      */
     void reviewRefund(Long orderId, boolean approved, Long merchantId, String reason,
                       String refundRequestNo);
 
+
     /**
-     * 平台退款仲裁，仅允许 REFUNDING 状态订单；approved=true 发起真实支付退款并由回调推进 REFUNDED，
-     * false 回退到 refundFromStatus。
-     * @param orderId 订单ID
-     * @param approved 仲裁是否支持退款
+     * 执行 reviewRefundByNo 方法。
+     * @param refundNo refundNo 参数
+     * @param approved approved 参数
+     * @param merchantId merchantId 参数
+     * @param reason reason 参数
+     */
+    void reviewRefundByNo(String refundNo, boolean approved, Long merchantId, String reason);
+
+
+    /**
+     * 执行 arbitrateRefund 方法。
+     * @param orderId orderId 参数
+     * @param approved approved 参数
      */
     void arbitrateRefund(Long orderId, boolean approved);
 
+
     /**
-     * 查询订单物流轨迹，校验归属，非本人订单抛出 ORDER_NOT_FOUND；按创建时间正序返回。
-     * @param orderId 订单ID
-     * @param userId 用户ID（归属校验，来自可信 Header）
-     * @return 物流节点列表
+     * 执行 queryLogistics 方法。
+     * @param orderId orderId 参数
+     * @param userId userId 参数
+     * @return 结果列表
      */
     List<OrderLogisticsVO> queryLogistics(Long orderId, Long userId);
 
+
+
     /**
-     * 导出商家订单列表，最多 10000 行，merchantId 强制绑定。
-     * @param merchantId 商家ID
-     * @param dto 查询入参（复用过滤字段）
-     * @return 订单列表
+     * 执行 exportList 方法。
+     * @param merchantId merchantId 参数
+     * @param dto dto 参数
+     * @return 结果列表
      */
     List<OrderPO> exportList(Long merchantId, OrderPageDTO dto);
-
     /**
-     * 导出全平台订单列表，最多 10000 行，不绑定 merchantId。
-     * @param dto 查询入参
-     * @return 订单列表
+     * 执行 exportVOList 方法。
+     * @param merchantId merchantId 参数
+     * @param dto dto 参数
+     * @return 结果列表
      */
-    List<OrderPO> platformExportList(OrderPageDTO dto);
+    List<OrderExportVO> exportVOList(Long merchantId, OrderPageDTO dto);
+
+
 
     /**
-     * 平台订单统计聚合，可选 merchantId 过滤，返回总数/总金额/退款金额/各状态计数。
-     * @param dto 查询入参（复用 merchantId/startTime/endTime）
-     * @return 订单统计VO
+     * 执行 platformExportVOList 方法。
+     * @param dto dto 参数
+     * @return 结果列表
+     */
+    List<OrderExportVO> platformExportVOList(OrderPageDTO dto);
+
+
+    /**
+     * 执行 platformExportVOList 方法。
+     * @param startDate startDate 参数
+     * @param endDate endDate 参数
+     * @return 结果列表
+     */
+    List<OrderExportVO> platformExportVOList(String startDate, String endDate);
+
+
+    /**
+     * 执行 statistics 方法。
+     * @param dto dto 参数
+     * @return 处理结果
      */
     OrderStatisticsVO statistics(OrderPageDTO dto);
 
+
     /**
-     * 平台财务汇总：按日期范围与可选商家聚合订单金额概览。
-     * @param startDate 起始日期（yyyy-MM-dd），空则不限
-     * @param endDate 截止日期（yyyy-MM-dd），空则不限
-     * @param merchantId 商家ID（字符串），空则全平台
-     * @return 订单财务汇总VO
+     * 执行 orderSummary 方法。
+     * @param startDate startDate 参数
+     * @param endDate endDate 参数
+     * @param merchantId merchantId 参数
+     * @return 处理结果
      */
     OrderSummaryVO orderSummary(String startDate, String endDate, String merchantId);
 
+
     /**
-     * 平台订单趋势：按日聚合区间订单数与已支付金额。
-     * @param startDate 起始日期（yyyy-MM-dd），空则不限
-     * @param endDate 截止日期（yyyy-MM-dd），空则不限
-     * @param merchantId 商家ID（字符串），空则全平台
-     * @return 订单趋势VO
+     * 执行 orderTrend 方法。
+     * @param startDate startDate 参数
+     * @param endDate endDate 参数
+     * @param merchantId merchantId 参数
+     * @return 处理结果
      */
     OrderTrendVO orderTrend(String startDate, String endDate, String merchantId);
 
+
     /**
-     * 统计指定用户各状态订单数量（待支付/待发货/待收货/已完成），供用户端"我的"页角标展示。
-     * @param userId 用户ID
-     * @return 各状态订单数量VO
+     * 统计业务数据。
+     * @param userId userId 参数
+     * @return 处理结果
      */
     OrderStatusCountsVO countStatusByUser(Long userId);
 
+
     /**
-     * 扫描超时未支付订单，逐个推进 PENDING→CANCELED 并释放库存。由定时任务调度。
-     * @return 本次扫描处理的订单数
+     * 扫描并处理待办数据。
+     * @return 业务数值
      */
     int scanExpiredOrders();
 
+
     /**
-     * 扫描发货后超期未确认收货订单，逐个推进 SHIPPED→COMPLETED。由定时任务调度。
-     * @return 本次扫描处理的订单数
+     * 扫描并处理待办数据。
+     * @return 业务数值
      */
     int scanAutoConfirm();
 
+
     /**
-     * 扫描已取消且库存待释放订单，按订单号幂等重试释放。
-     * @return 本次成功释放订单数
+     * 扫描并处理待办数据。
+     * @return 业务数值
      */
     int scanStockReleasePending();
 }

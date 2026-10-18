@@ -12,12 +12,13 @@ import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
 import com.yirancrazy.minimall.common.exception.BizException;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: MinioUtil 单元测试，验证上传 MIME 兜底推断与 public-endpoint 构造分支。
+ * @Description: MinioUtilTest 单元测试。
  * @Version: 1.0
- * @DateTime: 2026/08/27
- */
+ * @DateTime: 2026/10/16
+ **/
 class MinioUtilTest {
 
     private final MinioClient minioClient = mock(MinioClient.class);

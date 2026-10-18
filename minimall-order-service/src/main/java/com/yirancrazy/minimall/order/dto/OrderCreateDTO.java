@@ -8,11 +8,12 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 数据传输对象，用于接收请求参数。
+ * @Description: OrderCreateDTO 数据传输对象。
  * @Version: 1.0
- * @DateTime: 2026/7/31
+ * @DateTime: 2026/10/16
  **/
 @Data
 @NoArgsConstructor
@@ -26,7 +27,7 @@ public class OrderCreateDTO {
     @Min(value = 1, message = "购买数量至少为1")
     private Integer quantity;
 
-    /** 收货人信息，序列化为快照落库；未传则不记录收货信息 */
+
     @Valid
     private ReceiverDTO receiver;
 }

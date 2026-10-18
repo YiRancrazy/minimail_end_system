@@ -24,14 +24,15 @@ import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.notify.constant.RecipientTypeEnum;
 import com.yirancrazy.minimall.notify.dto.NotifyBatchDeleteDTO;
 import com.yirancrazy.minimall.notify.dto.NotifyListDTO;
-import com.yirancrazy.minimall.notify.entity.NotifyMessagePO;
 import com.yirancrazy.minimall.notify.service.NotifyService;
+import com.yirancrazy.minimall.notify.vo.NotifyMessageVO;
+
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: UserNotifyControllerV1 MockMvc 单元测试，验证用户站内信分页、未读计数、标记已读与删除端点。
+ * @Description: UserNotifyControllerV1Test 单元测试。
  * @Version: 1.0
- * @DateTime: 2026/08/05
+ * @DateTime: 2026/10/16
  **/
 class UserNotifyControllerV1Test {
 
@@ -45,12 +46,10 @@ class UserNotifyControllerV1Test {
         mockMvc = MockMvcBuilders.standaloneSetup(new UserNotifyControllerV1(notifyService)).build();
     }
 
-    /**
-     * 验证 GET /api/v1/user/notify/messages 通过 X-User-Id 头返回游标分页结果。
-     */
+
     @Test
     void page_returns_cursor_result() throws Exception {
-        when(notifyService.page(any(NotifyListDTO.class)))
+        when(notifyService.pageVO(any(NotifyListDTO.class)))
             .thenReturn(new CursorPageVO<>(Collections.emptyList(), null, false, 20));
         mockMvc.perform(get("/api/v1/user/notify/messages")
                 .header("X-User-Id", 1L)
@@ -59,9 +58,7 @@ class UserNotifyControllerV1Test {
             .andExpect(jsonPath("$.code").value("00000"));
     }
 
-    /**
-     * 验证 GET /api/v1/user/notify/messages/_count 返回未读消息数。
-     */
+
     @Test
     void unreadCount_returns_long() throws Exception {
         when(notifyService.unreadCount(anyInt(), anyLong())).thenReturn(5L);
@@ -72,9 +69,7 @@ class UserNotifyControllerV1Test {
             .andExpect(jsonPath("$.data").value(5));
     }
 
-    /**
-     * 验证 POST /api/v1/user/notify/messages/{id}/_read 调用 service 标记单条已读。
-     */
+
     @Test
     void markRead_invokes_service() throws Exception {
         mockMvc.perform(post("/api/v1/user/notify/messages/99/_read")
@@ -84,9 +79,7 @@ class UserNotifyControllerV1Test {
         verify(notifyService).markRead(anyLong(), anyInt(), anyLong());
     }
 
-    /**
-     * 验证 POST /api/v1/user/notify/messages/_read-all 调用 service 全部标记已读。
-     */
+
     @Test
     void markAllRead_invokes_service() throws Exception {
         mockMvc.perform(post("/api/v1/user/notify/messages/_read-all")
@@ -96,9 +89,7 @@ class UserNotifyControllerV1Test {
         verify(notifyService).markAllRead(anyInt(), anyLong());
     }
 
-    /**
-     * 验证 DELETE /api/v1/user/notify/messages/batch 调用 service 批量软删除。
-     */
+
     @Test
     void batchDelete_invokes_service() throws Exception {
         NotifyBatchDeleteDTO dto = new NotifyBatchDeleteDTO();
@@ -112,19 +103,16 @@ class UserNotifyControllerV1Test {
         verify(notifyService).batchDelete(any(), anyInt(), anyLong());
     }
 
-    /**
-     * 验证 GET /api/v1/user/notify 向后兼容入口：userId 以 X-User-Id 头为准，
-     * 请求参数传入他人 userId 时被强制覆盖，防止越权读取他人站内信。
-     */
+
     @Test
     void list_overrides_userId_from_header() throws Exception {
-        NotifyMessagePO po = new NotifyMessagePO();
-        po.setId(1L);
-        po.setUserId(1L);
-        po.setTitle("通知");
-        po.setContent("内容");
-        when(notifyService.listByUser(any(NotifyListDTO.class)))
-            .thenReturn(java.util.List.of(po));
+        NotifyMessageVO vo = new NotifyMessageVO();
+        vo.setId(1L);
+        vo.setUserId(1L);
+        vo.setTitle("通知");
+        vo.setContent("内容");
+        when(notifyService.listByUserVO(any(NotifyListDTO.class)))
+            .thenReturn(java.util.List.of(vo));
         mockMvc.perform(get("/api/v1/user/notify")
                 .header("X-User-Id", 1L)
                 .param("userId", "999"))
@@ -132,7 +120,7 @@ class UserNotifyControllerV1Test {
             .andExpect(jsonPath("$.code").value("00000"))
             .andExpect(jsonPath("$.data[0].id").value(1));
         ArgumentCaptor<NotifyListDTO> captor = ArgumentCaptor.forClass(NotifyListDTO.class);
-        verify(notifyService).listByUser(captor.capture());
+        verify(notifyService).listByUserVO(captor.capture());
         NotifyListDTO captured = captor.getValue();
         assertEquals(1L, captured.getUserId());
         assertEquals(RecipientTypeEnum.USER.intCode(), captured.getRecipientType());

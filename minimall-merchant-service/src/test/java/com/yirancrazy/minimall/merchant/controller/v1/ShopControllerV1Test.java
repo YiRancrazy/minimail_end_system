@@ -20,14 +20,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yirancrazy.minimall.merchant.dto.ShopCreateDTO;
 import com.yirancrazy.minimall.merchant.dto.ShopUpdateDTO;
-import com.yirancrazy.minimall.merchant.entity.ShopPO;
 import com.yirancrazy.minimall.merchant.service.ShopService;
+import com.yirancrazy.minimall.merchant.vo.ShopVO;
+
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: ShopControllerV1 MockMvc 单元测试，验证店铺 CRUD 端点的 HTTP 路由、参数绑定与 Result 包装。
- * @Version: 1.1
- * @DateTime: 2026/08/05
+ * @Description: ShopControllerV1Test 单元测试。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
  **/
 class ShopControllerV1Test {
 
@@ -43,18 +44,16 @@ class ShopControllerV1Test {
         mockMvc = MockMvcBuilders.standaloneSetup(new ShopControllerV1(shopService)).build();
     }
 
-    /**
-     * 验证 GET /api/v1/merchant/shops/{id} 携带商家头返回店铺详情。
-     */
+
     @Test
     void get_returns_shop() throws Exception {
-        ShopPO po = new ShopPO();
-        po.setId(99L);
-        po.setMerchantId(1L);
-        po.setShopName("薄荷商城");
-        po.setLicenseNo("ABC123456789012");
-        po.setStatus(com.yirancrazy.minimall.merchant.constant.ShopStatusEnum.ACTIVE.intCode());
-        when(shopService.getById(1L, 99L)).thenReturn(po);
+        ShopVO vo = new ShopVO();
+        vo.setId(99L);
+        vo.setMerchantId(1L);
+        vo.setShopName("薄荷商城");
+        vo.setLicenseNo("ABC123456789012");
+        vo.setStatus(com.yirancrazy.minimall.merchant.constant.ShopStatusEnum.ACTIVE.intCode());
+        when(shopService.getVO(1L, 99L)).thenReturn(vo);
         mockMvc.perform(get("/api/v1/merchant/shops/99")
                 .header(X_MERCHANT_ID, "1"))
             .andExpect(status().isOk())
@@ -63,9 +62,7 @@ class ShopControllerV1Test {
             .andExpect(jsonPath("$.data.shopName").value("薄荷商城"));
     }
 
-    /**
-     * 验证 POST /api/v1/merchant/shops 携带商家头创建店铺并返回店铺 ID。
-     */
+
     @Test
     void create_returns_id() throws Exception {
         when(shopService.create(eq(1L), any(ShopCreateDTO.class))).thenReturn(100L);
@@ -82,9 +79,7 @@ class ShopControllerV1Test {
         verify(shopService).create(eq(1L), any(ShopCreateDTO.class));
     }
 
-    /**
-     * 验证 PUT /api/v1/merchant/shops/{id} 携带商家头更新店铺信息并返回成功。
-     */
+
     @Test
     void update_returns_boolean() throws Exception {
         when(shopService.update(eq(1L), anyLong(), any(ShopUpdateDTO.class))).thenReturn(true);
@@ -102,9 +97,7 @@ class ShopControllerV1Test {
         verify(shopService).update(eq(1L), anyLong(), any(ShopUpdateDTO.class));
     }
 
-    /**
-     * 验证 DELETE /api/v1/merchant/shops/{id} 携带商家头删除店铺并返回成功。
-     */
+
     @Test
     void delete_returns_boolean() throws Exception {
         when(shopService.delete(1L, 99L)).thenReturn(true);

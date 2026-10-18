@@ -14,7 +14,6 @@ import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.api.dto.goods.SkuSnapshotDTO;
 import com.yirancrazy.minimall.api.dto.stock.StockAdjustDTO;
 import com.yirancrazy.minimall.api.dto.stock.StockInitDTO;
-import com.yirancrazy.minimall.api.feign.StockFeignClient;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CommonCode;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
@@ -28,17 +27,20 @@ import com.yirancrazy.minimall.goods.dto.SkuPageDTO;
 import com.yirancrazy.minimall.goods.dto.SkuUpdateDTO;
 import com.yirancrazy.minimall.goods.entity.SkuPO;
 import com.yirancrazy.minimall.goods.entity.SpuPO;
+import com.yirancrazy.minimall.goods.gateway.GoodsRemoteGateway;
 import com.yirancrazy.minimall.goods.manager.SkuManager;
 import com.yirancrazy.minimall.goods.manager.SpuManager;
 import com.yirancrazy.minimall.goods.service.SkuService;
 import com.yirancrazy.minimall.goods.service.SpuService;
+import com.yirancrazy.minimall.goods.vo.SkuVO;
+
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 商品领域服务实现，实现Sku相关业务逻辑
- * @Version: 1.3
- * @DateTime: 2026/08/02
- */
+ * @Description: SkuServiceImpl 服务实现，实现相关业务逻辑。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 @Slf4j
 @Service
 public class SkuServiceImpl implements SkuService {
@@ -46,23 +48,29 @@ public class SkuServiceImpl implements SkuService {
     private final SkuManager skuManager;
     private final SpuManager spuManager;
     private final SpuService spuService;
-    private final StockFeignClient stockFeignClient;
+    private final GoodsRemoteGateway goodsRemoteGateway;
 
+    /**
+     * 构造 SkuServiceImpl 实例。
+     * @param skuManager skuManager 参数
+     * @param spuManager spuManager 参数
+     * @param spuService spuService 参数
+     * @param goodsRemoteGateway goodsRemoteGateway 参数
+     */
     public SkuServiceImpl(SkuManager skuManager, SpuManager spuManager, SpuService spuService,
-                          StockFeignClient stockFeignClient) {
+                          GoodsRemoteGateway goodsRemoteGateway) {
         this.skuManager = skuManager;
         this.spuManager = spuManager;
         this.spuService = spuService;
-        this.stockFeignClient = stockFeignClient;
+        this.goodsRemoteGateway = goodsRemoteGateway;
     }
 
+
     /**
-     * 按主键查询 SKU，不存在时抛出 SKU_NOT_FOUND 业务异常。
-     *
-     * @param id SKU 主键 ID
-     * @return 已存在的 SKU 实体
+     * 获取相关数据。
+     * @param id id 参数
+     * @return 处理结果
      */
-    @Override
     public SkuPO getById(Long id) {
         SkuPO s = skuManager.getById(id);
         if (s == null) {
@@ -71,23 +79,37 @@ public class SkuServiceImpl implements SkuService {
         return s;
     }
 
+
     /**
-     * 按主键查询 SKU 并校验归属商家，供商家端使用；非本人商品按"不存在"返回，避免越权信息泄露。
-     * @param id SKU 主键 ID
-     * @param merchantId 商家ID，来自可信Header
-     * @return 属于该商家的 SKU 实体
+     * 获取相关数据。
+     * @param id id 参数
+     * @param merchantId merchantId 参数
+     * @return 处理结果
      */
-    @Override
     public SkuPO getById(Long id, Long merchantId) {
         SkuPO s = getById(id);
         checkOwner(s, merchantId);
         return s;
     }
 
+
     /**
-     * 归属校验：SKU 归属商家与请求商家不一致时抛出 SKU_NOT_FOUND，防越权的同时不暴露资源存在性。
-     * @param existing 已查出的 SKU 实体
-     * @param merchantId 请求方商家ID
+     * 获取相关数据。
+     * @param id id 参数
+     * @param merchantId merchantId 参数
+     * @return 处理结果
+     */
+    @Override
+    public SkuVO getVO(Long id, Long merchantId) {
+        return SkuVO.from(getById(id, merchantId));
+    }
+
+
+    /**
+     * 校验Owner。
+     * @param existing existing
+     * @param merchantId 商户 ID
+     * @throws BizException 业务校验失败时抛出
      */
     private void checkOwner(SkuPO existing, Long merchantId) {
         if (existing.getMerchantId() != null && !existing.getMerchantId().equals(merchantId)) {
@@ -95,13 +117,12 @@ public class SkuServiceImpl implements SkuService {
         }
     }
 
+
     /**
-     * 创建 SKU 记录，归属商家ID来自可信Header；父 SPU 不存在或非本人商品时按"不存在"处理，
-     * 防止商家在他人 SPU 下挂载 SKU。价格、库存等字段做缺省值兜底后落库。
-     *
-     * @param merchantId 商家ID，来自可信Header
-     * @param dto 待保存的 SKU 信息
-     * @return 新建 SKU 的主键 ID
+     * 创建业务数据。
+     * @param merchantId merchantId 参数
+     * @param dto dto 参数
+     * @return 业务数值
      */
     @Override
     public Long create(Long merchantId, SkuCreateDTO dto) {
@@ -122,15 +143,15 @@ public class SkuServiceImpl implements SkuService {
         return sku.getId();
     }
 
+
     /**
-     * 联动初始化 SKU 库存记录：stock-service 异常或降级时按 WARN 记录不阻断创建，
-     * 后续商家可手动入库兜底。
-     * @param sku 已落库的新建 SKU
-     * @param merchantId 商家ID，来自可信Header
+     * 初始化库存BestEffort。
+     * @param sku SKU
+     * @param merchantId 商户 ID
      */
     private void initStockBestEffort(SkuPO sku, Long merchantId) {
         try {
-            Result<Void> r = stockFeignClient.initStock(
+            Result<Void> r = goodsRemoteGateway.initStock(
                 new StockInitDTO(sku.getId(), merchantId, sku.getStock()));
             if (r == null || !CommonCode.SUCCESS.equals(r.getCode())) {
                 log.warn("初始化库存失败，skuId={}，msg={}", sku.getId(),
@@ -142,13 +163,12 @@ public class SkuServiceImpl implements SkuService {
         }
     }
 
+
     /**
-     * 游标分页查询 SKU，按归属商家过滤，skuName 非空时按 like 模糊匹配，按 ID 倒序。
-     *
-     * @param dto 游标分页查询入参
-     * @return SKU 游标分页结果
+     * 分页查询数据。
+     * @param dto dto 参数
+     * @return 处理结果
      */
-    @Override
     public CursorPageVO<SkuPO> page(SkuPageDTO dto) {
         Long lastId = CursorUtils.decode(dto.getCursor());
         int limit = dto.getLimit();
@@ -162,13 +182,24 @@ public class SkuServiceImpl implements SkuService {
         return CursorPageVO.of(records, limit, SkuPO::getId);
     }
 
+
     /**
-     * 按主键更新 SKU，不存在或非本人商品时抛出 SKU_NOT_FOUND。
-     *
-     * @param id SKU 主键 ID
-     * @param merchantId 商家ID，来自可信Header
-     * @param dto 待更新的 SKU 信息
-     * @return 更新是否成功
+     * 分页查询数据。
+     * @param dto dto 参数
+     * @return 处理结果
+     */
+    @Override
+    public CursorPageVO<SkuVO> pageVO(SkuPageDTO dto) {
+        return page(dto).map(SkuVO::from);
+    }
+
+
+    /**
+     * 更新业务数据。
+     * @param id id 参数
+     * @param merchantId merchantId 参数
+     * @param dto dto 参数
+     * @return 是否处理成功
      */
     @Override
     public boolean update(Long id, Long merchantId, SkuUpdateDTO dto) {
@@ -203,27 +234,29 @@ public class SkuServiceImpl implements SkuService {
         return ok;
     }
 
+
     /**
-     * 调整权威库存，库存服务失败时中止商品更新，避免本地库存投影产生伪更新。
-     * @param skuId SKU 主键 ID
-     * @param merchantId 商家ID
-     * @param delta 库存增量
-     * @param reason 调整原因
-     * @throws BizException 库存服务返回失败时
+     * 更新库存。
+     * @param skuId SKU ID
+     * @param merchantId 商户 ID
+     * @param delta delta
+     * @param reason 原因
+     * @throws BizException 业务校验失败时抛出
      */
     private void adjustStock(Long skuId, Long merchantId, long delta, String reason) {
-        Result<Void> result = stockFeignClient.adjustStock(
+        Result<Void> result = goodsRemoteGateway.adjustStock(
             new StockAdjustDTO(skuId, merchantId, delta, reason));
         if (result == null || !CommonCode.SUCCESS.equals(result.getCode())) {
             throw new BizException(SkuCodeEnum.STOCK_ADJUST_FAILED);
         }
     }
 
+
     /**
-     * 本地 SKU 更新失败时补偿库存调整，补偿异常单独记录以免掩盖主失败原因。
-     * @param skuId SKU 主键 ID
-     * @param merchantId 商家ID
-     * @param delta 反向调整量
+     * 处理rollback库存Adjustment。
+     * @param skuId SKU ID
+     * @param merchantId 商户 ID
+     * @param delta delta
      */
     private void rollbackStockAdjustment(Long skuId, Long merchantId, long delta) {
         try {
@@ -234,12 +267,12 @@ public class SkuServiceImpl implements SkuService {
         }
     }
 
+
     /**
-     * 按主键删除 SKU，不存在或非本人商品时抛出 SKU_NOT_FOUND。
-     *
-     * @param id SKU 主键 ID
-     * @param merchantId 商家ID，来自可信Header
-     * @return 删除是否成功
+     * 删除业务数据。
+     * @param id id 参数
+     * @param merchantId merchantId 参数
+     * @return 是否处理成功
      */
     @Override
     public boolean delete(Long id, Long merchantId) {
@@ -257,11 +290,11 @@ public class SkuServiceImpl implements SkuService {
         return ok;
     }
 
+
     /**
-     * 批量查询 SKU 快照：一次 IN 查询 SKU、一次 IN 查询所属 SPU，替代逐 SKU 的 N 次请求；
-     * 仅返回所属 SPU 在售的 SKU，与单条快照的防越权/防未过审语义保持一致，缺失项由调用方兜底降级。
-     * @param skuIds SKU 主键集合，允许为空
-     * @return skuId -> SKU 快照，空入参返回空 Map
+     * 查询列表数据。
+     * @param skuIds skuIds 参数
+     * @return 结果映射
      */
     @Override
     public Map<Long, SkuSnapshotDTO> listSnapshots(List<Long> skuIds) {
@@ -290,5 +323,25 @@ public class SkuServiceImpl implements SkuService {
                 s.getPrice(), s.getStock(), spu.getMerchantId()));
         }
         return snapshots;
+    }
+
+
+    /**
+     * 获取相关数据。
+     * @param id id 参数
+     * @return 处理结果
+     */
+    @Override
+    public SkuSnapshotDTO getSnapshot(Long id) {
+        SkuPO sku = getById(id);
+        SpuPO spu = spuManager.getById(sku.getSpuId());
+        if (spu == null) {
+            throw new BizException(SpuCodeEnum.SPU_NOT_FOUND);
+        }
+        if (spu.getStatus() == null || spu.getStatus() != SpuStatusEnum.ON_SALE.statusValue()) {
+            throw new BizException(SpuCodeEnum.SPU_NOT_ON_SALE);
+        }
+        return new SkuSnapshotDTO(sku.getId(), sku.getSpuId(), sku.getSkuName(),
+            sku.getPrice(), sku.getStock(), spu.getMerchantId());
     }
 }

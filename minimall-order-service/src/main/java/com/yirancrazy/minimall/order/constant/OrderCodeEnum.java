@@ -4,14 +4,15 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import com.yirancrazy.minimall.common.base.BaseEnum;
 
-/**
- * @Author: yirancrazy@gmail.com
- * @Description: 订单Order错误码枚举，定义订单相关错误码
- * @Version: 1.0
- * @DateTime: 2026/07/31
- */
+
 @Getter
 
+/**
+ * @Author: yirancrazy@gmail.com
+ * @Description: OrderCodeEnum 枚举，定义相关业务状态。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 @AllArgsConstructor
 public enum OrderCodeEnum implements BaseEnum {
     STOCK_RESERVE_FAIL("11001", "STOCK_RESERVE_FAIL", "库存锁定失败"),

@@ -27,11 +27,12 @@ import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 import com.yirancrazy.minimall.gateway.config.JwtVerifier;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: AuthGlobalFilter 的单元测试类，覆盖JWT鉴权、内部接口隔离、幂等键校验和防重放。
- * @Version: 2.0
- * @DateTime: 2026/08/04
+ * @Description: AuthGlobalFilterTest 单元测试。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
  **/
 @ExtendWith(MockitoExtension.class)
 class AuthGlobalFilterTest {

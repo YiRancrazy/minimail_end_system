@@ -25,10 +25,15 @@ import com.yirancrazy.minimall.user.dto.AddressUpdateDTO;
 import com.yirancrazy.minimall.user.entity.AddressPO;
 import com.yirancrazy.minimall.user.manager.AddressManager;
 import com.yirancrazy.minimall.user.service.impl.AddressServiceImpl;
+import com.yirancrazy.minimall.user.vo.AddressVO;
+
 
 /**
- * AddressServiceImpl 单元测试，覆盖收货地址增删改查与默认地址设置的正常、失败、边界路径。
- */
+ * @Author: yirancrazy@gmail.com
+ * @Description: AddressServiceImplTest 单元测试。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 public class AddressServiceImplTest {
 
     @BeforeAll
@@ -57,10 +62,10 @@ public class AddressServiceImplTest {
         service = new AddressServiceImpl(addressManager);
     }
 
+
     /**
-     * 验证 create 在地址数量未超限时正常保存并返回 ID。
+     * 创建业务数据。
      */
-    @Test
     public void create_persists_and_returns_id() {
         when(addressManager.count(any(Wrapper.class))).thenReturn(0L);
 
@@ -71,10 +76,10 @@ public class AddressServiceImplTest {
         verify(addressManager).save(any(AddressPO.class));
     }
 
+
     /**
-     * 验证 create 在地址数量达到 20 时抛出 BizException。
+     * 创建业务数据。
      */
-    @Test
     public void create_throws_when_limit_exceeded() {
         when(addressManager.count(any(Wrapper.class))).thenReturn(20L);
 
@@ -83,10 +88,10 @@ public class AddressServiceImplTest {
         verify(addressManager, never()).save(any(AddressPO.class));
     }
 
+
     /**
-     * 验证 create 在用户无地址时自动设为默认。
+     * 创建业务数据。
      */
-    @Test
     public void create_auto_set_default_when_no_addresses() {
         when(addressManager.count(any(Wrapper.class))).thenReturn(0L);
         doAnswer(inv -> {
@@ -101,10 +106,10 @@ public class AddressServiceImplTest {
         verify(addressManager).save(any(AddressPO.class));
     }
 
+
     /**
-     * 验证 listByUserId 返回指定用户的地址列表。
+     * 查询列表数据。
      */
-    @Test
     public void listByUserId_returns_addresses() {
         AddressPO addr = new AddressPO();
         addr.setId(1L);
@@ -112,16 +117,16 @@ public class AddressServiceImplTest {
         addr.setReceiverName("张三");
         when(addressManager.list(any(Wrapper.class))).thenReturn(List.of(addr));
 
-        List<AddressPO> result = service.listByUserId(1L);
+        List<AddressVO> result = service.listByUserId(1L);
 
         assertEquals(1, result.size());
-        assertEquals("张三", result.get(0).getReceiverName());
+        assertEquals("张三", result.get(0).getReceiver());
     }
 
+
     /**
-     * 验证 update 在地址存在且属于当前用户时正常更新。
+     * 更新业务数据。
      */
-    @Test
     public void update_succeeds_when_owned() {
         AddressPO existing = buildOwnedAddress(1L, 1L);
         when(addressManager.getById(1L)).thenReturn(existing);
@@ -133,10 +138,10 @@ public class AddressServiceImplTest {
         verify(addressManager).updateById(any(AddressPO.class));
     }
 
+
     /**
-     * 验证 update 在地址不属于当前用户时抛出 BizException。
+     * 更新业务数据。
      */
-    @Test
     public void update_throws_when_not_owned() {
         AddressPO existing = buildOwnedAddress(1L, 2L);
         when(addressManager.getById(1L)).thenReturn(existing);
@@ -145,10 +150,10 @@ public class AddressServiceImplTest {
         assertThrows(BizException.class, () -> service.update(1L, 1L, dto));
     }
 
+
     /**
-     * 验证 update 在地址不存在时抛出 BizException。
+     * 更新业务数据。
      */
-    @Test
     public void update_throws_when_not_found() {
         when(addressManager.getById(999L)).thenReturn(null);
 
@@ -156,10 +161,10 @@ public class AddressServiceImplTest {
         assertThrows(BizException.class, () -> service.update(1L, 999L, dto));
     }
 
+
     /**
-     * 验证 delete 在地址存在且属于当前用户时正常删除。
+     * 删除业务数据。
      */
-    @Test
     public void delete_succeeds_when_owned() {
         AddressPO existing = buildOwnedAddress(1L, 1L);
         when(addressManager.getById(1L)).thenReturn(existing);
@@ -169,10 +174,10 @@ public class AddressServiceImplTest {
         verify(addressManager).removeById(1L);
     }
 
+
     /**
-     * 验证 delete 在地址不属于当前用户时抛出 BizException。
+     * 删除业务数据。
      */
-    @Test
     public void delete_throws_when_not_owned() {
         AddressPO existing = buildOwnedAddress(1L, 2L);
         when(addressManager.getById(1L)).thenReturn(existing);
@@ -181,10 +186,10 @@ public class AddressServiceImplTest {
         verify(addressManager, never()).removeById(anyLong());
     }
 
+
     /**
-     * 验证 setDefault 在地址存在且属于当前用户时清除旧默认并设置新默认。
+     * 设置相关数据。
      */
-    @Test
     public void setDefault_clears_old_and_sets_new() {
         AddressPO existing = buildOwnedAddress(1L, 1L);
         when(addressManager.getById(1L)).thenReturn(existing);
@@ -195,10 +200,10 @@ public class AddressServiceImplTest {
         verify(addressManager).updateById(any(AddressPO.class));
     }
 
+
     /**
-     * 验证 setDefault 在地址不属于当前用户时抛出 BizException。
+     * 设置相关数据。
      */
-    @Test
     public void setDefault_throws_when_not_owned() {
         AddressPO existing = buildOwnedAddress(1L, 2L);
         when(addressManager.getById(1L)).thenReturn(existing);

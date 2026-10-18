@@ -10,11 +10,12 @@ import com.yirancrazy.minimall.api.feign.OrderFeignClient;
 import com.yirancrazy.minimall.common.result.CommonCode;
 import com.yirancrazy.minimall.common.result.Result;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: OrderFeignFallbackFactory 的单元测试类，验证服务不可用时返回系统错误而非伪造成功。
+ * @Description: OrderFeignFallbackFactoryTest 单元测试。
  * @Version: 1.0
- * @DateTime: 2026/8/16
+ * @DateTime: 2026/10/16
  **/
 class OrderFeignFallbackFactoryTest {
 

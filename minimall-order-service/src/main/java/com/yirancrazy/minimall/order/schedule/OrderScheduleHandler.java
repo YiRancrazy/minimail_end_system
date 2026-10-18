@@ -11,11 +11,12 @@ import org.springframework.stereotype.Component;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.order.service.OrderService;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 订单定时任务调度器，触发超时取消与自动确认收货扫描。ponytail: 用 Spring @Scheduled 替代 XXL-Job，等部署 XXL-Job admin 再切换。
- * @Version: 1.2
- * @DateTime: 2026/08/05
+ * @Description: OrderScheduleHandler 类型，承载相关业务能力。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
  **/
 @Slf4j
 @Component
@@ -24,10 +25,10 @@ import com.yirancrazy.minimall.order.service.OrderService;
     + "and '${minimall.xxl-job.enabled:false}' != 'true'")
 public class OrderScheduleHandler {
 
-    /** 分布式锁 TTL：分批扫描可能耗时数分钟，TTL 需覆盖单轮扫描并为宕机兜底 */
+
     private static final Duration LOCK_TTL = Duration.ofMinutes(10);
 
-    /** 释放锁时比较持有者标识，避免扫描超时后误删其他实例重新获取的锁 */
+
     private static final RedisScript<Long> RELEASE_LOCK_SCRIPT = RedisScript.of(
         "if redis.call('GET', KEYS[1]) == ARGV[1] then return redis.call('DEL', KEYS[1]) else return 0 end",
         Long.class);
@@ -35,15 +36,20 @@ public class OrderScheduleHandler {
     private final OrderService orderService;
     private final StringRedisTemplate redisTemplate;
 
+    /**
+     * 构造 OrderScheduleHandler 实例。
+     * @param orderService orderService 参数
+     * @param redisTemplate redisTemplate 参数
+     */
     public OrderScheduleHandler(OrderService orderService, StringRedisTemplate redisTemplate) {
         this.orderService = orderService;
         this.redisTemplate = redisTemplate;
     }
 
+
     /**
-     * 每 1 分钟扫描一次超时未支付订单；SETNX 加锁失败说明其他实例正在执行，直接跳过。
+     * 扫描并处理待办数据。
      */
-    @Scheduled(fixedDelayString = "${minimall.schedule.scan-expired-ms:60000}")
     public void scanExpiredOrders() {
         String lockKey = "order:schedule:scanExpiredOrders";
         String lockToken = tryLock(lockKey);
@@ -60,10 +66,10 @@ public class OrderScheduleHandler {
         }
     }
 
+
     /**
-     * 每 1 小时扫描一次超期未确认收货订单；SETNX 加锁失败说明其他实例正在执行，直接跳过。
+     * 扫描并处理待办数据。
      */
-    @Scheduled(fixedDelayString = "${minimall.schedule.scan-auto-confirm-ms:3600000}")
     public void scanAutoConfirm() {
         String lockKey = "order:schedule:scanAutoConfirm";
         String lockToken = tryLock(lockKey);
@@ -80,10 +86,10 @@ public class OrderScheduleHandler {
         }
     }
 
+
     /**
-     * 每 1 分钟扫描一次已取消但库存仍待释放的订单，供失败后补偿重试。
+     * 扫描并处理待办数据。
      */
-    @Scheduled(fixedDelayString = "${minimall.schedule.scan-stock-release-ms:60000}")
     public void scanStockReleasePending() {
         String lockKey = "order:schedule:scanStockReleasePending";
         String lockToken = tryLock(lockKey);
@@ -99,10 +105,11 @@ public class OrderScheduleHandler {
         }
     }
 
+
     /**
-     * Redis SETNX 加锁，写入随机持有者标识，防止多实例并发执行同一扫描任务。
-     * @param key 锁键
-     * @return 持有者标识；获取失败返回 null
+     * 处理try锁定。
+     * @param key 键
+     * @return 处理结果
      */
     private String tryLock(String key) {
         String token = UUID.randomUUID().toString();
@@ -110,10 +117,11 @@ public class OrderScheduleHandler {
         return Boolean.TRUE.equals(locked) ? token : null;
     }
 
+
     /**
-     * 原子比较持有者标识后删除锁：标识不匹配说明锁已过期并被其他实例持有，不删除。
-     * @param key 锁键
-     * @param token 本实例持有者标识
+     * 执行锁定操作。
+     * @param key 键
+     * @param token Token
      */
     private void releaseLock(String key, String token) {
         try {

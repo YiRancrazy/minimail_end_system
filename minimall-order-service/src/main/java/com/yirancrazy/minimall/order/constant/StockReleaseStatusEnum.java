@@ -4,11 +4,12 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import com.yirancrazy.minimall.common.base.BaseEnum;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 订单库存释放状态，区分无需释放、待释放与已释放。
+ * @Description: StockReleaseStatusEnum 枚举，定义相关业务状态。
  * @Version: 1.0
- * @DateTime: 2026/09/21
+ * @DateTime: 2026/10/16
  **/
 @Getter
 @AllArgsConstructor
@@ -21,14 +22,19 @@ public enum StockReleaseStatusEnum implements BaseEnum {
     private final String alias;
     private final String message;
 
+    /**
+     * 获取相关数据。
+     * @return 处理结果
+     */
     @Override
     public String getCode() {
         return String.valueOf(code);
     }
 
+
     /**
-     * 获取持久化整数状态码。
-     * @return 整数状态码
+     * 执行 intCode 方法。
+     * @return 业务数值
      */
     public int intCode() {
         return code;

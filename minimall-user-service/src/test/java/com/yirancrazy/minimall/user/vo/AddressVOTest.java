@@ -7,18 +7,19 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import com.yirancrazy.minimall.user.entity.AddressPO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: AddressVO.from() 单元测试，验证字段映射逻辑
+ * @Description: AddressVOTest 单元测试。
  * @Version: 1.0
- * @DateTime: 2026/08/04
+ * @DateTime: 2026/10/16
  **/
 public class AddressVOTest {
 
+
     /**
-     * 验证 from 将所有字段正确映射。
+     * 执行 from_mapsAllFields 方法。
      */
-    @Test
     public void from_mapsAllFields() {
         AddressPO po = new AddressPO();
         po.setId(1L);
@@ -47,10 +48,10 @@ public class AddressVOTest {
         assertEquals(LocalDateTime.of(2026, 1, 1, 0, 0), vo.getCreateTime());
     }
 
+
     /**
-     * 验证 from 在字段为 null 时正确处理，不抛 NPE。
+     * 执行 from_nullFields 方法。
      */
-    @Test
     public void from_nullFields() {
         AddressPO po = new AddressPO();
         po.setId(1L);

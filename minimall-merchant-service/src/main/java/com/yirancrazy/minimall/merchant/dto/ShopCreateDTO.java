@@ -5,12 +5,13 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: ShopCreate数据传输对象，用于ShopCreate相关数据传输
- * @Version: 1.1
- * @DateTime: 2026/08/16
- */
+ * @Description: ShopCreateDTO 数据传输对象。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 @Data
 public class ShopCreateDTO {
 

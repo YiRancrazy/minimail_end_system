@@ -22,31 +22,36 @@ import static org.mockito.Mockito.when;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.yirancrazy.minimall.api.dto.goods.SkuSnapshotDTO;
 import com.yirancrazy.minimall.api.dto.stock.StockAdjustDTO;
-import com.yirancrazy.minimall.api.feign.StockFeignClient;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.goods.constant.SkuCodeEnum;
+import com.yirancrazy.minimall.goods.constant.SpuCodeEnum;
 import com.yirancrazy.minimall.goods.constant.SpuStatusEnum;
 import com.yirancrazy.minimall.goods.dto.SkuCreateDTO;
 import com.yirancrazy.minimall.goods.dto.SkuPageDTO;
 import com.yirancrazy.minimall.goods.dto.SkuUpdateDTO;
 import com.yirancrazy.minimall.goods.entity.SkuPO;
 import com.yirancrazy.minimall.goods.entity.SpuPO;
+import com.yirancrazy.minimall.goods.gateway.GoodsRemoteGateway;
 import com.yirancrazy.minimall.goods.manager.SkuManager;
 import com.yirancrazy.minimall.goods.manager.SpuManager;
 import com.yirancrazy.minimall.goods.service.SpuService;
 import com.yirancrazy.minimall.goods.service.impl.SkuServiceImpl;
 
+
 /**
- * SkuServiceImpl 单元测试，覆盖按主键查询与创建 SKU 的正常、失败、边界路径。
- */
+ * @Author: yirancrazy@gmail.com
+ * @Description: SkuServiceImplTest 单元测试。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 public class SkuServiceImplTest {
 
     private SkuManager skuManager;
     private SpuManager spuManager;
     private SpuService spuService;
-    private StockFeignClient stockFeignClient;
+    private GoodsRemoteGateway goodsRemoteGateway;
     private SkuServiceImpl service;
 
     @BeforeEach
@@ -54,7 +59,7 @@ public class SkuServiceImplTest {
         skuManager = mock(SkuManager.class);
         spuManager = mock(SpuManager.class);
         spuService = mock(SpuService.class);
-        stockFeignClient = mock(StockFeignClient.class);
+        goodsRemoteGateway = mock(GoodsRemoteGateway.class);
         lenient().doAnswer(inv -> {
             SkuPO p = inv.getArgument(0);
             if (p.getId() == null) {
@@ -64,13 +69,13 @@ public class SkuServiceImplTest {
         }).when(skuManager).save(any(SkuPO.class));
         lenient().when(skuManager.updateById(any(SkuPO.class))).thenReturn(true);
         lenient().when(skuManager.removeById(100L)).thenReturn(true);
-        service = new SkuServiceImpl(skuManager, spuManager, spuService, stockFeignClient);
+        service = new SkuServiceImpl(skuManager, spuManager, spuService, goodsRemoteGateway);
     }
 
+
     /**
-     * 验证 getById 在 SKU 存在时返回实体。
+     * 获取相关数据。
      */
-    @Test
     public void getById_returns_sku_when_exists() {
         SkuPO s = new SkuPO();
         s.setId(100L);
@@ -82,19 +87,19 @@ public class SkuServiceImplTest {
         assertEquals("sku-100", result.getSkuName());
     }
 
+
     /**
-     * 验证 getById 在 SKU 不存在时抛出 BizException。
+     * 获取相关数据。
      */
-    @Test
     public void getById_throws_when_missing() {
         when(skuManager.getById(999L)).thenReturn(null);
         assertThrows(BizException.class, () -> service.getById(999L));
     }
 
+
     /**
-     * 验证 getById 带商家校验：SKU 归属其他商家时抛出 BizException，防止越权读取。
+     * 获取相关数据。
      */
-    @Test
     public void getById_throws_when_merchant_mismatch() {
         SkuPO s = new SkuPO();
         s.setId(100L);
@@ -104,10 +109,10 @@ public class SkuServiceImplTest {
         assertThrows(BizException.class, () -> service.getById(100L, 99L));
     }
 
+
     /**
-     * 验证 create 在 price/stock 为 null 时使用缺省值并返回新 ID。
+     * 创建业务数据。
      */
-    @Test
     public void create_uses_defaults_when_price_and_stock_null() {
         SkuCreateDTO dto = new SkuCreateDTO();
         dto.setSpuId(1L);
@@ -128,10 +133,10 @@ public class SkuServiceImplTest {
         service.create(10L, dto);
     }
 
+
     /**
-     * 验证 create 成功后刷新父 SPU 的 ES 文档，价格区间随新 SKU 变化。
+     * 创建业务数据。
      */
-    @Test
     public void create_refreshes_parent_spu_es_document() {
         SkuCreateDTO dto = new SkuCreateDTO();
         dto.setSpuId(1L);
@@ -144,10 +149,10 @@ public class SkuServiceImplTest {
         verify(spuService).refreshEsDocument(1L);
     }
 
+
     /**
-     * 验证 create 在 price/stock 非空时透传原值。
+     * 创建业务数据。
      */
-    @Test
     public void create_passes_through_price_and_stock() {
         SkuCreateDTO dto = new SkuCreateDTO();
         dto.setSpuId(1L);
@@ -160,10 +165,10 @@ public class SkuServiceImplTest {
         assertNotNull(id);
     }
 
+
     /**
-     * 验证 create 在父 SPU 归属其他商家时抛出 BizException，防止在他人 SPU 下挂载 SKU。
+     * 创建业务数据。
      */
-    @Test
     public void create_throws_when_parent_spu_not_owned() {
         SkuCreateDTO dto = new SkuCreateDTO();
         dto.setSpuId(1L);
@@ -176,9 +181,7 @@ public class SkuServiceImplTest {
         assertThrows(BizException.class, () -> service.create(99L, dto));
     }
 
-    /**
-     * 构造归属商家 10 的父 SPU。
-     */
+
     private SpuPO ownedSpu() {
         SpuPO spu = new SpuPO();
         spu.setId(1L);
@@ -186,10 +189,10 @@ public class SkuServiceImplTest {
         return spu;
     }
 
+
     /**
-     * 验证 page 返回游标分页结果。
+     * 分页查询数据。
      */
-    @Test
     public void page_returns_results() {
         List<SkuPO> mockRecords = new ArrayList<>();
         SkuPO sku = new SkuPO();
@@ -203,10 +206,10 @@ public class SkuServiceImplTest {
         assertEquals(1, result.getRecords().size());
     }
 
+
     /**
-     * 验证 update 在 SKU 不存在时抛出 BizException。
+     * 更新业务数据。
      */
-    @Test
     public void update_throws_when_missing() {
         when(skuManager.getById(999L)).thenReturn(null);
         SkuUpdateDTO dto = new SkuUpdateDTO();
@@ -214,10 +217,10 @@ public class SkuServiceImplTest {
         assertThrows(BizException.class, () -> service.update(999L, 10L, dto));
     }
 
+
     /**
-     * 验证 update 在 SKU 归属其他商家时抛出 BizException，防止越权修改。
+     * 更新业务数据。
      */
-    @Test
     public void update_throws_when_merchant_mismatch() {
         SkuPO existing = new SkuPO();
         existing.setId(100L);
@@ -229,10 +232,10 @@ public class SkuServiceImplTest {
         assertThrows(BizException.class, () -> service.update(100L, 99L, dto));
     }
 
+
     /**
-     * 验证 update 成功时返回 true 并更新字段。
+     * 更新业务数据。
      */
-    @Test
     public void update_returns_true_on_success() {
         SkuPO existing = new SkuPO();
         existing.setId(100L);
@@ -253,10 +256,10 @@ public class SkuServiceImplTest {
         verify(spuService).refreshEsDocument(10L);
     }
 
+
     /**
-     * 验证修改库存时以增量调用库存服务，成功后再更新本地展示投影。
+     * 更新业务数据。
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void update_adjusts_stock_via_stock_service() {
         SkuPO existing = new SkuPO();
@@ -270,7 +273,7 @@ public class SkuServiceImplTest {
         SkuUpdateDTO dto = new SkuUpdateDTO();
         dto.setSkuName("new-name");
         dto.setStock(20);
-        when(stockFeignClient.adjustStock(any(StockAdjustDTO.class)))
+        when(goodsRemoteGateway.adjustStock(any(StockAdjustDTO.class)))
             .thenReturn(Result.success());
 
         boolean ok = service.update(100L, 10L, dto);
@@ -279,17 +282,17 @@ public class SkuServiceImplTest {
         assertEquals(20, existing.getStock());
         org.mockito.ArgumentCaptor<StockAdjustDTO> captor =
             org.mockito.ArgumentCaptor.forClass(StockAdjustDTO.class);
-        verify(stockFeignClient).adjustStock(captor.capture());
+        verify(goodsRemoteGateway).adjustStock(captor.capture());
         assertEquals(100L, captor.getValue().getSkuId());
         assertEquals(10L, captor.getValue().getMerchantId());
         assertEquals(10L, captor.getValue().getQuantity());
         verify(skuManager).updateById(existing);
     }
 
+
     /**
-     * 验证库存服务失败时中止商品更新，不产生本地库存伪更新。
+     * 更新业务数据。
      */
-    @Test
     public void update_does_not_change_stock_when_adjust_fails() {
         SkuPO existing = new SkuPO();
         existing.setId(100L);
@@ -298,7 +301,7 @@ public class SkuServiceImplTest {
         existing.setSkuName("old-name");
         existing.setStock(10);
         when(skuManager.getById(100L)).thenReturn(existing);
-        when(stockFeignClient.adjustStock(any(StockAdjustDTO.class)))
+        when(goodsRemoteGateway.adjustStock(any(StockAdjustDTO.class)))
             .thenReturn(Result.fail("20000", "stock unavailable"));
 
         SkuUpdateDTO dto = new SkuUpdateDTO();
@@ -313,10 +316,10 @@ public class SkuServiceImplTest {
         verify(skuManager, never()).updateById(any(SkuPO.class));
     }
 
+
     /**
-     * 验证本地 SKU 更新失败时反向补偿已成功的库存调整。
+     * 更新业务数据。
      */
-    @Test
     public void update_rolls_back_stock_when_local_update_fails() {
         SkuPO existing = new SkuPO();
         existing.setId(100L);
@@ -326,7 +329,7 @@ public class SkuServiceImplTest {
         existing.setStock(10);
         when(skuManager.getById(100L)).thenReturn(existing);
         when(skuManager.updateById(any(SkuPO.class))).thenReturn(false);
-        when(stockFeignClient.adjustStock(any(StockAdjustDTO.class)))
+        when(goodsRemoteGateway.adjustStock(any(StockAdjustDTO.class)))
             .thenReturn(Result.success());
 
         SkuUpdateDTO dto = new SkuUpdateDTO();
@@ -340,24 +343,24 @@ public class SkuServiceImplTest {
         assertEquals(10, existing.getStock());
         org.mockito.ArgumentCaptor<StockAdjustDTO> captor =
             org.mockito.ArgumentCaptor.forClass(StockAdjustDTO.class);
-        verify(stockFeignClient, times(2)).adjustStock(captor.capture());
+        verify(goodsRemoteGateway, times(2)).adjustStock(captor.capture());
         assertEquals(10L, captor.getAllValues().get(0).getQuantity());
         assertEquals(-10L, captor.getAllValues().get(1).getQuantity());
     }
 
+
     /**
-     * 验证 delete 在 SKU 不存在时抛出 BizException。
+     * 删除业务数据。
      */
-    @Test
     public void delete_throws_when_missing() {
         when(skuManager.getById(999L)).thenReturn(null);
         assertThrows(BizException.class, () -> service.delete(999L, 10L));
     }
 
+
     /**
-     * 验证 delete 在 SKU 归属其他商家时抛出 BizException，防止越权删除。
+     * 删除业务数据。
      */
-    @Test
     public void delete_throws_when_merchant_mismatch() {
         SkuPO existing = new SkuPO();
         existing.setId(100L);
@@ -367,10 +370,10 @@ public class SkuServiceImplTest {
         assertThrows(BizException.class, () -> service.delete(100L, 99L));
     }
 
+
     /**
-     * 验证 delete 成功时返回 true。
+     * 删除业务数据。
      */
-    @Test
     public void delete_returns_true_on_success() {
         SkuPO existing = new SkuPO();
         existing.setId(100L);
@@ -384,10 +387,10 @@ public class SkuServiceImplTest {
         verify(spuService).refreshEsDocument(10L);
     }
 
+
     /**
-     * 验证 listSnapshots 仅返回所属 SPU 在售的 SKU 快照，非在售 SPU 的 SKU 不放入结果。
+     * 查询列表数据。
      */
-    @Test
     public void listSnapshots_returns_on_sale_only() {
         SkuPO skuOnSale = new SkuPO();
         skuOnSale.setId(100L);
@@ -419,12 +422,72 @@ public class SkuServiceImplTest {
         assertNull(result.get(200L));
     }
 
+
     /**
-     * 验证 listSnapshots 空入参返回空 Map 且不查询数据库。
+     * 查询列表数据。
      */
-    @Test
     public void listSnapshots_empty_returns_empty_map() {
         assertTrue(service.listSnapshots(List.of()).isEmpty());
         verify(skuManager, never()).list(any(Wrapper.class));
+    }
+
+
+    /**
+     * 获取相关数据。
+     */
+    public void getSnapshot_returns_snapshot_when_spu_on_sale() {
+        SkuPO sku = new SkuPO();
+        sku.setId(100L);
+        sku.setSpuId(1L);
+        sku.setSkuName("on-sale");
+        sku.setPrice(new BigDecimal("9.90"));
+        sku.setStock(10);
+        SpuPO spu = new SpuPO();
+        spu.setId(1L);
+        spu.setMerchantId(7L);
+        spu.setStatus(SpuStatusEnum.ON_SALE.statusValue());
+        when(skuManager.getById(100L)).thenReturn(sku);
+        when(spuManager.getById(1L)).thenReturn(spu);
+
+        SkuSnapshotDTO result = service.getSnapshot(100L);
+
+        assertEquals(100L, result.getSkuId());
+        assertEquals("on-sale", result.getSkuName());
+        assertEquals(7L, result.getMerchantId());
+    }
+
+
+    /**
+     * 获取相关数据。
+     */
+    public void getSnapshot_throws_when_spu_missing() {
+        SkuPO sku = new SkuPO();
+        sku.setId(100L);
+        sku.setSpuId(1L);
+        when(skuManager.getById(100L)).thenReturn(sku);
+        when(spuManager.getById(1L)).thenReturn(null);
+
+        BizException exception = assertThrows(BizException.class, () -> service.getSnapshot(100L));
+
+        assertEquals(SpuCodeEnum.SPU_NOT_FOUND.getCode(), exception.getCode());
+    }
+
+
+    /**
+     * 获取相关数据。
+     */
+    public void getSnapshot_throws_when_spu_not_on_sale() {
+        SkuPO sku = new SkuPO();
+        sku.setId(100L);
+        sku.setSpuId(1L);
+        SpuPO spu = new SpuPO();
+        spu.setId(1L);
+        spu.setStatus(SpuStatusEnum.OFF_SHELF.statusValue());
+        when(skuManager.getById(100L)).thenReturn(sku);
+        when(spuManager.getById(1L)).thenReturn(spu);
+
+        BizException exception = assertThrows(BizException.class, () -> service.getSnapshot(100L));
+
+        assertEquals(SpuCodeEnum.SPU_NOT_ON_SALE.getCode(), exception.getCode());
     }
 }

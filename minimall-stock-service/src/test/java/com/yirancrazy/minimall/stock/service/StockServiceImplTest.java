@@ -33,6 +33,7 @@ import com.yirancrazy.minimall.stock.dto.StockCountTaskCompleteDTO;
 import com.yirancrazy.minimall.stock.dto.StockCountTaskCreateDTO;
 import com.yirancrazy.minimall.stock.dto.StockCountTaskPageDTO;
 import com.yirancrazy.minimall.stock.dto.StockPageDTO;
+import com.yirancrazy.minimall.stock.dto.StockStatisticsDTO;
 import com.yirancrazy.minimall.stock.dto.StockTransferDTO;
 import com.yirancrazy.minimall.stock.dto.StockTransferPageDTO;
 import com.yirancrazy.minimall.stock.entity.StockCountTaskPO;
@@ -43,19 +44,20 @@ import com.yirancrazy.minimall.stock.manager.StockCountTaskManager;
 import com.yirancrazy.minimall.stock.manager.StockJournalManager;
 import com.yirancrazy.minimall.stock.manager.StockManager;
 import com.yirancrazy.minimall.stock.manager.StockTransferManager;
-import com.yirancrazy.minimall.stock.mapper.StockMapper;
 import com.yirancrazy.minimall.stock.service.impl.StockServiceImpl;
 import com.yirancrazy.minimall.stock.vo.StockStatisticsVO;
 
+
 /**
-* StockServiceImpl 单元测试，基于 Mockito 打桩 StockManager，
- *               覆盖库存预占成功与库存不足抛出 BizException、以及预占释放后可用量回补的场景。
- */
+ * @Author: yirancrazy@gmail.com
+ * @Description: StockServiceImplTest 单元测试。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 public class StockServiceImplTest {
 
     private StockManager manager;
     private StockJournalManager journalManager;
-    private StockMapper stockMapper;
     private StockTransferManager transferManager;
     private StockCountTaskManager countTaskManager;
     private StockServiceImpl service;
@@ -71,21 +73,19 @@ public class StockServiceImplTest {
 
         manager = mock(StockManager.class);
         journalManager = mock(StockJournalManager.class);
-        stockMapper = mock(StockMapper.class);
         transferManager = mock(StockTransferManager.class);
         countTaskManager = mock(StockCountTaskManager.class);
         lenient().when(manager.updateById(any(StockPO.class))).thenReturn(true);
         lenient().when(journalManager.save(any(StockJournalPO.class))).thenReturn(true);
         lenient().when(transferManager.save(any(StockTransferPO.class))).thenReturn(true);
         lenient().when(countTaskManager.updateById(any(StockCountTaskPO.class))).thenReturn(true);
-        service = new StockServiceImpl(manager, journalManager, stockMapper,
-            transferManager, countTaskManager);
+        service = new StockServiceImpl(manager, journalManager, transferManager, countTaskManager);
     }
 
+
     /**
-     * 验证预占成功时原子扣减命中 1 行并记录流水。
+     * 执行 reserve_atomic_success_records_journal 方法。
      */
-    @Test
     public void reserve_atomic_success_records_journal() {
         StockPO s = new StockPO();
         s.setId(1L);
@@ -93,20 +93,20 @@ public class StockServiceImplTest {
         s.setAvailable(10L);
         s.setReserved(0L);
         when(manager.getOne(any())).thenReturn(s);
-        when(stockMapper.deductAvailable(100L, 2L)).thenReturn(1);
+        when(manager.deductAvailable(100L, 2L)).thenReturn(1);
 
         boolean ok = service.reserve(100L, 2);
         assertEquals(true, ok);
         assertEquals(8L, s.getAvailable());
         assertEquals(2L, s.getReserved());
-        verify(stockMapper).deductAvailable(100L, 2L);
+        verify(manager).deductAvailable(100L, 2L);
         verify(journalManager).save(any(StockJournalPO.class));
     }
 
+
     /**
-     * 验证原子扣减未命中（0 行）时抛出 STOCK_INSUFFICIENT 且不记录流水。
+     * 执行 reserve_insufficient_stock_throws 方法。
      */
-    @Test
     public void reserve_insufficient_stock_throws() {
         StockPO s = new StockPO();
         s.setId(1L);
@@ -114,26 +114,26 @@ public class StockServiceImplTest {
         s.setAvailable(3L);
         s.setReserved(0L);
         when(manager.getOne(any())).thenReturn(s);
-        when(stockMapper.deductAvailable(100L, 100L)).thenReturn(0);
+        when(manager.deductAvailable(100L, 100L)).thenReturn(0);
 
         assertThrows(BizException.class, () -> service.reserve(100L, 100));
         verify(journalManager, never()).save(any(StockJournalPO.class));
     }
 
+
     /**
-     * 验证预占数量非法（null 或 <= 0）时抛出 BizException。
+     * 执行 reserve_invalid_quantity_throws 方法。
      */
-    @Test
     public void reserve_invalid_quantity_throws() {
         assertThrows(BizException.class, () -> service.reserve(100L, null));
         assertThrows(BizException.class, () -> service.reserve(100L, 0));
         assertThrows(BizException.class, () -> service.reserve(100L, -1));
     }
 
+
     /**
-     * 验证批量预占先合并重复 SKU，再按合并数量原子扣减一次。
+     * 执行 reserveBatch_merges_duplicate_skus 方法。
      */
-    @Test
     public void reserveBatch_merges_duplicate_skus() {
         StockPO stock = new StockPO();
         stock.setId(1L);
@@ -141,21 +141,21 @@ public class StockServiceImplTest {
         stock.setAvailable(10L);
         stock.setReserved(0L);
         when(manager.getOne(any())).thenReturn(stock);
-        when(stockMapper.deductAvailable(100L, 5L)).thenReturn(1);
+        when(manager.deductAvailable(100L, 5L)).thenReturn(1);
 
         boolean ok = service.reserveBatch(List.of(
             new StockReserveDTO(100L, 2),
             new StockReserveDTO(100L, 3)));
 
         assertTrue(ok);
-        verify(stockMapper).deductAvailable(100L, 5L);
+        verify(manager).deductAvailable(100L, 5L);
         verify(journalManager, times(1)).save(any(StockJournalPO.class));
     }
 
+
     /**
-     * 验证批量预占任一 SKU 库存不足时抛出异常，事务层回滚此前扣减。
+     * 执行 reserveBatch_any_insufficient_throws 方法。
      */
-    @Test
     public void reserveBatch_any_insufficient_throws() {
         StockPO first = new StockPO();
         first.setId(1L);
@@ -168,21 +168,21 @@ public class StockServiceImplTest {
         second.setAvailable(0L);
         second.setReserved(0L);
         when(manager.getOne(any())).thenReturn(first, second);
-        when(stockMapper.deductAvailable(100L, 1L)).thenReturn(1);
-        when(stockMapper.deductAvailable(200L, 1L)).thenReturn(0);
+        when(manager.deductAvailable(100L, 1L)).thenReturn(1);
+        when(manager.deductAvailable(200L, 1L)).thenReturn(0);
 
         assertThrows(BizException.class, () -> service.reserveBatch(List.of(
             new StockReserveDTO(100L, 1),
             new StockReserveDTO(200L, 1))));
 
-        verify(stockMapper).deductAvailable(100L, 1L);
-        verify(stockMapper).deductAvailable(200L, 1L);
+        verify(manager).deductAvailable(100L, 1L);
+        verify(manager).deductAvailable(200L, 1L);
     }
 
+
     /**
-     * 验证批量预占超过100个SKU时拒绝且不触发库存扣减。
+     * 执行 reserveBatch_rejects_more_than_100_skus 方法。
      */
-    @Test
     public void reserveBatch_rejects_more_than_100_skus() {
         List<StockReserveDTO> items = new ArrayList<>(101);
         for (long skuId = 1L; skuId <= 101L; skuId++) {
@@ -190,26 +190,26 @@ public class StockServiceImplTest {
         }
 
         assertThrows(BizException.class, () -> service.reserveBatch(items));
-        verify(stockMapper, never()).deductAvailable(anyLong(), anyLong());
+        verify(manager, never()).deductAvailable(anyLong(), anyLong());
     }
 
+
     /**
-     * 验证释放预占库存时原子回补命中 1 行并记录流水。
+     * 执行 release_restores_stock 方法。
      */
-    @Test
     public void release_restores_stock() {
-        when(stockMapper.restoreReserved(100L, 3L)).thenReturn(1);
+        when(manager.restoreReserved(100L, 3L)).thenReturn(1);
 
         boolean ok = service.release(100L, 3);
         assertEquals(true, ok);
-        verify(stockMapper).restoreReserved(100L, 3L);
+        verify(manager).restoreReserved(100L, 3L);
         verify(journalManager).save(any(StockJournalPO.class));
     }
 
+
     /**
-     * 验证同一订单重复释放按订单号幂等，不再重复回补库存。
+     * 执行 release_same_order_is_idempotent 方法。
      */
-    @Test
     public void release_same_order_is_idempotent() {
         when(journalManager.save(any(StockJournalPO.class)))
             .thenThrow(new DuplicateKeyException("duplicate release"));
@@ -217,54 +217,54 @@ public class StockServiceImplTest {
         boolean ok = service.release(100L, 3, "O100");
 
         assertTrue(ok);
-        verify(stockMapper, never()).restoreReserved(any(), anyLong());
+        verify(manager, never()).restoreReserved(any(), anyLong());
     }
 
+
     /**
-     * 验证带订单号的释放预占不足时抛出业务异常以触发流水插入回滚。
+     * 执行 release_order_insufficient_throws 方法。
      */
-    @Test
     public void release_order_insufficient_throws() {
-        when(stockMapper.restoreReserved(100L, 5L)).thenReturn(0);
+        when(manager.restoreReserved(100L, 5L)).thenReturn(0);
 
         assertThrows(BizException.class, () -> service.release(100L, 5, "O100"));
         verify(journalManager).save(any(StockJournalPO.class));
     }
 
+
     /**
-     * 验证预占不存在的 SKU 时抛出 STOCK_NOT_FOUND 业务异常。
+     * 执行 reserve_missing_throws_biz 方法。
      */
-    @Test
     public void reserve_missing_throws_biz() {
         when(manager.getOne(any())).thenReturn(null);
         assertThrows(BizException.class, () -> service.reserve(999L, 1));
     }
 
+
     /**
-     * 验证释放不存在的 SKU 库存时原子释放未命中（0 行）返回 false 而非抛出异常。
+     * 执行 release_missing_returns_false 方法。
      */
-    @Test
     public void release_missing_returns_false() {
-        when(stockMapper.restoreReserved(999L, 1L)).thenReturn(0);
+        when(manager.restoreReserved(999L, 1L)).thenReturn(0);
         boolean ok = service.release(999L, 1);
         assertEquals(false, ok);
     }
 
+
     /**
-     * 验证释放数量超过预占数量（原子释放未命中）时返回 false。
+     * 执行 release_insufficient_reserved_returns_false 方法。
      */
-    @Test
     public void release_insufficient_reserved_returns_false() {
-        when(stockMapper.restoreReserved(100L, 5L)).thenReturn(0);
+        when(manager.restoreReserved(100L, 5L)).thenReturn(0);
 
         boolean ok = service.release(100L, 5);
         assertEquals(false, ok);
     }
 
+
     /**
-     * 验证 SKU 无库存记录时 initStock 按初始数量建档并绑定归属商家、记录初始流水。
+     * 初始化相关资源。
      */
-    @Test
     public void initStock_creates_record_when_absent() {
         when(manager.getOne(any())).thenReturn(null);
 
@@ -280,10 +280,10 @@ public class StockServiceImplTest {
         verify(journalManager).save(any(StockJournalPO.class));
     }
 
+
     /**
-     * 验证库存记录已存在（如商家已入库）时 initStock 跳过建档，不覆盖真实库存。
+     * 初始化相关资源。
      */
-    @Test
     public void initStock_skips_when_record_exists() {
         StockPO existing = new StockPO();
         existing.setId(1L);
@@ -298,10 +298,10 @@ public class StockServiceImplTest {
         verify(journalManager, never()).save(any(StockJournalPO.class));
     }
 
+
     /**
-     * 验证初始数量为 null 时按 0 建档且不产生流水。
+     * 初始化相关资源。
      */
-    @Test
     public void initStock_null_quantity_defaults_zero() {
         when(manager.getOne(any())).thenReturn(null);
 
@@ -313,18 +313,18 @@ public class StockServiceImplTest {
         verify(journalManager, never()).save(any(StockJournalPO.class));
     }
 
+
     /**
-     * 验证 SKU 标识为 null 时 initStock 抛出参数校验异常。
+     * 初始化相关资源。
      */
-    @Test
     public void initStock_null_sku_throws() {
         assertThrows(BizException.class, () -> service.initStock(null, 10L, 5));
     }
 
+
     /**
-     * 验证查询存在的 SKU 库存返回正确的可用数量。
+     * 执行 query_returns_available 方法。
      */
-    @Test
     public void query_returns_available() {
         StockPO s = new StockPO();
         s.setId(1L);
@@ -337,20 +337,20 @@ public class StockServiceImplTest {
         assertEquals(10L, available);
     }
 
+
     /**
-     * 验证查询不存在的 SKU 库存返回 0。
+     * 执行 query_missing_returns_zero 方法。
      */
-    @Test
     public void query_missing_returns_zero() {
         when(manager.getOne(any())).thenReturn(null);
         long available = service.query(999L);
         assertEquals(0L, available);
     }
 
+
     /**
-     * 商家视角查询：库存归属与当前商家一致时返回可用数量。
+     * 执行 query_merchant_owned_returns_available 方法。
      */
-    @Test
     public void query_merchant_owned_returns_available() {
         StockPO s = new StockPO();
         s.setId(1L);
@@ -364,10 +364,10 @@ public class StockServiceImplTest {
         assertEquals(10L, available);
     }
 
+
     /**
-     * F13: 商家视角查询其他商家 SKU 库存时抛出 STOCK_NOT_FOUND，防止越权读取。
+     * 执行 query_merchant_mismatch_throws 方法。
      */
-    @Test
     public void query_merchant_mismatch_throws() {
         StockPO s = new StockPO();
         s.setId(1L);
@@ -380,10 +380,10 @@ public class StockServiceImplTest {
         assertThrows(BizException.class, () -> service.query(100L, 2L));
     }
 
+
     /**
-     * 验证 page 委托给 manager.list 并返回游标分页结果。
+     * 分页查询数据。
      */
-    @Test
     public void page_delegates_to_manager() {
         StockPageDTO dto = new StockPageDTO();
         List<StockPO> mockRecords = new ArrayList<>();
@@ -394,13 +394,13 @@ public class StockServiceImplTest {
         verify(manager).list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class));
     }
 
+
     /**
-     * 验证 platformStatistics 委托 mapper 并计算预警比例（3/10=0.30）。
+     * 执行 platformStatistics_computes_alert_ratio 方法。
      */
-    @Test
     public void platformStatistics_computes_alert_ratio() {
-        StockStatisticsVO stat = new StockStatisticsVO(10L, 1000L, 200L, 3L, null);
-        when(stockMapper.statistics()).thenReturn(stat);
+        StockStatisticsDTO stat = new StockStatisticsDTO(10L, 1000L, 200L, 3L);
+        when(manager.statistics()).thenReturn(stat);
 
         StockStatisticsVO result = service.platformStatistics();
         assertEquals(10L, result.getTotalSkuCount());
@@ -410,22 +410,22 @@ public class StockServiceImplTest {
         assertEquals(new BigDecimal("0.30"), result.getAlertRatio());
     }
 
+
     /**
-     * 验证 platformStatistics 在 mapper 返回 null 时回退零值。
+     * 执行 platformStatistics_null_returns_zero 方法。
      */
-    @Test
     public void platformStatistics_null_returns_zero() {
-        when(stockMapper.statistics()).thenReturn(null);
+        when(manager.statistics()).thenReturn(null);
 
         StockStatisticsVO result = service.platformStatistics();
         assertEquals(0L, result.getTotalSkuCount());
         assertEquals(BigDecimal.ZERO, result.getAlertRatio());
     }
 
+
     /**
-     * 验证 exportJournal 委托 journalManager.list 并返回结果。
+     * 执行 exportJournal_delegates_to_journalManager 方法。
      */
-    @Test
     public void exportJournal_delegates_to_journalManager() {
         StockJournalPO po = new StockJournalPO();
         po.setId(1L);
@@ -440,10 +440,10 @@ public class StockServiceImplTest {
         verify(journalManager).list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class));
     }
 
+
     /**
-     * F13 遗留：商家视角导出其他商家 SKU 流水时抛出 STOCK_NOT_FOUND，防止越权导出。
+     * 执行 exportJournal_merchant_mismatch_throws 方法。
      */
-    @Test
     public void exportJournal_merchant_mismatch_throws() {
         StockPO s = new StockPO();
         s.setId(1L);
@@ -457,10 +457,10 @@ public class StockServiceImplTest {
         verify(journalManager, never()).list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class));
     }
 
+
     /**
-     * 验证调拨成功时扣减源库存、增加目标库存、记录调拨流水与调拨记录。
+     * 执行 transfer_success_decrements_and_increments 方法。
      */
-    @Test
     public void transfer_success_decrements_and_increments() {
         StockPO from = new StockPO();
         from.setId(1L);
@@ -473,8 +473,8 @@ public class StockServiceImplTest {
         to.setAvailable(5L);
         to.setReserved(0L);
         when(manager.getOne(any())).thenReturn(from, to);
-        when(stockMapper.deductAvailable(100L, 3L)).thenReturn(1);
-        when(stockMapper.increaseAvailable(200L, 3L)).thenReturn(1);
+        when(manager.deductAvailable(100L, 3L)).thenReturn(1);
+        when(manager.increaseAvailable(200L, 3L)).thenReturn(1);
 
         StockTransferDTO dto = new StockTransferDTO();
         dto.setFromSkuId(100L);
@@ -486,15 +486,15 @@ public class StockServiceImplTest {
 
         assertEquals(7L, from.getAvailable());
         assertEquals(8L, to.getAvailable());
-        verify(stockMapper).deductAvailable(100L, 3L);
-        verify(stockMapper).increaseAvailable(200L, 3L);
+        verify(manager).deductAvailable(100L, 3L);
+        verify(manager).increaseAvailable(200L, 3L);
         verify(transferManager).save(any(StockTransferPO.class));
     }
 
+
     /**
-     * 验证调拨相同SKU时抛出 BizException。
+     * 执行 transfer_same_sku_throws 方法。
      */
-    @Test
     public void transfer_same_sku_throws() {
         StockTransferDTO dto = new StockTransferDTO();
         dto.setFromSkuId(100L);
@@ -503,10 +503,10 @@ public class StockServiceImplTest {
         assertThrows(BizException.class, () -> service.transfer(dto));
     }
 
+
     /**
-     * 验证源库存不足时调拨抛出 BizException。
+     * 执行 transfer_insufficient_throws 方法。
      */
-    @Test
     public void transfer_insufficient_throws() {
         StockPO from = new StockPO();
         from.setId(1L);
@@ -522,10 +522,10 @@ public class StockServiceImplTest {
         assertThrows(BizException.class, () -> service.transfer(dto));
     }
 
+
     /**
-     * 验证目标SKU库存不存在时调拨抛出 BizException。
+     * 执行 transfer_target_not_found_throws 方法。
      */
-    @Test
     public void transfer_target_not_found_throws() {
         StockPO from = new StockPO();
         from.setId(1L);
@@ -541,10 +541,10 @@ public class StockServiceImplTest {
         assertThrows(BizException.class, () -> service.transfer(dto));
     }
 
+
     /**
-     * 验证 transferPage 委托给 transferManager.list 并返回游标分页结果。
+     * 执行 transferPage_delegates_to_manager 方法。
      */
-    @Test
     public void transferPage_delegates_to_manager() {
         StockTransferPageDTO dto = new StockTransferPageDTO();
         List<StockTransferPO> mockRecords = new ArrayList<>();
@@ -555,10 +555,10 @@ public class StockServiceImplTest {
         verify(transferManager).list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class));
     }
 
+
     /**
-     * 验证创建盘点任务时查询当前可用库存作为期望数量。
+     * 创建业务数据。
      */
-    @Test
     public void createCountTask_succeeds() {
         StockPO s = new StockPO();
         s.setId(1L);
@@ -574,10 +574,10 @@ public class StockServiceImplTest {
         verify(countTaskManager).save(any(StockCountTaskPO.class));
     }
 
+
     /**
-     * 验证完成盘点任务有差异时调整库存并推进状态为 COMPLETED。
+     * 执行 completeCountTask_with_diff_adjusts_stock 方法。
      */
-    @Test
     public void completeCountTask_with_diff_adjusts_stock() {
         StockCountTaskPO task = new StockCountTaskPO();
         task.setId(1L);
@@ -606,10 +606,10 @@ public class StockServiceImplTest {
         verify(manager).updateById(any(StockPO.class));
     }
 
+
     /**
-     * 验证完成盘点任务无差异时不调整库存。
+     * 执行 completeCountTask_no_diff_succeeds 方法。
      */
-    @Test
     public void completeCountTask_no_diff_succeeds() {
         StockCountTaskPO task = new StockCountTaskPO();
         task.setId(1L);
@@ -628,10 +628,10 @@ public class StockServiceImplTest {
         verify(manager, never()).updateById(any(StockPO.class));
     }
 
+
     /**
-     * F28: 验证并发完成时条件更新未命中（影响 0 行）抛出 BizException 且盘点差异不重复入账。
+     * 执行 completeCountTask_concurrent_update_miss_throws 方法。
      */
-    @Test
     public void completeCountTask_concurrent_update_miss_throws() {
         StockCountTaskPO task = new StockCountTaskPO();
         task.setId(1L);
@@ -651,10 +651,10 @@ public class StockServiceImplTest {
         verify(journalManager, never()).save(any(StockJournalPO.class));
     }
 
+
     /**
-     * 验证调整库存遇乐观锁冲突时抛出并发更新异常。
+     * 执行 adjustStock_concurrent_update_throws 方法。
      */
-    @Test
     public void adjustStock_concurrent_update_throws() {
         StockPO s = new StockPO();
         s.setId(1L);
@@ -667,10 +667,10 @@ public class StockServiceImplTest {
         assertThrows(BizException.class, () -> service.adjustStock(100L, 5L, "replenish"));
     }
 
+
     /**
-     * 验证完成非PENDING状态的盘点任务时抛出 BizException。
+     * 执行 completeCountTask_not_pending_throws 方法。
      */
-    @Test
     public void completeCountTask_not_pending_throws() {
         StockCountTaskPO task = new StockCountTaskPO();
         task.setId(1L);
@@ -682,10 +682,10 @@ public class StockServiceImplTest {
         assertThrows(BizException.class, () -> service.completeCountTask(1L, dto));
     }
 
+
     /**
-     * 验证取消PENDING状态的盘点任务时推进为 CANCELLED。
+     * 执行 cancelCountTask_succeeds 方法。
      */
-    @Test
     public void cancelCountTask_succeeds() {
         StockCountTaskPO task = new StockCountTaskPO();
         task.setId(1L);
@@ -700,10 +700,10 @@ public class StockServiceImplTest {
             StockCountTaskStatusEnum.CANCELLED.intCode());
     }
 
+
     /**
-     * 验证取消非PENDING状态的盘点任务时抛出 BizException。
+     * 执行 cancelCountTask_not_pending_throws 方法。
      */
-    @Test
     public void cancelCountTask_not_pending_throws() {
         StockCountTaskPO task = new StockCountTaskPO();
         task.setId(1L);
@@ -713,10 +713,10 @@ public class StockServiceImplTest {
         assertThrows(BizException.class, () -> service.cancelCountTask(1L, 99L));
     }
 
+
     /**
-     * 验证 countTaskPage 委托给 countTaskManager.list 并返回游标分页结果。
+     * 统计业务数据。
      */
-    @Test
     public void countTaskPage_delegates_to_manager() {
         StockCountTaskPageDTO dto = new StockCountTaskPageDTO();
         List<StockCountTaskPO> mockRecords = new ArrayList<>();
@@ -728,10 +728,10 @@ public class StockServiceImplTest {
         verify(countTaskManager).list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class));
     }
 
+
     /**
-     * 验证创建盘点任务时SKU库存不存在抛出 BizException。
+     * 创建业务数据。
      */
-    @Test
     public void createCountTask_stock_not_found_throws() {
         when(manager.getOne(any())).thenReturn(null);
 
@@ -741,10 +741,10 @@ public class StockServiceImplTest {
         assertThrows(BizException.class, () -> service.createCountTask(dto));
     }
 
+
     /**
-     * 验证 listAbnormalStock 返回 available &lt; 0 或 reserved &lt; 0 的记录。
+     * 查询列表数据。
      */
-    @Test
     public void listAbnormalStock_returns_abnormal_records() {
         StockPO abnormal = new StockPO();
         abnormal.setId(1L);
@@ -760,10 +760,10 @@ public class StockServiceImplTest {
         verify(manager).list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class));
     }
 
+
     /**
-     * 验证纠正库存成功时更新可用量并记录流水。
+     * 执行 correctStock_succeeds 方法。
      */
-    @Test
     public void correctStock_succeeds() {
         StockPO s = new StockPO();
         s.setId(1L);
@@ -779,27 +779,27 @@ public class StockServiceImplTest {
         verify(journalManager).save(any(StockJournalPO.class));
     }
 
+
     /**
-     * 验证纠正库存时数量为负抛出 BizException。
+     * 执行 correctStock_negative_quantity_throws 方法。
      */
-    @Test
     public void correctStock_negative_quantity_throws() {
         assertThrows(BizException.class, () -> service.correctStock(100L, -1L, "test"));
     }
 
+
     /**
-     * 验证纠正库存时SKU不存在抛出 BizException。
+     * 执行 correctStock_stock_not_found_throws 方法。
      */
-    @Test
     public void correctStock_stock_not_found_throws() {
         when(manager.getOne(any())).thenReturn(null);
         assertThrows(BizException.class, () -> service.correctStock(999L, 10L, "test"));
     }
 
+
     /**
-     * 验证纠正库存遇乐观锁冲突时抛出并发更新异常。
+     * 执行 correctStock_concurrent_update_throws 方法。
      */
-    @Test
     public void correctStock_concurrent_update_throws() {
         StockPO s = new StockPO();
         s.setId(1L);
@@ -812,10 +812,10 @@ public class StockServiceImplTest {
         assertThrows(BizException.class, () -> service.correctStock(100L, 20L, "test"));
     }
 
+
     /**
-     * 验证 adjustStock 正数调整成功时增加可用量并记录流水。
+     * 执行 adjustStock_positive_increments_available 方法。
      */
-    @Test
     public void adjustStock_positive_increments_available() {
         StockPO s = new StockPO();
         s.setId(1L);
@@ -831,10 +831,10 @@ public class StockServiceImplTest {
         verify(journalManager).save(any(StockJournalPO.class));
     }
 
+
     /**
-     * 验证 adjustStock 负数调整成功时扣减可用量。
+     * 执行 adjustStock_negative_decrements_available 方法。
      */
-    @Test
     public void adjustStock_negative_decrements_available() {
         StockPO s = new StockPO();
         s.setId(1L);
@@ -849,10 +849,10 @@ public class StockServiceImplTest {
         verify(manager).updateById(s);
     }
 
+
     /**
-     * F53: 验证负向调整超过可用库存（调整后可用为负）时抛出 BizException 且不更新库存。
+     * 执行 adjustStock_negative_below_zero_throws 方法。
      */
-    @Test
     public void adjustStock_negative_below_zero_throws() {
         StockPO s = new StockPO();
         s.setId(1L);
@@ -866,18 +866,18 @@ public class StockServiceImplTest {
         verify(journalManager, never()).save(any(StockJournalPO.class));
     }
 
+
     /**
-     * 验证 adjustStock 调整数量为 null 时抛出 BizException。
+     * 执行 adjustStock_null_quantity_throws 方法。
      */
-    @Test
     public void adjustStock_null_quantity_throws() {
         assertThrows(BizException.class, () -> service.adjustStock(100L, null, "test"));
     }
 
+
     /**
-     * 验证 adjustStock 在库存记录不存在时自动创建初始记录（可用 0）再累加调整量。
+     * 执行 adjustStock_noRecord_createsThenIncrements 方法。
      */
-    @Test
     public void adjustStock_noRecord_createsThenIncrements() {
         final StockPO[] created = new StockPO[1];
         when(manager.getOne(any())).thenReturn(null);
@@ -898,10 +898,10 @@ public class StockServiceImplTest {
         verify(journalManager).save(any(StockJournalPO.class));
     }
 
+
     /**
-     * F13: 商家视角调整其他商家 SKU 库存时抛出 STOCK_NOT_FOUND，防止越权改库存。
+     * 执行 adjustStock_merchant_mismatch_throws 方法。
      */
-    @Test
     public void adjustStock_merchant_mismatch_throws() {
         StockPO s = new StockPO();
         s.setId(1L);
@@ -915,10 +915,10 @@ public class StockServiceImplTest {
         verify(manager, never()).updateById(any(StockPO.class));
     }
 
+
     /**
-     * F13: 商家视角调整库存遇无归属（merchant_id 为空）存量记录时抛出 STOCK_NOT_FOUND，不允许认领。
+     * 执行 adjustStock_merchant_null_ownership_throws 方法。
      */
-    @Test
     public void adjustStock_merchant_null_ownership_throws() {
         StockPO s = new StockPO();
         s.setId(1L);
@@ -931,10 +931,10 @@ public class StockServiceImplTest {
         verify(manager, never()).updateById(any(StockPO.class));
     }
 
+
     /**
-     * F13: 商家视角调整库存，记录不存在时以该商家归属创建并写入 merchantId。
+     * 执行 adjustStock_merchant_noRecord_creates_with_merchantId 方法。
      */
-    @Test
     public void adjustStock_merchant_noRecord_creates_with_merchantId() {
         final StockPO[] created = new StockPO[1];
         when(manager.getOne(any())).thenReturn(null);
@@ -953,10 +953,10 @@ public class StockServiceImplTest {
         verify(manager).save(created[0]);
     }
 
+
     /**
-     * 验证 setThreshold 在库存记录不存在时自动创建初始记录。
+     * 设置相关数据。
      */
-    @Test
     public void setThreshold_noRecord_creates() {
         final StockPO[] created = new StockPO[1];
         when(manager.getOne(any())).thenReturn(null);
@@ -975,10 +975,10 @@ public class StockServiceImplTest {
         verify(manager).updateById(created[0]);
     }
 
+
     /**
-     * 验证 setThreshold 正常设置预警阈值。
+     * 设置相关数据。
      */
-    @Test
     public void setThreshold_succeeds() {
         StockPO s = new StockPO();
         s.setId(1L);
@@ -992,26 +992,26 @@ public class StockServiceImplTest {
         verify(manager).updateById(s);
     }
 
+
     /**
-     * 验证 setThreshold 阈值为 null 时抛出 BizException。
+     * 设置相关数据。
      */
-    @Test
     public void setThreshold_null_throws() {
         assertThrows(BizException.class, () -> service.setThreshold(100L, null));
     }
 
+
     /**
-     * 验证 setThreshold 阈值为负数时抛出 BizException。
+     * 设置相关数据。
      */
-    @Test
     public void setThreshold_negative_throws() {
         assertThrows(BizException.class, () -> service.setThreshold(100L, -1L));
     }
 
+
     /**
-     * F13: 商家视角设置阈值遇归属不匹配时抛出 STOCK_NOT_FOUND，防止越权改其他商家阈值。
+     * 设置相关数据。
      */
-    @Test
     public void setThreshold_merchant_mismatch_throws() {
         StockPO s = new StockPO();
         s.setId(1L);
@@ -1024,10 +1024,10 @@ public class StockServiceImplTest {
         verify(manager, never()).updateById(any(StockPO.class));
     }
 
+
     /**
-     * 验证 queryJournal 委托给 journalManager.list 并返回结果。
+     * 执行 queryJournal_delegates_to_journalManager 方法。
      */
-    @Test
     public void queryJournal_delegates_to_journalManager() {
         StockJournalPO po = new StockJournalPO();
         po.setId(1L);
@@ -1042,10 +1042,10 @@ public class StockServiceImplTest {
         verify(journalManager).list(any(Wrapper.class));
     }
 
+
     /**
-     * F54: 验证 queryJournal 传入的查询被限制在 200 条上限。
+     * 执行 queryJournal_applies_limit_200 方法。
      */
-    @Test
     public void queryJournal_applies_limit_200() {
         when(journalManager.list(any(Wrapper.class))).thenReturn(new ArrayList<>());
 
@@ -1056,10 +1056,10 @@ public class StockServiceImplTest {
         assertTrue(captor.getValue().getCustomSqlSegment().contains("LIMIT 200"));
     }
 
+
     /**
-     * F13: 商家视角查询流水遇归属不匹配时抛出 STOCK_NOT_FOUND，防止越权读取流水。
+     * 执行 queryJournal_merchant_mismatch_throws 方法。
      */
-    @Test
     public void queryJournal_merchant_mismatch_throws() {
         StockPO s = new StockPO();
         s.setId(1L);
@@ -1072,10 +1072,10 @@ public class StockServiceImplTest {
         verify(journalManager, never()).list(any(Wrapper.class));
     }
 
+
     /**
-     * F54: 验证 listAbnormalStock 传入的查询被限制在 200 条上限。
+     * 查询列表数据。
      */
-    @Test
     public void listAbnormalStock_applies_limit_200() {
         when(manager.list(any(Wrapper.class))).thenReturn(new ArrayList<>());
 
@@ -1086,10 +1086,10 @@ public class StockServiceImplTest {
         assertTrue(captor.getValue().getCustomSqlSegment().contains("LIMIT 200"));
     }
 
+
     /**
-     * 验证 completeCountTask 在任务不存在时抛出 BizException。
+     * 执行 completeCountTask_not_found_throws 方法。
      */
-    @Test
     public void completeCountTask_not_found_throws() {
         when(countTaskManager.getById(999L)).thenReturn(null);
 
@@ -1098,10 +1098,10 @@ public class StockServiceImplTest {
         assertThrows(BizException.class, () -> service.completeCountTask(999L, dto));
     }
 
+
     /**
-     * 验证 cancelCountTask 在任务不存在时抛出 BizException。
+     * 执行 cancelCountTask_not_found_throws 方法。
      */
-    @Test
     public void cancelCountTask_not_found_throws() {
         when(countTaskManager.getById(999L)).thenReturn(null);
         assertThrows(BizException.class, () -> service.cancelCountTask(999L, 99L));

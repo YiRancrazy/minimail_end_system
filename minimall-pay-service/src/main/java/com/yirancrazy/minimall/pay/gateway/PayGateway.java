@@ -4,17 +4,22 @@ import java.math.BigDecimal;
 import java.util.Map;
 
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 网关实现类，处理支付等外部接口调用。
+ * @Description: PayGateway 接口，定义相关能力。
  * @Version: 1.0
- * @DateTime: 2026/7/31
+ * @DateTime: 2026/10/16
  **/
 public interface PayGateway {
 
+
     /**
-     * 退款渠道查询结果。
-     */
+     * @Author: yirancrazy@gmail.com
+     * @Description: RefundQueryStatus 枚举，定义相关业务状态。
+     * @Version: 1.0
+     * @DateTime: 2026/10/16
+     **/
     enum RefundQueryStatus {
         SUCCESS,
         PENDING,
@@ -23,36 +28,48 @@ public interface PayGateway {
     }
 
     /**
-     * 创建电脑网站支付单（alipay.trade.page.pay）。
-     * @param paymentNo 支付单号，作为 out_trade_no
-     * @param amount 支付金额，单位元，必须大于 0
+     * 创建电脑网站支付单。
+     * @param paymentNo 支付单号
+     * @param amount 支付金额
      * @param subject 订单标题
-     * @param expireTime 绝对过期时间，格式 yyyy-MM-dd HH:mm:ss
-     * @return 自动提交的收银台表单 HTML，前端写入页面后浏览器跳转支付宝收银台
-     * @throws RuntimeException 支付宝网关不可达或参数非法时抛出
+     * @param expireTime 过期时间
+     * @return 收银台表单
      */
     String createPagePayment(String paymentNo, BigDecimal amount, String subject, String expireTime);
 
+
     /**
-     * 校验回调签名并返回 trade_no。
+     * 校验支付回调签名。
+     * @param params 回调参数
+     * @return 支付交易号
      */
     String verifyCallback(Map<String, String> params);
 
+
     /**
-     * 查询支付宝支付状态。
+     * 查询支付状态。
+     * @param paymentNo 支付单号
+     * @return 支付状态
      */
     String queryPayment(String paymentNo);
 
+
     /**
-     * 退款支付。
+     * 发起支付退款。
+     * @param paymentNo 支付单号
+     * @param refundNo 退款单号
+     * @param amount 退款金额
+     * @param reason 退款原因
+     * @return 退款结果
      */
     String refund(String paymentNo, String refundNo, BigDecimal amount, String reason);
 
+
     /**
-     * 按原商户退款请求号查询退款结果，用于异常恢复与补偿。
-     * @param paymentNo 原支付商户订单号
-     * @param refundNo 原退款请求号，作为 out_request_no
-     * @return 退款查询状态；渠道不可用或返回无法识别时为 FAILED
+     * 查询退款结果。
+     * @param paymentNo 支付单号
+     * @param refundNo 退款单号
+     * @return 退款查询状态
      */
     RefundQueryStatus queryRefund(String paymentNo, String refundNo);
 }

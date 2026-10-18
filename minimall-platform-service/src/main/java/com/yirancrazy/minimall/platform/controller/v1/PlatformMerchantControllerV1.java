@@ -11,12 +11,12 @@ import com.yirancrazy.minimall.platform.dto.PlatformMerchantPageDTO;
 import com.yirancrazy.minimall.platform.service.PlatformMerchantService;
 import com.yirancrazy.minimall.platform.vo.PlatformMerchantVO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 平台商家控制器，提供商家列表与详情接口。
- *              当前阶段数据由 merchant-service 提供，本端作为契约入口。
+ * @Description: PlatformMerchantControllerV1 控制器，提供相关接口。
  * @Version: 1.0
- * @DateTime: 2026/08/10
+ * @DateTime: 2026/10/16
  **/
 @RestController
 @RequestMapping("/api/v1/platform/merchants/manage")
@@ -24,24 +24,30 @@ public class PlatformMerchantControllerV1 {
 
     private final PlatformMerchantService platformMerchantService;
 
+    /**
+     * 构造 PlatformMerchantControllerV1 实例。
+     * @param platformMerchantService platformMerchantService 参数
+     */
     public PlatformMerchantControllerV1(PlatformMerchantService platformMerchantService) {
         this.platformMerchantService = platformMerchantService;
     }
 
+
     /**
-     * 平台分页查询商家列表。
-     * @param dto 分页入参
-     * @return 商家游标分页结果
+     * 分页查询数据。
+     * @param dto dto 参数
+     * @return 统一响应结果
      */
     @GetMapping
     public Result<CursorPageVO<PlatformMerchantVO>> page(@Valid PlatformMerchantPageDTO dto) {
         return Result.success(platformMerchantService.page(dto));
     }
 
+
     /**
-     * 平台查询商家详情。
-     * @param merchantId 商家ID
-     * @return 商家视图
+     * 执行 detail 方法。
+     * @param merchantId merchantId 参数
+     * @return 统一响应结果
      */
     @GetMapping("/{merchantId}")
     public Result<PlatformMerchantVO> detail(@PathVariable("merchantId") Long merchantId) {

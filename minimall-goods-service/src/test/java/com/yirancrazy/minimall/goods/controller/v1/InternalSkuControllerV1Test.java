@@ -18,50 +18,33 @@ import com.yirancrazy.minimall.api.dto.goods.SkuSnapshotDTO;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.exception.GlobalExceptionHandler;
 import com.yirancrazy.minimall.goods.constant.SpuCodeEnum;
-import com.yirancrazy.minimall.goods.constant.SpuStatusEnum;
-import com.yirancrazy.minimall.goods.entity.SkuPO;
-import com.yirancrazy.minimall.goods.entity.SpuPO;
 import com.yirancrazy.minimall.goods.service.SkuService;
-import com.yirancrazy.minimall.goods.service.SpuService;
+
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: InternalSkuControllerV1 MockMvc 单元测试，验证内部 SKU 快照接口的在售校验与快照返回。
+ * @Description: InternalSkuControllerV1Test 单元测试。
  * @Version: 1.0
- * @DateTime: 2026/08/16
+ * @DateTime: 2026/10/16
  **/
 class InternalSkuControllerV1Test {
 
     private MockMvc mockMvc;
     private SkuService skuService;
-    private SpuService spuService;
 
     @BeforeEach
     void setUp() {
         skuService = mock(SkuService.class);
-        spuService = mock(SpuService.class);
-        mockMvc = MockMvcBuilders.standaloneSetup(new InternalSkuControllerV1(skuService, spuService))
+        mockMvc = MockMvcBuilders.standaloneSetup(new InternalSkuControllerV1(skuService))
             .setControllerAdvice(new GlobalExceptionHandler())
             .build();
     }
 
-    /**
-     * 验证所属 SPU 在售时返回 SKU 快照，含商家 ID。
-     */
+
     @Test
     void snapshot_returns_snapshot_when_spu_on_sale() throws Exception {
-        SkuPO sku = new SkuPO();
-        sku.setId(99L);
-        sku.setSpuId(1L);
-        sku.setSkuName("薄荷洗发水");
-        sku.setPrice(new BigDecimal("19.90"));
-        sku.setStock(100);
-        when(skuService.getById(99L)).thenReturn(sku);
-        SpuPO spu = new SpuPO();
-        spu.setId(1L);
-        spu.setMerchantId(7L);
-        spu.setStatus(SpuStatusEnum.ON_SALE.statusValue());
-        when(spuService.getById(1L)).thenReturn(spu);
+        when(skuService.getSnapshot(99L)).thenReturn(new SkuSnapshotDTO(
+            99L, 1L, "薄荷洗发水", new BigDecimal("19.90"), 100, 7L));
 
         mockMvc.perform(get("/internal/goods/sku/99"))
             .andExpect(status().isOk())
@@ -74,51 +57,28 @@ class InternalSkuControllerV1Test {
             .andExpect(jsonPath("$.data.merchantId").value(7));
     }
 
-    /**
-     * 验证所属 SPU 处于任一非在售状态（草稿/待审/下架/驳回）时拒绝返回快照，防止未过审商品被下单。
-     */
+
     @Test
     void snapshot_rejects_when_spu_not_on_sale() throws Exception {
-        SkuPO sku = new SkuPO();
-        sku.setId(99L);
-        sku.setSpuId(1L);
-        sku.setSkuName("薄荷洗发水");
-        sku.setPrice(new BigDecimal("19.90"));
-        sku.setStock(100);
-        when(skuService.getById(99L)).thenReturn(sku);
-        SpuPO spu = new SpuPO();
-        spu.setId(1L);
-        spu.setMerchantId(7L);
-        when(spuService.getById(1L)).thenReturn(spu);
-        for (SpuStatusEnum status : List.of(SpuStatusEnum.DRAFT, SpuStatusEnum.PENDING_AUDIT,
-            SpuStatusEnum.OFF_SHELF, SpuStatusEnum.REJECTED)) {
-            spu.setStatus(status.statusValue());
-            mockMvc.perform(get("/internal/goods/sku/99"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(SpuCodeEnum.SPU_NOT_ON_SALE.getCode()))
-                .andExpect(jsonPath("$.message").value(SpuCodeEnum.SPU_NOT_ON_SALE.getMessage()));
-        }
+        when(skuService.getSnapshot(99L)).thenThrow(new BizException(SpuCodeEnum.SPU_NOT_ON_SALE));
+
+        mockMvc.perform(get("/internal/goods/sku/99"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.code").value(SpuCodeEnum.SPU_NOT_ON_SALE.getCode()))
+            .andExpect(jsonPath("$.message").value(SpuCodeEnum.SPU_NOT_ON_SALE.getMessage()));
     }
 
-    /**
-     * 验证所属 SPU 不存在时透传 SPU_NOT_FOUND 业务错误。
-     */
+
     @Test
     void snapshot_propagates_spu_not_found() throws Exception {
-        SkuPO sku = new SkuPO();
-        sku.setId(99L);
-        sku.setSpuId(1L);
-        when(skuService.getById(99L)).thenReturn(sku);
-        when(spuService.getById(1L)).thenThrow(new BizException(SpuCodeEnum.SPU_NOT_FOUND));
+        when(skuService.getSnapshot(99L)).thenThrow(new BizException(SpuCodeEnum.SPU_NOT_FOUND));
 
         mockMvc.perform(get("/internal/goods/sku/99"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.code").value(SpuCodeEnum.SPU_NOT_FOUND.getCode()));
     }
 
-    /**
-     * 验证批量快照接口返回 skuId -> 快照 Map，契约与单条快照一致。
-     */
+
     @Test
     void batchSnapshot_returns_snapshot_map() throws Exception {
         when(skuService.listSnapshots(List.of(99L))).thenReturn(Map.of(
@@ -135,9 +95,7 @@ class InternalSkuControllerV1Test {
             .andExpect(jsonPath("$.data['99'].merchantId").value(7));
     }
 
-    /**
-     * 验证空入参批量快照返回空 Map。
-     */
+
     @Test
     void batchSnapshot_empty_ids_returns_empty_map() throws Exception {
         when(skuService.listSnapshots(List.of())).thenReturn(Map.of());

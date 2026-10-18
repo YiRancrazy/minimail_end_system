@@ -12,6 +12,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import com.yirancrazy.minimall.api.dto.merchant.MerchantManageVO;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.util.MinioUtil;
 import com.yirancrazy.minimall.merchant.constant.MerchantAuditStatusEnum;
@@ -24,11 +25,12 @@ import com.yirancrazy.minimall.merchant.vo.MerchantInfoVO;
 import com.yirancrazy.minimall.merchant.vo.MerchantQualificationVO;
 
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: MerchantServiceImpl 单元测试，覆盖资质提交、查询与审核状态流转。
+ * @Description: MerchantServiceImplTest 单元测试。
  * @Version: 1.0
- * @DateTime: 2026/08/03
+ * @DateTime: 2026/10/16
  **/
 public class MerchantServiceImplTest {
 
@@ -51,10 +53,10 @@ public class MerchantServiceImplTest {
         service = new MerchantServiceImpl(manager, minioUtil);
     }
 
+
     /**
-     * 验证首次提交资质时创建一条 PENDING 记录。
+     * 执行 submit_new_creates_pending 方法。
      */
-    @Test
     public void submit_new_creates_pending() {
         when(manager.getOne(any())).thenReturn(null);
         QualificationSubmitDTO dto = new QualificationSubmitDTO();
@@ -67,10 +69,10 @@ public class MerchantServiceImplTest {
         verify(manager).save(any(MerchantPO.class));
     }
 
+
     /**
-     * 验证已存在资质时更新并重置为 PENDING。
+     * 执行 submit_existing_updates_pending 方法。
      */
-    @Test
     public void submit_existing_updates_pending() {
         MerchantPO existing = buildPO(1L, 1L, 1);
         when(manager.getOne(any())).thenReturn(existing);
@@ -85,10 +87,10 @@ public class MerchantServiceImplTest {
         verify(manager).updateById(existing);
     }
 
+
     /**
-     * 验证资质提交时敏感字段随实体落库（typeHandler 加密前为明文透传）。
+     * 执行 submit_carries_sensitive_fields 方法。
      */
-    @Test
     public void submit_carries_sensitive_fields() {
         when(manager.getOne(any())).thenReturn(null);
         QualificationSubmitDTO dto = new QualificationSubmitDTO();
@@ -112,10 +114,10 @@ public class MerchantServiceImplTest {
         assertEquals("6222000011112222", po.getBankAccountEnc());
     }
 
+
     /**
-     * 验证提交资质时持久化营业执照图 objectKey，出参时由 MinioUtil 解析为可访问 URL。
+     * 执行 submit_persists_and_resolves_license_image 方法。
      */
-    @Test
     public void submit_persists_and_resolves_license_image() {
         when(manager.getOne(any())).thenReturn(null);
         when(minioUtil.resolvePublicUrl("lic/abc.png")).thenReturn("http://minio/mall-files/lic/abc.png?token");
@@ -132,10 +134,10 @@ public class MerchantServiceImplTest {
         assertEquals("http://minio/mall-files/lic/abc.png?token", vo.getLicenseImageUrl());
     }
 
+
     /**
-     * 验证资质查询 VO 敏感字段已脱敏输出。
+     * 获取相关数据。
      */
-    @Test
     public void getQualification_masks_sensitive_fields() {
         MerchantPO po = buildPO(1L, 1L, 1);
         po.setIdCardNoEnc("110101199001011234");
@@ -150,29 +152,29 @@ public class MerchantServiceImplTest {
         assertTrue(vo.getBankAccountMasked().contains("****"));
     }
 
+
     /**
-     * 验证查询存在资质返回 VO。
+     * 获取相关数据。
      */
-    @Test
     public void getQualification_exists() {
         when(manager.getOne(any())).thenReturn(buildPO(1L, 1L, 1));
         MerchantQualificationVO vo = service.getQualification(1L);
         assertEquals(1L, vo.getUserId());
     }
 
+
     /**
-     * 验证查询不存在资质抛出 MERCHANT_NOT_FOUND。
+     * 获取相关数据。
      */
-    @Test
     public void getQualification_missing_throws() {
         when(manager.getOne(any())).thenReturn(null);
         assertThrows(BizException.class, () -> service.getQualification(999L));
     }
 
+
     /**
-     * 验证审核通过后状态置为 APPROVED。
+     * 执行 audit_approve_marks_approved 方法。
      */
-    @Test
     public void audit_approve_marks_approved() {
         MerchantPO po = buildPO(1L, 1L, 0);
         when(manager.getById(1L)).thenReturn(po);
@@ -182,10 +184,10 @@ public class MerchantServiceImplTest {
         verify(manager).updateById(po);
     }
 
+
     /**
-     * 验证审核驳回后状态置为 REJECTED 并记录原因。
+     * 执行 audit_reject_marks_rejected 方法。
      */
-    @Test
     public void audit_reject_marks_rejected() {
         MerchantPO po = buildPO(1L, 1L, 0);
         when(manager.getById(1L)).thenReturn(po);
@@ -195,28 +197,28 @@ public class MerchantServiceImplTest {
         assertEquals("证件不清晰", po.getAuditReason());
     }
 
+
     /**
-     * 验证审核不存在商家抛出 MERCHANT_NOT_FOUND。
+     * 执行 audit_missing_throws 方法。
      */
-    @Test
     public void audit_missing_throws() {
         when(manager.getById(1L)).thenReturn(null);
         assertThrows(BizException.class, () -> service.audit(1L, true, null));
     }
 
+
     /**
-     * 验证已审核资质重复审核抛出 MERCHANT_ALREADY_AUDITED。
+     * 执行 audit_already_audited_throws 方法。
      */
-    @Test
     public void audit_already_audited_throws() {
         when(manager.getById(1L)).thenReturn(buildPO(1L, 1L, 1));
         assertThrows(BizException.class, () -> service.audit(1L, true, null));
     }
 
+
     /**
-     * 验证驳回但不填原因时抛出 PARAM_INVALID，且不触发任何落库。
+     * 执行 audit_reject_without_reason_throws 方法。
      */
-    @Test
     public void audit_reject_without_reason_throws() {
         when(manager.getById(1L)).thenReturn(buildPO(1L, 1L, 0));
         assertThrows(BizException.class, () -> service.audit(1L, false, null));
@@ -224,10 +226,10 @@ public class MerchantServiceImplTest {
                 .updateById(any(MerchantPO.class));
     }
 
+
     /**
-     * 验证审核状态为 null（脏数据）时不抛 NPE，而是拒绝审核。
+     * 执行 audit_null_status_throws_already_audited 方法。
      */
-    @Test
     public void audit_null_status_throws_already_audited() {
         MerchantPO po = buildPO(1L, 1L, 0);
         po.setAuditStatus(null);
@@ -235,10 +237,10 @@ public class MerchantServiceImplTest {
         assertThrows(BizException.class, () -> service.audit(1L, true, null));
     }
 
+
     /**
-     * 验证并发/过期版本提交时 updateById 返回 false，审核必须显式失败而不能静默返回成功。
+     * 执行 audit_update_conflict_throws_already_audited 方法。
      */
-    @Test
     public void audit_update_conflict_throws_already_audited() {
         MerchantPO po = buildPO(1L, 1L, 0);
         when(manager.getById(1L)).thenReturn(po);
@@ -246,10 +248,10 @@ public class MerchantServiceImplTest {
         assertThrows(BizException.class, () -> service.audit(1L, true, null));
     }
 
+
     /**
-     * 验证审核通过时清理历史驳回原因。
+     * 执行 audit_approve_clears_stale_reason 方法。
      */
-    @Test
     public void audit_approve_clears_stale_reason() {
         MerchantPO po = buildPO(1L, 1L, 0);
         po.setAuditReason("历史驳回原因");
@@ -260,10 +262,10 @@ public class MerchantServiceImplTest {
         verify(manager).updateById(po);
     }
 
+
     /**
-     * 验证 getMerchantInfo 返回 MerchantInfoVO 各字段正确映射。
+     * 获取相关数据。
      */
-    @Test
     public void getMerchantInfo_success() {
         MerchantPO po = buildPO(1L, 10L, 1);
         when(manager.getOne(any())).thenReturn(po);
@@ -276,19 +278,19 @@ public class MerchantServiceImplTest {
         assertEquals(1, vo.getQualificationStatus());
     }
 
+
     /**
-     * 验证 getMerchantInfo 商家不存在时抛出 MERCHANT_NOT_FOUND。
+     * 获取相关数据。
      */
-    @Test
     public void getMerchantInfo_notFound_throws() {
         when(manager.getOne(any())).thenReturn(null);
         assertThrows(BizException.class, () -> service.getMerchantInfo(999L));
     }
 
+
     /**
-     * 验证 listAuditLog 返回包含审核记录的单元素列表。
+     * 查询列表数据。
      */
-    @Test
     public void listAuditLog_success() {
         LocalDateTime auditAt = LocalDateTime.of(2026, 8, 4, 12, 0);
         MerchantPO po = buildPO(1L, 10L, 2);
@@ -308,10 +310,10 @@ public class MerchantServiceImplTest {
         assertEquals(auditAt, vo.getAuditAt());
     }
 
+
     /**
-     * 验证 listAuditLog 商家不存在时返回空列表。
+     * 查询列表数据。
      */
-    @Test
     public void listAuditLog_empty() {
         when(manager.getOne(any())).thenReturn(null);
         List<MerchantAuditLogVO> list = service.listAuditLog(999L);
@@ -328,10 +330,10 @@ public class MerchantServiceImplTest {
         return po;
     }
 
+
     /**
-     * 验证 page 在无记录时返回空分页。
+     * 分页查询数据。
      */
-    @Test
     public void page_returns_empty() {
         when(manager.list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class)))
                 .thenReturn(java.util.Collections.emptyList());
@@ -339,16 +341,16 @@ public class MerchantServiceImplTest {
         com.yirancrazy.minimall.merchant.dto.MerchantPageDTO dto =
                 new com.yirancrazy.minimall.merchant.dto.MerchantPageDTO();
         dto.setLimit(20);
-        com.yirancrazy.minimall.common.result.CursorPageVO<MerchantPO> page = service.page(dto);
+        com.yirancrazy.minimall.common.result.CursorPageVO<MerchantManageVO> page = service.page(dto);
 
         assertTrue(page.getRecords().isEmpty());
         assertEquals(false, page.isHasMore());
     }
 
+
     /**
-     * 验证 page 委托 manager 并按 keyword/auditStatus 过滤。
+     * 分页查询数据。
      */
-    @Test
     public void page_filters_combined() {
         MerchantPO a = buildPO(1L, 100L, 1);
         when(manager.list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class)))
@@ -359,27 +361,27 @@ public class MerchantServiceImplTest {
         dto.setLimit(20);
         dto.setKeyword("shop");
         dto.setAuditStatus(1);
-        com.yirancrazy.minimall.common.result.CursorPageVO<MerchantPO> page = service.page(dto);
+        com.yirancrazy.minimall.common.result.CursorPageVO<MerchantManageVO> page = service.page(dto);
 
         assertEquals(1, page.getRecords().size());
         verify(manager).list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class));
     }
 
+
     /**
-     * 验证 detail 正常返回商家 PO。
+     * 执行 detail_returns_manage_vo 方法。
      */
-    @Test
-    public void detail_returns_po() {
+    public void detail_returns_manage_vo() {
         when(manager.getById(1L)).thenReturn(buildPO(1L, 100L, 1));
 
-        MerchantPO got = service.detail(1L);
+        MerchantManageVO got = service.detail(1L);
         assertEquals(100L, got.getUserId());
     }
 
+
     /**
-     * 验证 detail 在商家不存在时抛 MERCHANT_NOT_FOUND。
+     * 执行 detail_throws_when_not_found 方法。
      */
-    @Test
     public void detail_throws_when_not_found() {
         when(manager.getById(99L)).thenReturn(null);
 

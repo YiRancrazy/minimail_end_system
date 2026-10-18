@@ -24,14 +24,15 @@ import com.yirancrazy.minimall.order.dto.OrderCheckoutDTO;
 import com.yirancrazy.minimall.order.dto.OrderCheckoutItemDTO;
 import com.yirancrazy.minimall.order.dto.OrderCreateDTO;
 import com.yirancrazy.minimall.order.dto.OrderPageDTO;
-import com.yirancrazy.minimall.order.entity.OrderPO;
 import com.yirancrazy.minimall.order.service.OrderService;
+import com.yirancrazy.minimall.order.vo.OrderVO;
+
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: UserOrderControllerV1 MockMvc 单元测试，验证 HTTP 层路由、参数绑定与 Result 包装。
+ * @Description: UserOrderControllerV1Test 单元测试。
  * @Version: 1.0
- * @DateTime: 2026/08/05
+ * @DateTime: 2026/10/16
  **/
 class UserOrderControllerV1Test {
 
@@ -45,24 +46,20 @@ class UserOrderControllerV1Test {
         mockMvc = MockMvcBuilders.standaloneSetup(new UserOrderControllerV1(service)).build();
     }
 
-    /**
-     * 验证 GET /api/v1/user/orders 返回游标分页结果。
-     */
+
     @Test
     void page_returns_cursor_result() throws Exception {
-        when(service.page(any(OrderPageDTO.class)))
+        when(service.pageVO(any(OrderPageDTO.class)))
             .thenReturn(new CursorPageVO<>(java.util.Collections.emptyList(), null, false, 20));
         mockMvc.perform(get("/api/v1/user/orders").header("X-User-Id", 7L))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.code").value("00000"));
     }
 
-    /**
-     * 验证用户订单分页强制绑定当前登录用户，忽略客户端传入的 userId。
-     */
+
     @Test
     void page_overrides_client_user_id() throws Exception {
-        when(service.page(any(OrderPageDTO.class)))
+        when(service.pageVO(any(OrderPageDTO.class)))
             .thenReturn(new CursorPageVO<>(java.util.Collections.emptyList(), null, false, 20));
 
         mockMvc.perform(get("/api/v1/user/orders")
@@ -71,13 +68,11 @@ class UserOrderControllerV1Test {
             .andExpect(status().isOk());
 
         ArgumentCaptor<OrderPageDTO> captor = ArgumentCaptor.forClass(OrderPageDTO.class);
-        verify(service).page(captor.capture());
+        verify(service).pageVO(captor.capture());
         assertEquals(7L, captor.getValue().getUserId());
     }
 
-    /**
-     * 验证 GET /api/v1/user/orders/status-counts 带 X-User-Id 头返回各状态订单数量。
-     */
+
     @Test
     void statusCounts_returns_counts() throws Exception {
         com.yirancrazy.minimall.order.vo.OrderStatusCountsVO vo =
@@ -98,9 +93,7 @@ class UserOrderControllerV1Test {
         verify(service).countStatusByUser(7L);
     }
 
-    /**
-     * 验证 POST /api/v1/user/orders/checkout 调用 service 并返回 201。
-     */
+
     @Test
     void checkout_returns_created() throws Exception {
         when(service.checkout(anyLong(), any(), any())).thenReturn(100L);
@@ -115,9 +108,7 @@ class UserOrderControllerV1Test {
         verify(service).checkout(anyLong(), any(), any());
     }
 
-    /**
-     * 验证 POST /api/v1/user/orders 带 X-User-Id 头创建订单并返回 201。
-     */
+
     @Test
     void create_with_header_returns_created() throws Exception {
         when(service.create(anyLong(), anyLong(), anyInt(), any())).thenReturn(100L);
@@ -131,18 +122,14 @@ class UserOrderControllerV1Test {
         verify(service).create(eq(1L), eq(100L), eq(2), any());
     }
 
-    /**
-     * 验证用户端不再暴露直接推进订单支付的入口。
-     */
+
     @Test
     void pay_endpoint_removed() throws Exception {
         mockMvc.perform(post("/api/v1/user/orders/99/pay").header("X-User-Id", 1L))
             .andExpect(status().isNotFound());
     }
 
-    /**
-     * 验证 GET /api/v1/user/orders/{id} 带 X-User-Id 返回订单状态。
-     */
+
     @Test
     void status_returns_integer() throws Exception {
         when(service.getStatus(99L, 1L)).thenReturn(2);
@@ -151,25 +138,21 @@ class UserOrderControllerV1Test {
             .andExpect(jsonPath("$.data").value(2));
     }
 
-    /**
-     * 验证 GET /api/v1/user/orders/{id}/detail 带 X-User-Id 调用 service 并返回 VO。
-     */
+
     @Test
     void detail_returns_vo() throws Exception {
-        OrderPO po = new OrderPO();
-        po.setId(99L);
-        po.setUserId(1L);
-        po.setAmount(java.math.BigDecimal.TEN);
-        po.setStatus(2);
-        when(service.getDetail(99L, 1L)).thenReturn(po);
+        OrderVO vo = new OrderVO();
+        vo.setId(99L);
+        vo.setUserId(1L);
+        vo.setAmount("10");
+        vo.setStatus("PAID");
+        when(service.detailVO(99L, 1L)).thenReturn(vo);
         mockMvc.perform(get("/api/v1/user/orders/99/detail").header("X-User-Id", 1L))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.id").value(99));
     }
 
-    /**
-     * 验证 GET /api/v1/user/orders/{orderId}/logistics 带 X-User-Id 调用 service 并返回物流节点。
-     */
+
     @Test
     void logistics_returns_nodes() throws Exception {
         when(service.queryLogistics(99L, 1L)).thenReturn(java.util.List.of(
@@ -180,9 +163,7 @@ class UserOrderControllerV1Test {
         verify(service).queryLogistics(99L, 1L);
     }
 
-    /**
-     * 验证 POST /api/v1/user/orders/{id}/cancel 带 X-User-Id 调用 service。
-     */
+
     @Test
     void cancel_with_header_invokes_service() throws Exception {
         mockMvc.perform(post("/api/v1/user/orders/99/cancel").header("X-User-Id", 1L))
@@ -190,9 +171,7 @@ class UserOrderControllerV1Test {
         verify(service).cancel(99L, 1L);
     }
 
-    /**
-     * 验证 POST /api/v1/user/orders/{id}/refund 带 X-User-Id 调用 service。
-     */
+
     @Test
     void refund_with_header_invokes_service() throws Exception {
         mockMvc.perform(post("/api/v1/user/orders/99/refund").header("X-User-Id", 1L))

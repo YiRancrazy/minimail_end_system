@@ -32,10 +32,6 @@ import com.yirancrazy.minimall.api.dto.pay.PayCreateDTO;
 import com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO;
 import com.yirancrazy.minimall.api.dto.stock.StockBatchReserveDTO;
 import com.yirancrazy.minimall.api.dto.stock.StockReserveDTO;
-import com.yirancrazy.minimall.api.feign.GoodsFeignClient;
-import com.yirancrazy.minimall.api.feign.IdFeignClient;
-import com.yirancrazy.minimall.api.feign.PayFeignClient;
-import com.yirancrazy.minimall.api.feign.StockFeignClient;
 import com.yirancrazy.minimall.common.event.EventBus;
 import com.yirancrazy.minimall.common.event.OutboxStore;
 import com.yirancrazy.minimall.common.exception.BizException;
@@ -51,17 +47,22 @@ import com.yirancrazy.minimall.order.constant.OrderStatusMachine;
 import com.yirancrazy.minimall.order.constant.StockReleaseStatusEnum;
 import com.yirancrazy.minimall.order.dto.OrderCheckoutItemDTO;
 import com.yirancrazy.minimall.order.dto.OrderPageDTO;
+import com.yirancrazy.minimall.order.dto.OrderStatisticsResultDTO;
+import com.yirancrazy.minimall.order.dto.OrderStatusCountDTO;
+import com.yirancrazy.minimall.order.dto.OrderSummaryResultDTO;
+import com.yirancrazy.minimall.order.dto.OrderTrendPointDTO;
 import com.yirancrazy.minimall.order.dto.ReceiverDTO;
 import com.yirancrazy.minimall.order.entity.OrderItemPO;
 import com.yirancrazy.minimall.order.entity.OrderLogisticsPO;
 import com.yirancrazy.minimall.order.entity.OrderPO;
 import com.yirancrazy.minimall.order.entity.OrderStatusLogPO;
+import com.yirancrazy.minimall.order.gateway.OrderRemoteGateway;
 import com.yirancrazy.minimall.order.manager.OrderItemManager;
 import com.yirancrazy.minimall.order.manager.OrderLogisticsManager;
 import com.yirancrazy.minimall.order.manager.OrderManager;
 import com.yirancrazy.minimall.order.manager.OrderStatusLogManager;
-import com.yirancrazy.minimall.order.mapper.OrderMapper;
 import com.yirancrazy.minimall.order.service.OrderService;
+import com.yirancrazy.minimall.order.vo.OrderExportVO;
 import com.yirancrazy.minimall.order.vo.OrderItemVO;
 import com.yirancrazy.minimall.order.vo.OrderLogisticsVO;
 import com.yirancrazy.minimall.order.vo.OrderStatisticsVO;
@@ -71,12 +72,13 @@ import com.yirancrazy.minimall.order.vo.OrderTrendPointVO;
 import com.yirancrazy.minimall.order.vo.OrderTrendVO;
 import com.yirancrazy.minimall.order.vo.OrderVO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 订单领域服务实现，编排下单核心链路：取商品快照→锁库存→创建支付流水→持久化订单，并通过事件总线广播订单状态变更。
- * @Version: 1.2
- * @DateTime: 2026/08/03
- */
+ * @Description: OrderServiceImpl 服务实现，实现相关业务逻辑。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 @Slf4j
 @Service
 public class OrderServiceImpl implements OrderService {
@@ -101,11 +103,7 @@ public class OrderServiceImpl implements OrderService {
     private final OrderItemManager orderItemManager;
     private final OrderLogisticsManager orderLogisticsManager;
     private final OrderStatusLogManager orderStatusLogManager;
-    private final OrderMapper orderMapper;
-    private final GoodsFeignClient goodsFeignClient;
-    private final StockFeignClient stockFeignClient;
-    private final PayFeignClient payFeignClient;
-    private final IdFeignClient idFeignClient;
+    private final OrderRemoteGateway orderRemoteGateway;
     private final EventBus eventBus;
     private final OutboxStore outboxStore;
     private final TransactionTemplate transactionTemplate;
@@ -113,15 +111,25 @@ public class OrderServiceImpl implements OrderService {
     private final ObjectMapper objectMapper;
     private final MinioUtil minioUtil;
 
+    /**
+     * 构造 OrderServiceImpl 实例。
+     * @param orderManager orderManager 参数
+     * @param orderItemManager orderItemManager 参数
+     * @param orderLogisticsManager orderLogisticsManager 参数
+     * @param orderStatusLogManager orderStatusLogManager 参数
+     * @param orderRemoteGateway orderRemoteGateway 参数
+     * @param eventBus eventBus 参数
+     * @param outboxStore outboxStore 参数
+     * @param transactionTemplate transactionTemplate 参数
+     * @param statusMachine statusMachine 参数
+     * @param objectMapper objectMapper 参数
+     * @param minioUtil minioUtil 参数
+     */
     public OrderServiceImpl(OrderManager orderManager,
                             OrderItemManager orderItemManager,
                             OrderLogisticsManager orderLogisticsManager,
                             OrderStatusLogManager orderStatusLogManager,
-                            OrderMapper orderMapper,
-                            GoodsFeignClient goodsFeignClient,
-                            StockFeignClient stockFeignClient,
-                            PayFeignClient payFeignClient,
-                            IdFeignClient idFeignClient,
+                            OrderRemoteGateway orderRemoteGateway,
                             EventBus eventBus,
                             OutboxStore outboxStore,
                             TransactionTemplate transactionTemplate,
@@ -132,11 +140,7 @@ public class OrderServiceImpl implements OrderService {
         this.orderItemManager = orderItemManager;
         this.orderLogisticsManager = orderLogisticsManager;
         this.orderStatusLogManager = orderStatusLogManager;
-        this.orderMapper = orderMapper;
-        this.goodsFeignClient = goodsFeignClient;
-        this.stockFeignClient = stockFeignClient;
-        this.payFeignClient = payFeignClient;
-        this.idFeignClient = idFeignClient;
+        this.orderRemoteGateway = orderRemoteGateway;
         this.eventBus = eventBus;
         this.outboxStore = outboxStore;
         this.transactionTemplate = transactionTemplate;
@@ -145,24 +149,33 @@ public class OrderServiceImpl implements OrderService {
         this.minioUtil = minioUtil;
     }
 
+
     /**
-     * 创建订单：取商品快照算金额，Seata AT 全局事务内锁库存与创建支付流水，落库后返回订单ID。
-     * @param userId 用户ID
-     * @param skuId SKU 主键 ID
-     * @param quantity 购买数量
-     * @return 订单ID
+     * 创建业务数据。
+     * @param userId userId 参数
+     * @param skuId skuId 参数
+     * @param quantity quantity 参数
+     * @return 业务数值
      */
     @Override
     public Long create(Long userId, Long skuId, Integer quantity) {
         return create(userId, skuId, quantity, null);
     }
 
+    /**
+     * 创建业务数据。
+     * @param userId userId 参数
+     * @param skuId skuId 参数
+     * @param quantity quantity 参数
+     * @param receiver receiver 参数
+     * @return 业务数值
+     */
     @Override
     @GlobalTransactional
     public Long create(Long userId, Long skuId, Integer quantity, ReceiverDTO receiver) {
 
         // 获取商品快照
-        SkuSnapshotDTO snapshot = goodsFeignClient.skuSnapshot(skuId).getData();
+        SkuSnapshotDTO snapshot = orderRemoteGateway.skuSnapshot(skuId).getData();
         if (snapshot == null || snapshot.getPrice() == null) {
             throw new BizException(OrderCodeEnum.ORDER_SKU_SNAPSHOT_MISSING);
         }
@@ -171,7 +184,7 @@ public class OrderServiceImpl implements OrderService {
         BigDecimal amount = normalizeAmount(snapshot.getPrice().multiply(BigDecimal.valueOf(quantity)));
 
         // 锁库存
-        Boolean reserved = stockFeignClient.reserve(new StockReserveDTO(skuId, quantity)).getData();
+        Boolean reserved = orderRemoteGateway.reserve(new StockReserveDTO(skuId, quantity)).getData();
         if (reserved == null || !reserved) {
             throw new BizException(OrderCodeEnum.STOCK_RESERVE_FAIL);
         }
@@ -210,7 +223,7 @@ public class OrderServiceImpl implements OrderService {
         orderItemManager.save(itemPO);
 
         // 创建支付流水：支付服务在 C 端无商户上下文，按订单归属商户收款
-        Long payId = payFeignClient.create(
+        Long payId = orderRemoteGateway.createPayment(
             new PayCreateDTO(String.valueOf(po.getId()), userId, 0L, amount, null)).getData();
         if (payId == null || payId < 0) {
             throw new BizException(OrderCodeEnum.ORDER_PAY_CREATE_FAIL);
@@ -223,12 +236,12 @@ public class OrderServiceImpl implements OrderService {
         return po.getId();
     }
 
+
     /**
-     * 多SKU结算下单：按商家分组拆单，每组创建独立 t_order 共享同一 orderGroupNo，并各自初始化支付流水。
-     * ponytail: 单商家时退化为单订单，行为与旧版本兼容。
-     * @param userId 用户ID
-     * @param items 结算明细列表
-     * @return 主订单ID（首个创建的子订单）
+     * 校验业务条件。
+     * @param userId userId 参数
+     * @param items items 参数
+     * @return 业务数值
      */
     @Override
     @GlobalTransactional
@@ -236,6 +249,13 @@ public class OrderServiceImpl implements OrderService {
         return checkout(userId, items, null);
     }
 
+    /**
+     * 校验业务条件。
+     * @param userId userId 参数
+     * @param items items 参数
+     * @param receiver receiver 参数
+     * @return 业务数值
+     */
     @Override
     @GlobalTransactional
     public Long checkout(Long userId, List<OrderCheckoutItemDTO> items, ReceiverDTO receiver) {
@@ -306,7 +326,7 @@ public class OrderServiceImpl implements OrderService {
                 orderItemManager.save(itemPO);
             }
 
-            Long payId = payFeignClient.create(
+            Long payId = orderRemoteGateway.createPayment(
                 new PayCreateDTO(String.valueOf(po.getId()), userId, merchantId, groupAmount, null)).getData();
             if (payId == null || payId < 0) {
                 throw new BizException(OrderCodeEnum.ORDER_PAY_CREATE_FAIL);
@@ -326,10 +346,12 @@ public class OrderServiceImpl implements OrderService {
         return mainOrderId;
     }
 
+
     /**
-     * 合并重复 SKU 并限制单次结算 SKU 数，避免重复请求 RPC 与超大批次。
-     * @param items 结算明细
-     * @return skuId -> 合并后的数量
+     * 填充或标记CheckoutItems。
+     * @param items 明细列表
+     * @return 结果映射
+     * @throws BizException 业务校验失败时抛出
      */
     private Map<Long, Integer> mergeCheckoutItems(List<OrderCheckoutItemDTO> items) {
         if (items == null || items.isEmpty()) {
@@ -355,13 +377,15 @@ public class OrderServiceImpl implements OrderService {
         return quantityBySku;
     }
 
+
     /**
-     * 一次批量查询结算 SKU 快照，返回缺失项时拒绝下单。
-     * @param skuIds 去重后的 SKU 集合
-     * @return skuId -> 快照
+     * 加载CheckoutSnapshots。
+     * @param skuIds SKU ID 列表
+     * @return 结果映射
+     * @throws BizException 业务校验失败时抛出
      */
     private Map<Long, SkuSnapshotDTO> loadCheckoutSnapshots(List<Long> skuIds) {
-        Result<Map<Long, SkuSnapshotDTO>> result = goodsFeignClient.batchSkuSnapshot(skuIds);
+        Result<Map<Long, SkuSnapshotDTO>> result = orderRemoteGateway.batchSkuSnapshot(skuIds);
         Map<Long, SkuSnapshotDTO> snapshots = result == null ? null : result.getData();
         if (snapshots == null || snapshots.size() != skuIds.size()
             || !snapshots.keySet().containsAll(skuIds)) {
@@ -370,33 +394,37 @@ public class OrderServiceImpl implements OrderService {
         return snapshots;
     }
 
+
     /**
-     * 一次批量预占结算库存，失败时交由 stock-service 本地事务整批回滚。
-     * @param quantityBySku skuId -> 合并后的数量
+     * 执行Checkout库存操作。
+     * @param quantityBySku 数量根据SKU
+     * @throws BizException 业务校验失败时抛出
      */
     private void reserveCheckoutStock(Map<Long, Integer> quantityBySku) {
         List<StockReserveDTO> reserveItems = quantityBySku.entrySet().stream()
             .map(entry -> new StockReserveDTO(entry.getKey(), entry.getValue()))
             .toList();
-        Result<Boolean> result = stockFeignClient.reserveBatch(new StockBatchReserveDTO(reserveItems));
+        Result<Boolean> result = orderRemoteGateway.reserveBatch(new StockBatchReserveDTO(reserveItems));
         if (result == null || !CommonCode.SUCCESS.equals(result.getCode())
             || !Boolean.TRUE.equals(result.getData())) {
             throw new BizException(OrderCodeEnum.STOCK_RESERVE_FAIL);
         }
     }
 
+
     /**
-     * 内部推进订单为已支付（支付服务回调/事务消息场景），不校验用户归属。
-     * @param orderId 订单ID
+     * 执行 pay 方法。
+     * @param orderId orderId 参数
      */
-    @Override
     public void pay(Long orderId) {
         doPay(getOrder(orderId));
     }
 
+
     /**
-     * 推进订单为已支付并广播事件：用户支付与内部回调共用，事件携带订单归属用户ID。
-     * @param po 订单实体（调用方已校验归属）
+     * 处理do支付。
+     * @param po 持久化对象
+     * @throws BizException 业务校验失败时抛出
      */
     private void doPay(OrderPO po) {
         Long orderId = po.getId();
@@ -404,6 +432,8 @@ public class OrderServiceImpl implements OrderService {
             log.info("订单已支付，跳过重复推进，orderId={}", orderId);
             return;
         }
+
+        // 确保订单状态为待支付
         if (po.getStatus() != OrderStatusEnum.PENDING.intCode()) {
             throw new BizException(OrderCodeEnum.ORDER_STATUS_TRANSITION_INVALID);
         }
@@ -418,11 +448,11 @@ public class OrderServiceImpl implements OrderService {
         log.info("订单已支付，orderId={}", orderId);
     }
 
+
     /**
-     * 按业务单号推进订单为已支付，C 端支付回调携带业务单号而非订单ID，不存在时抛出 ORDER_NOT_FOUND。
-     * @param orderNo 业务单号
+     * 执行 payByOrderNo 方法。
+     * @param orderNo orderNo 参数
      */
-    @Override
     public void payByOrderNo(String orderNo) {
         OrderPO po = orderManager.getOne(Wrappers.lambdaQuery(OrderPO.class)
             .eq(OrderPO::getOrderNo, orderNo)
@@ -433,17 +463,22 @@ public class OrderServiceImpl implements OrderService {
         pay(po.getId());
     }
 
+
     /**
-     * 检查订单是否已进入 PAID 状态，用于事务消息回调校验。
-     * @param orderId 待检查的订单 ID
-     * @return 订单为 PAID 时返回 true
+     * 校验订单Paid。
+     * @param orderId 订单 ID
+     * @return 是否满足条件
      */
     private boolean isOrderPaid(Long orderId) {
         OrderPO po = orderManager.getById(orderId);
         return po != null && po.getStatus() == OrderStatusEnum.PAID.intCode();
     }
 
-    @Override
+    /**
+     * 执行 cancel 方法。
+     * @param orderId orderId 参数
+     * @param userId userId 参数
+     */
     public void cancel(Long orderId, Long userId) {
         OrderPO po = getOrder(orderId);
         if (!po.getUserId().equals(userId)) {
@@ -459,7 +494,13 @@ public class OrderServiceImpl implements OrderService {
         log.info("订单已取消，orderId={}，userId={}", orderId, userId);
     }
 
-    @Override
+    /**
+     * 执行 ship 方法。
+     * @param orderId orderId 参数
+     * @param merchantId merchantId 参数
+     * @param carrier carrier 参数
+     * @param trackingNo trackingNo 参数
+     */
     public void ship(Long orderId, Long merchantId, String carrier, String trackingNo) {
         OrderPO po = getOrder(orderId);
         if (po.getMerchantId() == null || !po.getMerchantId().equals(merchantId)) {
@@ -476,20 +517,26 @@ public class OrderServiceImpl implements OrderService {
             orderId, merchantId, carrier, trackingNo);
     }
 
+
     /**
-     * 商家主动发起退款：仅 PAID/SHIPPED 允许发起（状态机无 COMPLETED→REFUNDING 迁移，
-     * 售后退款需先补状态机规则再放开）；refundAmount 支持部分退款并随申请落库，审核通过时按实退金额透传支付服务。
-     * @param orderId 订单ID
-     * @param merchantId 商家ID
-     * @param refundAmount 退款金额（元），必须 > 0 且不超过支付金额
-     * @param reason 退款原因
+     * 执行 merchantInitiateRefund 方法。
+     * @param orderId orderId 参数
+     * @param merchantId merchantId 参数
+     * @param refundAmount refundAmount 参数
+     * @param reason reason 参数
      */
-    @Override
     public void merchantInitiateRefund(Long orderId, Long merchantId, String refundAmount, String reason) {
         merchantInitiateRefund(orderId, merchantId, refundAmount, reason, "R" + orderId);
     }
 
-    @Override
+    /**
+     * 执行 merchantInitiateRefund 方法。
+     * @param orderId orderId 参数
+     * @param merchantId merchantId 参数
+     * @param refundAmount refundAmount 参数
+     * @param reason reason 参数
+     * @param refundRequestNo refundRequestNo 参数
+     */
     public void merchantInitiateRefund(Long orderId, Long merchantId, String refundAmount, String reason,
                                        String refundRequestNo) {
         OrderPO po = getOrder(orderId);
@@ -513,7 +560,24 @@ public class OrderServiceImpl implements OrderService {
             orderId, merchantId, refundAmount, reason);
     }
 
-    @Override
+    /**
+     * 执行 merchantInitiateRefundByNo 方法。
+     * @param refundNo refundNo 参数
+     * @param merchantId merchantId 参数
+     * @param refundAmount refundAmount 参数
+     * @param reason reason 参数
+     */
+    public void merchantInitiateRefundByNo(String refundNo, Long merchantId,
+                                           String refundAmount, String reason) {
+        merchantInitiateRefund(parseOrderIdFromRefundNo(refundNo), merchantId,
+            refundAmount, reason, refundNo);
+    }
+
+    /**
+     * 执行 confirm 方法。
+     * @param orderId orderId 参数
+     * @param userId userId 参数
+     */
     public void confirm(Long orderId, Long userId) {
         OrderPO po = getOrder(orderId);
         if (!po.getUserId().equals(userId)) {
@@ -523,11 +587,22 @@ public class OrderServiceImpl implements OrderService {
         log.info("订单已确认收货，orderId={}，userId={}", orderId, userId);
     }
 
-    @Override
+    /**
+     * 执行 refund 方法。
+     * @param orderId orderId 参数
+     * @param userId userId 参数
+     */
     public void refund(Long orderId, Long userId) {
         refund(orderId, userId, UUID.randomUUID().toString().replace("-", ""));
     }
 
+    /**
+     * 处理退款。
+     * @param orderId 订单 ID
+     * @param userId 用户 ID
+     * @param refundRequestNo 退款Request 编号
+     * @throws BizException 业务校验失败时抛出
+     */
     private void refund(Long orderId, Long userId, String refundRequestNo) {
         OrderPO po = getOrder(orderId);
         if (!po.getUserId().equals(userId)) {
@@ -544,7 +619,10 @@ public class OrderServiceImpl implements OrderService {
         log.info("订单退款处理中，orderId={}", orderId);
     }
 
-    @Override
+    /**
+     * 处理业务事件。
+     * @param dto dto 参数
+     */
     public void handleRefundCallback(RefundCallbackDTO dto) {
         if (dto == null || dto.getOrderId() == null || dto.getRefundedAmount() == null
             || dto.getTotalRefundedAmount() == null) {
@@ -598,11 +676,12 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
+
     /**
-     * 查询订单状态，校验归属，非本人订单抛出 ORDER_NOT_FOUND。
-     * @param orderId 订单ID
-     * @param userId 用户ID（归属校验，来自可信 Header）
-     * @return 订单状态码
+     * 获取相关数据。
+     * @param orderId orderId 参数
+     * @param userId userId 参数
+     * @return 业务数值
      */
     @Override
     public Integer getStatus(Long orderId, Long userId) {
@@ -613,21 +692,22 @@ public class OrderServiceImpl implements OrderService {
         return po.getStatus();
     }
 
+
     /**
-     * 查询订单状态（内部/平台入口），不校验用户归属。
-     * @param orderId 订单ID
-     * @return 订单状态码
+     * 获取相关数据。
+     * @param orderId orderId 参数
+     * @return 业务数值
      */
     @Override
     public Integer getStatus(Long orderId) {
         return getOrder(orderId).getStatus();
     }
 
+
     /**
-     * 按订单标识解析归属商户：纯数字按订单ID查，其余按业务单号查，不存在返回 null。
-     * 支付服务在 C 端无商户上下文的场景用此接口归属收款商户。
-     * @param ref 订单标识
-     * @return 商户ID，订单不存在时返回 null
+     * 执行 resolveMerchantId 方法。
+     * @param ref ref 参数
+     * @return 业务数值
      */
     @Override
     public Long resolveMerchantId(String ref) {
@@ -635,10 +715,11 @@ public class OrderServiceImpl implements OrderService {
         return po == null ? null : po.getMerchantId();
     }
 
+
     /**
-     * 查询订单支付快照，供支付服务校验支付人、应付金额和订单状态。
-     * @param ref 订单标识（订单ID或业务单号）
-     * @return 订单支付快照
+     * 获取相关数据。
+     * @param ref ref 参数
+     * @return 处理结果
      */
     @Override
     public OrderPaySnapshotDTO getPaySnapshot(String ref) {
@@ -651,13 +732,13 @@ public class OrderServiceImpl implements OrderService {
             payAmount, po.getStatus(), po.getPayId());
     }
 
+
     /**
-     * 校验订单评价资格：订单存在、归属该用户、包含该 SPU 且处于已购买状态（PAID/SHIPPED/COMPLETED），
-     * 返回订单快照中的商家ID，避免评价落库使用前端传入的 merchantId。
-     * @param orderNo 订单号
-     * @param userId 评价用户ID
-     * @param spuId 商品SPU ID
-     * @return 评价资格快照；任何条件不满足时 eligible=false
+     * 执行 commentEligibility 方法。
+     * @param orderNo orderNo 参数
+     * @param userId userId 参数
+     * @param spuId spuId 参数
+     * @return 处理结果
      */
     @Override
     public OrderCommentEligibilityDTO commentEligibility(String orderNo, Long userId, Long spuId) {
@@ -683,21 +764,23 @@ public class OrderServiceImpl implements OrderService {
         return eligibilityOf(po, true, merchantId);
     }
 
+
     /**
-     * 组装订单评价资格快照。
-     * @param po 订单实体
-     * @param eligible 是否具备评价资格
-     * @param merchantId 订单快照商家ID
-     * @return 评价资格快照
+     * 处理eligibilityOf。
+     * @param po 持久化对象
+     * @param eligible eligible
+     * @param merchantId 商户 ID
+     * @return 处理结果
      */
     private OrderCommentEligibilityDTO eligibilityOf(OrderPO po, boolean eligible, Long merchantId) {
         return new OrderCommentEligibilityDTO(eligible, po.getId(), po.getUserId(), merchantId, po.getStatus());
     }
 
+
     /**
-     * 按订单标识查找订单，先按业务单号匹配，数字标识再回退按主键匹配。
-     * @param ref 订单标识
-     * @return 订单实体；未找到返回 null
+     * 加载订单根据Ref。
+     * @param ref ref
+     * @return 查询结果
      */
     private OrderPO findOrderByRef(String ref) {
         if (ref == null || ref.isBlank()) {
@@ -720,13 +803,13 @@ public class OrderServiceImpl implements OrderService {
         return po;
     }
 
+
     /**
-     * 查询订单详情，校验归属，非本人订单抛出 ORDER_NOT_FOUND。
-     * @param orderId 订单ID
-     * @param userId 用户ID（归属校验，来自可信 Header）
-     * @return 订单持久化实体
+     * 获取相关数据。
+     * @param orderId orderId 参数
+     * @param userId userId 参数
+     * @return 处理结果
      */
-    @Override
     public OrderPO getDetail(Long orderId, Long userId) {
         OrderPO po = getOrder(orderId);
         if (!po.getUserId().equals(userId)) {
@@ -735,20 +818,21 @@ public class OrderServiceImpl implements OrderService {
         return po;
     }
 
+
     /**
-     * 查询订单详情（平台/内部入口），不校验用户归属。
-     * @param orderId 订单ID
-     * @return 订单持久化实体
+     * 获取相关数据。
+     * @param orderId orderId 参数
+     * @return 处理结果
      */
-    @Override
     public OrderPO getDetail(Long orderId) {
         return getOrder(orderId);
     }
 
+
     /**
-     * 查询订单商品明细行，按创建时间正序返回，供订单详情页展示。
-     * @param orderId 订单ID
-     * @return 商品明细VO列表
+     * 查询列表数据。
+     * @param orderId orderId 参数
+     * @return 结果列表
      */
     @Override
     public List<OrderItemVO> listItemVO(Long orderId) {
@@ -764,10 +848,10 @@ public class OrderServiceImpl implements OrderService {
         return vos;
     }
 
+
     /**
-     * 按 SPU ID 批量装配商品标题：标题非下单快照，出参实时从 goods 解析；
-     * goods 服务不可用或 SPU 缺失时保持 null，由前端回退显示 SKU 名，不阻断详情。
-     * @param vos 待填充的订单明细 VO 列表
+     * 填充或标记SPUName。
+     * @param vos vos
      */
     private void fillSpuName(List<OrderItemVO> vos) {
         List<Long> spuIds = vos.stream().map(OrderItemVO::getSpuId)
@@ -775,7 +859,7 @@ public class OrderServiceImpl implements OrderService {
         if (spuIds.isEmpty()) {
             return;
         }
-        Result<java.util.Map<Long, SpuSnapshotDTO>> result = goodsFeignClient.batchSpuSnapshot(spuIds);
+        Result<java.util.Map<Long, SpuSnapshotDTO>> result = orderRemoteGateway.batchSpuSnapshot(spuIds);
         java.util.Map<Long, SpuSnapshotDTO> snapshots =
             (result != null && result.getData() != null) ? result.getData() : Collections.emptyMap();
         for (OrderItemVO vo : vos) {
@@ -786,12 +870,12 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
+
     /**
-     * 商家关闭订单，仅允许 PENDING 状态关闭并释放库存，归属不符时抛出 ORDER_NOT_FOUND。
-     * @param orderId 订单ID
-     * @param merchantId 商家ID
+     * 执行 merchantClose 方法。
+     * @param orderId orderId 参数
+     * @param merchantId merchantId 参数
      */
-    @Override
     public void merchantClose(Long orderId, Long merchantId) {
         OrderPO po = getOrder(orderId);
         if (po.getMerchantId() == null || !po.getMerchantId().equals(merchantId)) {
@@ -807,12 +891,12 @@ public class OrderServiceImpl implements OrderService {
         log.info("订单已由商家关闭，orderId={}，merchantId={}", orderId, merchantId);
     }
 
+
     /**
-     * 用户删除订单，仅允许终态（CANCELED/COMPLETED/REFUNDED）删除，归属不符抛出 ORDER_NOT_FOUND。
-     * @param orderId 订单ID
-     * @param userId 用户ID
+     * 删除业务数据。
+     * @param orderId orderId 参数
+     * @param userId userId 参数
      */
-    @Override
     public void delete(Long orderId, Long userId) {
         OrderPO po = getOrder(orderId);
         if (!po.getUserId().equals(userId)) {
@@ -828,11 +912,11 @@ public class OrderServiceImpl implements OrderService {
         log.info("订单已删除，orderId={}，userId={}", orderId, userId);
     }
 
+
     /**
-     * 平台强制关闭异常订单，允许 PENDING 或 REFUNDING 状态关闭并释放库存。
-     * @param orderId 订单ID
+     * 执行 platformClose 方法。
+     * @param orderId orderId 参数
      */
-    @Override
     public void platformClose(Long orderId) {
         OrderPO po = getOrder(orderId);
         po.setStockReleaseStatus(StockReleaseStatusEnum.PENDING.intCode());
@@ -845,10 +929,11 @@ public class OrderServiceImpl implements OrderService {
         log.info("订单已由平台关闭，orderId={}", orderId);
     }
 
+
     /**
-     * 商家待处理订单数量统计，包含 PENDING/PAID/REFUNDING 三种状态。
-     * @param merchantId 商家ID
-     * @return 待处理订单总数
+     * 执行 pendingCount 方法。
+     * @param merchantId merchantId 参数
+     * @return 业务数值
      */
     @Override
     public long pendingCount(Long merchantId) {
@@ -860,6 +945,12 @@ public class OrderServiceImpl implements OrderService {
                 OrderStatusEnum.REFUNDING.intCode())));
     }
 
+    /**
+     * 获取订单。
+     * @param orderId 订单 ID
+     * @return 查询结果
+     * @throws BizException 业务校验失败时抛出
+     */
     private OrderPO getOrder(Long orderId) {
         OrderPO po = orderManager.getById(orderId);
         if (po == null) {
@@ -868,16 +959,18 @@ public class OrderServiceImpl implements OrderService {
         return po;
     }
 
+
     /**
-     * 释放订单库存：优先查询 order_item 明细逐条释放，无明细时回退到订单头的 skuId/quantity（兼容旧单SKU订单）。
-     * @param po 订单实体
+     * 执行库存For订单操作。
+     * @param po 持久化对象
+     * @return 是否满足条件
      */
     private boolean releaseStockForOrder(OrderPO po) {
         List<OrderItemPO> items = orderItemManager.list(
             Wrappers.lambdaQuery(OrderItemPO.class).eq(OrderItemPO::getOrderId, po.getId()));
         if (!items.isEmpty()) {
             for (OrderItemPO item : items) {
-                Result<Boolean> result = stockFeignClient.release(
+                Result<Boolean> result = orderRemoteGateway.release(
                     new StockReserveDTO(item.getSkuId(), item.getQuantity(), po.getOrderNo()));
                 if (result == null || !CommonCode.SUCCESS.equals(result.getCode())
                     || !Boolean.TRUE.equals(result.getData())) {
@@ -887,7 +980,7 @@ public class OrderServiceImpl implements OrderService {
             return true;
         }
         if (po.getSkuId() != null && po.getQuantity() != null) {
-            Result<Boolean> result = stockFeignClient.release(
+            Result<Boolean> result = orderRemoteGateway.release(
                 new StockReserveDTO(po.getSkuId(), po.getQuantity(), po.getOrderNo()));
             return result != null && CommonCode.SUCCESS.equals(result.getCode())
                 && Boolean.TRUE.equals(result.getData());
@@ -895,10 +988,11 @@ public class OrderServiceImpl implements OrderService {
         return true;
     }
 
+
     /**
-     * 记录订单库存释放结果，成功置已释放，失败保持待释放供补偿扫描重试。
-     * @param po 订单实体
-     * @param released 本次是否已成功释放
+     * 填充或标记库存释放Result。
+     * @param po 持久化对象
+     * @param released released
      */
     private void markStockReleaseResult(OrderPO po, boolean released) {
         po.setStockReleaseStatus((released
@@ -906,25 +1000,27 @@ public class OrderServiceImpl implements OrderService {
         orderManager.updateById(po);
     }
 
+
     /**
-     * 推进订单状态并落状态日志：写入目标状态对应的时间戳，CANCELED 额外记录关闭原因。
-     * @param orderId 订单ID
-     * @param target 目标状态
-     * @param triggerSource 触发来源（状态日志）
-     * @param closeReason 关闭原因（仅 CANCELED 使用）
+     * 处理transit状态。
+     * @param orderId 订单 ID
+     * @param target 目标对象
+     * @param triggerSource triggerSource
+     * @param closeReason 关闭Reason
      */
     private void transitStatus(Long orderId, OrderStatusEnum target, String triggerSource, String closeReason) {
         transition(getOrder(orderId), target, triggerSource, closeReason, null);
     }
 
+
     /**
-     * 推进订单状态：状态机校验→写目标时间戳→更新影响 0 行即抛状态流转异常（并发防抖），
-     * 全部成功后才落状态日志，保证副作用只发生在状态真正迁移之后。
-     * @param po 待推进的订单实体（已校验归属）
-     * @param target 目标状态
-     * @param triggerSource 触发来源（状态日志）
-     * @param closeReason 关闭原因（仅 CANCELED 使用）
-     * @param note 状态日志备注（如驳回退款原因），无则传 null
+     * 处理transition。
+     * @param po 持久化对象
+     * @param target 目标对象
+     * @param triggerSource triggerSource
+     * @param closeReason 关闭Reason
+     * @param note note
+     * @throws BizException 业务校验失败时抛出
      */
     private void transition(OrderPO po, OrderStatusEnum target, String triggerSource, String closeReason, String note) {
         Integer fromStatus = po.getStatus();
@@ -937,21 +1033,23 @@ public class OrderServiceImpl implements OrderService {
         saveStatusLog(po, fromStatus, target, triggerSource, note);
     }
 
+
     /**
-     * 解析退款回退目标状态：优先使用申请退款时记录的 refundFromStatus，缺失时兜底 PAID。
-     * @param po 退款中订单实体
-     * @return 回退目标状态
+     * 处理revertTarget。
+     * @param po 持久化对象
+     * @return 处理结果
      */
     private OrderStatusEnum revertTarget(OrderPO po) {
         Integer fromStatus = po.getRefundFromStatus();
         return fromStatus != null ? statusMachine.fromCode(fromStatus) : OrderStatusEnum.PAID;
     }
 
+
     /**
-     * 按目标状态写入对应业务时间戳。
-     * @param po 订单实体
-     * @param target 目标状态
-     * @param closeReason 关闭原因
+     * 执行TargetTimestamps逻辑。
+     * @param po 持久化对象
+     * @param target 目标对象
+     * @param closeReason 关闭Reason
      */
     private void applyTargetTimestamps(OrderPO po, OrderStatusEnum target, String closeReason) {
         LocalDateTime now = LocalDateTime.now();
@@ -969,13 +1067,14 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
+
     /**
-     * 落订单状态机日志，供事件溯源与审计追溯。
-     * @param po 订单实体
-     * @param fromStatus 原状态码
-     * @param toStatus 目标状态
-     * @param triggerSource 触发来源
-     * @param note 日志备注（如驳回退款原因），无则传 null
+     * 创建状态日志。
+     * @param po 持久化对象
+     * @param fromStatus 从状态
+     * @param toStatus 转换状态
+     * @param triggerSource triggerSource
+     * @param note note
      */
     private void saveStatusLog(OrderPO po, Integer fromStatus, OrderStatusEnum toStatus,
                                String triggerSource, String note) {
@@ -988,33 +1087,34 @@ public class OrderServiceImpl implements OrderService {
         orderStatusLogManager.save(log);
     }
 
+
     /**
-     * 生成业务单号：优先取 Id 服务全局唯一 ID（避免并发碰撞唯一索引），Id 服务不可用时
-     * 回退时间戳+3 位随机并告警，保证单号不落 null 且不阻断下单。
-     * @return 业务单号
+     * 构建或生成订单编号。
+     * @return 编号或编码
      */
     private String generateOrderNo() {
         return "OD" + requireGlobalId("ORDER");
     }
 
+
     /**
-     * 生成订单组业务号（多商家拆单共享同一组号）。
-     * @return 订单组业务号
+     * 构建或生成订单Group编号。
+     * @return 编号或编码
      */
     private String generateOrderGroupNo() {
         return "OG" + requireGlobalId("ORDER_GROUP");
     }
 
+
     /**
-     * 调用 ID 服务下发全局唯一 ID；不可用或返回失败时直接抛业务异常，
-     * 不回退时间戳+随机数，避免业务号碰撞导致订单/支付串号。
-     * @param bizTag 业务标签
-     * @return 全局唯一 ID
-     * @throws BizException ID 服务不可用或返回失败时
+     * 处理requireGlobalID。
+     * @param bizTag bizTag
+     * @return 处理结果
+     * @throws BizException 业务校验失败时抛出
      */
     private Long requireGlobalId(String bizTag) {
         try {
-            Result<Long> result = idFeignClient.nextId(bizTag);
+            Result<Long> result = orderRemoteGateway.nextId(bizTag);
             if (result != null && CommonCode.SUCCESS.equals(result.getCode()) && result.getData() != null) {
                 return result.getData();
             }
@@ -1026,11 +1126,13 @@ public class OrderServiceImpl implements OrderService {
         throw new BizException(OrderCodeEnum.ORDER_ID_GENERATE_FAIL);
     }
 
+
     /**
-     * 校验并规范化退款金额：非空、大于 0 且不超过支付金额，非法时抛出 REFUND_AMOUNT_INVALID。
-     * @param refundAmount 退款金额字符串
-     * @param po 订单实体
-     * @return 规范化后的退款金额
+     * 校验退款金额。
+     * @param refundAmount 退款金额
+     * @param po 持久化对象
+     * @return 处理结果
+     * @throws BizException 业务校验失败时抛出
      */
     private BigDecimal validateRefundAmount(String refundAmount, OrderPO po) {
         BigDecimal refundAmt;
@@ -1058,10 +1160,11 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
+
     /**
-     * 序列化订单快照 JSON，失败时返回 null（不阻断下单）。
-     * @param value 待序列化对象
-     * @return JSON 字符串
+     * 转换或解析快照Json。
+     * @param value 值
+     * @return 处理结果
      */
     private String toSnapshotJson(Object value) {
         try {
@@ -1073,19 +1176,21 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
+
     /**
-     * 序列化收货人信息为快照 JSON：未传收货信息时返回 null，避免落空字符串。
+     * 转换或解析收货人快照Json。
      * @param receiver 收货人信息
-     * @return 快照 JSON；receiver 为 null 时返回 null
+     * @return 处理结果
      */
     private String toReceiverSnapshotJson(ReceiverDTO receiver) {
         return receiver == null ? null : toSnapshotJson(receiver);
     }
 
+
     /**
-     * 计算订单总金额，等于各订单行金额之和，统一为两位小数且不接受更高精度尾数。
-     * @param itemPOs 订单行列表
-     * @return 订单总金额
+     * 计算金额。
+     * @param itemPOs itemPOs
+     * @return 处理结果
      */
     private BigDecimal calcAmount(List<OrderItemPO> itemPOs) {
         BigDecimal total = BigDecimal.ZERO;
@@ -1095,11 +1200,12 @@ public class OrderServiceImpl implements OrderService {
         return normalizeAmount(total);
     }
 
+
     /**
-     * 统一金额精度：强制两位小数，存在更高精度尾数时拒绝而不是静默进位。
-     * @param amount 原始金额
-     * @return 两位小数金额
-     * @throws BizException 金额尾数超过两位时
+     * 构建或生成金额。
+     * @param amount 金额
+     * @return 处理结果
+     * @throws BizException 业务校验失败时抛出
      */
     private static BigDecimal normalizeAmount(BigDecimal amount) {
         try {
@@ -1110,12 +1216,12 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
+
     /**
-     * 游标分页查询订单，按 userId/merchantId/status 等值过滤，按ID倒序。
-     * @param dto 游标分页查询入参
-     * @return 订单游标分页结果
+     * 分页查询数据。
+     * @param dto dto 参数
+     * @return 处理结果
      */
-    @Override
     public CursorPageVO<OrderPO> page(OrderPageDTO dto) {
         Long lastId = CursorUtils.decode(dto.getCursor());
         int limit = dto.getLimit();
@@ -1132,10 +1238,47 @@ public class OrderServiceImpl implements OrderService {
         return CursorPageVO.of(records, limit, OrderPO::getId);
     }
 
+
     /**
-     * 商家端订单分页查询并装配展示字段，返回 Controller 边界 VO。
-     * @param dto 游标分页查询入参
-     * @return 订单 VO 游标分页结果
+     * 分页查询数据。
+     * @param dto dto 参数
+     * @return 处理结果
+     */
+    @Override
+    public CursorPageVO<OrderVO> pageVO(OrderPageDTO dto) {
+        return page(dto).map(OrderVO::from);
+    }
+
+
+    /**
+     * 执行 detailVO 方法。
+     * @param orderId orderId 参数
+     * @param userId userId 参数
+     * @return 处理结果
+     */
+    @Override
+    public OrderVO detailVO(Long orderId, Long userId) {
+        OrderVO vo = OrderVO.from(getDetail(orderId, userId));
+        vo.setItems(listItemVO(orderId));
+        return vo;
+    }
+
+
+    /**
+     * 执行 platformDetailVO 方法。
+     * @param orderId orderId 参数
+     * @return 处理结果
+     */
+    @Override
+    public OrderVO platformDetailVO(Long orderId) {
+        return OrderVO.from(getDetail(orderId));
+    }
+
+
+    /**
+     * 执行 merchantPageVO 方法。
+     * @param dto dto 参数
+     * @return 处理结果
      */
     @Override
     public CursorPageVO<OrderVO> merchantPageVO(OrderPageDTO dto) {
@@ -1146,10 +1289,10 @@ public class OrderServiceImpl implements OrderService {
         return result;
     }
 
+
     /**
-     * 按订单明细聚合商品名与数量：商品名以下单快照为准（不依赖 goods 在售状态，多明细顿号拼接去重），
-     * 拆单订单 t_order 不落库 quantity 时按明细求和。
-     * @param vos 商家端订单 VO 列表
+     * 填充或标记Item汇总。
+     * @param vos vos
      */
     private void fillItemSummary(List<OrderVO> vos) {
         List<Long> orderIds = vos.stream().map(OrderVO::getId).toList();
@@ -1175,11 +1318,11 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
+
     /**
-     * 批量拉取明细涉及的 SPU 标题：标题不出参实时解析，非下单快照；
-     * goods 不可用或缺失时返回空 map，展示侧降级为仅规格名。
-     * @param byOrder 按订单 ID 分组的明细列表
-     * @return spuId -> SPU 标题 的映射
+     * 处理fetchSPUTitles。
+     * @param byOrder 根据订单
+     * @return 结果映射
      */
     private Map<Long, String> fetchSpuTitles(Map<Long, List<OrderItemPO>> byOrder) {
         Set<Long> spuIds = byOrder.values().stream()
@@ -1190,7 +1333,7 @@ public class OrderServiceImpl implements OrderService {
             return Collections.emptyMap();
         }
         Result<java.util.Map<Long, SpuSnapshotDTO>> result =
-            goodsFeignClient.batchSpuSnapshot(new ArrayList<>(spuIds));
+            orderRemoteGateway.batchSpuSnapshot(new ArrayList<>(spuIds));
         if (result == null || result.getData() == null) {
             return Collections.emptyMap();
         }
@@ -1203,12 +1346,12 @@ public class OrderServiceImpl implements OrderService {
         return titles;
     }
 
+
     /**
-     * 拼接订单商品展示串：每条 "标题 | 规格名 * 数量"，最多两条，超出补省略号。
-     * 订单明细可能含多条同标题不同规格，逐条展示避免信息丢失；标题缺失时降级为 "规格名 * 数量"。
-     * @param orderItems 订单明细列表
-     * @param spuTitles spuId -> SPU 标题 映射
-     * @return 拼好的商品展示串
+     * 构建或生成ItemDisplay。
+     * @param orderItems 订单Items
+     * @param spuTitles SPUTitles
+     * @return 处理结果
      */
     private String buildItemDisplay(List<OrderItemPO> orderItems, Map<Long, String> spuTitles) {
         List<OrderItemPO> head = orderItems;
@@ -1224,11 +1367,12 @@ public class OrderServiceImpl implements OrderService {
         return truncated ? joined + "…" : joined;
     }
 
+
     /**
-     * 拼接单条明细展示段 "标题 | 规格名 * 数量"，标题或规格缺失时按剩余字段降级，均缺失返回 null。
-     * @param item 订单明细
-     * @param spuTitles spuId -> SPU 标题 映射
-     * @return 单条展示段；无可展示内容时返回 null
+     * 构建或生成ItemSegment。
+     * @param item 明细项
+     * @param spuTitles SPUTitles
+     * @return 处理结果
      */
     private String buildItemSegment(OrderItemPO item, Map<Long, String> spuTitles) {
         String title = item.getSpuId() == null ? null : spuTitles.get(item.getSpuId());
@@ -1244,12 +1388,12 @@ public class OrderServiceImpl implements OrderService {
         return tail == null ? title : title + " | " + tail;
     }
 
+
     /**
-     * 商家端查询单个订单详情：按订单ID与商家ID定位，装配商品名、驳回原因与拆单聚合数据。
-     * @param orderId 订单ID
-     * @param merchantId 商家ID，来自可信 Header
-     * @return 订单 VO
-     * @throws BizException 订单不存在或不属于该商家时
+     * 执行 merchantDetailVO 方法。
+     * @param orderId orderId 参数
+     * @param merchantId merchantId 参数
+     * @return 处理结果
      */
     @Override
     public OrderVO merchantDetailVO(Long orderId, Long merchantId) {
@@ -1266,16 +1410,17 @@ public class OrderServiceImpl implements OrderService {
         return vo;
     }
 
+
     /**
-     * 按 skuId 批量装配商品名；goods 服务不可用或 SKU 缺失时保持 null，不阻断列表返回。
-     * @param vos 待填充的订单 VO 列表
+     * 填充或标记SKUName。
+     * @param vos vos
      */
     private void fillSkuName(List<OrderVO> vos) {
         List<Long> skuIds = vos.stream().map(OrderVO::getSkuId).filter(Objects::nonNull).distinct().toList();
         if (skuIds.isEmpty()) {
             return;
         }
-        Result<Map<Long, SkuSnapshotDTO>> result = goodsFeignClient.batchSkuSnapshot(skuIds);
+        Result<Map<Long, SkuSnapshotDTO>> result = orderRemoteGateway.batchSkuSnapshot(skuIds);
         Map<Long, SkuSnapshotDTO> snapshots =
             (result != null && result.getData() != null) ? result.getData() : Collections.emptyMap();
         for (OrderVO vo : vos) {
@@ -1289,9 +1434,10 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
+
     /**
-     * 批量装配各订单最近一次商家驳回退款的原因（来自状态日志 note）。
-     * @param vos 待填充的订单 VO 列表
+     * 填充或标记RejectReason。
+     * @param vos vos
      */
     private void fillRejectReason(List<OrderVO> vos) {
         List<Long> orderIds = vos.stream().map(OrderVO::getId).toList();
@@ -1313,13 +1459,13 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
+
     /**
-     * 导出商家订单列表，最多 10000 行，merchantId 强制绑定。
-     * @param merchantId 商家ID
-     * @param dto 查询入参
-     * @return 订单列表
+     * 执行 exportList 方法。
+     * @param merchantId merchantId 参数
+     * @param dto dto 参数
+     * @return 结果列表
      */
-    @Override
     public List<OrderPO> exportList(Long merchantId, OrderPageDTO dto) {
         Integer statusCode = resolveStatusCode(dto.getStatus());
         return orderManager.list(Wrappers.lambdaQuery(OrderPO.class)
@@ -1332,12 +1478,24 @@ public class OrderServiceImpl implements OrderService {
             .last("LIMIT " + CsvExporter.maxExportRows()));
     }
 
+
     /**
-     * 导出全平台订单列表，最多 10000 行，不绑定 merchantId。
-     * @param dto 查询入参
-     * @return 订单列表
+     * 执行 exportVOList 方法。
+     * @param merchantId merchantId 参数
+     * @param dto dto 参数
+     * @return 结果列表
      */
     @Override
+    public List<OrderExportVO> exportVOList(Long merchantId, OrderPageDTO dto) {
+        return exportList(merchantId, dto).stream().map(OrderExportVO::from).toList();
+    }
+
+
+    /**
+     * 执行 platformExportList 方法。
+     * @param dto dto 参数
+     * @return 结果列表
+     */
     public List<OrderPO> platformExportList(OrderPageDTO dto) {
         Integer statusCode = resolveStatusCode(dto.getStatus());
         return orderManager.list(Wrappers.lambdaQuery(OrderPO.class)
@@ -1350,10 +1508,36 @@ public class OrderServiceImpl implements OrderService {
             .last("LIMIT " + CsvExporter.maxExportRows()));
     }
 
+
     /**
-     * 将订单状态枚举别名（如 PENDING）解析为持久化状态码；非法或空值返回 null 表示不过滤。
-     * @param status 状态枚举别名
-     * @return 持久化状态码或 null
+     * 执行 platformExportVOList 方法。
+     * @param dto dto 参数
+     * @return 结果列表
+     */
+    @Override
+    public List<OrderExportVO> platformExportVOList(OrderPageDTO dto) {
+        return platformExportList(dto).stream().map(OrderExportVO::from).toList();
+    }
+
+    /**
+     * 执行 platformExportVOList 方法。
+     * @param startDate startDate 参数
+     * @param endDate endDate 参数
+     * @return 结果列表
+     */
+    @Override
+    public List<OrderExportVO> platformExportVOList(String startDate, String endDate) {
+        OrderPageDTO dto = new OrderPageDTO();
+        dto.setStartTime(parseStart(startDate));
+        dto.setEndTime(parseEnd(endDate));
+        return platformExportVOList(dto);
+    }
+
+
+    /**
+     * 转换或解析状态编码。
+     * @param status 状态
+     * @return 处理结果
      */
     private Integer resolveStatusCode(String status) {
         if (status == null || status.isBlank()) {
@@ -1367,43 +1551,71 @@ public class OrderServiceImpl implements OrderService {
         return null;
     }
 
+
     /**
-     * 平台订单统计聚合，可选 merchantId 过滤，委托 OrderMapper 统计。
-     * @param dto 查询入参（复用 merchantId/startTime/endTime）
-     * @return 订单统计VO
+     * 执行 statistics 方法。
+     * @param dto dto 参数
+     * @return 处理结果
      */
     @Override
     public OrderStatisticsVO statistics(OrderPageDTO dto) {
-        return orderMapper.statistics(dto.getMerchantId(), dto.getStartTime(), dto.getEndTime());
+        OrderStatisticsResultDTO result =
+            orderManager.statistics(dto.getMerchantId(), dto.getStartTime(), dto.getEndTime());
+        if (result == null) {
+            return null;
+        }
+        return new OrderStatisticsVO(
+            result.getTotalOrderCount(), result.getTotalAmount(), result.getRefundAmount(),
+            result.getPendingCount(), result.getPaidCount(), result.getShippedCount(),
+            result.getReceivedCount(), result.getCancelledCount(), result.getRefundingCount(),
+            result.getRefundedCount());
     }
 
+
     /**
-     * 平台财务汇总，日期范围空值兜底：解析失败或为空时不限制对应边界。
-     * @param startDate 起始日期（yyyy-MM-dd）
-     * @param endDate 截止日期（yyyy-MM-dd）
-     * @param merchantId 商家ID
-     * @return 订单财务汇总VO
+     * 执行 orderSummary 方法。
+     * @param startDate startDate 参数
+     * @param endDate endDate 参数
+     * @param merchantId merchantId 参数
+     * @return 处理结果
      */
     @Override
     public OrderSummaryVO orderSummary(String startDate, String endDate, String merchantId) {
-        return orderMapper.summary(parseMerchantId(merchantId), parseStart(startDate), parseEnd(endDate));
+        OrderSummaryResultDTO result = orderManager.summary(
+            parseMerchantId(merchantId), parseStart(startDate), parseEnd(endDate));
+        if (result == null) {
+            return null;
+        }
+        return new OrderSummaryVO(
+            result.getTotalCount(), result.getTotalAmount(), result.getPaidAmount(),
+            result.getPendingAmount(), result.getRefundAmount(), result.getNetIncome());
     }
 
+
     /**
-     * 平台订单趋势，按日聚合；无数据时返回空点集而非 null。
-     * @param startDate 起始日期（yyyy-MM-dd）
-     * @param endDate 截止日期（yyyy-MM-dd）
-     * @param merchantId 商家ID
-     * @return 订单趋势VO
+     * 执行 orderTrend 方法。
+     * @param startDate startDate 参数
+     * @param endDate endDate 参数
+     * @param merchantId merchantId 参数
+     * @return 处理结果
      */
     @Override
     public OrderTrendVO orderTrend(String startDate, String endDate, String merchantId) {
-        List<OrderTrendPointVO> points =
-                orderMapper.trend(parseMerchantId(merchantId), parseStart(startDate), parseEnd(endDate));
-        return new OrderTrendVO(points == null ? Collections.emptyList() : points);
+        List<OrderTrendPointDTO> points = orderManager.trend(
+            parseMerchantId(merchantId), parseStart(startDate), parseEnd(endDate));
+        List<OrderTrendPointVO> vos = points == null ? Collections.emptyList()
+            : points.stream()
+                .map(p -> new OrderTrendPointVO(p.getDate(), p.getCount(), p.getAmount()))
+                .toList();
+        return new OrderTrendVO(vos);
     }
 
-    /** 解析商家ID，非法或为空返回 null（表示全平台）。 */
+
+    /**
+     * 转换或解析商户ID。
+     * @param merchantId 商户 ID
+     * @return 处理结果
+     */
     private Long parseMerchantId(String merchantId) {
         if (merchantId == null || merchantId.isBlank()) {
             return null;
@@ -1417,7 +1629,12 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
-    /** 解析起始日期为当天 00:00:00，空或非法返回 null。 */
+
+    /**
+     * 转换或解析启动。
+     * @param date 日期
+     * @return 处理结果
+     */
     private LocalDateTime parseStart(String date) {
         if (date == null || date.isBlank()) {
             return null;
@@ -1431,7 +1648,12 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
-    /** 解析截止日期为当天 23:59:59，空或非法返回 null。 */
+
+    /**
+     * 转换或解析End。
+     * @param date 日期
+     * @return 处理结果
+     */
     private LocalDateTime parseEnd(String date) {
         if (date == null || date.isBlank()) {
             return null;
@@ -1445,23 +1667,22 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
+
     /**
-     * 统计指定用户各状态订单数量：委托 OrderMapper 单条 GROUP BY 查询。
-     * @param userId 用户ID
-     * @return 各状态订单数量VO
+     * 统计业务数据。
+     * @param userId userId 参数
+     * @return 处理结果
      */
     @Override
     public OrderStatusCountsVO countStatusByUser(Long userId) {
-        List<java.util.Map<String, Object>> rows = orderMapper.countByStatus(userId);
+        List<OrderStatusCountDTO> rows = orderManager.countByStatus(userId);
         OrderStatusCountsVO vo = new OrderStatusCountsVO();
-        for (java.util.Map<String, Object> row : rows) {
-            Number status = (Number) row.get("status");
-            Number cnt = (Number) row.get("cnt");
-            if (status == null || cnt == null) {
+        for (OrderStatusCountDTO row : rows) {
+            if (row.getStatus() == null || row.getCnt() == null) {
                 continue;
             }
-            long count = cnt.longValue();
-            switch (status.intValue()) {
+            long count = row.getCnt();
+            switch (row.getStatus()) {
                 case 1 -> vo.setPendingCount(count);
                 case 2 -> vo.setPaidCount(count);
                 case 3 -> vo.setShippedCount(count);
@@ -1474,19 +1695,26 @@ public class OrderServiceImpl implements OrderService {
         return vo;
     }
 
+
     /**
-     * 商家审核退款，校验订单归属与 REFUNDING 状态；approved=true 才发起真实退款（状态由支付回调驱动到 REFUNDED），
-     * false 回退到 refundFromStatus。
-     * @param orderId 订单ID
-     * @param approved 是否同意退款
-     * @param merchantId 商家ID
+     * 执行 reviewRefund 方法。
+     * @param orderId orderId 参数
+     * @param approved approved 参数
+     * @param merchantId merchantId 参数
+     * @param reason reason 参数
      */
-    @Override
     public void reviewRefund(Long orderId, boolean approved, Long merchantId, String reason) {
         reviewRefund(orderId, approved, merchantId, reason, null);
     }
 
-    @Override
+    /**
+     * 执行 reviewRefund 方法。
+     * @param orderId orderId 参数
+     * @param approved approved 参数
+     * @param merchantId merchantId 参数
+     * @param reason reason 参数
+     * @param refundRequestNo refundRequestNo 参数
+     */
     public void reviewRefund(Long orderId, boolean approved, Long merchantId, String reason,
                              String refundRequestNo) {
         OrderPO po = getOrder(orderId);
@@ -1513,12 +1741,42 @@ public class OrderServiceImpl implements OrderService {
     }
 
     /**
-     * 平台退款仲裁，校验 REFUNDING 状态；approved=true 发起真实支付退款并由回调推进 REFUNDED，
-     * false 回退到 refundFromStatus。
-     * @param orderId 订单ID
-     * @param approved 仲裁是否支持退款
+     * 执行 reviewRefundByNo 方法。
+     * @param refundNo refundNo 参数
+     * @param approved approved 参数
+     * @param merchantId merchantId 参数
+     * @param reason reason 参数
      */
-    @Override
+    public void reviewRefundByNo(String refundNo, boolean approved, Long merchantId, String reason) {
+        reviewRefund(parseOrderIdFromRefundNo(refundNo), approved, merchantId, reason, refundNo);
+    }
+
+
+    /**
+     * 转换或解析订单ID从退款编号。
+     * @param refundNo 退款 编号
+     * @return 处理结果
+     * @throws BizException 业务校验失败时抛出
+     */
+    private Long parseOrderIdFromRefundNo(String refundNo) {
+        if (refundNo == null || refundNo.isEmpty()) {
+            throw new BizException(CommonCode.PARAM_INVALID, "退款单号不能为空");
+        }
+        String tail = refundNo.startsWith("R") ? refundNo.substring(1) : refundNo;
+        try {
+            return Long.parseLong(tail);
+        }
+        catch (NumberFormatException e) {
+            throw new BizException(CommonCode.PARAM_INVALID, "退款单号格式错误：" + refundNo);
+        }
+    }
+
+
+    /**
+     * 执行 arbitrateRefund 方法。
+     * @param orderId orderId 参数
+     * @param approved approved 参数
+     */
     public void arbitrateRefund(Long orderId, boolean approved) {
         OrderPO po = getOrder(orderId);
         if (po.getStatus() != OrderStatusEnum.REFUNDING.intCode()) {
@@ -1533,9 +1791,12 @@ public class OrderServiceImpl implements OrderService {
         log.info("退款仲裁已拒绝，orderId={}", orderId);
     }
 
+
     /**
-     * 发起真实支付退款，失败时抛出 ORDER_REFUND_FAIL；订单状态由支付退款回调统一推进。
-     * @param po 退款中的订单
+     * 处理request支付退款。
+     * @param po 持久化对象
+     * @param refundRequestNo 退款Request 编号
+     * @throws BizException 业务校验失败时抛出
      */
     private void requestPayRefund(OrderPO po, String refundRequestNo) {
         BigDecimal refundAmount = po.getRefundAmount() != null ? po.getRefundAmount() : po.getAmount();
@@ -1543,7 +1804,7 @@ public class OrderServiceImpl implements OrderService {
             throw new BizException(OrderCodeEnum.REFUND_AMOUNT_INVALID);
         }
         BigDecimal refundAmt = normalizeAmount(refundAmount);
-        Result<Boolean> refundResult = payFeignClient.refund(
+        Result<Boolean> refundResult = orderRemoteGateway.refund(
             new RefundCreateDTO(po.getPayId(), refundAmt, null, refundRequestNo));
         if (refundResult == null
             || !CommonCode.SUCCESS.equals(refundResult.getCode())
@@ -1553,11 +1814,13 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
+
     /**
-     * 解析订单退款请求号，已有请求号时拒绝被其他请求覆盖。
-     * @param po 订单实体
-     * @param candidate 本次请求携带的退款请求号，可为空
-     * @return 稳定的退款请求号
+     * 转换或解析退款Request编号。
+     * @param po 持久化对象
+     * @param candidate candidate
+     * @return 编号或编码
+     * @throws BizException 业务校验失败时抛出
      */
     private String resolveRefundRequestNo(OrderPO po, String candidate) {
         String current = po.getRefundRequestNo();
@@ -1574,11 +1837,12 @@ public class OrderServiceImpl implements OrderService {
         return resolved;
     }
 
+
     /**
-     * 查询订单物流轨迹，校验归属，非本人订单抛出 ORDER_NOT_FOUND；按创建时间正序返回。
-     * @param orderId 订单ID
-     * @param userId 用户ID（归属校验，来自可信 Header）
-     * @return 物流节点列表
+     * 执行 queryLogistics 方法。
+     * @param orderId orderId 参数
+     * @param userId userId 参数
+     * @return 结果列表
      */
     @Override
     public List<OrderLogisticsVO> queryLogistics(Long orderId, Long userId) {
@@ -1593,6 +1857,11 @@ public class OrderServiceImpl implements OrderService {
         return nodes.stream().map(this::toLogisticsVO).collect(Collectors.toList());
     }
 
+    /**
+     * 转换或解析物流VO。
+     * @param po 持久化对象
+     * @return 视图对象
+     */
     private OrderLogisticsVO toLogisticsVO(OrderLogisticsPO po) {
         OrderLogisticsVO vo = new OrderLogisticsVO();
         vo.setNode(po.getNode());
@@ -1601,9 +1870,10 @@ public class OrderServiceImpl implements OrderService {
         return vo;
     }
 
+
     /**
-     * 扫描超时未支付订单（PENDING 且 pay_expire_at 已过期；旧数据无 pay_expire_at 时回退 create_time+30min），逐个取消并释放库存。
-     * @return 处理的订单数
+     * 扫描并处理待办数据。
+     * @return 业务数值
      */
     @Override
     public int scanExpiredOrders() {
@@ -1647,9 +1917,10 @@ public class OrderServiceImpl implements OrderService {
         return count;
     }
 
+
     /**
-     * 扫描已取消且库存待释放订单，按订单号幂等重试释放。
-     * @return 本次成功释放订单数
+     * 扫描并处理待办数据。
+     * @return 业务数值
      */
     @Override
     public int scanStockReleasePending() {
@@ -1674,9 +1945,10 @@ public class OrderServiceImpl implements OrderService {
         return count;
     }
 
+
     /**
-     * 扫描发货后超期未确认收货订单（SHIPPED 且 shipped_at + 15d < NOW()），逐个推进 COMPLETED。
-     * @return 处理的订单数
+     * 扫描并处理待办数据。
+     * @return 业务数值
      */
     @Override
     public int scanAutoConfirm() {

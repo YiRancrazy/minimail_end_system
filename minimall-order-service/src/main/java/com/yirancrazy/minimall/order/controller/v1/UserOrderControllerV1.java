@@ -18,57 +18,63 @@ import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.order.dto.OrderCheckoutDTO;
 import com.yirancrazy.minimall.order.dto.OrderCreateDTO;
 import com.yirancrazy.minimall.order.dto.OrderPageDTO;
-import com.yirancrazy.minimall.order.entity.OrderPO;
 import com.yirancrazy.minimall.order.service.OrderService;
 import com.yirancrazy.minimall.order.vo.OrderLogisticsVO;
 import com.yirancrazy.minimall.order.vo.OrderStatusCountsVO;
 import com.yirancrazy.minimall.order.vo.OrderVO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 用户端订单控制器，提供用户视角的订单 RESTful API
+ * @Description: UserOrderControllerV1 控制器，提供相关接口。
  * @Version: 1.0
- * @DateTime: 2026/08/04
- */
+ * @DateTime: 2026/10/16
+ **/
 @RestController
 @RequestMapping("/api/v1/user/orders")
 public class UserOrderControllerV1 {
 
     private final OrderService orderService;
 
+    /**
+     * 构造 UserOrderControllerV1 实例。
+     * @param orderService orderService 参数
+     */
     public UserOrderControllerV1(OrderService orderService) {
         this.orderService = orderService;
     }
 
+
     /**
-     * 游标分页查询当前用户订单列表，用户ID以网关注入的 X-User-Id 为准。
-     * @param userId 当前用户ID，来自网关 X-User-Id 头
-     * @param dto 游标分页查询入参
-     * @return 订单游标分页结果
+     * 分页查询数据。
+     * @param userId userId 参数
+     * @param dto dto 参数
+     * @return 统一响应结果
      */
     @GetMapping
     public Result<CursorPageVO<OrderVO>> page(@RequestHeader("X-User-Id") Long userId,
                                               @Valid OrderPageDTO dto) {
         dto.setUserId(userId);
-        return Result.success(orderService.page(dto).map(OrderVO::from));
+        return Result.success(orderService.pageVO(dto));
     }
 
+
     /**
-     * 统计当前用户各状态订单数量，供"我的"页面订单快捷入口角标展示。
-     * @param userId 用户ID，来自网关 X-User-Id 头
-     * @return 各状态订单数量VO
+     * 执行 statusCounts 方法。
+     * @param userId userId 参数
+     * @return 统一响应结果
      */
     @GetMapping("/status-counts")
     public Result<OrderStatusCountsVO> statusCounts(@RequestHeader("X-User-Id") Long userId) {
         return Result.success(orderService.countStatusByUser(userId));
     }
 
+
     /**
-     * 创建订单并完成库存锁定及支付流水初始化。
-     *
-     * @param userId 用户ID，来自网关 X-User-Id 头
-     * @param dto 订单创建请求参数
-     * @return 新创建的订单标识
+     * 创建业务数据。
+     * @param userId userId 参数
+     * @param dto dto 参数
+     * @return 统一响应结果
      */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -78,11 +84,12 @@ public class UserOrderControllerV1 {
         return Result.success(orderService.create(userId, dto.getSkuId(), dto.getQuantity(), dto.getReceiver()));
     }
 
+
     /**
-     * 多SKU结算下单，支持购物车批量结算。
-     * @param userId 用户ID，来自网关 X-User-Id 头
-     * @param dto 结算请求
-     * @return 新创建的订单ID
+     * 校验业务条件。
+     * @param userId userId 参数
+     * @param dto dto 参数
+     * @return 统一响应结果
      */
     @PostMapping("/checkout")
     @ResponseStatus(HttpStatus.CREATED)
@@ -92,11 +99,12 @@ public class UserOrderControllerV1 {
         return Result.success(orderService.checkout(userId, dto.getItems(), dto.getReceiver()));
     }
 
+
     /**
-     * 查询订单状态。
-     * @param id 订单ID
-     * @param userId 用户ID，来自网关 X-User-Id 头
-     * @return 订单状态
+     * 执行 status 方法。
+     * @param id id 参数
+     * @param userId userId 参数
+     * @return 统一响应结果
      */
     @GetMapping("/{id}")
     public Result<Integer> status(@PathVariable("id") Long id,
@@ -104,25 +112,25 @@ public class UserOrderControllerV1 {
         return Result.success(orderService.getStatus(id, userId));
     }
 
+
     /**
-     * 查询订单详情。
-     * @param id 订单ID
-     * @param userId 用户ID，来自网关 X-User-Id 头
-     * @return 订单实体
+     * 执行 detail 方法。
+     * @param id id 参数
+     * @param userId userId 参数
+     * @return 统一响应结果
      */
     @GetMapping("/{id}/detail")
     public Result<OrderVO> detail(@PathVariable("id") Long id,
                                   @RequestHeader("X-User-Id") Long userId) {
-        OrderPO po = orderService.getDetail(id, userId);
-        OrderVO vo = OrderVO.from(po);
-        vo.setItems(orderService.listItemVO(id));
-        return Result.success(vo);
+        return Result.success(orderService.detailVO(id, userId));
     }
 
+
     /**
-     * 取消订单。
-     * @param orderId 订单ID
-     * @param userId  当前用户ID
+     * 执行 cancel 方法。
+     * @param orderId orderId 参数
+     * @param userId userId 参数
+     * @return 统一响应结果
      */
     @PostMapping("/{orderId}/cancel")
     public Result<Void> cancel(@PathVariable Long orderId,
@@ -131,10 +139,12 @@ public class UserOrderControllerV1 {
         return Result.success(null);
     }
 
+
     /**
-     * 确认收货。
-     * @param orderId 订单ID
-     * @param userId  当前用户ID
+     * 执行 confirm 方法。
+     * @param orderId orderId 参数
+     * @param userId userId 参数
+     * @return 统一响应结果
      */
     @PostMapping("/{orderId}/confirm")
     public Result<Void> confirm(@PathVariable Long orderId,
@@ -143,10 +153,12 @@ public class UserOrderControllerV1 {
         return Result.success(null);
     }
 
+
     /**
-     * 申请退款：仅将订单置为退款中并记录原状态，真实退款由商家审核通过后触发。
-     * @param orderId 订单ID
-     * @param userId 当前用户ID，来自网关 X-User-Id 头
+     * 执行 refund 方法。
+     * @param orderId orderId 参数
+     * @param userId userId 参数
+     * @return 统一响应结果
      */
     @PostMapping("/{orderId}/refund")
     @Idempotent
@@ -156,10 +168,12 @@ public class UserOrderControllerV1 {
         return Result.success(null);
     }
 
+
     /**
-     * 用户删除订单，仅允许终态订单软删除。
-     * @param orderId 订单ID
-     * @param userId 用户ID
+     * 删除业务数据。
+     * @param orderId orderId 参数
+     * @param userId userId 参数
+     * @return 统一响应结果
      */
     @DeleteMapping("/{orderId}")
     public Result<Void> delete(@PathVariable Long orderId,
@@ -168,11 +182,12 @@ public class UserOrderControllerV1 {
         return Result.success(null);
     }
 
+
     /**
-     * 查询订单物流轨迹，按创建时间正序返回。
-     * @param orderId 订单ID
-     * @param userId 用户ID，来自网关 X-User-Id 头
-     * @return 物流节点列表
+     * 执行 logistics 方法。
+     * @param orderId orderId 参数
+     * @param userId userId 参数
+     * @return 统一响应结果
      */
     @GetMapping("/{orderId}/logistics")
     public Result<List<OrderLogisticsVO>> logistics(@PathVariable Long orderId,

@@ -10,19 +10,26 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import com.yirancrazy.minimall.common.result.Result;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 全链路 traceId 过滤器：从 X-Trace-Id 请求头取值（缺省生成）写入 MDC 并回写响应头，
- *               使服务日志 %X{traceId} 与 Result.traceId 贯通，便于按链路追踪排障。
+ * @Description: TraceIdFilter 类型，承载相关业务能力。
  * @Version: 1.0
- * @DateTime: 2026/08/13
- */
+ * @DateTime: 2026/10/16
+ **/
 public class TraceIdFilter extends OncePerRequestFilter {
 
-    /** 链路追踪 ID 请求/响应头，与网关 TraceIdGlobalFilter.HEADER 保持一致 */
+
     public static final String HEADER = "X-Trace-Id";
 
-    @Override
+    /**
+     * 执行 doFilterInternal 方法。
+     * @param request request 参数
+     * @param response response 参数
+     * @param chain chain 参数
+     * @throws ServletException 处理失败时抛出
+     * @throws IOException 处理失败时抛出
+     */
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
         String traceId = sanitize(request.getHeader(HEADER));
@@ -36,10 +43,11 @@ public class TraceIdFilter extends OncePerRequestFilter {
         }
     }
 
+
     /**
-     * 规整客户端传入的 traceId：剔除 CR/LF 控制字符（防日志伪造），超过 64 字符时截断；为空时生成 UUID。
-     * @param raw 请求头原始值，可为 null
-     * @return 规整后的 traceId
+     * 处理sanitize。
+     * @param raw raw
+     * @return 处理结果
      */
     static String sanitize(String raw) {
         if (raw == null || raw.isBlank()) {

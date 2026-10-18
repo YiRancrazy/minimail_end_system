@@ -4,11 +4,12 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import lombok.Data;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 商家主动发起退款入参。refundAmount 使用字符串避免精度损失。
+ * @Description: MerchantRefundExecuteDTO 数据传输对象。
  * @Version: 1.0
- * @DateTime: 2026/08/09
+ * @DateTime: 2026/10/16
  **/
 @Data
 public class MerchantRefundExecuteDTO {

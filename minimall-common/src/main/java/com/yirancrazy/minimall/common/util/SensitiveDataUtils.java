@@ -1,19 +1,25 @@
 package com.yirancrazy.minimall.common.util;
 
+
 /**
- * 敏感数据脱敏工具类
- */
+ * @Author: yirancrazy@gmail.com
+ * @Description: SensitiveDataUtils 类型，承载相关业务能力。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 public final class SensitiveDataUtils {
 
+    /**
+     * 构造 SensitiveDataUtils 实例。
+     */
     private SensitiveDataUtils() {
     }
 
+
     /**
-     * 手机号脱敏
-     * <p>保留前3位和后4位，中间用*替换</p>
-     *
-     * @param phone 手机号
-     * @return 脱敏后的手机号
+     * 执行 maskPhone 方法。
+     * @param phone phone 参数
+     * @return 处理结果
      */
     public static String maskPhone(String phone) {
         if (phone == null || phone.isEmpty()) {
@@ -28,12 +34,11 @@ public final class SensitiveDataUtils {
         return digits.substring(0, 3) + "****" + digits.substring(digits.length() - 4);
     }
 
+
     /**
-     * 身份证号脱敏
-     * <p>保留前3位和后4位，中间用*替换</p>
-     *
-     * @param idCard 身份证号
-     * @return 脱敏后的身份证号
+     * 执行 maskIdCard 方法。
+     * @param idCard idCard 参数
+     * @return 处理结果
      */
     public static String maskIdCard(String idCard) {
         if (idCard == null || idCard.isEmpty()) {
@@ -50,12 +55,11 @@ public final class SensitiveDataUtils {
         return digits.substring(0, 3) + stars + digits.substring(length - 4);
     }
 
+
     /**
-     * 银行卡号脱敏
-     * <p>保留前4位和后4位，中间用*替换</p>
-     *
-     * @param bankCard 银行卡号
-     * @return 脱敏后的银行卡号
+     * 执行 maskBankCard 方法。
+     * @param bankCard bankCard 参数
+     * @return 处理结果
      */
     public static String maskBankCard(String bankCard) {
         if (bankCard == null || bankCard.isEmpty()) {
@@ -72,12 +76,11 @@ public final class SensitiveDataUtils {
         return digits.substring(0, 4) + stars + digits.substring(length - 4);
     }
 
+
     /**
-     * 密码脱敏
-     * <p>完全遮蔽密码，返回固定长度的*</p>
-     *
-     * @param password 密码
-     * @return 固定长度的遮蔽字符串
+     * 执行 maskPassword 方法。
+     * @param password password 参数
+     * @return 处理结果
      */
     public static String maskPassword(String password) {
         if (password == null || password.isEmpty()) {
@@ -86,12 +89,11 @@ public final class SensitiveDataUtils {
         return "******";
     }
 
+
     /**
-     * Token脱敏
-     * <p>保留前4位和后4位，中间用*替换</p>
-     *
-     * @param token Token 值
-     * @return 脱敏后的Token
+     * 执行 maskToken 方法。
+     * @param token token 参数
+     * @return 处理结果
      */
     public static String maskToken(String token) {
         if (token == null || token.isEmpty()) {

@@ -6,11 +6,12 @@ import lombok.Getter;
 import com.yirancrazy.minimall.common.base.BaseEnum;
 
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 枚举类，定义业务常量。
+ * @Description: PayChannelEnum 枚举，定义相关业务状态。
  * @Version: 1.0
- * @DateTime: 2026/7/31
+ * @DateTime: 2026/10/16
  **/
 @Getter
 @AllArgsConstructor
@@ -23,16 +24,20 @@ public enum PayChannelEnum implements BaseEnum {
     private final String alias;
     private final String message;
 
+    /**
+     * 获取相关数据。
+     * @return 处理结果
+     */
     @Override
     public String getCode() {
         return String.valueOf(code);
     }
 
+
     /**
-     * 反序列化入口，兼容枚举名（ALIPAY，大小写不敏感）与数字 code（1）。
-     * 客户端契约不统一（字符串/数字均可能），未知值抛出异常交由全局异常处理返回参数错误。
-     * @param value JSON 中 channel 字段值
-     * @return 匹配的渠道枚举
+     * 执行 fromValue 方法。
+     * @param value value 参数
+     * @return 处理结果
      */
     @JsonCreator
     public static PayChannelEnum fromValue(String value) {

@@ -4,11 +4,12 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import com.yirancrazy.minimall.common.base.BaseEnum;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 店铺状态枚举，对齐 t_merch_shop.status 持久化 int code；DTO 入参沿用 alias 字符串（ACTIVE/INACTIVE/SUSPENDED）由服务层转换。
+ * @Description: ShopStatusEnum 枚举，定义相关业务状态。
  * @Version: 1.0
- * @DateTime: 2026/08/16
+ * @DateTime: 2026/10/16
  **/
 @Getter
 @AllArgsConstructor
@@ -21,23 +22,29 @@ public enum ShopStatusEnum implements BaseEnum {
     private final String alias;
     private final String message;
 
+    /**
+     * 获取相关数据。
+     * @return 处理结果
+     */
     @Override
     public String getCode() {
         return String.valueOf(code);
     }
 
+
     /**
-     * 返回 int 形态状态码，用于持久化。
-     * @return 状态码
+     * 执行 intCode 方法。
+     * @return 业务数值
      */
     public int intCode() {
         return code;
     }
 
+
     /**
-     * 将持久化状态码转换为枚举，非法时返回 null（由调用方决定错误语义）。
-     * @param code 持久化状态码
-     * @return 对应枚举；未知状态码返回 null
+     * 执行 fromCode 方法。
+     * @param code code 参数
+     * @return 处理结果
      */
     public static ShopStatusEnum fromCode(int code) {
         for (ShopStatusEnum e : values()) {
@@ -48,10 +55,11 @@ public enum ShopStatusEnum implements BaseEnum {
         return null;
     }
 
+
     /**
-     * 将入参 alias 字符串转换为枚举，非法时返回 null（由服务层抛参数错误）。
-     * @param alias DTO 传入的状态字符串
-     * @return 对应枚举；未知状态返回 null
+     * 执行 fromAlias 方法。
+     * @param alias alias 参数
+     * @return 处理结果
      */
     public static ShopStatusEnum fromAlias(String alias) {
         for (ShopStatusEnum e : values()) {

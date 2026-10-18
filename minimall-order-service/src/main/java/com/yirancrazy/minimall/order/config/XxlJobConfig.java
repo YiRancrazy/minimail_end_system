@@ -7,11 +7,12 @@ import org.springframework.context.annotation.Configuration;
 import com.xxl.job.core.executor.impl.XxlJobSpringExecutor;
 import lombok.extern.slf4j.Slf4j;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: XXL-Job 执行器配置，仅在 minimall.xxl-job.enabled=true 时启用。双轨制下默认禁用，保留 Spring @Scheduled。
+ * @Description: XxlJobConfig 配置类。
  * @Version: 1.0
- * @DateTime: 2026/08/05
+ * @DateTime: 2026/10/16
  **/
 @Slf4j
 @Configuration
@@ -39,9 +40,10 @@ public class XxlJobConfig {
     @Value("${minimall.xxl-job.log-retention-days:30}")
     private int logRetentionDays;
 
+
     /**
-     * 注册 XXL-Job 执行器 Bean，启动时连接 admin 控制台。
-     * @return XxlJobSpringExecutor 执行器
+     * 执行 xxlJobExecutor 方法。
+     * @return 处理结果
      */
     @Bean
     public XxlJobSpringExecutor xxlJobExecutor() {

@@ -9,12 +9,13 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CommonCode;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: CursorUtils 单元测试，验证游标编解码与非法游标的错误码语义。
+ * @Description: CursorUtilsTest 单元测试。
  * @Version: 1.0
- * @DateTime: 2026/08/16
- */
+ * @DateTime: 2026/10/16
+ **/
 class CursorUtilsTest {
 
     @Test

@@ -6,11 +6,12 @@ import com.yirancrazy.minimall.notify.entity.ComplaintPO;
 import com.yirancrazy.minimall.notify.manager.ComplaintManager;
 import com.yirancrazy.minimall.notify.mapper.ComplaintMapper;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 投诉数据访问层实现，封装 t_notify_complaint 表 CRUD 操作
+ * @Description: ComplaintManagerImpl 管理器实现，封装数据访问逻辑。
  * @Version: 1.0
- * @DateTime: 2026/08/03
+ * @DateTime: 2026/10/16
  **/
 @Manager
 public class ComplaintManagerImpl extends ServiceImpl<ComplaintMapper, ComplaintPO>

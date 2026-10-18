@@ -6,11 +6,12 @@ import com.yirancrazy.minimall.order.entity.OrderPaymentSnapshotPO;
 import com.yirancrazy.minimall.order.manager.OrderPaymentSnapshotManager;
 import com.yirancrazy.minimall.order.mapper.OrderPaymentSnapshotMapper;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: OrderPaymentSnapshot数据访问层实现，封装订单支付快照表 CRUD 操作
+ * @Description: OrderPaymentSnapshotManagerImpl 管理器实现，封装数据访问逻辑。
  * @Version: 1.0
- * @DateTime: 2026/08/04
+ * @DateTime: 2026/10/16
  **/
 @Manager
 public class OrderPaymentSnapshotManagerImpl

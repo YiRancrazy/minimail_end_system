@@ -38,11 +38,12 @@ import com.yirancrazy.minimall.auth.manager.AuthUserManager;
 import com.yirancrazy.minimall.auth.util.JwtUtil;
 import com.yirancrazy.minimall.common.exception.BizException;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 刷新令牌轮换并发测试，校验同一刷新令牌并发重放时只有原子删除成功者能换到新令牌。
+ * @Description: RefreshTokenRotationConcurrencyTest 单元测试。
  * @Version: 1.0
- * @DateTime: 2026/09/23
+ * @DateTime: 2026/10/16
  **/
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -135,9 +136,13 @@ class RefreshTokenRotationConcurrencyTest {
         };
     }
 
+
     /**
-     * 带命名前缀的线程工厂，便于并发测试线程定位。
-     */
+     * @Author: yirancrazy@gmail.com
+     * @Description: NamedThreadFactory 类型，承载相关业务能力。
+     * @Version: 1.0
+     * @DateTime: 2026/10/16
+     **/
     private static final class NamedThreadFactory implements ThreadFactory {
 
         private final String prefix;
@@ -147,6 +152,11 @@ class RefreshTokenRotationConcurrencyTest {
             this.prefix = prefix;
         }
 
+        /**
+         * 执行 newThread 方法。
+         * @param runnable runnable 参数
+         * @return 处理结果
+         */
         @Override
         public Thread newThread(Runnable runnable) {
             Thread thread = new Thread(runnable, prefix + "-" + counter.incrementAndGet());

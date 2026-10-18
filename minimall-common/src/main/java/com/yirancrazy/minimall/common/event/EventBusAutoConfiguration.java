@@ -8,27 +8,31 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 事件总线自动配置，按 rocketmq.enabled 决定注册 LocalEventBus 或 RocketMqEventBus。
- * @Version: 1.1
- * @DateTime: 2026/08/02
- */
+ * @Description: EventBusAutoConfiguration 类型，承载相关业务能力。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 @Configuration
 public class EventBusAutoConfiguration {
 
+    /**
+     * 执行 localEventBus 方法。
+     * @return 处理结果
+     */
     @Bean
     @ConditionalOnMissingBean(LocalEventBus.class)
     public LocalEventBus localEventBus() {
         return new LocalEventBus();
     }
 
+
     /**
-     * 将进程内 {@link LocalEventBus} 暴露为默认 {@link EventBus} Bean，
-     * 当上下文中未注册其他实现时使用。
-     *
-     * @param local 始终注册的 {@link LocalEventBus} 候选 Bean
-     * @return 同一个 {@link LocalEventBus} 实例，用作兜底 {@link EventBus}
+     * 执行 defaultEventBus 方法。
+     * @param local local 参数
+     * @return 处理结果
      */
     @Bean
     @ConditionalOnMissingBean(EventBus.class)
@@ -36,14 +40,13 @@ public class EventBusAutoConfiguration {
         return local;
     }
 
+
     /**
-     * 启用 rocketmq 时注册基于 RocketMQ 的 {@link EventBus}。
-     * 标记为 {@link Primary}，使其在启用事务消息的上下文中覆盖本地兜底实现。
-     *
-     * @param namesrvAddr RocketMQ NameServer 地址
-     * @param topic 事件主题
-     * @param outboxProvider 可选的 {@link OutboxStore}，用于崩溃安全的回调
-     * @return 配置好的 {@link RocketMqEventBus}
+     * 执行 rocketMqEventBus 方法。
+     * @param namesrvAddr namesrvAddr 参数
+     * @param topic topic 参数
+     * @param outboxProvider outboxProvider 参数
+     * @return 处理结果
      */
     @Bean
     @ConditionalOnProperty(name = "minimall.eventbus.rocketmq.enabled", havingValue = "true")

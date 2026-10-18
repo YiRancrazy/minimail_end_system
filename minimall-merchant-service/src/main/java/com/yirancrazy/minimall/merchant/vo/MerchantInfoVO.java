@@ -5,11 +5,12 @@ import lombok.Data;
 import com.yirancrazy.minimall.common.util.SensitiveDataUtils;
 import com.yirancrazy.minimall.merchant.entity.MerchantPO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 商家自身信息视图对象，返回商家店铺与资质聚合信息。
+ * @Description: MerchantInfoVO 视图对象。
  * @Version: 1.0
- * @DateTime: 2026/08/04
+ * @DateTime: 2026/10/16
  **/
 @Data
 public class MerchantInfoVO {
@@ -23,10 +24,11 @@ public class MerchantInfoVO {
     private String bankAccountMasked;
     private LocalDateTime createTime;
 
+
     /**
-     * 将 MerchantPO 转换为 MerchantInfoVO。
-     * @param po 商家主体持久化对象
-     * @return 商家信息VO
+     * 执行 from 方法。
+     * @param po po 参数
+     * @return 处理结果
      */
     public static MerchantInfoVO from(MerchantPO po) {
         MerchantInfoVO vo = new MerchantInfoVO();

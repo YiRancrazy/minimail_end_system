@@ -5,12 +5,13 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 购物车项勾选状态修改入参，selected=1 选中、0 取消选中
+ * @Description: CartSelectDTO 数据传输对象。
  * @Version: 1.0
- * @DateTime: 2026/08/02
- */
+ * @DateTime: 2026/10/16
+ **/
 @Data
 public class CartSelectDTO {
 

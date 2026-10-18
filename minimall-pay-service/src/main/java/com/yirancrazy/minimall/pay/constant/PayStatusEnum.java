@@ -5,11 +5,12 @@ import lombok.Getter;
 import com.yirancrazy.minimall.common.base.BaseEnum;
 
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 枚举类，定义业务常量。
+ * @Description: PayStatusEnum 枚举，定义相关业务状态。
  * @Version: 1.0
- * @DateTime: 2026/7/31
+ * @DateTime: 2026/10/16
  **/
 @Getter
 @AllArgsConstructor
@@ -26,6 +27,10 @@ public enum PayStatusEnum implements BaseEnum {
     private final String alias;
     private final String message;
 
+    /**
+     * 获取相关数据。
+     * @return 处理结果
+     */
     @Override
     public String getCode() {
         return String.valueOf(code);

@@ -19,11 +19,12 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import reactor.core.publisher.Mono;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: RouterConfig 的单元测试类，校验网关路由走服务发现、路径归属正确且不暴露内部 ID 服务。
- * @Version: 2.1
- * @DateTime: 2026/09/25
+ * @Description: RouterConfigTest 单元测试。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
  **/
 class RouterConfigTest {
 

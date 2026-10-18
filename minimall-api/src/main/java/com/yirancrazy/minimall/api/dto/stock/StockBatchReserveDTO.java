@@ -8,12 +8,13 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 批量库存预占请求，一次调用完成同一结算单的 SKU 库存锁定
+ * @Description: StockBatchReserveDTO 数据传输对象。
  * @Version: 1.0
- * @DateTime: 2026/09/25
- */
+ * @DateTime: 2026/10/16
+ **/
 @Data
 @AllArgsConstructor
 @NoArgsConstructor

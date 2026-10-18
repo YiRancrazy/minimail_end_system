@@ -4,11 +4,12 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import com.yirancrazy.minimall.common.dto.CursorPageDTO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 库存盘点任务分页查询入参，支持按SKU和状态过滤
- * @Version: 1.1
- * @DateTime: 2026/08/04
+ * @Description: StockCountTaskPageDTO 数据传输对象。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
  **/
 @Data
 @EqualsAndHashCode(callSuper = true)

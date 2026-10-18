@@ -5,11 +5,12 @@ import lombok.Getter;
 import com.yirancrazy.minimall.common.base.BaseEnum;
 
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 商家资质审核状态枚举。
+ * @Description: MerchantAuditStatusEnum 枚举，定义相关业务状态。
  * @Version: 1.0
- * @DateTime: 2026/08/03
+ * @DateTime: 2026/10/16
  **/
 @Getter
 @AllArgsConstructor
@@ -22,6 +23,10 @@ public enum MerchantAuditStatusEnum implements BaseEnum {
     private final String alias;
     private final String message;
 
+    /**
+     * 获取相关数据。
+     * @return 处理结果
+     */
     @Override
     public String getCode() {
         return String.valueOf(code);

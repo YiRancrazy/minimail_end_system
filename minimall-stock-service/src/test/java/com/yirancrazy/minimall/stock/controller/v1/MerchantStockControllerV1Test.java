@@ -13,14 +13,15 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import com.yirancrazy.minimall.stock.entity.StockJournalPO;
 import com.yirancrazy.minimall.stock.service.StockService;
+import com.yirancrazy.minimall.stock.vo.StockJournalVO;
+
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: MerchantStockControllerV1 MockMvc 单元测试，验证 HTTP 层路由、X-Merchant-Id 头绑定与 Result 包装。
- * @Version: 1.1
- * @DateTime: 2026/08/05
+ * @Description: MerchantStockControllerV1Test 单元测试。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
  **/
 class MerchantStockControllerV1Test {
 
@@ -35,9 +36,7 @@ class MerchantStockControllerV1Test {
         mockMvc = MockMvcBuilders.standaloneSetup(new MerchantStockControllerV1(stockService)).build();
     }
 
-    /**
-     * 验证 GET /api/v1/merchant/stock/{skuId} 返回 SKU 可用库存数量，并透传 X-Merchant-Id。
-     */
+
     @Test
     void get_returns_available_quantity() throws Exception {
         when(stockService.query(99L, MERCHANT_ID)).thenReturn(100L);
@@ -48,18 +47,14 @@ class MerchantStockControllerV1Test {
             .andExpect(jsonPath("$.data").value(100));
     }
 
-    /**
-     * 验证缺省 X-Merchant-Id 头时返回 400（网关注入头必选，防绕过归属校验直连）。
-     */
+
     @Test
     void get_without_merchant_header_returns_400() throws Exception {
         mockMvc.perform(get("/api/v1/merchant/stock/99"))
             .andExpect(status().isBadRequest());
     }
 
-    /**
-     * 验证 POST /api/v1/merchant/stock/{skuId}/threshold 携带 merchantId 调用 service 设置预警阈值。
-     */
+
     @Test
     void setThreshold_invokes_service() throws Exception {
         mockMvc.perform(post("/api/v1/merchant/stock/99/threshold")
@@ -70,9 +65,7 @@ class MerchantStockControllerV1Test {
         verify(stockService).setThreshold(99L, 50L, MERCHANT_ID);
     }
 
-    /**
-     * 验证 POST /api/v1/merchant/stock/{skuId}/adjust 传递 quantity 与 reason 至 service。
-     */
+
     @Test
     void adjustStock_passes_quantity_and_reason() throws Exception {
         mockMvc.perform(post("/api/v1/merchant/stock/99/adjust")
@@ -84,17 +77,15 @@ class MerchantStockControllerV1Test {
         verify(stockService).adjustStock(99L, 10L, "补货", MERCHANT_ID);
     }
 
-    /**
-     * 验证 GET /api/v1/merchant/stock/{skuId}/journal 返回库存流水列表。
-     */
+
     @Test
     void queryJournal_returns_list() throws Exception {
-        StockJournalPO po = new StockJournalPO();
-        po.setId(1L);
-        po.setSkuId(99L);
-        po.setQuantity(10L);
-        po.setType(1);
-        when(stockService.queryJournal(99L, MERCHANT_ID)).thenReturn(List.of(po));
+        StockJournalVO vo = new StockJournalVO();
+        vo.setId(1L);
+        vo.setSkuId(99L);
+        vo.setQuantity(10L);
+        vo.setType(1);
+        when(stockService.queryJournalVO(99L, MERCHANT_ID)).thenReturn(List.of(vo));
         mockMvc.perform(get("/api/v1/merchant/stock/99/journal")
                 .header("X-Merchant-Id", MERCHANT_ID))
             .andExpect(status().isOk())
@@ -102,12 +93,10 @@ class MerchantStockControllerV1Test {
             .andExpect(jsonPath("$.data[0].id").value(1));
     }
 
-    /**
-     * 验证 GET /api/v1/merchant/stock/{skuId}/journal 在无流水时返回空列表。
-     */
+
     @Test
     void queryJournal_returns_empty_list_when_no_records() throws Exception {
-        when(stockService.queryJournal(99L, MERCHANT_ID)).thenReturn(Collections.emptyList());
+        when(stockService.queryJournalVO(99L, MERCHANT_ID)).thenReturn(Collections.emptyList());
         mockMvc.perform(get("/api/v1/merchant/stock/99/journal")
                 .header("X-Merchant-Id", MERCHANT_ID))
             .andExpect(status().isOk())
@@ -115,27 +104,22 @@ class MerchantStockControllerV1Test {
             .andExpect(jsonPath("$.data").isArray());
     }
 
-    /**
-     * 验证 GET /api/v1/merchant/stock/{skuId}/journal/export 透传 X-Merchant-Id，
-     * 调用带归属校验的导出方法，防止越权导出其他商家流水。
-     */
+
     @Test
     void exportJournal_passes_merchant_id() throws Exception {
-        StockJournalPO po = new StockJournalPO();
-        po.setId(1L);
-        po.setSkuId(99L);
-        po.setQuantity(10L);
-        po.setType(1);
-        when(stockService.exportJournal(99L, MERCHANT_ID)).thenReturn(List.of(po));
+        StockJournalVO vo = new StockJournalVO();
+        vo.setId(1L);
+        vo.setSkuId(99L);
+        vo.setQuantity(10L);
+        vo.setType(1);
+        when(stockService.exportJournalVO(99L, MERCHANT_ID)).thenReturn(List.of(vo));
         mockMvc.perform(get("/api/v1/merchant/stock/99/journal/export")
                 .header("X-Merchant-Id", MERCHANT_ID))
             .andExpect(status().isOk());
-        verify(stockService).exportJournal(99L, MERCHANT_ID);
+        verify(stockService).exportJournalVO(99L, MERCHANT_ID);
     }
 
-    /**
-     * 验证导出接口缺失 X-Merchant-Id 头时被拒绝（400）。
-     */
+
     @Test
     void exportJournal_rejects_missing_merchant_header() throws Exception {
         mockMvc.perform(get("/api/v1/merchant/stock/99/journal/export"))

@@ -4,11 +4,12 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import com.yirancrazy.minimall.common.base.BaseEnum;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 文件上传业务错误码枚举，供用户端/商家端上传接口统一使用。
+ * @Description: UploadCodeEnum 枚举，定义相关业务状态。
  * @Version: 1.0
- * @DateTime: 2026/08/12
+ * @DateTime: 2026/10/16
  **/
 @Getter
 @AllArgsConstructor

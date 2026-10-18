@@ -5,11 +5,12 @@ import lombok.Getter;
 import com.yirancrazy.minimall.common.base.BaseEnum;
 
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 商家主体错误码枚举，定义资质审核相关错误码。
+ * @Description: MerchantCodeEnum 枚举，定义相关业务状态。
  * @Version: 1.0
- * @DateTime: 2026/08/03
+ * @DateTime: 2026/10/16
  **/
 @Getter
 @AllArgsConstructor

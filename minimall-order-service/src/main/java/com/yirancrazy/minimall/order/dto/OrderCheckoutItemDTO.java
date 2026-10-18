@@ -6,12 +6,13 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 结算明细项DTO，单条SKU购买信息。
+ * @Description: OrderCheckoutItemDTO 数据传输对象。
  * @Version: 1.0
- * @DateTime: 2026/08/03
- */
+ * @DateTime: 2026/10/16
+ **/
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

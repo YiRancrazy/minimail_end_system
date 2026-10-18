@@ -7,12 +7,13 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import com.yirancrazy.minimall.common.base.BasePO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: Order持久化对象，映射t_order表，承载订单生命周期关键字段（单号/金额/快照/状态时间戳）。
- * @Version: 1.3
- * @DateTime: 2026/08/13
- */
+ * @Description: OrderPO 持久化对象，对应数据库表。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName("t_order")
@@ -40,11 +41,11 @@ public class OrderPO extends BasePO {
     private Integer status;
     private Integer stockReleaseStatus;
     private Integer refundFromStatus;
-    /** 本次申请退款金额，部分退款场景使用；null 表示全单退款 */
+
     private BigDecimal refundAmount;
-    /** 累计已退款金额，用于部分退款累计与结清判断 */
+
     private BigDecimal totalRefundedAmount;
-    /** 退款请求幂等键，用于跨服务重复请求去重 */
+
     private String refundRequestNo;
     private LocalDateTime shippedAt;
     private String orderGroupNo;

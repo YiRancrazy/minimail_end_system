@@ -18,40 +18,46 @@ import com.yirancrazy.minimall.goods.dto.SkuUpdateDTO;
 import com.yirancrazy.minimall.goods.service.SkuService;
 import com.yirancrazy.minimall.goods.vo.SkuVO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 商品控制器，提供Sku RESTful API
- * @Version: 1.1
- * @DateTime: 2026/08/02
- */
+ * @Description: SkuControllerV1 控制器，提供相关接口。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 @RestController
 @RequestMapping("/api/v1/merchant/goods/skus")
 public class SkuControllerV1 {
 
     private final SkuService skuService;
 
+    /**
+     * 构造 SkuControllerV1 实例。
+     * @param skuService skuService 参数
+     */
     public SkuControllerV1(SkuService skuService) {
         this.skuService = skuService;
     }
 
+
     /**
-     * 根据主键查询 SKU 详情。
-     *
-     * @param merchantId 商家ID，来自可信Header
-     * @param id SKU 主键 ID
-     * @return SKU 视图，不存在或非本人商品时由 Service 层抛出业务异常
+     * 获取相关数据。
+     * @param merchantId merchantId 参数
+     * @param id id 参数
+     * @return 统一响应结果
      */
     @GetMapping("/{id}")
     public Result<SkuVO> get(@RequestHeader("X-Merchant-Id") Long merchantId,
                              @PathVariable("id") Long id) {
-        return Result.success(SkuVO.from(skuService.getById(id, merchantId)));
+        return Result.success(skuService.getVO(id, merchantId));
     }
 
+
     /**
-     * 创建SKU，归属商家ID来自可信Header。
-     * @param merchantId 商家ID，来自可信Header
-     * @param dto SKU创建DTO
-     * @return SKU 主键 ID
+     * 创建业务数据。
+     * @param merchantId merchantId 参数
+     * @param dto dto 参数
+     * @return 统一响应结果
      */
     @PostMapping
     public Result<Long> create(@RequestHeader("X-Merchant-Id") Long merchantId,
@@ -59,25 +65,27 @@ public class SkuControllerV1 {
         return Result.success(skuService.create(merchantId, dto));
     }
 
+
     /**
-     * 游标分页查询SKU列表，支持按名称模糊搜索，按归属商家过滤。
-     * @param merchantId 商家ID，来自可信Header
-     * @param dto 游标分页查询入参
-     * @return SKU 游标分页结果
+     * 分页查询数据。
+     * @param merchantId merchantId 参数
+     * @param dto dto 参数
+     * @return 统一响应结果
      */
     @GetMapping
     public Result<CursorPageVO<SkuVO>> page(@RequestHeader("X-Merchant-Id") Long merchantId,
                                             @Valid SkuPageDTO dto) {
         dto.setMerchantId(merchantId);
-        return Result.success(skuService.page(dto).map(SkuVO::from));
+        return Result.success(skuService.pageVO(dto));
     }
 
+
     /**
-     * 根据ID更新SKU信息。
-     * @param merchantId 商家ID，来自可信Header
-     * @param id SKU 主键 ID
-     * @param dto SKU修改DTO
-     * @return 更新是否成功
+     * 更新业务数据。
+     * @param merchantId merchantId 参数
+     * @param id id 参数
+     * @param dto dto 参数
+     * @return 统一响应结果
      */
     @PutMapping("/{id}")
     public Result<Boolean> update(@RequestHeader("X-Merchant-Id") Long merchantId,
@@ -86,11 +94,12 @@ public class SkuControllerV1 {
         return Result.success(skuService.update(id, merchantId, dto));
     }
 
+
     /**
-     * 根据ID删除SKU。
-     * @param merchantId 商家ID，来自可信Header
-     * @param id SKU 主键 ID
-     * @return 删除是否成功
+     * 删除业务数据。
+     * @param merchantId merchantId 参数
+     * @param id id 参数
+     * @return 统一响应结果
      */
     @DeleteMapping("/{id}")
     public Result<Boolean> delete(@RequestHeader("X-Merchant-Id") Long merchantId,

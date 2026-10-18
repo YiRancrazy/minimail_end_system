@@ -15,11 +15,12 @@ import com.yirancrazy.minimall.auth.service.MerchantAuthService;
 import com.yirancrazy.minimall.auth.vo.UserInfoVO;
 import com.yirancrazy.minimall.common.result.Result;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 商家端认证控制器，提供商家登录、登出、修改密码接口。
+ * @Description: MerchantAuthControllerV1 控制器，提供相关接口。
  * @Version: 1.0
- * @DateTime: 2026/08/02
+ * @DateTime: 2026/10/16
  **/
 @RestController
 @RequestMapping("/api/v1/merchant/auth")
@@ -27,35 +28,42 @@ public class MerchantAuthControllerV1 {
 
     private final MerchantAuthService merchantAuthService;
 
+    /**
+     * 构造 MerchantAuthControllerV1 实例。
+     * @param merchantAuthService merchantAuthService 参数
+     */
     public MerchantAuthControllerV1(MerchantAuthService merchantAuthService) {
         this.merchantAuthService = merchantAuthService;
     }
 
+
     /**
-     * 商家登录。
-     * @param dto 登录DTO
-     * @return 令牌VO
+     * 执行 login 方法。
+     * @param dto dto 参数
+     * @return 统一响应结果
      */
     @PostMapping("/login")
     public Result<TokenVO> login(@Valid @RequestBody LoginDTO dto) {
         return Result.success(merchantAuthService.login(dto));
     }
 
+
     /**
-     * 商家注册，创建 role=MERCHANT 的账号并签发令牌。
-     * @param dto 注册DTO
-     * @return 令牌VO
+     * 执行 register 方法。
+     * @param dto dto 参数
+     * @return 统一响应结果
      */
     @PostMapping("/register")
     public Result<TokenVO> register(@Valid @RequestBody RegisterDTO dto) {
         return Result.success(merchantAuthService.register(dto));
     }
 
+
     /**
-     * 商家登出。
-     * @param merchantAccountId 商家账号ID（来自网关 X-User-Id）
-     * @param jti 令牌唯一标识（来自网关 X-User-Jti）
-     * @return 无返回值
+     * 执行 logout 方法。
+     * @param merchantAccountId merchantAccountId 参数
+     * @param jti jti 参数
+     * @return 统一响应结果
      */
     @PostMapping("/logout")
     public Result<Void> logout(@RequestHeader("X-User-Id") Long merchantAccountId,
@@ -64,11 +72,12 @@ public class MerchantAuthControllerV1 {
         return Result.success();
     }
 
+
     /**
-     * 商家修改密码，需登录态校验旧密码。
-     * @param merchantAccountId 商家账号ID（来自网关 X-User-Id）
-     * @param dto 修改密码DTO
-     * @return 无返回值
+     * 执行 changePassword 方法。
+     * @param merchantAccountId merchantAccountId 参数
+     * @param dto dto 参数
+     * @return 统一响应结果
      */
     @PostMapping("/password/change")
     public Result<Void> changePassword(@RequestHeader("X-User-Id") Long merchantAccountId,
@@ -77,10 +86,11 @@ public class MerchantAuthControllerV1 {
         return Result.success();
     }
 
+
     /**
-     * 获取当前商家信息。
-     * @param authorization 授权头
-     * @return 用户信息VO
+     * 执行 me 方法。
+     * @param authorization authorization 参数
+     * @return 统一响应结果
      */
     @GetMapping("/me")
     public Result<UserInfoVO> me(@RequestHeader("Authorization") String authorization) {

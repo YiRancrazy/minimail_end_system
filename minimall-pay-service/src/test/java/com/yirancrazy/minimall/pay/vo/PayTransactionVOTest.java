@@ -7,11 +7,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import com.yirancrazy.minimall.pay.entity.PayTransactionPO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: PayTransactionVO 单元测试，验证从 PayTransactionPO 到 PayTransactionVO 的字段映射正确性及内部字段隐藏。
+ * @Description: PayTransactionVOTest 单元测试。
  * @Version: 1.0
- * @DateTime: 2026/08/04
+ * @DateTime: 2026/10/16
  **/
 class PayTransactionVOTest {
 

@@ -4,12 +4,13 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import com.yirancrazy.minimall.common.base.BaseEnum;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 通知Notify错误码枚举，定义通知相关错误码
- * @Version: 1.1
- * @DateTime: 2026/08/03
- */
+ * @Description: NotifyCodeEnum 枚举，定义相关业务状态。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 @Getter
 @AllArgsConstructor
 public enum NotifyCodeEnum implements BaseEnum {

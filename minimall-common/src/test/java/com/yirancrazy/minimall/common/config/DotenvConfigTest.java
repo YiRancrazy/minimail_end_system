@@ -3,17 +3,16 @@ package com.yirancrazy.minimall.common.config;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: DotenvConfig 单元测试，验证敏感环境变量日志脱敏规则。
+ * @Description: DotenvConfigTest 单元测试。
  * @Version: 1.0
- * @DateTime: 2026/09/25
+ * @DateTime: 2026/10/16
  **/
 class DotenvConfigTest {
 
-    /**
-     * 验证密钥、Token 和私钥配置不会进入日志值。
-     */
+
     @Test
     void redactedValue_masksSensitiveKeys() {
         assertEquals("***", DotenvConfig.redactedValue("MINIMALL_JWT_SECRET", "secret-value"));
@@ -25,9 +24,7 @@ class DotenvConfigTest {
         assertEquals("***", DotenvConfig.redactedValue("MYSQL_PASSWORD", "password-value"));
     }
 
-    /**
-     * 验证非敏感配置仍按原值返回。
-     */
+
     @Test
     void redactedValue_keepsNonSensitiveValue() {
         assertEquals("localhost", DotenvConfig.redactedValue("MYSQL_HOST", "localhost"));

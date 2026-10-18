@@ -2,26 +2,27 @@ package com.yirancrazy.minimall.order.vo;
 
 import lombok.Data;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 用户各状态订单数量VO，供"我的"页面订单快捷入口角标展示。
+ * @Description: OrderStatusCountsVO 视图对象。
  * @Version: 1.0
- * @DateTime: 2026/08/13
+ * @DateTime: 2026/10/16
  **/
 @Data
 public class OrderStatusCountsVO {
-    /** 待支付订单数 */
+
     private long pendingCount;
-    /** 待发货订单数 */
+
     private long paidCount;
-    /** 待收货订单数 */
+
     private long shippedCount;
-    /** 已完成订单数 */
+
     private long completedCount;
-    /** 已取消订单数 */
+
     private long canceledCount;
-    /** 退款中订单数 */
+
     private long refundingCount;
-    /** 已退款订单数 */
+
     private long refundedCount;
 }

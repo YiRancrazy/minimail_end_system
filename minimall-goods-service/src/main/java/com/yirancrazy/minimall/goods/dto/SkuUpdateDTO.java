@@ -7,12 +7,13 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: Sku 修改入参，用于更新商品名称、价格与库存
+ * @Description: SkuUpdateDTO 数据传输对象。
  * @Version: 1.0
- * @DateTime: 2026/08/02
- */
+ * @DateTime: 2026/10/16
+ **/
 @Data
 public class SkuUpdateDTO {
 

@@ -6,11 +6,12 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 订单物流节点视图对象，用于返回物流轨迹查询结果。
+ * @Description: OrderLogisticsVO 视图对象。
  * @Version: 1.0
- * @DateTime: 2026/08/03
+ * @DateTime: 2026/10/16
  **/
 @Data
 @NoArgsConstructor

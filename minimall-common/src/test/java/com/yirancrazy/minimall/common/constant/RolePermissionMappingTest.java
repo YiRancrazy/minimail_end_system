@@ -10,9 +10,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+
 /**
- * RolePermissionMapping 单元测试，验证角色-权限映射的完整性与正确性。
- */
+ * @Author: yirancrazy@gmail.com
+ * @Description: RolePermissionMappingTest 单元测试。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 class RolePermissionMappingTest {
 
     @Test

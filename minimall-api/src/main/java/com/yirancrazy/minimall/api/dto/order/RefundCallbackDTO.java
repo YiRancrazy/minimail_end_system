@@ -9,12 +9,13 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 支付服务退款结果回调，携带本次与累计退款金额
+ * @Description: RefundCallbackDTO 数据传输对象。
  * @Version: 1.0
- * @DateTime: 2026/09/25
- */
+ * @DateTime: 2026/10/16
+ **/
 @Data
 @AllArgsConstructor
 @NoArgsConstructor

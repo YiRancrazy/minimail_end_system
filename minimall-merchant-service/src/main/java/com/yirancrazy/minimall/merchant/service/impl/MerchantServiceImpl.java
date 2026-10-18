@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.extern.slf4j.Slf4j;
+import com.yirancrazy.minimall.api.dto.merchant.MerchantManageVO;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CommonCode;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
@@ -25,11 +26,12 @@ import com.yirancrazy.minimall.merchant.vo.MerchantAuditLogVO;
 import com.yirancrazy.minimall.merchant.vo.MerchantInfoVO;
 import com.yirancrazy.minimall.merchant.vo.MerchantQualificationVO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 商家资质服务实现，处理资质提交、查询与平台审核状态流转。
+ * @Description: MerchantServiceImpl 服务实现，实现相关业务逻辑。
  * @Version: 1.0
- * @DateTime: 2026/08/03
+ * @DateTime: 2026/10/16
  **/
 @Slf4j
 @Service
@@ -38,16 +40,22 @@ public class MerchantServiceImpl implements MerchantService {
     private final MerchantManager merchantManager;
     private final MinioUtil minioUtil;
 
+    /**
+     * 构造 MerchantServiceImpl 实例。
+     * @param merchantManager merchantManager 参数
+     * @param minioUtil minioUtil 参数
+     */
     public MerchantServiceImpl(MerchantManager merchantManager, MinioUtil minioUtil) {
         this.merchantManager = merchantManager;
         this.minioUtil = minioUtil;
     }
 
+
     /**
-     * 商家提交或更新资质，审核状态置为 PENDING。
-     * @param merchantId 商家ID
-     * @param dto 资质提交入参
-     * @return 资质VO
+     * 执行 submitQualification 方法。
+     * @param merchantId merchantId 参数
+     * @param dto dto 参数
+     * @return 处理结果
      */
     @Override
     public MerchantQualificationVO submitQualification(Long merchantId, QualificationSubmitDTO dto) {
@@ -77,25 +85,24 @@ public class MerchantServiceImpl implements MerchantService {
         return toVO(po);
     }
 
+
     /**
-     * 查询商家资质，不存在时抛出 MERCHANT_NOT_FOUND。
-     * @param merchantId 商家ID
-     * @return 资质VO
+     * 获取相关数据。
+     * @param merchantId merchantId 参数
+     * @return 处理结果
      */
     @Override
     public MerchantQualificationVO getQualification(Long merchantId) {
         return toVO(getByUserId(merchantId));
     }
 
+
     /**
-     * 平台审核商家资质，仅允许 PENDING 状态审核；approved=true 置 APPROVED（同时清理历史驳回原因），
-     * false 置 REJECTED 并记录原因。依赖乐观锁（BasePO.version）保证并发下仅一次审核落库成功。
-     * @param merchantId 商家主体ID
-     * @param approved 是否通过
-     * @param reason 驳回原因，approved=false 时必填
-     * @throws BizException 商家不存在、非待审核状态或并发冲突时
+     * 执行 audit 方法。
+     * @param merchantId merchantId 参数
+     * @param approved approved 参数
+     * @param reason reason 参数
      */
-    @Transactional(rollbackFor = Exception.class)
     @Override
     public void audit(Long merchantId, boolean approved, String reason) {
         if (!approved && (reason == null || reason.isBlank())) {
@@ -123,6 +130,12 @@ public class MerchantServiceImpl implements MerchantService {
         log.info("商家审核完成，merchantId={}，approved={}", merchantId, approved);
     }
 
+    /**
+     * 获取根据用户ID。
+     * @param merchantId 商户 ID
+     * @return 查询结果
+     * @throws BizException 业务校验失败时抛出
+     */
     private MerchantPO getByUserId(Long merchantId) {
         MerchantPO po = merchantManager.getOne(
             Wrappers.lambdaQuery(MerchantPO.class).eq(MerchantPO::getUserId, merchantId));
@@ -132,10 +145,11 @@ public class MerchantServiceImpl implements MerchantService {
         return po;
     }
 
+
     /**
-     * 商家获取自身信息，不存在时抛出 MERCHANT_NOT_FOUND。
-     * @param merchantId 商家ID
-     * @return 商家信息VO
+     * 获取相关数据。
+     * @param merchantId merchantId 参数
+     * @return 处理结果
      */
     @Override
     public MerchantInfoVO getMerchantInfo(Long merchantId) {
@@ -147,10 +161,11 @@ public class MerchantServiceImpl implements MerchantService {
         return MerchantInfoVO.from(po);
     }
 
+
     /**
-     * 商家查看审核记录，返回资质审核记录。
-     * @param merchantId 商家ID
-     * @return 审核记录列表
+     * 查询列表数据。
+     * @param merchantId merchantId 参数
+     * @return 结果列表
      */
     @Override
     public List<MerchantAuditLogVO> listAuditLog(Long merchantId) {
@@ -169,10 +184,11 @@ public class MerchantServiceImpl implements MerchantService {
         return Collections.singletonList(vo);
     }
 
+
     /**
-     * 将资质提交中的敏感字段写入商家实体（typeHandler 自动加密落库）。
-     * @param po 商家实体
-     * @param dto 资质提交入参
+     * 执行SensitiveFields逻辑。
+     * @param po 持久化对象
+     * @param dto 请求参数
      */
     private void applySensitiveFields(MerchantPO po, QualificationSubmitDTO dto) {
         po.setLegalPersonEnc(dto.getLegalPerson());
@@ -182,6 +198,11 @@ public class MerchantServiceImpl implements MerchantService {
         po.setBankAccountEnc(dto.getBankAccount());
     }
 
+    /**
+     * 转换或解析VO。
+     * @param po 持久化对象
+     * @return 视图对象
+     */
     private MerchantQualificationVO toVO(MerchantPO po) {
         MerchantQualificationVO vo = new MerchantQualificationVO();
         vo.setId(po.getId());
@@ -200,13 +221,14 @@ public class MerchantServiceImpl implements MerchantService {
         return vo;
     }
 
+
     /**
-     * 平台商家管理分页查询，支持按名称/审核状态过滤；按 ID 降序返回。
-     * @param dto 分页入参
-     * @return 商家游标分页结果
+     * 分页查询数据。
+     * @param dto dto 参数
+     * @return 处理结果
      */
     @Override
-    public CursorPageVO<MerchantPO> page(MerchantPageDTO dto) {
+    public CursorPageVO<MerchantManageVO> page(MerchantPageDTO dto) {
         int limit = dto.getLimit();
         Long lastId = CursorUtils.decode(dto.getCursor());
         LambdaQueryWrapper<MerchantPO> wrapper = Wrappers.lambdaQuery(MerchantPO.class);
@@ -220,21 +242,33 @@ public class MerchantServiceImpl implements MerchantService {
         wrapper.orderByDesc(MerchantPO::getId);
         wrapper.last("LIMIT " + (limit + 1));
         List<MerchantPO> records = merchantManager.list(wrapper);
-        return CursorPageVO.of(records, limit, MerchantPO::getId);
+        return CursorPageVO.of(records, limit, MerchantPO::getId).map(this::toManageVO);
     }
 
+
     /**
-     * 平台商家详情。
-     * @param merchantId 商家主体ID
-     * @return 商家PO
-     * @throws BizException 商家不存在时
+     * 执行 detail 方法。
+     * @param merchantId merchantId 参数
+     * @return 处理结果
      */
     @Override
-    public MerchantPO detail(Long merchantId) {
+    public MerchantManageVO detail(Long merchantId) {
         MerchantPO po = merchantManager.getById(merchantId);
         if (po == null) {
             throw new BizException(MerchantCodeEnum.MERCHANT_NOT_FOUND);
         }
-        return po;
+        return toManageVO(po);
+    }
+
+
+    /**
+     * 转换或解析ManageVO。
+     * @param po 持久化对象
+     * @return 视图对象
+     */
+    private MerchantManageVO toManageVO(MerchantPO po) {
+        return new MerchantManageVO(po.getId(), po.getUserId(), po.getMerchantName(),
+            po.getLicenseNo(), po.getLicenseImageUrl(), po.getAuditStatus(), po.getAuditReason(),
+            po.getAuditAt(), po.getCreateTime());
     }
 }

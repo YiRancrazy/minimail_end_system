@@ -12,12 +12,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import com.yirancrazy.minimall.stock.service.StockService;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: InternalStockControllerV1 MockMvc 单元测试，验证库存调整内部入口。
+ * @Description: InternalStockControllerV1Test 单元测试。
  * @Version: 1.0
- * @DateTime: 2026/09/25
- */
+ * @DateTime: 2026/10/16
+ **/
 class InternalStockControllerV1Test {
 
     private MockMvc mockMvc;
@@ -30,9 +31,7 @@ class InternalStockControllerV1Test {
             new InternalStockControllerV1(stockService)).build();
     }
 
-    /**
-     * 验证库存调整入口透传 SKU、增量、原因和商家归属。
-     */
+
     @Test
     void adjust_passes_request_to_service() throws Exception {
         mockMvc.perform(post("/internal/stock/adjust")
@@ -45,9 +44,7 @@ class InternalStockControllerV1Test {
         verify(stockService).adjustStock(99L, 5L, "spu edit", 1001L);
     }
 
-    /**
-     * 验证批量预占入口透传 SKU 明细并返回成功。
-     */
+
     @Test
     void reserveBatch_passes_items_to_service() throws Exception {
         mockMvc.perform(post("/internal/stock/reserve-batch")

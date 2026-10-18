@@ -15,11 +15,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.yirancrazy.minimall.api.dto.order.OrderCommentEligibilityDTO;
 import com.yirancrazy.minimall.order.service.OrderService;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: InternalOrderControllerV1 MockMvc 单元测试，验证评价资格内部接口的路由、参数绑定与 Result 包装。
+ * @Description: InternalOrderControllerV1Test 单元测试。
  * @Version: 1.0
- * @DateTime: 2026/09/25
+ * @DateTime: 2026/10/16
  **/
 class InternalOrderControllerV1Test {
 
@@ -32,9 +33,7 @@ class InternalOrderControllerV1Test {
         mockMvc = MockMvcBuilders.standaloneSetup(new InternalOrderControllerV1(service)).build();
     }
 
-    /**
-     * 验证 GET /internal/order/comment-eligibility 透传参数并返回评价资格快照。
-     */
+
     @Test
     void commentEligibility_returns_snapshot() throws Exception {
         when(service.commentEligibility(eq("OD10001"), anyLong(), anyLong()))
@@ -52,9 +51,7 @@ class InternalOrderControllerV1Test {
         verify(service).commentEligibility("OD10001", 7L, 500L);
     }
 
-    /**
-     * 验证订单不可评价时内部接口返回 eligible=false，而不是抛异常。
-     */
+
     @Test
     void commentEligibility_returns_not_eligible() throws Exception {
         when(service.commentEligibility(eq("OD10002"), anyLong(), anyLong()))

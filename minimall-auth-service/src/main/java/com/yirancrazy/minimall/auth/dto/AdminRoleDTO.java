@@ -4,11 +4,12 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 平台管理员角色分配 DTO，按角色编码分配角色
+ * @Description: AdminRoleDTO 数据传输对象。
  * @Version: 1.0
- * @DateTime: 2026/08/25
+ * @DateTime: 2026/10/16
  **/
 @Data
 public class AdminRoleDTO {

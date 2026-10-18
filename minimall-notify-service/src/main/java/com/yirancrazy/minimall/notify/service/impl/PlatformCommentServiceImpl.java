@@ -7,34 +7,44 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.util.CursorUtils;
+import com.yirancrazy.minimall.common.util.MinioUtil;
 import com.yirancrazy.minimall.notify.constant.CommentStatusEnum;
 import com.yirancrazy.minimall.notify.constant.NotifyCodeEnum;
 import com.yirancrazy.minimall.notify.dto.CommentPageDTO;
 import com.yirancrazy.minimall.notify.entity.CommentPO;
 import com.yirancrazy.minimall.notify.manager.CommentManager;
 import com.yirancrazy.minimall.notify.service.PlatformCommentService;
+import com.yirancrazy.minimall.notify.vo.CommentVO;
+
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 平台评价管理服务实现，封装审核（通过/隐藏）与平台回复业务
+ * @Description: PlatformCommentServiceImpl 服务实现，实现相关业务逻辑。
  * @Version: 1.0
- * @DateTime: 2026/08/10
+ * @DateTime: 2026/10/16
  **/
 @Service
 public class PlatformCommentServiceImpl implements PlatformCommentService {
 
     private final CommentManager commentManager;
-
-    public PlatformCommentServiceImpl(CommentManager commentManager) {
-        this.commentManager = commentManager;
-    }
+    private final MinioUtil minioUtil;
 
     /**
-     * 分页查询评价，按 ID 降序返回，支持状态/订单号过滤；游标解码后按 id < lastId 取下一页。
-     * @param dto 分页入参
-     * @return 评价游标分页结果
+     * 构造 PlatformCommentServiceImpl 实例。
+     * @param commentManager commentManager 参数
+     * @param minioUtil minioUtil 参数
      */
-    @Override
+    public PlatformCommentServiceImpl(CommentManager commentManager, MinioUtil minioUtil) {
+        this.commentManager = commentManager;
+        this.minioUtil = minioUtil;
+    }
+
+
+    /**
+     * 分页查询数据。
+     * @param dto dto 参数
+     * @return 处理结果
+     */
     public CursorPageVO<CommentPO> page(CommentPageDTO dto) {
         Long lastId = CursorUtils.decode(dto.getCursor());
         int limit = dto.getLimit();
@@ -51,11 +61,22 @@ public class PlatformCommentServiceImpl implements PlatformCommentService {
         return CursorPageVO.of(commentManager.list(wrapper), limit, CommentPO::getId);
     }
 
+
     /**
-     * 通过评价：将状态置为 NORMAL。已 NORMAL 的评价为幂等操作。
-     * @param id 评价ID
+     * 分页查询数据。
+     * @param dto dto 参数
+     * @return 处理结果
      */
     @Override
+    public CursorPageVO<CommentVO> pageVO(CommentPageDTO dto) {
+        return page(dto).map(po -> CommentVO.from(po, minioUtil));
+    }
+
+
+    /**
+     * 执行 approve 方法。
+     * @param id id 参数
+     */
     @Transactional(rollbackFor = Exception.class)
     public void approve(Long id) {
         CommentPO po = mustGet(id);
@@ -66,11 +87,11 @@ public class PlatformCommentServiceImpl implements PlatformCommentService {
         commentManager.updateById(po);
     }
 
+
     /**
-     * 隐藏评价：将状态置为 HIDDEN。允许从 NORMAL 隐藏回 HIDDEN。
-     * @param id 评价ID
+     * 执行 hide 方法。
+     * @param id id 参数
      */
-    @Override
     @Transactional(rollbackFor = Exception.class)
     public void hide(Long id) {
         CommentPO po = mustGet(id);
@@ -78,12 +99,12 @@ public class PlatformCommentServiceImpl implements PlatformCommentService {
         commentManager.updateById(po);
     }
 
+
     /**
-     * 平台回复评价：写入回复内容与当前时间；不影响商家后续再次回复。
-     * @param id 评价ID
-     * @param reply 回复内容
+     * 执行 reply 方法。
+     * @param id id 参数
+     * @param reply reply 参数
      */
-    @Override
     @Transactional(rollbackFor = Exception.class)
     public void reply(Long id, String reply) {
         CommentPO po = mustGet(id);
@@ -92,6 +113,12 @@ public class PlatformCommentServiceImpl implements PlatformCommentService {
         commentManager.updateById(po);
     }
 
+    /**
+     * 处理must获取。
+     * @param id ID
+     * @return 处理结果
+     * @throws BizException 业务校验失败时抛出
+     */
     private CommentPO mustGet(Long id) {
         CommentPO po = commentManager.getById(id);
         if (po == null) {

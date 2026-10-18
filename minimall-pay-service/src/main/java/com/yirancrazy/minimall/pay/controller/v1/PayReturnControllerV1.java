@@ -7,23 +7,25 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import lombok.extern.slf4j.Slf4j;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 支付宝同步跳转落地页：支付完成后浏览器被重定向至此，业务状态以异步回调为准，本页仅展示结果。
+ * @Description: PayReturnControllerV1 控制器，提供相关接口。
  * @Version: 1.0
- * @DateTime: 2026/08/15
+ * @DateTime: 2026/10/16
  **/
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/pay")
 public class PayReturnControllerV1 {
 
+
     /**
-     * 支付宝支付成功后浏览器同步跳转的落地页，展示支付结果并引导返回应用。
-     * @param outTradeNo 支付单号
-     * @param tradeNo 支付宝交易号
-     * @param totalAmount 支付金额
-     * @return 支付结果 HTML 页面
+     * 执行 success 方法。
+     * @param outTradeNo outTradeNo 参数
+     * @param tradeNo tradeNo 参数
+     * @param totalAmount totalAmount 参数
+     * @return 处理结果
      */
     @GetMapping(value = "/success", produces = MediaType.TEXT_HTML_VALUE + ";charset=UTF-8")
     public String success(@RequestParam(value = "out_trade_no", required = false) String outTradeNo,
@@ -45,10 +47,11 @@ public class PayReturnControllerV1 {
             + "</div></body></html>";
     }
 
+
     /**
-     * 转义 HTML 特殊字符，防止支付宝跳转参数注入脚本。
-     * @param value 原始参数
-     * @return 转义后的字符串
+     * 处理escape。
+     * @param value 值
+     * @return 处理结果
      */
     private String escape(String value) {
         if (value == null) {

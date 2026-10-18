@@ -22,9 +22,13 @@ import com.yirancrazy.minimall.common.constant.RoleEnum;
 import com.yirancrazy.minimall.common.constant.RolePermissionMapping;
 import com.yirancrazy.minimall.common.exception.BizException;
 
+
 /**
- * PermissionAspect 单元测试，验证权限校验切面对不同角色与权限组合的放行/拒绝逻辑。
- */
+ * @Author: yirancrazy@gmail.com
+ * @Description: PermissionAspectTest 单元测试。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 class PermissionAspectTest {
 
     private PermissionAspect aspect;

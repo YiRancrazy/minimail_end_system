@@ -4,12 +4,13 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: UserSnapshot数据传输对象，用于UserSnapshot相关数据传输
+ * @Description: UserSnapshotDTO 数据传输对象。
  * @Version: 1.0
- * @DateTime: 2026/07/31
- */
+ * @DateTime: 2026/10/16
+ **/
 @Data
 @AllArgsConstructor
 @NoArgsConstructor

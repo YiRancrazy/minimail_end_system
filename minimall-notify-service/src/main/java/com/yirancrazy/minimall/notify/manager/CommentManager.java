@@ -1,23 +1,25 @@
 package com.yirancrazy.minimall.notify.manager;
 
 import java.util.List;
-import java.util.Map;
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.yirancrazy.minimall.notify.dto.CommentRatingCountDTO;
 import com.yirancrazy.minimall.notify.entity.CommentPO;
+
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 商品评价数据访问层接口，定义 t_notify_comment 表操作契约
- * @Version: 1.1
- * @DateTime: 2026/08/10
+ * @Description: CommentManager 管理器接口，封装数据访问能力。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
  **/
 public interface CommentManager extends IService<CommentPO> {
 
+
     /**
-     * 按评分分组统计指定 SPU 的正常评价数量，聚合在数据库侧完成。
-     * @param spuId 商品 SPU ID
-     * @param status 评价状态过滤（NORMAL）
-     * @return 每行 {rating, cnt} 的分组结果
+     * 统计业务数据。
+     * @param spuId spuId 参数
+     * @param status status 参数
+     * @return 结果列表
      */
-    List<Map<String, Object>> countGroupByRating(Long spuId, Integer status);
+    List<CommentRatingCountDTO> countGroupByRating(Long spuId, Integer status);
 }

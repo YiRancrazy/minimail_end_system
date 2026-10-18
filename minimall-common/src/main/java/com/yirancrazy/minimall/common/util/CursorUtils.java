@@ -5,21 +5,26 @@ import java.util.Base64;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CommonCode;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 游标编解码工具，将记录ID编码为不透明 Base64 字符串供前端传递。
+ * @Description: CursorUtils 类型，承载相关业务能力。
  * @Version: 1.0
- * @DateTime: 2026/08/04
+ * @DateTime: 2026/10/16
  **/
 public final class CursorUtils {
 
+    /**
+     * 构造 CursorUtils 实例。
+     */
     private CursorUtils() {
     }
 
+
     /**
-     * 将记录ID编码为游标字符串。
-     * @param id 记录ID
-     * @return Base64 编码的游标字符串
+     * 执行 encode 方法。
+     * @param id id 参数
+     * @return 处理结果
      */
     public static String encode(Long id) {
         if (id == null) {
@@ -29,11 +34,11 @@ public final class CursorUtils {
             .encodeToString(String.valueOf(id).getBytes(StandardCharsets.UTF_8));
     }
 
+
     /**
-     * 将游标字符串解码为记录ID。
-     * @param cursor 游标字符串
-     * @return 记录ID，cursor 为空时返回 null
-     * @throws BizException 当游标格式非法时
+     * 执行 decode 方法。
+     * @param cursor cursor 参数
+     * @return 业务数值
      */
     public static Long decode(String cursor) {
         if (cursor == null || cursor.isBlank()) {

@@ -10,11 +10,12 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import reactor.core.publisher.Mono;
 
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: TraceIdGlobalFilter 的单元测试类。
+ * @Description: TraceIdGlobalFilterTest 单元测试。
  * @Version: 1.0
- * @DateTime: 2026/7/31
+ * @DateTime: 2026/10/16
  **/
 class TraceIdGlobalFilterTest {
 

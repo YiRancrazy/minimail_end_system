@@ -17,12 +17,14 @@ import com.yirancrazy.minimall.notify.dto.ComplaintPageDTO;
 import com.yirancrazy.minimall.notify.entity.ComplaintPO;
 import com.yirancrazy.minimall.notify.manager.ComplaintManager;
 import com.yirancrazy.minimall.notify.service.ComplaintService;
+import com.yirancrazy.minimall.notify.vo.ComplaintVO;
+
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 投诉领域服务实现，实现投诉提交、分页查询、处理业务逻辑
+ * @Description: ComplaintServiceImpl 服务实现，实现相关业务逻辑。
  * @Version: 1.0
- * @DateTime: 2026/08/03
+ * @DateTime: 2026/10/16
  **/
 @Slf4j
 @Service
@@ -30,15 +32,20 @@ public class ComplaintServiceImpl implements ComplaintService {
 
     private final ComplaintManager complaintManager;
 
+    /**
+     * 构造 ComplaintServiceImpl 实例。
+     * @param complaintManager complaintManager 参数
+     */
     public ComplaintServiceImpl(ComplaintManager complaintManager) {
         this.complaintManager = complaintManager;
     }
 
+
     /**
-     * 提交投诉，使用 complainantId 覆盖 DTO 中的投诉方ID，初始状态为 PENDING。
-     * @param complainantId 投诉方ID，来自可信 Header
-     * @param dto 创建入参
-     * @return 新投诉ID
+     * 创建业务数据。
+     * @param complainantId complainantId 参数
+     * @param dto dto 参数
+     * @return 业务数值
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -58,12 +65,12 @@ public class ComplaintServiceImpl implements ComplaintService {
         return po.getId();
     }
 
+
     /**
-     * 平台分页查询投诉，支持按状态和订单号过滤，按 ID 降序返回。
-     * @param dto 分页入参
-     * @return 投诉分页结果
+     * 分页查询数据。
+     * @param dto dto 参数
+     * @return 处理结果
      */
-    @Override
     public CursorPageVO<ComplaintPO> page(ComplaintPageDTO dto) {
         Long lastId = CursorUtils.decode(dto.getCursor());
         int limit = dto.getLimit();
@@ -87,15 +94,24 @@ public class ComplaintServiceImpl implements ComplaintService {
         return CursorPageVO.of(records, limit, ComplaintPO::getId);
     }
 
+
     /**
-     * 平台处理投诉，校验状态流转：PENDING→PROCESSING，PROCESSING→RESOLVED/REJECTED；
-     * 采用条件更新（WHERE status=当前状态）保证并发下 check-then-act 原子性，影响 0 行视为状态已被并发修改。
-     * @param id 投诉ID
-     * @param handlerId 处理人ID
-     * @param dto 处理入参
-     * @throws BizException 投诉不存在或状态流转非法时
+     * 分页查询数据。
+     * @param dto dto 参数
+     * @return 处理结果
      */
     @Override
+    public CursorPageVO<ComplaintVO> pageVO(ComplaintPageDTO dto) {
+        return page(dto).map(ComplaintVO::from);
+    }
+
+
+    /**
+     * 处理业务事件。
+     * @param id id 参数
+     * @param handlerId handlerId 参数
+     * @param dto dto 参数
+     */
     @Transactional(rollbackFor = Exception.class)
     public void handle(Long id, Long handlerId, ComplaintHandleDTO dto) {
         ComplaintPO po = complaintManager.getById(id);
@@ -118,12 +134,12 @@ public class ComplaintServiceImpl implements ComplaintService {
         log.info("投诉已处理，id={}，handlerId={}，newStatus={}", id, handlerId, dto.getStatus());
     }
 
+
     /**
-     * 查询投诉详情，不存在时抛 COMPLAINT_NOT_FOUND。
-     * @param id 投诉ID
-     * @return 投诉实体
+     * 执行 detail 方法。
+     * @param id id 参数
+     * @return 处理结果
      */
-    @Override
     public ComplaintPO detail(Long id) {
         ComplaintPO po = complaintManager.getById(id);
         if (po == null) {
@@ -132,6 +148,39 @@ public class ComplaintServiceImpl implements ComplaintService {
         return po;
     }
 
+
+    /**
+     * 执行 detailVO 方法。
+     * @param id id 参数
+     * @return 处理结果
+     */
+    @Override
+    public ComplaintVO detailVO(Long id) {
+        return ComplaintVO.from(detail(id));
+    }
+
+
+    /**
+     * 执行 detailForUser 方法。
+     * @param id id 参数
+     * @param userId userId 参数
+     * @return 处理结果
+     */
+    @Override
+    public ComplaintVO detailForUser(Long id, Long userId) {
+        ComplaintPO po = detail(id);
+        if (po.getComplainantId() == null || !po.getComplainantId().equals(userId)) {
+            throw new BizException(NotifyCodeEnum.COMPLAINT_NOT_FOUND);
+        }
+        return ComplaintVO.from(po);
+    }
+
+    /**
+     * 校验ValidTransition。
+     * @param current 当前
+     * @param target 目标对象
+     * @return 是否满足条件
+     */
     private boolean isValidTransition(Integer current, Integer target) {
         if (current == null || target == null) {
             return false;

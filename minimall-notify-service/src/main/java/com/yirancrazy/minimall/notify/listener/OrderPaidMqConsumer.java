@@ -12,12 +12,13 @@ import com.yirancrazy.minimall.api.dto.order.OrderPaidDTO;
 import com.yirancrazy.minimall.common.event.RocketMqEventConsumer;
 import com.yirancrazy.minimall.notify.service.NotifyService;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: OrderPaidMq消费者，消费OrderPaidMq相关消息并落库站内信
- * @Version: 1.2
- * @DateTime: 2026/08/03
- */
+ * @Description: OrderPaidMqConsumer 类型，承载相关业务能力。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 @Slf4j
 @Component
 @ConditionalOnProperty(name = "minimall.eventbus.rocketmq.enabled", havingValue = "true")
@@ -32,6 +33,14 @@ public class OrderPaidMqConsumer {
     private final String group;
     private RocketMqEventConsumer consumer;
 
+    /**
+     * 构造 OrderPaidMqConsumer 实例。
+     * @param notifyService notifyService 参数
+     * @param redis redis 参数
+     * @param namesrv namesrv 参数
+     * @param topic topic 参数
+     * @param group group 参数
+     */
     public OrderPaidMqConsumer(
         NotifyService notifyService,
         StringRedisTemplate redis,
@@ -45,6 +54,9 @@ public class OrderPaidMqConsumer {
         this.group = group;
     }
 
+    /**
+     * 初始化init。
+     */
     @PostConstruct
     void init() {
         consumer = new RocketMqEventConsumer(namesrv, topic, group);
@@ -53,6 +65,9 @@ public class OrderPaidMqConsumer {
         log.info("OrderPaidMqConsumer 已就绪（namesrv={}，topic={}）", namesrv, topic);
     }
 
+    /**
+     * 释放当前资源。
+     */
     @PreDestroy
     void close() {
         if (consumer != null) {
@@ -60,9 +75,10 @@ public class OrderPaidMqConsumer {
         }
     }
 
+
     /**
-     * 消费订单支付事件，Redis SETNX 幂等去重后落库站内信；SSE 推送由 push 内部统一负责。
-     * @param event 订单支付事件
+     * 处理Paid。
+     * @param event 事件
      */
     void onPaid(OrderPaidDTO event) {
         if (event == null || event.getOrderId() == null) {

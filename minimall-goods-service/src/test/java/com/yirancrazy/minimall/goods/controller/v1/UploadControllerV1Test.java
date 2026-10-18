@@ -21,11 +21,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.yirancrazy.minimall.common.service.ChunkUploadService;
 import com.yirancrazy.minimall.common.service.ChunkUploadService.ChunkResult;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: UploadControllerV1 MockMvc 单元测试，验证商家端分片上传与断点状态查询的路由、参数绑定与 Result 包装。
+ * @Description: UploadControllerV1Test 单元测试。
  * @Version: 1.0
- * @DateTime: 2026/08/12
+ * @DateTime: 2026/10/16
  **/
 class UploadControllerV1Test {
 
@@ -41,7 +42,7 @@ class UploadControllerV1Test {
     @Test
     void chunk_returns_received_count_when_not_done() throws Exception {
         when(chunkUploadService.saveChunk(anyLong(), anyString(), anyInt(), anyInt(),
-            anyString(), any(), any()))
+            anyString(), any(), any(ChunkUploadService.ChunkInputStreamSupplier.class)))
             .thenReturn(new ChunkResult(false, 1, null));
 
         MockMultipartFile file = new MockMultipartFile("file", "a.png",
@@ -57,13 +58,13 @@ class UploadControllerV1Test {
             .andExpect(jsonPath("$.data.done").value(false))
             .andExpect(jsonPath("$.data.received").value(1));
         verify(chunkUploadService).saveChunk(eq(42L), eq("task-1"), eq(0), eq(3),
-            eq("image/png"), any(), any());
+            eq("image/png"), any(), any(ChunkUploadService.ChunkInputStreamSupplier.class));
     }
 
     @Test
     void chunk_returns_object_key_when_done() throws Exception {
         when(chunkUploadService.saveChunk(anyLong(), anyString(), anyInt(), anyInt(),
-            anyString(), any(), any()))
+            anyString(), any(), any(ChunkUploadService.ChunkInputStreamSupplier.class)))
             .thenReturn(new ChunkResult(true, 3, "final-key"));
 
         MockMultipartFile file = new MockMultipartFile("file", "a.png",

@@ -13,18 +13,23 @@ import com.yirancrazy.minimall.platform.service.RolePermissionService;
 import com.yirancrazy.minimall.platform.vo.PermissionVO;
 import com.yirancrazy.minimall.platform.vo.RoleVO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 平台角色权限服务实现，基于硬编码映射 + Redis 覆盖存储，USER 角色权限不可修改。
+ * @Description: RolePermissionServiceImpl 服务实现，实现相关业务逻辑。
  * @Version: 1.0
- * @DateTime: 2026/08/13
- */
+ * @DateTime: 2026/10/16
+ **/
 @Service
 @RequiredArgsConstructor
 public class RolePermissionServiceImpl implements RolePermissionService {
 
     private final StringRedisTemplate redisTemplate;
 
+    /**
+     * 查询列表数据。
+     * @return 结果列表
+     */
     @Override
     public List<RoleVO> listRoles() {
         return Arrays.stream(RoleEnum.values())
@@ -32,13 +37,22 @@ public class RolePermissionServiceImpl implements RolePermissionService {
             .toList();
     }
 
+    /**
+     * 获取相关数据。
+     * @param roleCode roleCode 参数
+     * @return 处理结果
+     */
     @Override
     public RoleVO getRolePermissions(String roleCode) {
         RoleEnum role = RoleEnum.fromCode(roleCode);
         return role == null ? null : toRoleVO(role);
     }
 
-    @Override
+    /**
+     * 更新业务数据。
+     * @param roleCode roleCode 参数
+     * @param permissionCodes permissionCodes 参数
+     */
     public void updatePermissions(String roleCode, List<String> permissionCodes) {
         RoleEnum role = RoleEnum.fromCode(roleCode);
         if (role == null) {
@@ -55,6 +69,11 @@ public class RolePermissionServiceImpl implements RolePermissionService {
         }
     }
 
+    /**
+     * 转换或解析角色VO。
+     * @param role 角色
+     * @return 视图对象
+     */
     private RoleVO toRoleVO(RoleEnum role) {
         List<PermissionVO> permissions = RolePermissionMapping.getEffectivePermissions(role, redisTemplate).stream()
             .map(p -> new PermissionVO(p.getCode(), p.getDescription()))

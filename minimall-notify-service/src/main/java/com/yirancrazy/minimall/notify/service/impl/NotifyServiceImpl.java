@@ -21,35 +21,42 @@ import com.yirancrazy.minimall.notify.dto.NotifySystemAlertDTO;
 import com.yirancrazy.minimall.notify.dto.NotifyViolationWarningDTO;
 import com.yirancrazy.minimall.notify.dto.SystemAlertPageDTO;
 import com.yirancrazy.minimall.notify.entity.NotifyMessagePO;
+import com.yirancrazy.minimall.notify.gateway.NotifyPushGateway;
 import com.yirancrazy.minimall.notify.manager.NotifyManager;
 import com.yirancrazy.minimall.notify.service.NotifyService;
-import com.yirancrazy.minimall.notify.sse.SseHub;
+import com.yirancrazy.minimall.notify.vo.NotifyMessageVO;
+
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 通知领域服务实现，实现站内信发送、分页查询、已读标记、删除与广播
- * @Version: 1.1
- * @DateTime: 2026/08/03
- */
+ * @Description: NotifyServiceImpl 服务实现，实现相关业务逻辑。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 @Slf4j
 @Service
 public class NotifyServiceImpl implements NotifyService {
 
     private final NotifyManager notifyManager;
-    private final SseHub sseHub;
-
-    public NotifyServiceImpl(NotifyManager notifyManager, SseHub sseHub) {
-        this.notifyManager = notifyManager;
-        this.sseHub = sseHub;
-    }
+    private final NotifyPushGateway notifyPushGateway;
 
     /**
-     * 构造通知实体并写入数据库，默认接收方为 USER、消息类型为 SYSTEM，落库后通过 SSE 推送。
-     *
-     * @param userId  接收用户主键
-     * @param title   通知标题
-     * @param content 通知正文
-     * @return 入库是否成功
+     * 构造 NotifyServiceImpl 实例。
+     * @param notifyManager notifyManager 参数
+     * @param notifyPushGateway notifyPushGateway 参数
+     */
+    public NotifyServiceImpl(NotifyManager notifyManager, NotifyPushGateway notifyPushGateway) {
+        this.notifyManager = notifyManager;
+        this.notifyPushGateway = notifyPushGateway;
+    }
+
+
+    /**
+     * 执行 push 方法。
+     * @param userId userId 参数
+     * @param title title 参数
+     * @param content content 参数
+     * @return 是否处理成功
      */
     @Override
     public boolean push(Long userId, String title, String content) {
@@ -62,18 +69,17 @@ public class NotifyServiceImpl implements NotifyService {
         m.setReadFlag(0);
         boolean saved = notifyManager.save(m);
         if (saved) {
-            sseHub.send(userId, title);
+            notifyPushGateway.send(userId, title);
         }
         return saved;
     }
 
+
     /**
-     * 查询指定用户全部通知消息，按ID降序返回。
-     *
-     * @param dto 查询条件
-     * @return 通知消息列表
+     * 查询列表数据。
+     * @param dto dto 参数
+     * @return 结果列表
      */
-    @Override
     public List<NotifyMessagePO> listByUser(NotifyListDTO dto) {
         LambdaQueryWrapper<NotifyMessagePO> wrapper = Wrappers.lambdaQuery(NotifyMessagePO.class)
             .eq(NotifyMessagePO::getUserId, dto.getUserId());
@@ -84,13 +90,23 @@ public class NotifyServiceImpl implements NotifyService {
         return notifyManager.list(wrapper);
     }
 
+
     /**
-     * 分页查询站内信，支持按接收方/消息类型/已读状态过滤，按ID降序返回；
-     * 用户侧查询同时并入 userId=0 + recipientType=ALL 的公告/全端广播占位记录，否则公告永远不可见。
-     * @param dto 分页查询入参
-     * @return 站内信分页结果
+     * 查询列表数据。
+     * @param dto dto 参数
+     * @return 结果列表
      */
     @Override
+    public List<NotifyMessageVO> listByUserVO(NotifyListDTO dto) {
+        return listByUser(dto).stream().map(NotifyMessageVO::from).toList();
+    }
+
+
+    /**
+     * 分页查询数据。
+     * @param dto dto 参数
+     * @return 处理结果
+     */
     public CursorPageVO<NotifyMessagePO> page(NotifyListDTO dto) {
         Long lastId = CursorUtils.decode(dto.getCursor());
         int limit = dto.getLimit();
@@ -120,11 +136,23 @@ public class NotifyServiceImpl implements NotifyService {
         return CursorPageVO.of(records, limit, NotifyMessagePO::getId);
     }
 
+
     /**
-     * 统计指定接收方的未读消息数量。
-     * @param recipientType 接收方类型
-     * @param userId 接收者ID
-     * @return 未读消息数
+     * 分页查询数据。
+     * @param dto dto 参数
+     * @return 处理结果
+     */
+    @Override
+    public CursorPageVO<NotifyMessageVO> pageVO(NotifyListDTO dto) {
+        return page(dto).map(NotifyMessageVO::from);
+    }
+
+
+    /**
+     * 执行 unreadCount 方法。
+     * @param recipientType recipientType 参数
+     * @param userId userId 参数
+     * @return 业务数值
      */
     @Override
     public long unreadCount(Integer recipientType, Long userId) {
@@ -134,14 +162,13 @@ public class NotifyServiceImpl implements NotifyService {
             .eq(NotifyMessagePO::getReadFlag, 0));
     }
 
+
     /**
-     * 标记单条消息为已读，校验归属权限；已读则幂等返回。
-     * @param id 消息ID
-     * @param recipientType 接收方类型
-     * @param userId 接收者ID
-     * @throws BizException 消息不存在或无权操作时
+     * 执行 markRead 方法。
+     * @param id id 参数
+     * @param recipientType recipientType 参数
+     * @param userId userId 参数
      */
-    @Override
     public void markRead(Long id, Integer recipientType, Long userId) {
         NotifyMessagePO m = getOwnedMessage(id, recipientType, userId);
         if (Integer.valueOf(1).equals(m.getReadFlag())) {
@@ -151,12 +178,12 @@ public class NotifyServiceImpl implements NotifyService {
         notifyManager.updateById(m);
     }
 
+
     /**
-     * 将指定接收方的全部未读消息标记为已读。
-     * @param recipientType 接收方类型
-     * @param userId 接收者ID
+     * 执行 markAllRead 方法。
+     * @param recipientType recipientType 参数
+     * @param userId userId 参数
      */
-    @Override
     public void markAllRead(Integer recipientType, Long userId) {
         notifyManager.update(Wrappers.lambdaUpdate(NotifyMessagePO.class)
             .eq(NotifyMessagePO::getRecipientType, recipientType)
@@ -165,27 +192,25 @@ public class NotifyServiceImpl implements NotifyService {
             .set(NotifyMessagePO::getReadFlag, 1));
     }
 
+
     /**
-     * 删除单条消息（软删除），校验归属权限。
-     * @param id 消息ID
-     * @param recipientType 接收方类型
-     * @param userId 接收者ID
-     * @throws BizException 消息不存在或无权操作时
+     * 删除业务数据。
+     * @param id id 参数
+     * @param recipientType recipientType 参数
+     * @param userId userId 参数
      */
-    @Override
     public void delete(Long id, Integer recipientType, Long userId) {
         getOwnedMessage(id, recipientType, userId);
         notifyManager.removeById(id);
     }
 
+
     /**
-     * 批量删除消息（软删除），校验所有消息归属当前用户。
-     * @param ids 消息ID列表，最多100条
-     * @param recipientType 接收方类型
-     * @param userId 接收者ID
-     * @throws BizException 当ID列表为空、超限或存在非本人消息时
+     * 执行 batchDelete 方法。
+     * @param ids ids 参数
+     * @param recipientType recipientType 参数
+     * @param userId userId 参数
      */
-    @Override
     @Transactional(rollbackFor = Exception.class)
     public void batchDelete(List<Long> ids, Integer recipientType, Long userId) {
         if (ids == null || ids.isEmpty()) {
@@ -211,12 +236,11 @@ public class NotifyServiceImpl implements NotifyService {
         log.info("消息已批量删除，count={}，userId={}", ids.size(), userId);
     }
 
+
     /**
-     * 平台广播消息，落库并通过 SSE 实时推送；指定 targetId 时定向发送，否则全端广播占位。
-     * @param dto 广播入参
-     * @throws BizException 接收方类型非法时
+     * 执行 broadcast 方法。
+     * @param dto dto 参数
      */
-    @Override
     public void broadcast(NotifyBroadcastDTO dto) {
         if (dto.getRecipientType() == null
             || dto.getRecipientType() < 1
@@ -234,7 +258,7 @@ public class NotifyServiceImpl implements NotifyService {
         if (dto.getTargetId() != null) {
             m.setUserId(dto.getTargetId());
             notifyManager.save(m);
-            sseHub.send(dto.getTargetId(), dto.getTitle());
+            notifyPushGateway.send(dto.getTargetId(), dto.getTitle());
         }
         else {
             // 全端广播：落库一条 userId=0 的占位记录，按需扩展批量下发
@@ -245,11 +269,11 @@ public class NotifyServiceImpl implements NotifyService {
             dto.getRecipientType(), dto.getTargetId());
     }
 
+
     /**
-     * 营销推送，向指定用户列表发送营销站内信；userIds 为 null 或空时全量广播（落库 userId=0 占位）。
-     * @param dto 营销推送入参
+     * 执行 marketingPush 方法。
+     * @param dto dto 参数
      */
-    @Override
     @Transactional(rollbackFor = Exception.class)
     public void marketingPush(NotifyMarketingPushDTO dto) {
         if (dto.getUserIds() == null || dto.getUserIds().isEmpty()) {
@@ -276,17 +300,17 @@ public class NotifyServiceImpl implements NotifyService {
             }
             notifyManager.saveBatch(messages);
             for (Long uid : dto.getUserIds()) {
-                sseHub.send(uid, dto.getTitle());
+                notifyPushGateway.send(uid, dto.getTitle());
             }
         }
         log.info("营销消息已推送，userIds={}", dto.getUserIds());
     }
 
+
     /**
-     * 违规警告通知，向指定商家发送违规警告站内信并 SSE 推送。
-     * @param dto 违规警告入参
+     * 执行 violationWarning 方法。
+     * @param dto dto 参数
      */
-    @Override
     @Transactional(rollbackFor = Exception.class)
     public void violationWarning(NotifyViolationWarningDTO dto) {
         NotifyMessagePO m = new NotifyMessagePO();
@@ -297,16 +321,16 @@ public class NotifyServiceImpl implements NotifyService {
         m.setContent(dto.getContent());
         m.setReadFlag(0);
         notifyManager.save(m);
-        sseHub.send(dto.getMerchantId(), dto.getTitle());
+        notifyPushGateway.send(dto.getMerchantId(), dto.getTitle());
         log.info("违规警告已发送，merchantId={}，type={}",
             dto.getMerchantId(), dto.getViolationType());
     }
 
+
     /**
-     * 系统告警通知，向平台管理员发送系统异常/故障预警站内信。
-     * @param dto 系统告警入参
+     * 执行 systemAlert 方法。
+     * @param dto dto 参数
      */
-    @Override
     @Transactional(rollbackFor = Exception.class)
     public void systemAlert(NotifySystemAlertDTO dto) {
         NotifyMessagePO m = new NotifyMessagePO();
@@ -320,12 +344,12 @@ public class NotifyServiceImpl implements NotifyService {
         log.info("系统告警已发送，title={}，level={}", dto.getTitle(), dto.getAlertLevel());
     }
 
+
     /**
-     * 平台系统告警分页查询，固定过滤 recipient_type=PLATFORM, message_type=SYSTEM，按 ID 降序返回。
-     * @param dto 分页入参
-     * @return 系统告警分页结果
+     * 执行 alertPage 方法。
+     * @param dto dto 参数
+     * @return 处理结果
      */
-    @Override
     public CursorPageVO<NotifyMessagePO> alertPage(SystemAlertPageDTO dto) {
         Long lastId = CursorUtils.decode(dto.getCursor());
         int limit = dto.getLimit();
@@ -339,11 +363,22 @@ public class NotifyServiceImpl implements NotifyService {
         return CursorPageVO.of(records, limit, NotifyMessagePO::getId);
     }
 
+
     /**
-     * 发布系统公告，落库为 messageType=ANNOUNCEMENT, recipientType=ALL 的站内信。
-     * @param dto 公告发布入参
+     * 执行 alertPageVO 方法。
+     * @param dto dto 参数
+     * @return 处理结果
      */
     @Override
+    public CursorPageVO<NotifyMessageVO> alertPageVO(SystemAlertPageDTO dto) {
+        return alertPage(dto).map(NotifyMessageVO::from);
+    }
+
+
+    /**
+     * 执行 publishAnnouncement 方法。
+     * @param dto dto 参数
+     */
     @Transactional(rollbackFor = Exception.class)
     public void publishAnnouncement(AnnouncementCreateDTO dto) {
         NotifyMessagePO m = new NotifyMessagePO();
@@ -357,6 +392,14 @@ public class NotifyServiceImpl implements NotifyService {
         log.info("公告已发布，title={}", dto.getTitle());
     }
 
+    /**
+     * 获取Owned消息。
+     * @param id ID
+     * @param recipientType recipientType
+     * @param userId 用户 ID
+     * @return 查询结果
+     * @throws BizException 业务校验失败时抛出
+     */
     private NotifyMessagePO getOwnedMessage(Long id, Integer recipientType, Long userId) {
         NotifyMessagePO m = notifyManager.getById(id);
         if (m == null

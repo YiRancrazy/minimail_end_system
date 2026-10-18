@@ -4,23 +4,27 @@ import java.io.IOException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+
 /**
- * RocketMQ 消息体的 JSON 编解码器。Tag 使用事件 simpleName；
- * key 使用相同约定。
- */
+ * @Author: yirancrazy@gmail.com
+ * @Description: MqEventJsonCodec 类型，承载相关业务能力。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 public final class MqEventJsonCodec {
     private static final ObjectMapper M = new ObjectMapper().findAndRegisterModules();
 
+    /**
+     * 构造 MqEventJsonCodec 实例。
+     */
     private MqEventJsonCodec() {
     }
 
+
     /**
-     * 将给定事件对象序列化为可用作 RocketMQ 消息体的 JSON 字节数组。
-     * Jackson 模块自动注册。
-     *
-     * @param event 要序列化的领域事件；不能为 {@code null}
-     * @return {@code event} 的 UTF-8 JSON 编码
-     * @throws IllegalStateException Jackson 序列化事件失败时抛出
+     * 执行 encode 方法。
+     * @param event event 参数
+     * @return 结果列表
      */
     public static byte[] encode(Object event) {
         try {
@@ -31,14 +35,13 @@ public final class MqEventJsonCodec {
         }
     }
 
+
     /**
-     * 将给定 RocketMQ 消息体反序列化为目标事件类型实例。
-     *
-     * @param body 从 RocketMQ 接收到的原始消息字节
-     * @param type 要解码到的目标事件 {@link Class}
-     * @param <T> 目标事件类型
-     * @return 已填充的 {@code type} 实例
-     * @throws IllegalStateException Jackson 读取或绑定消息体失败时抛出
+     * 执行 decode 方法。
+     * @param <T> 泛型参数
+     * @param body body 参数
+     * @param type type 参数
+     * @return 处理结果
      */
     public static <T> T decode(byte[] body, Class<T> type) {
         try {
@@ -49,12 +52,11 @@ public final class MqEventJsonCodec {
         }
     }
 
+
     /**
-     * 为事件类型推导 RocketMQ 路由 Tag。约定使用简单类名，
-     * 与生产者侧 {@link #encode(Object)} 保持一致。
-     *
-     * @param eventType 要推导 Tag 的事件 {@link Class}
-     * @return {@code eventType} 的简单类名，用作 RocketMQ Tag
+     * 执行 tagFor 方法。
+     * @param eventType eventType 参数
+     * @return 处理结果
      */
     public static String tagFor(Class<?> eventType) {
         return eventType.getSimpleName();

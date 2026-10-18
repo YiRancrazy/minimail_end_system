@@ -3,11 +3,12 @@ package com.yirancrazy.minimall.common.constant;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 系统细粒度权限枚举，用于 @RequirePermission 注解声明接口所需权限。
+ * @Description: PermissionEnum 枚举，定义相关业务状态。
  * @Version: 1.0
- * @DateTime: 2026/08/03
+ * @DateTime: 2026/10/16
  **/
 @Getter
 @AllArgsConstructor

@@ -5,11 +5,12 @@ import lombok.Data;
 import com.yirancrazy.minimall.notify.constant.NotifyMessageTypeEnum;
 import com.yirancrazy.minimall.notify.entity.NotifyMessagePO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 站内信VO，用于Controller边界输出，隐藏内部字段；status/type 输出枚举别名供前端直接消费
- * @Version: 1.1
- * @DateTime: 2026/08/04
+ * @Description: NotifyMessageVO 视图对象。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
  **/
 @Data
 public class NotifyMessageVO {
@@ -17,18 +18,19 @@ public class NotifyMessageVO {
     private Long id;
     private Long userId;
     private Integer recipientType;
-    /** 消息类型枚举别名（如 ORDER/LOGISTICS/SYSTEM），未知码原样返回数字字符串 */
+
     private String type;
     private String title;
     private String content;
-    /** 已读状态枚举别名：UNREAD / READ */
+
     private String status;
     private LocalDateTime createTime;
 
+
     /**
-     * 将 NotifyMessagePO 转换为 NotifyMessageVO。
-     * @param po 站内信持久化对象
-     * @return 站内信VO
+     * 执行 from 方法。
+     * @param po po 参数
+     * @return 处理结果
      */
     public static NotifyMessageVO from(NotifyMessagePO po) {
         NotifyMessageVO vo = new NotifyMessageVO();
@@ -43,10 +45,11 @@ public class NotifyMessageVO {
         return vo;
     }
 
+
     /**
-     * 将持久化消息类型码映射为枚举别名，未知码原样返回数字字符串避免丢失类型。
-     * @param code 持久化消息类型码
-     * @return 消息类型枚举别名
+     * 处理typeAlias。
+     * @param code 编码
+     * @return 处理结果
      */
     private static String typeAlias(Integer code) {
         for (NotifyMessageTypeEnum e : NotifyMessageTypeEnum.values()) {

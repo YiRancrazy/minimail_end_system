@@ -6,16 +6,17 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-/**
- * @Author: yirancrazy@gmail.com
- * @Description: StockReserve数据传输对象，用于StockReserve相关数据传输
- * @Version: 1.0
- * @DateTime: 2026/07/31
- */
+
 @Data
 
 @AllArgsConstructor
 
+/**
+ * @Author: yirancrazy@gmail.com
+ * @Description: StockReserveDTO 数据传输对象。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 @NoArgsConstructor
 public class StockReserveDTO {
     @NotNull(message = "SKU ID不能为空")
@@ -27,10 +28,11 @@ public class StockReserveDTO {
 
     private String orderNo;
 
+
     /**
-     * 构造不携带订单号的兼容入参。
-     * @param skuId SKU 主键 ID
-     * @param quantity 数量
+     * 构造 StockReserveDTO 实例。
+     * @param skuId skuId 参数
+     * @param quantity quantity 参数
      */
     public StockReserveDTO(Long skuId, Integer quantity) {
         this(skuId, quantity, null);

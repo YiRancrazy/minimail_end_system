@@ -18,11 +18,12 @@ import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.pay.config.AlipayConfig;
 
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: AlipayGateway 类。
+ * @Description: AlipayGateway 类型，承载相关业务能力。
  * @Version: 1.0
- * @DateTime: 2026/7/31
+ * @DateTime: 2026/10/16
  **/
 @Slf4j
 @Component
@@ -31,19 +32,24 @@ public class AlipayGateway implements PayGateway {
     private final AlipayClient alipayClient;    // 支付宝支付客户端
     private final AlipayConfig config;          // 支付宝支付配置
 
+    /**
+     * 构造 AlipayGateway 实例。
+     * @param alipayClient alipayClient 参数
+     * @param config config 参数
+     */
     public AlipayGateway(AlipayClient alipayClient, AlipayConfig config) {
         this.alipayClient = alipayClient;
         this.config = config;
     }
 
+
     /**
-     * 创建电脑网站支付单（alipay.trade.page.pay）。
-     * @param paymentNo 支付单号，作为 out_trade_no
-     * @param amount 支付金额，单位元，必须大于 0
-     * @param subject 订单标题
-     * @param expireTime 绝对过期时间，格式 yyyy-MM-dd HH:mm:ss
-     * @return 自动提交的收银台表单 HTML，前端写入页面后浏览器跳转支付宝收银台
-     * @throws RuntimeException 支付宝网关不可达或参数非法时抛出
+     * 创建业务数据。
+     * @param paymentNo paymentNo 参数
+     * @param amount amount 参数
+     * @param subject subject 参数
+     * @param expireTime expireTime 参数
+     * @return 处理结果
      */
     @Override
     public String createPagePayment(String paymentNo, BigDecimal amount, String subject, String expireTime) {
@@ -77,10 +83,11 @@ public class AlipayGateway implements PayGateway {
         }
     }
 
+
     /**
-     * 验证支付回调
-     * @param params 支付回调参数
-     * @return 支付订单号
+     * 执行 verifyCallback 方法。
+     * @param params params 参数
+     * @return 处理结果
      */
     @Override
     public String verifyCallback(Map<String, String> params) {
@@ -98,10 +105,11 @@ public class AlipayGateway implements PayGateway {
         }
     }
 
+
     /**
-     * 查询支付订单
-     * @param paymentNo 支付订单号
-     * @return 支付订单状态
+     * 执行 queryPayment 方法。
+     * @param paymentNo paymentNo 参数
+     * @return 处理结果
      */
     @Override
     public String queryPayment(String paymentNo) {
@@ -120,13 +128,14 @@ public class AlipayGateway implements PayGateway {
         }
     }
 
+
     /**
-     * 申请退款
-     * @param paymentNo 支付订单号
-     * @param refundNo 退款订单号
-     * @param amount 退款金额
-     * @param reason 退款原因
-     * @return 退款订单号
+     * 执行 refund 方法。
+     * @param paymentNo paymentNo 参数
+     * @param refundNo refundNo 参数
+     * @param amount amount 参数
+     * @param reason reason 参数
+     * @return 处理结果
      */
     @Override
     public String refund(String paymentNo, String refundNo, BigDecimal amount, String reason) {
@@ -147,11 +156,12 @@ public class AlipayGateway implements PayGateway {
         }
     }
 
+
     /**
-     * 按原退款请求号查询支付宝退款结果。
-     * @param paymentNo 原支付商户订单号
-     * @param refundNo 原退款请求号，作为 out_request_no
-     * @return 退款查询状态；查询异常或无法识别时返回 FAILED
+     * 执行 queryRefund 方法。
+     * @param paymentNo paymentNo 参数
+     * @param refundNo refundNo 参数
+     * @return 处理结果
      */
     @Override
     public RefundQueryStatus queryRefund(String paymentNo, String refundNo) {
@@ -189,6 +199,11 @@ public class AlipayGateway implements PayGateway {
         }
     }
 
+    /**
+     * 校验退款NotFound。
+     * @param subCode sub编码
+     * @return 是否满足条件
+     */
     private static boolean isRefundNotFound(String subCode) {
         return "ACQ.TRADE_NOT_EXIST".equals(subCode)
             || "ACQ.REFUND_NOT_EXIST".equals(subCode)

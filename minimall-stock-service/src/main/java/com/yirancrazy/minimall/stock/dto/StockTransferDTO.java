@@ -4,11 +4,12 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 跨商家库存调拨入参，支持指定源/目标SKU及调拨数量
+ * @Description: StockTransferDTO 数据传输对象。
  * @Version: 1.0
- * @DateTime: 2026/08/03
+ * @DateTime: 2026/10/16
  **/
 @Data
 public class StockTransferDTO {
@@ -23,9 +24,9 @@ public class StockTransferDTO {
     @Min(value = 1, message = "quantity must be >= 1")
     private Long quantity;
 
-    /** 调拨原因 */
+
     private String reason;
 
-    /** 操作人ID，由 Controller 从 Header 注入 */
+
     private Long operatorId;
 }

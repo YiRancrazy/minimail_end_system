@@ -24,11 +24,12 @@ import com.yirancrazy.minimall.notify.dto.NotifySystemAlertDTO;
 import com.yirancrazy.minimall.notify.dto.SystemAlertPageDTO;
 import com.yirancrazy.minimall.notify.service.NotifyService;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: PlatformNotifyControllerV1 MockMvc 单元测试，验证平台站内信分页、广播、营销推送与公告端点。
+ * @Description: PlatformNotifyControllerV1Test 单元测试。
  * @Version: 1.0
- * @DateTime: 2026/08/05
+ * @DateTime: 2026/10/16
  **/
 class PlatformNotifyControllerV1Test {
 
@@ -42,12 +43,10 @@ class PlatformNotifyControllerV1Test {
         mockMvc = MockMvcBuilders.standaloneSetup(new PlatformNotifyControllerV1(notifyService)).build();
     }
 
-    /**
-     * 验证 GET /api/v1/platform/notify/messages 通过 X-User-Id 头返回平台站内信分页。
-     */
+
     @Test
     void page_returns_cursor_result() throws Exception {
-        when(notifyService.page(any(NotifyListDTO.class)))
+        when(notifyService.pageVO(any(NotifyListDTO.class)))
             .thenReturn(new CursorPageVO<>(Collections.emptyList(), null, false, 20));
         mockMvc.perform(get("/api/v1/platform/notify/messages")
                 .header("X-User-Id", 1L)
@@ -56,9 +55,7 @@ class PlatformNotifyControllerV1Test {
             .andExpect(jsonPath("$.code").value("00000"));
     }
 
-    /**
-     * 验证 POST /api/v1/platform/notify/broadcast 通过 X-User-Id 注入发送者并广播消息。
-     */
+
     @Test
     void broadcast_with_header_invokes_service() throws Exception {
         NotifyBroadcastDTO dto = new NotifyBroadcastDTO();
@@ -75,9 +72,7 @@ class PlatformNotifyControllerV1Test {
         verify(notifyService).broadcast(any(NotifyBroadcastDTO.class));
     }
 
-    /**
-     * 验证 POST /api/v1/platform/notify/marketing-push 调用 service 发送营销推送。
-     */
+
     @Test
     void marketingPush_invokes_service() throws Exception {
         NotifyMarketingPushDTO dto = new NotifyMarketingPushDTO();
@@ -92,9 +87,7 @@ class PlatformNotifyControllerV1Test {
         verify(notifyService).marketingPush(any(NotifyMarketingPushDTO.class));
     }
 
-    /**
-     * 验证 POST /api/v1/platform/notify/system-alert 调用 service 发送系统告警。
-     */
+
     @Test
     void systemAlert_invokes_service() throws Exception {
         NotifySystemAlertDTO dto = new NotifySystemAlertDTO();
@@ -109,12 +102,10 @@ class PlatformNotifyControllerV1Test {
         verify(notifyService).systemAlert(any(NotifySystemAlertDTO.class));
     }
 
-    /**
-     * 验证 GET /api/v1/platform/notify/alerts 返回系统告警分页结果。
-     */
+
     @Test
     void alerts_returns_cursor_result() throws Exception {
-        when(notifyService.alertPage(any(SystemAlertPageDTO.class)))
+        when(notifyService.alertPageVO(any(SystemAlertPageDTO.class)))
             .thenReturn(new CursorPageVO<>(Collections.emptyList(), null, false, 20));
         mockMvc.perform(get("/api/v1/platform/notify/alerts")
                 .header("X-User-Id", 1L))
@@ -122,9 +113,7 @@ class PlatformNotifyControllerV1Test {
             .andExpect(jsonPath("$.code").value("00000"));
     }
 
-    /**
-     * 验证 POST /api/v1/platform/notify/announcements 发布系统公告。
-     */
+
     @Test
     void publishAnnouncement_invokes_service() throws Exception {
         AnnouncementCreateDTO dto = new AnnouncementCreateDTO();

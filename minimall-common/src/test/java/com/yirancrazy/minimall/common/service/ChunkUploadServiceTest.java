@@ -29,11 +29,12 @@ import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CommonCode;
 import com.yirancrazy.minimall.common.util.MinioUtil;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: ChunkUploadService 单元测试，验证分片落盘、收满合并上传 MinIO、断点查询与参数校验。
+ * @Description: ChunkUploadServiceTest 单元测试。
  * @Version: 1.0
- * @DateTime: 2026/08/12
+ * @DateTime: 2026/10/16
  **/
 class ChunkUploadServiceTest {
 

@@ -4,22 +4,23 @@ import java.time.LocalDateTime;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 商家资质视图对象，返回资质与审核状态，敏感字段仅输出脱敏值。
- * @Version: 1.1
- * @DateTime: 2026/08/13
+ * @Description: MerchantQualificationVO 视图对象。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
  **/
 @Data
 @NoArgsConstructor
 public class MerchantQualificationVO {
     private Long id;
-    /** 与 userId 同义，对外暴露稳定别名 merchantId。 */
+
     private Long merchantId;
     private Long userId;
     private String merchantName;
     private String licenseNo;
-    /** 营业执照图片可访问 URL，objectKey 在出参边界由 MinioUtil 解析 */
+
     private String licenseImageUrl;
     private Integer auditStatus;
     private String auditReason;

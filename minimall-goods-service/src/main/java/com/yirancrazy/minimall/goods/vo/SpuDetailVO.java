@@ -5,11 +5,12 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: SPU 详情视图对象，聚合 SPU 基础信息与其下 SKU 列表，用于用户端商品详情
+ * @Description: SpuDetailVO 视图对象。
  * @Version: 1.0
- * @DateTime: 2026/08/02
+ * @DateTime: 2026/10/16
  **/
 @Data
 @AllArgsConstructor

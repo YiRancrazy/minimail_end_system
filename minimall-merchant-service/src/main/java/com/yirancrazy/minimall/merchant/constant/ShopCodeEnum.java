@@ -4,14 +4,15 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import com.yirancrazy.minimall.common.base.BaseEnum;
 
-/**
- * @Author: yirancrazy@gmail.com
- * @Description: 商户Shop错误码枚举，定义商户相关错误码
- * @Version: 1.0
- * @DateTime: 2026/07/31
- */
+
 @Getter
 
+/**
+ * @Author: yirancrazy@gmail.com
+ * @Description: ShopCodeEnum 枚举，定义相关业务状态。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 @AllArgsConstructor
 public enum ShopCodeEnum implements BaseEnum {
     SHOP_NOT_FOUND("15001", "SHOP_NOT_FOUND", "店铺不存在"),

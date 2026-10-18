@@ -5,23 +5,24 @@ import org.apache.ibatis.annotations.Param;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.yirancrazy.minimall.cart.entity.CartItemPO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: CartItem MyBatis Mapper 接口，映射CartItem表
+ * @Description: CartItemMapper 数据访问接口，映射数据库操作。
  * @Version: 1.0
- * @DateTime: 2026/07/31
- */
+ * @DateTime: 2026/10/16
+ **/
 public interface CartItemMapper extends BaseMapper<CartItemPO> {
 
+
     /**
-     * 原子新增或累加购物车数量，已存在时由数据库在数量列上执行增量更新。
-     *
-     * @param id 新记录候选主键；重复键命中时保留数据库已有主键
-     * @param userId 用户ID
-     * @param skuId SKU 主键 ID
-     * @param quantity 本次增加数量
-     * @param selected 是否选中：0=否 1=是
-     * @return 受影响行数
+     * 执行 upsertQuantity 方法。
+     * @param id id 参数
+     * @param userId userId 参数
+     * @param skuId skuId 参数
+     * @param quantity quantity 参数
+     * @param selected selected 参数
+     * @return 业务数值
      */
     @Insert("""
         INSERT INTO t_cart_item

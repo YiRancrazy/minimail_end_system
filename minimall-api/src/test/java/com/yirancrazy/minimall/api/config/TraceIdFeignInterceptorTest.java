@@ -10,12 +10,13 @@ import feign.RequestTemplate;
 import com.yirancrazy.minimall.common.filter.TraceIdFilter;
 import com.yirancrazy.minimall.common.result.Result;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: TraceIdFeignInterceptor 的单元测试类，验证 traceId 从 MDC 到 Feign 请求头的注入。
+ * @Description: TraceIdFeignInterceptorTest 单元测试。
  * @Version: 1.0
- * @DateTime: 2026/08/16
- */
+ * @DateTime: 2026/10/16
+ **/
 class TraceIdFeignInterceptorTest {
 
     private TraceIdFeignInterceptor interceptor;

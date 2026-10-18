@@ -8,11 +8,12 @@ import lombok.EqualsAndHashCode;
 import com.yirancrazy.minimall.common.base.BasePO;
 import com.yirancrazy.minimall.common.security.EncryptedStringTypeHandler;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 商家主体持久化对象，映射 t_merch_merchant 表。法人/身份证/银行卡等敏感字段 AES-256-GCM 加密存储（_enc 列）。
- * @Version: 1.1
- * @DateTime: 2026/08/13
+ * @Description: MerchantPO 持久化对象，对应数据库表。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
  **/
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -21,7 +22,7 @@ public class MerchantPO extends BasePO {
     private Long userId;
     private String merchantName;
     private String licenseNo;
-    /** 营业执照图片 objectKey，出参时由 MinioUtil 解析为可访问 URL */
+
     private String licenseImageUrl;
     private Integer auditStatus;
     private String auditReason;

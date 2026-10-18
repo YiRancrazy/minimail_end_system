@@ -12,12 +12,14 @@ import com.yirancrazy.minimall.user.dto.AddressUpdateDTO;
 import com.yirancrazy.minimall.user.entity.AddressPO;
 import com.yirancrazy.minimall.user.manager.AddressManager;
 import com.yirancrazy.minimall.user.service.AddressService;
+import com.yirancrazy.minimall.user.vo.AddressVO;
+
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 收货地址领域服务实现，实现收货地址增删改查与默认地址设置业务逻辑
+ * @Description: AddressServiceImpl 服务实现，实现相关业务逻辑。
  * @Version: 1.0
- * @DateTime: 2026/08/03
+ * @DateTime: 2026/10/16
  **/
 @Slf4j
 @Service
@@ -27,29 +29,36 @@ public class AddressServiceImpl implements AddressService {
 
     private final AddressManager addressManager;
 
+    /**
+     * 构造 AddressServiceImpl 实例。
+     * @param addressManager addressManager 参数
+     */
     public AddressServiceImpl(AddressManager addressManager) {
         this.addressManager = addressManager;
     }
 
+
     /**
-     * 查询指定用户的全部收货地址列表，按是否默认和创建时间倒序排列。
-     * @param userId 用户ID
-     * @return 收货地址列表
+     * 查询列表数据。
+     * @param userId userId 参数
+     * @return 结果列表
      */
     @Override
-    public List<AddressPO> listByUserId(Long userId) {
+    public List<AddressVO> listByUserId(Long userId) {
         return addressManager.list(Wrappers.lambdaQuery(AddressPO.class)
             .eq(AddressPO::getUserId, userId)
             .orderByDesc(AddressPO::getIsDefault)
-            .orderByDesc(AddressPO::getCreateTime));
+            .orderByDesc(AddressPO::getCreateTime)).stream()
+            .map(AddressVO::from)
+            .toList();
     }
 
+
     /**
-     * 创建收货地址，每个用户最多 20 条；用户无地址时自动设为默认。
-     * @param userId 用户ID
-     * @param dto 创建入参
-     * @return 新地址ID
-     * @throws BizException 当地址数量达到上限时
+     * 创建业务数据。
+     * @param userId userId 参数
+     * @param dto dto 参数
+     * @return 业务数值
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -75,13 +84,13 @@ public class AddressServiceImpl implements AddressService {
         return po.getId();
     }
 
+
     /**
-     * 更新收货地址，校验地址归属。
-     * @param userId 用户ID
-     * @param id 地址ID
-     * @param dto 更新入参
-     * @return 更新是否成功
-     * @throws BizException 当地址不存在或不属于当前用户时
+     * 更新业务数据。
+     * @param userId userId 参数
+     * @param id id 参数
+     * @param dto dto 参数
+     * @return 是否处理成功
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -100,13 +109,12 @@ public class AddressServiceImpl implements AddressService {
         return ok;
     }
 
+
     /**
-     * 删除收货地址，校验地址归属。
-     * @param userId 用户ID
-     * @param id 地址ID
-     * @throws BizException 当地址不存在或不属于当前用户时
+     * 删除业务数据。
+     * @param userId userId 参数
+     * @param id id 参数
      */
-    @Override
     @Transactional(rollbackFor = Exception.class)
     public void delete(Long userId, Long id) {
         getOwnedAddress(userId, id);
@@ -114,13 +122,12 @@ public class AddressServiceImpl implements AddressService {
         log.info("收货地址已删除，userId={}，addressId={}", userId, id);
     }
 
+
     /**
-     * 设置默认地址，事务内清除旧默认并设置新默认。
-     * @param userId 用户ID
-     * @param id 地址ID
-     * @throws BizException 当地址不存在或不属于当前用户时
+     * 设置相关数据。
+     * @param userId userId 参数
+     * @param id id 参数
      */
-    @Override
     @Transactional(rollbackFor = Exception.class)
     public void setDefault(Long userId, Long id) {
         AddressPO existing = getOwnedAddress(userId, id);
@@ -137,6 +144,13 @@ public class AddressServiceImpl implements AddressService {
         log.info("默认收货地址已设置，userId={}，addressId={}", userId, id);
     }
 
+    /**
+     * 获取Owned地址。
+     * @param userId 用户 ID
+     * @param id ID
+     * @return 查询结果
+     * @throws BizException 业务校验失败时抛出
+     */
     private AddressPO getOwnedAddress(Long userId, Long id) {
         AddressPO po = addressManager.getById(id);
         if (po == null || !userId.equals(po.getUserId())) {

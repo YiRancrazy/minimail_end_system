@@ -5,11 +5,12 @@ import java.time.LocalDateTime;
 import lombok.Data;
 import com.yirancrazy.minimall.goods.entity.SkuPO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 商品SKU VO，用于Controller边界输出，隐藏内部字段
+ * @Description: SkuVO 视图对象。
  * @Version: 1.0
- * @DateTime: 2026/08/04
+ * @DateTime: 2026/10/16
  **/
 @Data
 public class SkuVO {
@@ -21,10 +22,11 @@ public class SkuVO {
     private Integer stock;
     private LocalDateTime createTime;
 
+
     /**
-     * 将 SkuPO 转换为 SkuVO。
-     * @param po SKU持久化对象
-     * @return SKU 视图对象
+     * 执行 from 方法。
+     * @param po po 参数
+     * @return 处理结果
      */
     public static SkuVO from(SkuPO po) {
         SkuVO vo = new SkuVO();

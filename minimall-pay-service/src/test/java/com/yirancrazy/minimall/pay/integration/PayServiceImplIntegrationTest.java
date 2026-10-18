@@ -39,11 +39,12 @@ import com.yirancrazy.minimall.pay.mapper.PayTransactionMapper;
 import com.yirancrazy.minimall.pay.service.PayService;
 import com.yirancrazy.minimall.pay.vo.PayStatisticsVO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: PayService 集成测试，使用 H2 内存库 + Mock 外部网关 / Feign。
+ * @Description: PayServiceImplIntegrationTest 单元测试。
  * @Version: 1.0
- * @DateTime: 2026/08/10
+ * @DateTime: 2026/10/16
  **/
 @SpringBootTest
 @ActiveProfiles("test")
@@ -72,17 +73,23 @@ class PayServiceImplIntegrationTest {
     @Autowired
     private PayManager payManager;
 
+
     /**
-     * 测试上下文：注册 MetaObjectHandler 解决 BasePO.isDeleted 自动填充。
-     * 默认 service.save 不会显式 setIsDeleted，需要在 INSERT 前填 0。
-     */
+     * @Author: yirancrazy@gmail.com
+     * @Description: TestMetaObjectConfig 配置类。
+     * @Version: 1.0
+     * @DateTime: 2026/10/16
+     **/
     @org.springframework.boot.test.context.TestConfiguration
     static class TestMetaObjectConfig {
 
+        /**
+         * 创建元对象处理器。
+         * @return 元对象处理器
+         */
         @org.springframework.context.annotation.Bean
         com.baomidou.mybatisplus.core.handlers.MetaObjectHandler metaObjectHandler() {
             return new com.baomidou.mybatisplus.core.handlers.MetaObjectHandler() {
-                @Override
                 public void insertFill(org.apache.ibatis.reflection.MetaObject metaObject) {
                     this.strictInsertFill(metaObject, "createTime", java.time.LocalDateTime.class,
                         java.time.LocalDateTime.now());
@@ -92,7 +99,10 @@ class PayServiceImplIntegrationTest {
                     this.strictInsertFill(metaObject, "version", Integer.class, 0);
                 }
 
-                @Override
+                /**
+                 * 更新业务数据。
+                 * @param metaObject metaObject 参数
+                 */
                 public void updateFill(org.apache.ibatis.reflection.MetaObject metaObject) {
                     this.strictUpdateFill(metaObject, "updateTime", java.time.LocalDateTime.class,
                         java.time.LocalDateTime.now());
@@ -139,46 +149,40 @@ class PayServiceImplIntegrationTest {
         });
     }
 
-    /**
-     * 端到端：createPayment 写入 PENDING 行后 getByOrderNo 可见。
-     */
+
     @Test
     void createPayment_persists_and_getByOrderNo_returns_it() {
         Long payId = payService.createPayment("ORD-INT-1", 100L, 200L, new BigDecimal("99.99"), null);
         assertNotNull(payId);
 
-        PayTransactionPO po = payService.getByOrderNo("ORD-INT-1", 100L);
-        assertNotNull(po);
-        assertEquals(1, po.getStatus());
-        assertEquals(0, new BigDecimal("99.99").compareTo(po.getAmount()));
+        com.yirancrazy.minimall.pay.vo.PayTransactionVO vo =
+            payService.getStatusVO("ORD-INT-1", 100L);
+        assertNotNull(vo);
+        assertEquals(1, vo.getStatus());
+        assertEquals(0, new BigDecimal("99.99").compareTo(vo.getAmount()));
     }
 
-    /**
-     * 端到端：getByOrderNo 查询他人支付流水时按不存在处理。
-     */
+
     @Test
     void getByOrderNo_rejects_other_user() {
         payService.createPayment("ORD-INT-OWNER", 100L, 200L, new BigDecimal("19.99"), null);
 
-        assertThrows(BizException.class, () -> payService.getByOrderNo("ORD-INT-OWNER", 999L));
+        assertThrows(BizException.class, () -> payService.getStatusVO("ORD-INT-OWNER", 999L));
     }
 
-    /**
-     * 端到端：createPayment 显式 channel=2（WECHAT）应抛 PAY_CHANNEL_UNSUPPORTED。
-     */
+
     @Test
     void createPayment_unsupported_channel_throws() {
         assertThrows(BizException.class,
             () -> payService.createPayment("ORD-INT-2", 100L, 200L, new BigDecimal("10.00"), 2));
     }
 
-    /**
-     * 端到端：getPaymentParams 返回的 VO 字段与持久化一致。
-     */
+
     @Test
     void getPaymentParams_returns_persisted_fields() {
         payService.createPayment("ORD-INT-3", 1L, 2L, new BigDecimal("50.00"), null);
-        PayTransactionPO po = payService.getByOrderNo("ORD-INT-3", 1L);
+        com.yirancrazy.minimall.pay.vo.PayTransactionVO po =
+            payService.getStatusVO("ORD-INT-3", 1L);
 
         com.yirancrazy.minimall.pay.vo.PaymentParamsVO params =
             payService.getPaymentParams(po.getPaymentNo(), 1L);
@@ -188,17 +192,13 @@ class PayServiceImplIntegrationTest {
         assertEquals("CNY", params.getCurrency());
     }
 
-    /**
-     * 端到端：getByOrderNo 不存在时抛 PAY_NOT_FOUND。
-     */
+
     @Test
     void getByOrderNo_missing_throws_biz() {
-        assertThrows(BizException.class, () -> payService.getByOrderNo("ORD-INT-NOT-EXIST", 100L));
+        assertThrows(BizException.class, () -> payService.getStatusVO("ORD-INT-NOT-EXIST", 100L));
     }
 
-    /**
-     * 端到端：支付单抢占抛异常时，已插入的 PENDING 退款和支付状态在同一事务内回滚。
-     */
+
     @Test
     void createRefund_rollsBackPendingWhenStatusClaimFails() {
         Long payId = payService.createPayment(
@@ -217,9 +217,7 @@ class PayServiceImplIntegrationTest {
         assertEquals(2, payManager.getById(payId).getStatus());
     }
 
-    /**
-     * 端到端：PENDING 退款经渠道查询补成 SUCCESS，重复扫描不会再次调用渠道。
-     */
+
     @Test
     void scanPendingRefunds_reconcilesExternalSuccessOnce() {
         Long payId = payService.createPayment(
@@ -250,9 +248,7 @@ class PayServiceImplIntegrationTest {
             anyString(), anyString(), any(BigDecimal.class), anyString());
     }
 
-    /**
-     * 资金统计按退款流水聚合，包含两笔未把支付单置为 REFUNDED 的部分退款。
-     */
+
     @Test
     void statistics_includesMultiplePartialRefunds() {
         Long payId = payService.createPayment(
@@ -266,7 +262,8 @@ class PayServiceImplIntegrationTest {
         payRefundMapper.insert(successfulRefund("REFUND-STATS-2", "REQ-STATS-2",
             payTx.getPaymentNo(), "20.00"));
 
-        PayStatisticsVO statistics = payTransactionMapper.statistics(77777L, null, null);
+        com.yirancrazy.minimall.pay.dto.PayStatisticsDTO statistics =
+            payTransactionMapper.statistics(77777L, null, null);
 
         assertEquals(0, new BigDecimal("100.00").compareTo(statistics.getTotalAmount()));
         assertEquals(0, new BigDecimal("50.00").compareTo(statistics.getRefundAmount()));

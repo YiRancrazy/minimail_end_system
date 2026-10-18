@@ -3,11 +3,12 @@ package com.yirancrazy.minimall.common.constant;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 系统角色枚举，与 JWT role claim 及网关 X-User-Role 头保持一致。
+ * @Description: RoleEnum 枚举，定义相关业务状态。
  * @Version: 1.0
- * @DateTime: 2026/08/03
+ * @DateTime: 2026/10/16
  **/
 @Getter
 @AllArgsConstructor
@@ -20,10 +21,11 @@ public enum RoleEnum {
     private final String code;
     private final String description;
 
+
     /**
-     * 根据 string code 解析为枚举，匹配失败时返回 null。
-     * @param code 角色字符串
-     * @return 匹配到的角色枚举，或 null
+     * 执行 fromCode 方法。
+     * @param code code 参数
+     * @return 处理结果
      */
     public static RoleEnum fromCode(String code) {
         if (code == null) {

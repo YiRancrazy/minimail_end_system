@@ -5,11 +5,12 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import com.yirancrazy.minimall.common.base.BasePO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 事务消息 outbox 持久化对象，记录已提交的半消息 transactionId。
+ * @Description: OutboxPO 持久化对象，对应数据库表。
  * @Version: 1.0
- * @DateTime: 2026/08/02
+ * @DateTime: 2026/10/16
  **/
 @Data
 @EqualsAndHashCode(callSuper = true)

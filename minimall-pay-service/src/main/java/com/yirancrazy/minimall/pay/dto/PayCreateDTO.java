@@ -11,11 +11,12 @@ import lombok.NoArgsConstructor;
 import com.yirancrazy.minimall.pay.constant.PayChannelEnum;
 
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 支付流水创建DTO，承载订单号、用户、商户与金额。
+ * @Description: PayCreateDTO 数据传输对象。
  * @Version: 1.0
- * @DateTime: 2026/08/02
+ * @DateTime: 2026/10/16
  **/
 @Data
 @NoArgsConstructor

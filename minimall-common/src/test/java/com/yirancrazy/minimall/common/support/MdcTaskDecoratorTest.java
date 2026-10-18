@@ -8,12 +8,13 @@ import org.slf4j.MDC;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: MdcTaskDecorator 的单元测试类，验证 MDC（含 traceId）在提交线程与执行线程间的透传与还原。
+ * @Description: MdcTaskDecoratorTest 单元测试。
  * @Version: 1.0
- * @DateTime: 2026/08/16
- */
+ * @DateTime: 2026/10/16
+ **/
 class MdcTaskDecoratorTest {
 
     private MdcTaskDecorator decorator;

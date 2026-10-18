@@ -7,11 +7,12 @@ import com.yirancrazy.minimall.merchant.manager.MerchantManager;
 import com.yirancrazy.minimall.merchant.mapper.MerchantMapper;
 
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 商家主体数据访问层实现，封装 t_merch_merchant 表 CRUD 操作。
+ * @Description: MerchantManagerImpl 管理器实现，封装数据访问逻辑。
  * @Version: 1.0
- * @DateTime: 2026/08/03
+ * @DateTime: 2026/10/16
  **/
 @Manager
 public class MerchantManagerImpl extends ServiceImpl<MerchantMapper, MerchantPO>

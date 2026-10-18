@@ -6,15 +6,21 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: Router配置类，配置Router相关 Bean
- * @Version: 1.4
- * @DateTime: 2026/09/25
- */
+ * @Description: RouterConfig 配置类。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 @Configuration
 public class RouterConfig {
 
+    /**
+     * 执行 routeLocator 方法。
+     * @param b b 参数
+     * @return 处理结果
+     */
     @Bean
     public RouteLocator routeLocator(RouteLocatorBuilder b) {
         return b.routes()

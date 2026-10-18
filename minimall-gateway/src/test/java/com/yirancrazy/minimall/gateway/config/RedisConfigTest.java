@@ -14,11 +14,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: Redis 配置测试，校验网关密码只从环境变量注入且编排文件已下发该变量。
+ * @Description: RedisConfigTest 单元测试。
  * @Version: 1.0
- * @DateTime: 2026/09/23
+ * @DateTime: 2026/10/16
  **/
 class RedisConfigTest {
 

@@ -3,11 +3,12 @@ package com.yirancrazy.minimall.auth.controller.v1;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: HealthControllerV1 的单元测试类。
+ * @Description: HealthControllerV1Test 单元测试。
  * @Version: 1.0
- * @DateTime: 2026/7/31
+ * @DateTime: 2026/10/16
  **/
 class HealthControllerV1Test {
 

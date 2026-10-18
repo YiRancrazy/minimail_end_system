@@ -4,11 +4,12 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: BizException 的单元测试类。
+ * @Description: BizExceptionTest 单元测试。
  * @Version: 1.0
- * @DateTime: 2026/7/31
+ * @DateTime: 2026/10/16
  **/
 class BizExceptionTest {
 

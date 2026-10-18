@@ -3,11 +3,12 @@ package com.yirancrazy.minimall.order.manager;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.yirancrazy.minimall.order.entity.OutboxPO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: Outbox 数据访问层接口，封装 t_order_outbox 表 CRUD
+ * @Description: OutboxManager 管理器接口，封装数据访问能力。
  * @Version: 1.0
- * @DateTime: 2026/08/02
+ * @DateTime: 2026/10/16
  **/
 public interface OutboxManager extends IService<OutboxPO> {
 }

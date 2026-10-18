@@ -5,11 +5,12 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: SPU 列表视图对象，用于用户端商品列表展示
- * @Version: 1.1
- * @DateTime: 2026/08/02
+ * @Description: SpuListVO 视图对象。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
  **/
 @Data
 @AllArgsConstructor
@@ -21,6 +22,6 @@ public class SpuListVO {
     private String subtitle;
     private String mainImageUrl;
     private Long merchantId;
-    /** 最低售价，单位元；无 SKU 时为 null */
+
     private BigDecimal minPrice;
 }

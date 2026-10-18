@@ -8,11 +8,12 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: RefundCreate 数据传输对象，跨服务退款创建入参
- * @Version: 1.1
- * @DateTime: 2026/08/02
+ * @Description: RefundCreateDTO 数据传输对象。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
  **/
 @Data
 @NoArgsConstructor
@@ -30,22 +31,24 @@ public class RefundCreateDTO {
     @NotBlank(message = "refundRequestNo cannot be blank")
     private String refundRequestNo;
 
+
     /**
-     * 兼容存量调用，保留无幂等键构造器。
-     * @param payId 支付流水ID
-     * @param amount 退款金额
-     * @param reason 退款原因
+     * 构造 RefundCreateDTO 实例。
+     * @param payId payId 参数
+     * @param amount amount 参数
+     * @param reason reason 参数
      */
     public RefundCreateDTO(Long payId, BigDecimal amount, String reason) {
         this(payId, amount, reason, null);
     }
 
+
     /**
-     * 创建退款请求。
-     * @param payId 支付流水ID
-     * @param amount 退款金额
-     * @param reason 退款原因
-     * @param refundRequestNo 退款请求幂等键
+     * 构造 RefundCreateDTO 实例。
+     * @param payId payId 参数
+     * @param amount amount 参数
+     * @param reason reason 参数
+     * @param refundRequestNo refundRequestNo 参数
      */
     public RefundCreateDTO(Long payId, BigDecimal amount, String reason, String refundRequestNo) {
         this.payId = payId;

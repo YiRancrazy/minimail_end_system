@@ -6,16 +6,17 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-/**
- * @Author: yirancrazy@gmail.com
- * @Description: PayCreate数据传输对象，用于PayCreate相关数据传输
- * @Version: 1.0
- * @DateTime: 2026/07/31
- */
+
 @Data
 
 @AllArgsConstructor
 
+/**
+ * @Author: yirancrazy@gmail.com
+ * @Description: PayCreateDTO 数据传输对象。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 @NoArgsConstructor
 public class PayCreateDTO {
     private String orderNo;

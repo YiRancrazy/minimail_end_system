@@ -6,11 +6,12 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 数据传输对象，用于接收请求参数。
+ * @Description: RefreshTokenDTO 数据传输对象。
  * @Version: 1.0
- * @DateTime: 2026/7/31
+ * @DateTime: 2026/10/16
  **/
 @Data
 @NoArgsConstructor

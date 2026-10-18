@@ -8,15 +8,20 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: Jackson配置类，Long/BigDecimal 序列化为字符串，避免雪花ID超出 JS Number 安全整数导致精度丢失
- * @Version: 1.1
- * @DateTime: 2026/08/13
- */
+ * @Description: JacksonConfig 配置类。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 @Configuration
 public class JacksonConfig {
 
+    /**
+     * 执行 jacksonCustomizer 方法。
+     * @return 处理结果
+     */
     @Bean
     public Jackson2ObjectMapperBuilderCustomizer jacksonCustomizer() {
         return builder -> builder

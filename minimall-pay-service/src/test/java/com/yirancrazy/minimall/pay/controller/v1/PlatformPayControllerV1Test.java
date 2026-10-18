@@ -19,11 +19,12 @@ import com.yirancrazy.minimall.pay.dto.PayPageDTO;
 import com.yirancrazy.minimall.pay.service.PayService;
 import com.yirancrazy.minimall.pay.vo.PayStatisticsVO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: PlatformPayControllerV1 MockMvc 单元测试，验证平台端交易流水分页、资金统计与冻结 HTTP 路由。
+ * @Description: PlatformPayControllerV1Test 单元测试。
  * @Version: 1.0
- * @DateTime: 2026/08/05
+ * @DateTime: 2026/10/16
  **/
 class PlatformPayControllerV1Test {
 
@@ -36,21 +37,17 @@ class PlatformPayControllerV1Test {
         mockMvc = MockMvcBuilders.standaloneSetup(new PlatformPayControllerV1(service)).build();
     }
 
-    /**
-     * 验证 GET /api/v1/platform/pay/transactions 返回游标分页结果。
-     */
+
     @Test
     void transactions_returns_cursor_result() throws Exception {
-        when(service.platformPage(any(PayPageDTO.class)))
+        when(service.platformPageVO(any(PayPageDTO.class)))
             .thenReturn(new CursorPageVO<>(Collections.emptyList(), null, false, 20));
         mockMvc.perform(get("/api/v1/platform/pay/transactions"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.code").value("00000"));
     }
 
-    /**
-     * 验证 GET /api/v1/platform/pay/statistics 返回全平台资金统计 VO。
-     */
+
     @Test
     void statistics_returns_vo() throws Exception {
         PayStatisticsVO vo = new PayStatisticsVO(BigDecimal.TEN, BigDecimal.ZERO, 5L);
@@ -60,9 +57,7 @@ class PlatformPayControllerV1Test {
             .andExpect(jsonPath("$.data.transactionCount").value(5));
     }
 
-    /**
-     * 验证 POST /api/v1/platform/pay/{paymentNo}/freeze 调用 service 冻结支付单。
-     */
+
     @Test
     void freeze_invokes_service() throws Exception {
         mockMvc.perform(post("/api/v1/platform/pay/P001/freeze"))

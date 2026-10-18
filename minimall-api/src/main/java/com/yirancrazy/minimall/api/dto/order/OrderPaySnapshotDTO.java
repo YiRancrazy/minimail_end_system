@@ -6,12 +6,13 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 订单支付快照 DTO，承载支付服务创建支付单前的归属、金额和状态校验数据。
+ * @Description: OrderPaySnapshotDTO 数据传输对象。
  * @Version: 1.0
- * @DateTime: 2026/09/23
- */
+ * @DateTime: 2026/10/16
+ **/
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

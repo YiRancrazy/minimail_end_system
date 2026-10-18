@@ -17,16 +17,16 @@ import com.yirancrazy.minimall.common.constant.UploadCodeEnum;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.util.MinioUtil;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 分片上传服务，分片落本地临时目录，全部到齐后合并为临时文件并上传 MinIO。
- *  由 MinioConfig 注册为 Bean，仅在 minimall.minio.endpoint 配置存在时可用。
+ * @Description: ChunkUploadService 服务接口，定义相关业务能力。
  * @Version: 1.0
- * @DateTime: 2026/08/12
+ * @DateTime: 2026/10/16
  **/
 public class ChunkUploadService {
 
-    /** 分片任务根目录：{tmp}/mm-chunk/{uploadId} */
+
     private static final String DEFAULT_ROOT = System.getProperty("java.io.tmpdir") + "/mm-chunk";
 
     private static final String OWNER_FILE = ".owner";
@@ -40,16 +40,21 @@ public class ChunkUploadService {
     private final UploadLimits limits;
     private final Clock clock;
 
+    /**
+     * 构造 ChunkUploadService 实例。
+     * @param minioUtil minioUtil 参数
+     */
     public ChunkUploadService(MinioUtil minioUtil) {
         this(minioUtil, Paths.get(DEFAULT_ROOT), DEFAULT_LIMITS, Clock.systemUTC());
     }
 
+
     /**
-     * 创建支持配额、用户隔离和过期清理的分片上传服务。
-     * @param minioUtil 对象存储工具
-     * @param root 分片临时根目录
-     * @param limits 上传限制
-     * @param clock 时钟源
+     * 构造 ChunkUploadService 实例。
+     * @param minioUtil minioUtil 参数
+     * @param root root 参数
+     * @param limits limits 参数
+     * @param clock clock 参数
      */
     public ChunkUploadService(MinioUtil minioUtil, Path root, UploadLimits limits, Clock clock) {
         this.minioUtil = minioUtil;
@@ -58,16 +63,17 @@ public class ChunkUploadService {
         this.clock = clock;
     }
 
+
     /**
-     * 保存单个分片；若已收满全部，则合并上传 MinIO 并清理临时文件。
-     * @param userId 上传用户ID
-     * @param uploadId 上传任务 ID
-     * @param chunkIndex 分片序号（0 起）
-     * @param totalChunks 总分片数
-     * @param contentType 内容类型
-     * @param fileName 原始文件名，用于生成 objectKey 后缀（可空）
-     * @param in 分片输入流
-     * @return 上传结果；done=true 时含 objectKey
+     * 保存业务数据。
+     * @param userId userId 参数
+     * @param uploadId uploadId 参数
+     * @param chunkIndex chunkIndex 参数
+     * @param totalChunks totalChunks 参数
+     * @param contentType contentType 参数
+     * @param fileName fileName 参数
+     * @param in in 参数
+     * @return 处理结果
      */
     public ChunkResult saveChunk(Long userId, String uploadId, int chunkIndex, int totalChunks,
                                  String contentType, String fileName, InputStream in) {
@@ -114,12 +120,54 @@ public class ChunkUploadService {
         return new ChunkResult(false, received.size(), null);
     }
 
+
     /**
-     * 查询已接收分片序号集合。
-     * @param userId 上传用户ID
-     * @param uploadId 上传任务 ID
-     * @param totalChunks 总分片数
-     * @return 已接收分片序号（升序）
+     * 保存业务数据。
+     * @param userId userId 参数
+     * @param uploadId uploadId 参数
+     * @param chunkIndex chunkIndex 参数
+     * @param totalChunks totalChunks 参数
+     * @param contentType contentType 参数
+     * @param fileName fileName 参数
+     * @param streamSupplier streamSupplier 参数
+     * @return 处理结果
+     */
+    public ChunkResult saveChunk(Long userId, String uploadId, int chunkIndex, int totalChunks,
+                                 String contentType, String fileName, ChunkInputStreamSupplier streamSupplier) {
+        try (InputStream in = streamSupplier.open()) {
+            return saveChunk(userId, uploadId, chunkIndex, totalChunks, contentType, fileName, in);
+        }
+        catch (IOException e) {
+            throw new BizException(UploadCodeEnum.CHUNK_UPLOAD_FAIL);
+        }
+    }
+
+
+    /**
+     * @Author: yirancrazy@gmail.com
+     * @Description: ChunkInputStreamSupplier 接口，定义相关能力。
+     * @Version: 1.0
+     * @DateTime: 2026/10/16
+     **/
+    @FunctionalInterface
+    public interface ChunkInputStreamSupplier {
+
+
+        /**
+         * 执行 open 方法。
+         * @return 处理结果
+         * @throws IOException 处理失败时抛出
+         */
+        InputStream open() throws IOException;
+    }
+
+
+    /**
+     * 执行 receivedChunks 方法。
+     * @param userId userId 参数
+     * @param uploadId uploadId 参数
+     * @param totalChunks totalChunks 参数
+     * @return 结果列表
      */
     public List<Integer> receivedChunks(Long userId, String uploadId, int totalChunks) {
         Path dir = taskDir(uploadId);
@@ -127,19 +175,55 @@ public class ChunkUploadService {
             return List.of();
         }
         try {
+            /**
+             * 执行 ensureOwner 方法。
+             * @param userId userId 参数
+             * @param dir dir 参数
+             */
             ensureOwner(userId, dir);
         }
         catch (IOException e) {
             throw new BizException(UploadCodeEnum.CHUNK_UPLOAD_FAIL);
         }
+        /**
+         * 执行 try 方法。
+         */
         try (var stream = Files.list(dir)) {
             return stream
+                /**
+                 * 执行 filter 方法。
+                 * @return 处理结果
+                 */
                 .filter(p -> p.getFileName().toString().startsWith("chunk-"))
+                /**
+                 * 执行 map 方法。
+                 * @return 处理结果
+                 */
                 .map(p -> p.getFileName().toString().substring("chunk-".length()))
+                /**
+                 * 执行 filter 方法。
+                 * @return 处理结果
+                 */
                 .filter(s -> s.matches("\\d+"))
+                /**
+                 * 执行 map 方法。
+                 * @return 处理结果
+                 */
                 .map(Integer::parseInt)
+                /**
+                 * 执行 filter 方法。
+                 * @return 处理结果
+                 */
                 .filter(i -> i >= 0 && i < totalChunks)
+                /**
+                 * 执行 sorted 方法。
+                 * @return 处理结果
+                 */
                 .sorted()
+                /**
+                 * 执行 collect 方法。
+                 * @return 处理结果
+                 */
                 .collect(Collectors.toList());
         }
         catch (IOException e) {
@@ -147,17 +231,19 @@ public class ChunkUploadService {
         }
     }
 
+
     /**
-     * 删除整个上传任务临时目录（取消/超时清理）。
-     * @param uploadId 上传任务 ID
+     * 删除业务数据。
+     * @param uploadId uploadId 参数
      */
     public void deleteTask(String uploadId) {
         deleteDir(taskDir(uploadId));
     }
 
+
     /**
-     * 清理超过 TTL 的未完成上传任务。
-     * @return 清理任务数
+     * 执行 cleanupExpiredTasks 方法。
+     * @return 业务数值
      */
     public int cleanupExpiredTasks() {
         if (!Files.isDirectory(root)) {
@@ -165,9 +251,21 @@ public class ChunkUploadService {
         }
         long expireBefore = clock.instant().minus(limits.taskTtl()).toEpochMilli();
         int cleaned = 0;
+        /**
+         * 执行 try 方法。
+         */
         try (var dirs = Files.list(root)) {
             List<Path> expired = dirs
+                /**
+                 * 执行 filter 方法。
+                 * @param isDirectory isDirectory 参数
+                 * @return 处理结果
+                 */
                 .filter(Files::isDirectory)
+                /**
+                 * 执行 filter 方法。
+                 * @return 处理结果
+                 */
                 .filter(dir -> {
                     try {
                         return Files.getLastModifiedTime(dir).toMillis() < expireBefore;
@@ -176,8 +274,16 @@ public class ChunkUploadService {
                         return false;
                     }
                 })
+                /**
+                 * 执行 collect 方法。
+                 * @return 处理结果
+                 */
                 .collect(Collectors.toList());
             for (Path dir : expired) {
+                /**
+                 * 删除业务数据。
+                 * @param dir dir 参数
+                 */
                 deleteDir(dir);
                 cleaned++;
             }
@@ -188,6 +294,13 @@ public class ChunkUploadService {
         }
     }
 
+    /**
+     * 校验Params。
+     * @param uploadId 上传 ID
+     * @param chunkIndex chunkIndex
+     * @param totalChunks totalChunks
+     * @throws BizException 业务校验失败时抛出
+     */
     private void validateParams(String uploadId, int chunkIndex, int totalChunks) {
         // uploadId 限定为字母数字与短横线，杜绝路径分隔符/相对路径穿越字符，同时要求 8~64 位
         if (totalChunks < 1 || chunkIndex < 0 || chunkIndex >= totalChunks
@@ -199,6 +312,12 @@ public class ChunkUploadService {
         }
     }
 
+    /**
+     * 处理任务Dir。
+     * @param uploadId 上传 ID
+     * @return 处理结果
+     * @throws BizException 业务校验失败时抛出
+     */
     private Path taskDir(String uploadId) {
         Path dir = root.resolve(uploadId).normalize();
         // 双保险：即使字符集校验被绕过，normalize 后越出 ROOT 的路径也直接拒绝
@@ -208,9 +327,23 @@ public class ChunkUploadService {
         return dir;
     }
 
+    /**
+     * 处理ensureOwner。
+     * @param userId 用户 ID
+     * @param dir dir
+     * @throws IOException 处理失败时抛出
+     * @throws BizException 业务校验失败时抛出
+     */
     private void ensureOwner(Long userId, Path dir) throws IOException {
         Path ownerFile = dir.resolve(OWNER_FILE);
         try {
+            /**
+             * 执行 writeString 方法。
+             * @param ownerFile ownerFile 参数
+             * @param CREATE_NEW CREATE_NEW 参数
+             * @param WRITE WRITE 参数
+             * @return 处理结果
+             */
             Files.writeString(ownerFile, String.valueOf(userId),
                 StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
         }
@@ -222,10 +355,27 @@ public class ChunkUploadService {
         }
     }
 
+    /**
+     * 处理storedBytes。
+     * @param dir dir
+     * @return 处理结果
+     * @throws IOException 处理失败时抛出
+     */
     private long storedBytes(Path dir) throws IOException {
+        /**
+         * 执行 try 方法。
+         */
         try (var files = Files.list(dir)) {
             return files
+                /**
+                 * 执行 filter 方法。
+                 * @return 处理结果
+                 */
                 .filter(path -> path.getFileName().toString().startsWith("chunk-"))
+                /**
+                 * 执行 mapToLong 方法。
+                 * @return 处理结果
+                 */
                 .mapToLong(path -> {
                     try {
                         return Files.size(path);
@@ -234,19 +384,36 @@ public class ChunkUploadService {
                         return 0L;
                     }
                 })
+                /**
+                 * 执行 sum 方法。
+                 * @return 处理结果
+                 */
                 .sum();
         }
     }
 
+    /**
+     * 处理用户StoredBytes。
+     * @param userId 用户 ID
+     * @return 处理结果
+     * @throws IOException 处理失败时抛出
+     */
     private long userStoredBytes(Long userId) throws IOException {
         if (!Files.isDirectory(root)) {
             return 0L;
         }
         long total = 0L;
+        /**
+         * 执行 try 方法。
+         */
         try (var dirs = Files.list(root)) {
             for (Path dir : dirs.filter(Files::isDirectory).collect(Collectors.toList())) {
                 Path ownerFile = dir.resolve(OWNER_FILE);
                 if (!Files.isRegularFile(ownerFile)
+                    /**
+                     * 执行 valueOf 方法。
+                     * @return 处理结果
+                     */
                     || !String.valueOf(userId).equals(Files.readString(ownerFile).trim())) {
                     continue;
                 }
@@ -256,26 +423,39 @@ public class ChunkUploadService {
         return total;
     }
 
+
     /**
-     * 按序号顺序合并分片为单个临时文件，上传 MinIO 后清理分片目录与合并文件。
-     * @param uploadId 上传任务 ID
-     * @param totalChunks 总分片数
-     * @param contentType 内容类型
-     * @param fileName 原始文件名，用于生成 objectKey 后缀（可空）
-     * @return MinIO 对象 key
+     * 填充或标记And上传。
+     * @param uploadId 上传 ID
+     * @param totalChunks totalChunks
+     * @param contentType contentType
+     * @param fileName 文件Name
+     * @return 处理结果
+     * @throws BizException 业务校验失败时抛出
      */
     private String mergeAndUpload(String uploadId, int totalChunks, String contentType, String fileName) {
         Path dir = taskDir(uploadId);
         Path merged = dir.resolve("merged.bin");
         try {
             // 按序号拼接分片到合并文件，避免一次性持有多个流
+            /**
+             * 执行 try 方法。
+             */
             try (OutputStream out = Files.newOutputStream(
                     merged,
                     StandardOpenOption.CREATE,
                     StandardOpenOption.TRUNCATE_EXISTING)) {
                 for (int i = 0; i < totalChunks; i++) {
                     Path chunk = dir.resolve("chunk-" + i);
+                    /**
+                     * 执行 try 方法。
+                     */
                     try (InputStream in = Files.newInputStream(chunk)) {
+                        /**
+                         * 执行 transferTo 方法。
+                         * @param out out 参数
+                         * @return 处理结果
+                         */
                         in.transferTo(out);
                     }
                 }
@@ -286,14 +466,19 @@ public class ChunkUploadService {
             throw new BizException(UploadCodeEnum.CHUNK_MERGE_FAIL);
         }
         finally {
+            /**
+             * 删除业务数据。
+             * @param dir dir 参数
+             */
             deleteDir(dir);
         }
     }
 
+
     /**
-     * 从原始文件名提取合法后缀（如 "avatar.png" -> ".png"），无后缀或后缀非法时返回空串。
-     * @param fileName 原始文件名
-     * @return 小写后缀（含点），如 ".png"；无合法后缀返回 ""
+     * 处理extensionOf。
+     * @param fileName 文件Name
+     * @return 处理结果
      */
     private static String extensionOf(String fileName) {
         if (fileName == null) {
@@ -307,13 +492,29 @@ public class ChunkUploadService {
         return ext.matches("[a-z0-9]{1,10}") ? "." + ext : "";
     }
 
+    /**
+     * 删除Dir。
+     * @param dir dir
+     */
     private static void deleteDir(Path dir) {
         if (dir == null || !Files.isDirectory(dir)) {
             return;
         }
+        /**
+         * 执行 try 方法。
+         */
         try (var stream = Files.walk(dir)) {
+            /**
+             * 执行 sorted 方法。
+             * @return 处理结果
+             */
             stream.sorted(Comparator.reverseOrder()).forEach(p -> {
                 try {
+                    /**
+                     * 删除业务数据。
+                     * @param p p 参数
+                     * @return 处理结果
+                     */
                     Files.deleteIfExists(p);
                 }
                 catch (IOException ignored) {
@@ -326,11 +527,23 @@ public class ChunkUploadService {
         }
     }
 
-    /** 分片保存结果 */
+
+    /**
+     * @Author: yirancrazy@gmail.com
+     * @Description: ChunkResult 记录对象，承载不可变数据。
+     * @Version: 1.0
+     * @DateTime: 2026/10/16
+     **/
     public record ChunkResult(boolean done, int received, String objectKey) {
     }
 
-    /** 上传资源限制 */
+
+    /**
+     * @Author: yirancrazy@gmail.com
+     * @Description: UploadLimits 记录对象，承载不可变数据。
+     * @Version: 1.0
+     * @DateTime: 2026/10/16
+     **/
     public record UploadLimits(int maxTotalChunks, long maxChunkBytes, long maxTaskBytes,
                                long maxUserBytes, Duration taskTtl) {
     }

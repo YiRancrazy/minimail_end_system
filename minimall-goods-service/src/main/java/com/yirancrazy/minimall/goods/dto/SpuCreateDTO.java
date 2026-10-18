@@ -9,16 +9,17 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: Spu 创建入参，商家发布新商品 SPU 时提交，可携带 SKU 清单一并落库
- * @Version: 1.1
- * @DateTime: 2026/08/02
- */
+ * @Description: SpuCreateDTO 数据传输对象。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 @Data
 public class SpuCreateDTO {
 
-    /** 归属店铺ID，服务端校验店铺存在、归属当前商家且状态为营业中 */
+
     @NotNull(message = "shopId cannot be null")
     private Long shopId;
 
@@ -37,7 +38,7 @@ public class SpuCreateDTO {
     @Size(max = 255, message = "mainImageUrl length must be <= 255")
     private String mainImageUrl;
 
-    /** 创建时携带的 SKU 清单，可为空；spuId 由服务端回填 */
+
     @Valid
     private List<SkuItemDTO> skus = new ArrayList<>();
 }

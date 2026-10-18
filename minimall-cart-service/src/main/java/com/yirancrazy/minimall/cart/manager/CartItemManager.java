@@ -3,19 +3,32 @@ package com.yirancrazy.minimall.cart.manager;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.yirancrazy.minimall.cart.entity.CartItemPO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: CartItem数据访问层接口，定义CartItem表操作契约
+ * @Description: CartItemManager 管理器接口，封装数据访问能力。
  * @Version: 1.0
- * @DateTime: 2026/07/31
- */
+ * @DateTime: 2026/10/16
+ **/
 public interface CartItemManager extends IService<CartItemPO> {
 
+
     /**
-     * 根据用户ID和SKU ID查询购物车条目。
-     * @param userId 用户ID，来自网关X-User-Id可信头
-     * @param skuId SKU 主键 ID
-     * @return 购物车条目；不存在返回 null
+     * 获取相关数据。
+     * @param userId userId 参数
+     * @param skuId skuId 参数
+     * @return 处理结果
      */
     CartItemPO getByUserIdAndSkuId(Long userId, Long skuId);
+
+    /**
+     * 执行 upsertQuantity 方法。
+     * @param id id 参数
+     * @param userId userId 参数
+     * @param skuId skuId 参数
+     * @param quantity quantity 参数
+     * @param selected selected 参数
+     * @return 业务数值
+     */
+    int upsertQuantity(Long id, Long userId, Long skuId, Integer quantity, Integer selected);
 }

@@ -19,26 +19,29 @@ import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.common.filter.TraceIdFilter;
 import com.yirancrazy.minimall.common.result.Result;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 事件总线组件，提供事件发布订阅能力
- * @Version: 1.1
- * @DateTime: 2026/08/02
- */
+ * @Description: RocketMqEventBus 类型，承载相关业务能力。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 @Slf4j
 public class RocketMqEventBus implements EventBus {
 
     private final String namesrvAddr;
     private final String topic;
     private TransactionMQProducer producer;
-    /**
-     * 可选的持久化存储，用于提交确认。存在时，broker 回调从其中读取提交状态；
-     * 否则回退到生产者重启后会丢失的内存 checker map。
-     */
+
     private OutboxStore outboxStore;
     private final Map<String, Function<Object, Boolean>> checkers = new ConcurrentHashMap<>();
     private final Map<String, Class<?>> tagTypes = new ConcurrentHashMap<>();
 
+    /**
+     * 构造 RocketMqEventBus 实例。
+     * @param namesrvAddr namesrvAddr 参数
+     * @param topic topic 参数
+     */
     public RocketMqEventBus(
         @Value("${minimall.eventbus.rocketmq.namesrv-addr:127.0.0.1:9876}") String namesrvAddr,
         @Value("${minimall.eventbus.rocketmq.topic:minimall-events}") String topic) {
@@ -46,19 +49,29 @@ public class RocketMqEventBus implements EventBus {
         this.topic = topic;
     }
 
+
     /**
-     * 注入用于崩溃安全回调的持久化 {@link OutboxStore}。
-     * @param outboxStore 存储实例；为 null 时回退到内存 checker
+     * 设置相关数据。
+     * @param outboxStore outboxStore 参数
      */
     public void setOutboxStore(OutboxStore outboxStore) {
         this.outboxStore = outboxStore;
     }
 
+    /**
+     * 启动start。
+     */
     @PostConstruct
     void start() {
         producer = new TransactionMQProducer("minimall-producer");
         producer.setNamesrvAddr(namesrvAddr);
         producer.setTransactionListener(new TransactionListener() {
+            /**
+             * 执行 executeLocalTransaction 方法。
+             * @param msg msg 参数
+             * @param arg arg 参数
+             * @return 处理结果
+             */
             @Override
             public LocalTransactionState executeLocalTransaction(Message msg, Object arg) {
                 @SuppressWarnings("unchecked")
@@ -73,6 +86,11 @@ public class RocketMqEventBus implements EventBus {
                 }
             }
 
+            /**
+             * 校验业务条件。
+             * @param msg msg 参数
+             * @return 处理结果
+             */
             @Override
             public LocalTransactionState checkLocalTransaction(MessageExt msg) {
                 if (outboxStore != null && msg.getTransactionId() != null) {
@@ -113,6 +131,9 @@ public class RocketMqEventBus implements EventBus {
         }
     }
 
+    /**
+     * 停止stop。
+     */
     @PreDestroy
     void stop() {
         if (producer != null) {
@@ -120,13 +141,11 @@ public class RocketMqEventBus implements EventBus {
         }
     }
 
+
     /**
-     * 使用事件简单类名作为路由 Tag、JSON 编码作为消息体，将给定事件投递到配置的
-     * RocketMQ topic。生产者不可用只记录 WARN 日志并吞掉异常，确保发布点不会被阻塞。
-     *
-     * @param event 要发送的领域事件；通过 {@link MqEventJsonCodec} 编码
+     * 执行 publish 方法。
+     * @param event event 参数
      */
-    @Override
     public void publish(Object event) {
         if (producer == null) {
             throw new IllegalStateException("RocketMQ 生产者未启动");
@@ -144,25 +163,23 @@ public class RocketMqEventBus implements EventBus {
         }
     }
 
+
     /**
-     * 以事务半消息发布事件。本地事务在 broker 回调中运行；
-     * 成功时提交消息，异常时回滚消息。
-     * @param event 要发布的领域事件
-     * @param localTx 半消息暂存后要执行的本地事务
+     * 执行 publishInTx 方法。
+     * @param event event 参数
+     * @param localTx localTx 参数
      */
-    @Override
     public void publishInTx(Object event, Consumer<String> localTx) {
         publishInTx(event, localTx, e -> Boolean.TRUE);
     }
 
+
     /**
-     * 使用 broker 回调 checker 以事务半消息发布事件。checker 按事件 Tag 注册，
-     * 使 broker 能在生产者未回复时确认提交或回滚。
-     * @param event 要发布的领域事件
-     * @param localTx 半消息暂存后要执行的本地事务
-     * @param checker 提交返回 true，回滚返回 false
+     * 执行 publishInTx 方法。
+     * @param event event 参数
+     * @param localTx localTx 参数
+     * @param checker checker 参数
      */
-    @Override
     public void publishInTx(Object event, Consumer<String> localTx, Function<Object, Boolean> checker) {
         if (producer == null) {
             throw new IllegalStateException("RocketMQ 生产者未启动");
@@ -189,10 +206,11 @@ public class RocketMqEventBus implements EventBus {
         }
     }
 
+
     /**
-     * 将 outbox 三态映射为 RocketMQ 本地事务状态。
-     * @param status outbox 本地事务状态
-     * @return RocketMQ 本地事务状态
+     * 转换或解析本地事务状态。
+     * @param status 状态
+     * @return 处理结果
      */
     static LocalTransactionState toLocalTransactionState(OutboxStore.CommitStatus status) {
         if (status == OutboxStore.CommitStatus.COMMITTED) {
@@ -204,9 +222,10 @@ public class RocketMqEventBus implements EventBus {
         return LocalTransactionState.UNKNOW;
     }
 
+
     /**
-     * 将当前链路 traceId 写入消息属性，供消费端沿用同一链路 ID；MDC 无值时不设置。
-     * @param msg 待发送的消息
+     * 附加链路追踪ID。
+     * @param msg 提示消息
      */
     static void attachTraceId(Message msg) {
         String traceId = MDC.get(Result.TRACE_ID_KEY);

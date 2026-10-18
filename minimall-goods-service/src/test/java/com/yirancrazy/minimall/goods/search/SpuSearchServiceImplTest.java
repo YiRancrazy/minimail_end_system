@@ -18,9 +18,13 @@ import com.yirancrazy.minimall.goods.dto.SpuSearchDTO;
 import com.yirancrazy.minimall.goods.search.impl.SpuSearchServiceImpl;
 import com.yirancrazy.minimall.goods.vo.SpuSearchVO;
 
+
 /**
- * SpuSearchServiceImpl 单元测试，覆盖 ES 搜索与同步的正常、边界路径。
- */
+ * @Author: yirancrazy@gmail.com
+ * @Description: SpuSearchServiceImplTest 单元测试。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 public class SpuSearchServiceImplTest {
 
     private ElasticsearchOperations elasticsearchOperations;
@@ -43,10 +47,10 @@ public class SpuSearchServiceImplTest {
         service = new SpuSearchServiceImpl(elasticsearchOperations, minioUtil);
     }
 
+
     /**
-     * 验证 search 有关键词时委托给 elasticsearchOperations.search 并返回结果。
+     * 执行 search_with_keyword_returns_results 方法。
      */
-    @Test
     public void search_with_keyword_returns_results() {
         SpuDocument doc = new SpuDocument();
         doc.setSpuId(1L);
@@ -75,10 +79,10 @@ public class SpuSearchServiceImplTest {
         verify(elasticsearchOperations).search(any(Query.class), eq(SpuDocument.class));
     }
 
+
     /**
-     * 验证 search 无关键词时仍能返回结果（过滤查询）。
+     * 执行 search_without_keyword_returns_results 方法。
      */
-    @Test
     public void search_without_keyword_returns_results() {
         SpuDocument doc = new SpuDocument();
         doc.setSpuId(2L);
@@ -104,10 +108,10 @@ public class SpuSearchServiceImplTest {
         verify(elasticsearchOperations).search(any(Query.class), eq(SpuDocument.class));
     }
 
+
     /**
-     * 验证 search 无结果时返回空列表。
+     * 执行 search_returns_empty_when_no_results 方法。
      */
-    @Test
     @SuppressWarnings("unchecked")
     public void search_returns_empty_when_no_results() {
         SearchHits<SpuDocument> hits = mock(SearchHits.class);
@@ -125,10 +129,10 @@ public class SpuSearchServiceImplTest {
         assertEquals(0, result.size());
     }
 
+
     /**
-     * 验证 search 结果主图由裸 objectKey 转成可访问的预签名 URL。
+     * 执行 search_resolves_main_image_to_presigned_url 方法。
      */
-    @Test
     public void search_resolves_main_image_to_presigned_url() {
         SpuDocument doc = new SpuDocument();
         doc.setSpuId(3L);
@@ -149,10 +153,10 @@ public class SpuSearchServiceImplTest {
         assertEquals("http://minio/mall-files/img-abc.png?token", result.get(0).getMainImage());
     }
 
+
     /**
-     * 验证 sync 委托给 elasticsearchOperations.save。
+     * 执行 sync_saves_document 方法。
      */
-    @Test
     public void sync_saves_document() {
         SpuDocument doc = new SpuDocument();
         doc.setSpuId(1L);
@@ -163,10 +167,10 @@ public class SpuSearchServiceImplTest {
         verify(elasticsearchOperations).save(doc);
     }
 
+
     /**
-     * 验证 deleteById 委托给 elasticsearchOperations.delete，id 转为字符串后删除指定类型文档。
+     * 删除业务数据。
      */
-    @Test
     public void deleteById_deletes_document() {
         service.deleteById(1L);
 

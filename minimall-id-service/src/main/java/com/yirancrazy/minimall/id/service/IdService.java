@@ -1,16 +1,18 @@
 package com.yirancrazy.minimall.id.service;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: ID生成领域服务接口，定义Id相关业务契约
+ * @Description: IdService 服务接口，定义相关业务能力。
  * @Version: 1.0
- * @DateTime: 2026/07/31
- */
+ * @DateTime: 2026/10/16
+ **/
 public interface IdService {
+
     /**
-     * 获取下一个全局唯一ID。
-     * @param bizTag 业务标签
-     * @return 全局唯一ID
+     * 执行 nextId 方法。
+     * @param bizTag bizTag 参数
+     * @return 业务数值
      */
     long nextId(String bizTag);
 }

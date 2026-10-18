@@ -3,51 +3,57 @@ package com.yirancrazy.minimall.user.service;
 import java.util.List;
 import com.yirancrazy.minimall.user.dto.AddressCreateDTO;
 import com.yirancrazy.minimall.user.dto.AddressUpdateDTO;
-import com.yirancrazy.minimall.user.entity.AddressPO;
+import com.yirancrazy.minimall.user.vo.AddressVO;
+
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 收货地址领域服务接口，定义收货地址增删改查与默认地址设置业务契约
+ * @Description: AddressService 服务接口，定义相关业务能力。
  * @Version: 1.0
- * @DateTime: 2026/08/03
+ * @DateTime: 2026/10/16
  **/
 public interface AddressService {
 
-    /**
-     * 查询指定用户的全部收货地址列表。
-     * @param userId 用户ID
-     * @return 收货地址列表
-     */
-    List<AddressPO> listByUserId(Long userId);
 
     /**
-     * 创建收货地址，每个用户最多 20 条；用户无地址时自动设为默认。
-     * @param userId 用户ID
-     * @param dto 创建入参
-     * @return 新地址ID
+     * 查询列表数据。
+     * @param userId userId 参数
+     * @return 结果列表
+     */
+    List<AddressVO> listByUserId(Long userId);
+
+
+    /**
+     * 创建业务数据。
+     * @param userId userId 参数
+     * @param dto dto 参数
+     * @return 业务数值
      */
     Long create(Long userId, AddressCreateDTO dto);
 
+
     /**
-     * 更新收货地址，校验地址归属。
-     * @param userId 用户ID
-     * @param id 地址ID
-     * @param dto 更新入参
-     * @return 更新是否成功
+     * 更新业务数据。
+     * @param userId userId 参数
+     * @param id id 参数
+     * @param dto dto 参数
+     * @return 是否处理成功
      */
     boolean update(Long userId, Long id, AddressUpdateDTO dto);
 
+
     /**
-     * 删除收货地址，校验地址归属。
-     * @param userId 用户ID
-     * @param id 地址ID
+     * 删除业务数据。
+     * @param userId userId 参数
+     * @param id id 参数
      */
     void delete(Long userId, Long id);
 
+
     /**
-     * 设置默认地址，事务内清除旧默认并设置新默认。
-     * @param userId 用户ID
-     * @param id 地址ID
+     * 设置相关数据。
+     * @param userId userId 参数
+     * @param id id 参数
      */
     void setDefault(Long userId, Long id);
 }

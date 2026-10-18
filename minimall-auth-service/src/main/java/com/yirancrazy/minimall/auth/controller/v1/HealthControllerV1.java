@@ -5,17 +5,19 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import com.yirancrazy.minimall.common.result.Result;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 认证控制器，提供Health RESTful API
+ * @Description: HealthControllerV1 控制器，提供相关接口。
  * @Version: 1.0
- * @DateTime: 2026/07/31
- */
+ * @DateTime: 2026/10/16
+ **/
 public class HealthControllerV1 {
 
+
     /**
-     * 健康检查。
-     * @return 健康状态
+     * 执行 health 方法。
+     * @return 统一响应结果
      */
     @GetMapping("/health")
     public Result<String> health() {

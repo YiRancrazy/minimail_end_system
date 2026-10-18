@@ -5,11 +5,12 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import lombok.Data;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 角色权限分配请求体，用于动态修改角色权限映射。
+ * @Description: RolePermissionUpdateDTO 数据传输对象。
  * @Version: 1.0
- * @DateTime: 2026/08/04
+ * @DateTime: 2026/10/16
  **/
 @Data
 public class RolePermissionUpdateDTO {

@@ -1,40 +1,24 @@
 package com.yirancrazy.minimall.stock.entity;
 
-import java.time.LocalDateTime;
-import com.baomidou.mybatisplus.annotation.FieldFill;
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import com.yirancrazy.minimall.common.base.BasePO;
+
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: StockJournal持久化对象，映射t_stock_journal表
+ * @Description: StockJournalPO 持久化对象，对应数据库表。
  * @Version: 1.0
- * @DateTime: 2026/07/31
+ * @DateTime: 2026/10/16
  **/
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("t_stock_journal")
-public class StockJournalPO {
-    @TableId(type = IdType.ASSIGN_ID)
-    private Long id;
-
+public class StockJournalPO extends BasePO {
     private Long skuId;
     private Long quantity;
     private Integer type;
     private String reason;
     private String orderNo;
-
-    // 按 V13 迁移实际列名重新定义 BasePO 字段。
-    @TableField(value = "created_at", fill = FieldFill.INSERT)
-    private LocalDateTime createTime;
-
-    @TableField(value = "updated_at", fill = FieldFill.INSERT_UPDATE)
-    private LocalDateTime updateTime;
-
-    @TableLogic
-    @TableField(fill = FieldFill.INSERT)
-    private Integer isDeleted;
 }

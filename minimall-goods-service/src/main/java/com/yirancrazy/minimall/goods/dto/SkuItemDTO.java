@@ -7,16 +7,17 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: SPU 创建/更新入参中携带的 SKU 子项，前端以 spec 字段表达规格描述
+ * @Description: SkuItemDTO 数据传输对象。
  * @Version: 1.0
- * @DateTime: 2026/08/21
- */
+ * @DateTime: 2026/10/16
+ **/
 @Data
 public class SkuItemDTO {
 
-    /** 编辑场景下已存在 SKU 的主键，新建时为空 */
+
     private Long id;
 
     // 兼容前端字段名 spec，即规格描述，落库为 skuName

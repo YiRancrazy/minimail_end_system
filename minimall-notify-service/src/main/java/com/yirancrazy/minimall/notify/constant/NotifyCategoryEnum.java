@@ -4,11 +4,12 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import com.yirancrazy.minimall.common.base.BaseEnum;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 通知类别枚举，code 持久化为 VARCHAR(32)
+ * @Description: NotifyCategoryEnum 枚举，定义相关业务状态。
  * @Version: 1.0
- * @DateTime: 2026/08/10
+ * @DateTime: 2026/10/16
  **/
 @Getter
 @AllArgsConstructor
@@ -24,6 +25,10 @@ public enum NotifyCategoryEnum implements BaseEnum {
     private final String code;
     private final String message;
 
+    /**
+     * 获取相关数据。
+     * @return 处理结果
+     */
     @Override
     public String getAlias() {
         return code;

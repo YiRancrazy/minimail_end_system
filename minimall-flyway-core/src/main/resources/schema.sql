@@ -77,13 +77,18 @@ CREATE TABLE IF NOT EXISTS t_auth_role_permission (
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='角色权限关联表';
 
 CREATE TABLE IF NOT EXISTS t_auth_token_blacklist (
-                                                      jti             CHAR(32)        NOT NULL COMMENT '令牌唯一标识（JWT ID）',
+    id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    jti             CHAR(32)        NOT NULL COMMENT '令牌唯一标识（JWT ID）',
     user_id         BIGINT UNSIGNED NOT NULL COMMENT '用户ID',
     expires_at      DATETIME(3)     NOT NULL COMMENT '令牌过期时间',
     revoked_at      DATETIME(3)     NOT NULL COMMENT '撤销时间',
     reason          VARCHAR(64)     NULL COMMENT '撤销原因',
+    is_deleted      TINYINT         DEFAULT 0 COMMENT '是否删除：0=未删除 1=已删除（允许NULL）',
+    create_time     DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
+    update_time     DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '更新时间',
     version         INT             NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
-    PRIMARY KEY (jti),
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_token_bl_jti (jti),
     KEY idx_token_bl_user (user_id),
     KEY idx_token_bl_expires (expires_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='令牌黑名单表';
@@ -411,8 +416,9 @@ CREATE TABLE IF NOT EXISTS t_stock_journal (
                                                reason          VARCHAR(255)    NULL COMMENT '变动原因',
     order_no        VARCHAR(32)     NULL COMMENT '关联订单号',
     is_deleted      TINYINT         DEFAULT 0 COMMENT '是否删除：0=未删除 1=已删除（允许NULL）',
-    created_at      DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
-    updated_at      DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '更新时间',
+    create_time     DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
+    update_time     DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '更新时间',
+    version         INT             NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
     PRIMARY KEY (id),
     INDEX idx_journal_sku_id (sku_id),
     UNIQUE KEY uk_stock_journal_release_idem (sku_id, order_no, type, is_deleted)

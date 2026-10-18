@@ -9,12 +9,13 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import com.yirancrazy.minimall.common.result.Result;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: TraceIdFilter 单元测试，验证 traceId 的生成、透传与 MDC 清理。
+ * @Description: TraceIdFilterTest 单元测试。
  * @Version: 1.0
- * @DateTime: 2026/08/13
- */
+ * @DateTime: 2026/10/16
+ **/
 class TraceIdFilterTest {
 
     private final TraceIdFilter filter = new TraceIdFilter();

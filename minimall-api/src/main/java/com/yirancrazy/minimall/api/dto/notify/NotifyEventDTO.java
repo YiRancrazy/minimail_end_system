@@ -7,16 +7,17 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-/**
- * @Author: yirancrazy@gmail.com
- * @Description: NotifyEvent数据传输对象，用于NotifyEvent相关数据传输
- * @Version: 1.0
- * @DateTime: 2026/07/31
- */
+
 @Data
 
 @AllArgsConstructor
 
+/**
+ * @Author: yirancrazy@gmail.com
+ * @Description: NotifyEventDTO 数据传输对象。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 @NoArgsConstructor
 public class NotifyEventDTO {
 

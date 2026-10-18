@@ -8,36 +8,37 @@ import jakarta.validation.Valid;
 import com.yirancrazy.minimall.api.dto.notify.NotifyEventDTO;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.notify.service.NotifyService;
-import com.yirancrazy.minimall.notify.sse.SseHub;
+
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 通知内部控制器，提供Notify相关内部接口
+ * @Description: InternalNotifyControllerV1 控制器，提供相关接口。
  * @Version: 1.0
- * @DateTime: 2026/07/31
- */
+ * @DateTime: 2026/10/16
+ **/
 @RestController
 @RequestMapping("/internal/notify")
 public class InternalNotifyControllerV1 {
 
     private final NotifyService notifyService;
-    private final SseHub sseHub;
-
-    public InternalNotifyControllerV1(NotifyService notifyService, SseHub sseHub) {
-        this.notifyService = notifyService;
-        this.sseHub = sseHub;
-    }
 
     /**
-     * 持久化通知消息，并通过 SSE Hub 向在线用户的连接推送实时通知。
-     *
-     * @param dto 事件负载，包含目标用户、标题与内容
-     * @return 持久化结果是否成功的 Result 包装
+     * 构造 InternalNotifyControllerV1 实例。
+     * @param notifyService notifyService 参数
+     */
+    public InternalNotifyControllerV1(NotifyService notifyService) {
+        this.notifyService = notifyService;
+    }
+
+
+    /**
+     * 执行 push 方法。
+     * @param dto dto 参数
+     * @return 统一响应结果
      */
     @PostMapping("/push")
     public Result<Boolean> push(@Valid @RequestBody NotifyEventDTO dto) {
         boolean saved = notifyService.push(dto.getUserId(), dto.getTitle(), dto.getContent());
-        sseHub.send(dto.getUserId(), dto.getTitle() + ": " + dto.getContent());
         return Result.success(saved);
     }
 }

@@ -9,14 +9,12 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.api.dto.goods.SkuSnapshotDTO;
 import com.yirancrazy.minimall.api.dto.goods.SpuSnapshotDTO;
-import com.yirancrazy.minimall.api.feign.GoodsFeignClient;
-import com.yirancrazy.minimall.api.feign.UserFeignClient;
 import com.yirancrazy.minimall.cart.constant.CartCodeEnum;
 import com.yirancrazy.minimall.cart.dto.CartItemAddDTO;
 import com.yirancrazy.minimall.cart.dto.CartUpdateDTO;
 import com.yirancrazy.minimall.cart.entity.CartItemPO;
+import com.yirancrazy.minimall.cart.gateway.CartRemoteGateway;
 import com.yirancrazy.minimall.cart.manager.CartItemManager;
-import com.yirancrazy.minimall.cart.mapper.CartItemMapper;
 import com.yirancrazy.minimall.cart.service.CartService;
 import com.yirancrazy.minimall.cart.vo.CartItemVO;
 import com.yirancrazy.minimall.common.exception.BizException;
@@ -24,37 +22,39 @@ import com.yirancrazy.minimall.common.result.CommonCode;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.common.util.MinioUtil;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 购物车领域服务实现，实现Cart相关业务逻辑
- * @Version: 1.4
- * @DateTime: 2026/08/03
- */
+ * @Description: CartServiceImpl 服务实现，实现相关业务逻辑。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 @Slf4j
 @Service
 public class CartServiceImpl implements CartService {
 
     private final CartItemManager cartItemManager;
-    private final CartItemMapper cartItemMapper;
-    private final UserFeignClient userFeignClient;
-    private final GoodsFeignClient goodsFeignClient;
+    private final CartRemoteGateway cartRemoteGateway;
     private final MinioUtil minioUtil;
 
-    public CartServiceImpl(CartItemManager cartItemManager, CartItemMapper cartItemMapper,
-                           UserFeignClient userFeignClient, GoodsFeignClient goodsFeignClient,
+    /**
+     * 构造 CartServiceImpl 实例。
+     * @param cartItemManager cartItemManager 参数
+     * @param cartRemoteGateway cartRemoteGateway 参数
+     * @param minioUtil minioUtil 参数
+     */
+    public CartServiceImpl(CartItemManager cartItemManager, CartRemoteGateway cartRemoteGateway,
                            MinioUtil minioUtil) {
         this.cartItemManager = cartItemManager;
-        this.cartItemMapper = cartItemMapper;
-        this.userFeignClient = userFeignClient;
-        this.goodsFeignClient = goodsFeignClient;
+        this.cartRemoteGateway = cartRemoteGateway;
         this.minioUtil = minioUtil;
     }
 
+
     /**
-     * 根据用户 ID 查询其购物车全部条目，并叠加 SKU/SPU 快照用于前端渲染。
-     *
-     * @param userId 用户ID，来自网关X-User-Id可信头
-     * @return 该用户购物车条目列表
+     * 查询列表数据。
+     * @param userId userId 参数
+     * @return 结果列表
      */
     @Override
     public List<CartItemVO> listByUser(Long userId) {
@@ -63,13 +63,13 @@ public class CartServiceImpl implements CartService {
         if (items.isEmpty()) {
             return List.of();
         }
-        // 批量快照替代逐条目 2N 次 Feign：1 次批量 SKU + 按需 1 次批量 SPU；缺失快照沿用原降级逻辑
+        // 批量快照替代逐条目 2N 次远程调用：1 次批量 SKU + 按需 1 次批量 SPU；缺失快照沿用原降级逻辑
         List<Long> skuIds = items.stream().map(CartItemPO::getSkuId).filter(Objects::nonNull).toList();
-        Map<Long, SkuSnapshotDTO> skuMap = goodsFeignClient.batchSkuSnapshot(skuIds).getData();
+        Map<Long, SkuSnapshotDTO> skuMap = cartRemoteGateway.batchSkuSnapshot(skuIds).getData();
         List<Long> spuIds = skuMap == null ? List.of() : skuMap.values().stream()
             .map(SkuSnapshotDTO::getSpuId).filter(Objects::nonNull).distinct().toList();
         Map<Long, SpuSnapshotDTO> spuMap = spuIds.isEmpty() ? Map.of()
-            : goodsFeignClient.batchSpuSnapshot(spuIds).getData();
+            : cartRemoteGateway.batchSpuSnapshot(spuIds).getData();
         Map<Long, SkuSnapshotDTO> effectiveSkuMap = skuMap == null ? Map.of() : skuMap;
         Map<Long, SpuSnapshotDTO> effectiveSpuMap = spuMap == null ? Map.of() : spuMap;
         return items.stream().map(item -> {
@@ -81,19 +81,18 @@ public class CartServiceImpl implements CartService {
         }).toList();
     }
 
+
     /**
-     * 新增一条购物车条目；同用户同 SKU 已存在时累加数量（上限 999），否则新建。
-     * SKU 有效性未在此校验，由结算链路兜底（快照缺失时购物车展示降级、下单时校验）。
-     *
-     * @param userId 用户ID，来自网关X-User-Id可信头
-     * @param dto 购物车条目信息
-     * @return 购物车条目 ID（合并时返回已有条目 ID）
+     * 执行 add 方法。
+     * @param userId userId 参数
+     * @param dto dto 参数
+     * @return 业务数值
      */
     @Override
     public Long add(Long userId, CartItemAddDTO dto) {
         int selected = dto.getSelected() != null ? dto.getSelected() : 1;
         // 唯一键冲突由数据库原子累加，避免 read-check-write 丢增量或首次并发插入异常
-        int affected = cartItemMapper.upsertQuantity(
+        int affected = cartItemManager.upsertQuantity(
             IdWorker.getId(), userId, dto.getSkuId(), dto.getQuantity(), selected);
         if (affected <= 0) {
             log.error("购物车商品 upsert 未影响任何行，userId={}，skuId={}", userId, dto.getSkuId());
@@ -108,13 +107,12 @@ public class CartServiceImpl implements CartService {
         return item.getId();
     }
 
+
     /**
-     * 根据购物车项 ID 逻辑删除该条目，仅允许删除归属于当前用户的条目。
-     *
-     * @param id 购物车项 ID
-     * @param userId 用户ID，来自网关X-User-Id可信头
-     * @return 是否删除成功
-     * @throws BizException 条目不存在或不属于该用户时抛 CART_ITEM_NOT_FOUND
+     * 删除业务数据。
+     * @param id id 参数
+     * @param userId userId 参数
+     * @return 是否处理成功
      */
     @Override
     public boolean delete(Long id, Long userId) {
@@ -125,10 +123,11 @@ public class CartServiceImpl implements CartService {
         return cartItemManager.removeById(id);
     }
 
+
     /**
-     * 统计用户购物车项数量。
-     * @param userId 用户ID
-     * @return 购物车项数量
+     * 统计业务数据。
+     * @param userId userId 参数
+     * @return 业务数值
      */
     @Override
     public long countByUser(Long userId) {
@@ -136,13 +135,13 @@ public class CartServiceImpl implements CartService {
             .eq(CartItemPO::getUserId, userId));
     }
 
+
     /**
-     * 部分更新购物车项，仅更新非空字段（quantity / isSelected），条目不存在或不属于当前用户时抛出 CART_ITEM_NOT_FOUND。
-     *
-     * @param id 购物车项 ID
-     * @param userId 用户ID，来自网关X-User-Id可信头
-     * @param dto 更新入参
-     * @return 更新是否成功
+     * 更新业务数据。
+     * @param id id 参数
+     * @param userId userId 参数
+     * @param dto dto 参数
+     * @return 是否处理成功
      */
     @Override
     public boolean update(Long id, Long userId, CartUpdateDTO dto) {
@@ -159,12 +158,12 @@ public class CartServiceImpl implements CartService {
         return cartItemManager.updateById(existing);
     }
 
+
     /**
-     * 全选或取消全选指定用户的购物车项。
-     *
-     * @param userId 用户ID，来自网关X-User-Id可信头
-     * @param selected 选中状态，0 或 1
-     * @return 更新是否成功
+     * 执行 selectAll 方法。
+     * @param userId userId 参数
+     * @param selected selected 参数
+     * @return 是否处理成功
      */
     @Override
     public boolean selectAll(Long userId, Integer selected) {
@@ -173,11 +172,11 @@ public class CartServiceImpl implements CartService {
             .set(CartItemPO::getSelected, selected));
     }
 
+
     /**
-     * 清空指定用户的购物车。
-     *
-     * @param userId 用户ID
-     * @return 清空是否成功
+     * 执行 clear 方法。
+     * @param userId userId 参数
+     * @return 是否处理成功
      */
     @Override
     public boolean clear(Long userId) {
@@ -185,15 +184,12 @@ public class CartServiceImpl implements CartService {
             .eq(CartItemPO::getUserId, userId));
     }
 
+
     /**
-     * 将指定购物车条目移入收藏夹：先按 SKU 幂等收藏，全部成功后再删除购物车条目。
-     * 收藏端按 userId+skuId 幂等，部分失败时购物车保留，调用方可安全重试。
-     *
-     * @param userId 用户ID，来自网关X-User-Id可信头
-     * @param itemIds 待移入收藏夹的购物车条目 ID 列表，不可为空且必须全部归属于该用户
-     * @throws BizException 条目不存在/不属于该用户时抛 CART_ITEM_NOT_FOUND；收藏或删除失败时抛 MOVE_TO_FAVORITE_FAIL
+     * 执行 moveToFavorite 方法。
+     * @param userId userId 参数
+     * @param itemIds itemIds 参数
      */
-    @Override
     public void moveToFavorite(Long userId, List<Long> itemIds) {
         if (itemIds == null || itemIds.isEmpty()) {
             throw new BizException(CartCodeEnum.CART_ITEM_NOT_FOUND);
@@ -206,7 +202,7 @@ public class CartServiceImpl implements CartService {
             throw new BizException(CartCodeEnum.CART_ITEM_NOT_FOUND);
         }
         for (CartItemPO item : items) {
-            Result<Void> result = userFeignClient.addFavorite(userId, item.getSkuId());
+            Result<Void> result = cartRemoteGateway.addFavorite(userId, item.getSkuId());
             if (result == null || !CommonCode.SUCCESS.equals(result.getCode())) {
                 log.error("moveToFavorite 调用 addFavorite 失败，userId={}，skuId={}，code={}",
                     userId, item.getSkuId(), result == null ? null : result.getCode());

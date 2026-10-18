@@ -8,8 +8,11 @@ import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.SimpleTransactionStatus;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -28,8 +31,6 @@ import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.yirancrazy.minimall.api.dto.goods.SpuSnapshotDTO;
 import com.yirancrazy.minimall.api.dto.merchant.ShopSnapshotDTO;
 import com.yirancrazy.minimall.api.dto.stock.StockAdjustDTO;
-import com.yirancrazy.minimall.api.feign.MerchantFeignClient;
-import com.yirancrazy.minimall.api.feign.StockFeignClient;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.result.Result;
@@ -44,6 +45,7 @@ import com.yirancrazy.minimall.goods.dto.SpuUpdateDTO;
 import com.yirancrazy.minimall.goods.entity.SkuPO;
 import com.yirancrazy.minimall.goods.entity.SpuAuditRecordPO;
 import com.yirancrazy.minimall.goods.entity.SpuPO;
+import com.yirancrazy.minimall.goods.gateway.GoodsRemoteGateway;
 import com.yirancrazy.minimall.goods.manager.SkuManager;
 import com.yirancrazy.minimall.goods.manager.SpuAuditRecordManager;
 import com.yirancrazy.minimall.goods.manager.SpuManager;
@@ -52,18 +54,22 @@ import com.yirancrazy.minimall.goods.search.SpuSearchService;
 import com.yirancrazy.minimall.goods.service.impl.SpuServiceImpl;
 import com.yirancrazy.minimall.goods.vo.SpuVO;
 
+
 /**
- * SpuServiceImpl 单元测试，覆盖查询、创建、分页、更新、删除、上下架与审核闭环的正常、失败、边界路径。
- */
+ * @Author: yirancrazy@gmail.com
+ * @Description: SpuServiceImplTest 单元测试。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 public class SpuServiceImplTest {
 
     private SpuManager spuManager;
     private SpuAuditRecordManager spuAuditRecordManager;
     private SpuSearchService spuSearchService;
     private SkuManager skuManager;
-    private MerchantFeignClient merchantFeignClient;
-    private StockFeignClient stockFeignClient;
+    private GoodsRemoteGateway goodsRemoteGateway;
     private MinioUtil minioUtil;
+    private TransactionTemplate transactionTemplate;
     private SpuServiceImpl service;
 
     @BeforeEach
@@ -72,9 +78,12 @@ public class SpuServiceImplTest {
         spuAuditRecordManager = mock(SpuAuditRecordManager.class);
         spuSearchService = mock(SpuSearchService.class);
         skuManager = mock(SkuManager.class);
-        merchantFeignClient = mock(MerchantFeignClient.class);
-        stockFeignClient = mock(StockFeignClient.class);
+        goodsRemoteGateway = mock(GoodsRemoteGateway.class);
         minioUtil = mock(MinioUtil.class);
+        PlatformTransactionManager transactionManager = mock(PlatformTransactionManager.class);
+        lenient().when(transactionManager.getTransaction(any()))
+            .thenReturn(new SimpleTransactionStatus());
+        transactionTemplate = new TransactionTemplate(transactionManager);
         lenient().doAnswer(inv -> {
             SpuPO p = inv.getArgument(0);
             if (p.getId() == null) {
@@ -87,16 +96,16 @@ public class SpuServiceImplTest {
         lenient().when(skuManager.list(any(Wrapper.class))).thenReturn(List.of());
         lenient().when(spuAuditRecordManager.save(any(SpuAuditRecordPO.class))).thenReturn(true);
         // 默认店铺快照：店铺1归属商家10且营业中，覆盖正常路径
-        lenient().when(merchantFeignClient.shopSnapshot(anyLong()))
+        lenient().when(goodsRemoteGateway.shopSnapshot(anyLong()))
             .thenReturn(Result.success(new ShopSnapshotDTO(1L, 10L, "shop-1", "ACTIVE")));
         service = new SpuServiceImpl(spuManager, spuAuditRecordManager,
-            spuSearchService, skuManager, merchantFeignClient, stockFeignClient, minioUtil);
+            spuSearchService, skuManager, goodsRemoteGateway, minioUtil, transactionTemplate);
     }
 
+
     /**
-     * 验证 getById 在 SPU 存在时返回实体。
+     * 获取相关数据。
      */
-    @Test
     public void getById_returns_spu_when_exists() {
         SpuPO s = new SpuPO();
         s.setId(100L);
@@ -108,19 +117,19 @@ public class SpuServiceImplTest {
         assertEquals("spu-100", result.getTitle());
     }
 
+
     /**
-     * 验证 getById 在 SPU 不存在时抛出 BizException。
+     * 获取相关数据。
      */
-    @Test
     public void getById_throws_when_missing() {
         when(spuManager.getById(999L)).thenReturn(null);
         assertThrows(BizException.class, () -> service.getById(999L));
     }
 
+
     /**
-     * 验证 getById 带商家校验：SPU 归属其他商家时抛出 BizException，防止越权读取。
+     * 获取相关数据。
      */
-    @Test
     public void getById_throws_when_merchant_mismatch() {
         SpuPO s = new SpuPO();
         s.setId(100L);
@@ -130,10 +139,10 @@ public class SpuServiceImplTest {
         assertThrows(BizException.class, () -> service.getById(100L, 99L));
     }
 
+
     /**
-     * 验证 getById 带商家校验：SPU 归属本人时正常返回。
+     * 获取相关数据。
      */
-    @Test
     public void getById_returns_spu_when_owned() {
         SpuPO s = new SpuPO();
         s.setId(100L);
@@ -144,10 +153,10 @@ public class SpuServiceImplTest {
         assertEquals(100L, result.getId());
     }
 
+
     /**
-     * 验证 create 生成编号、初始为草稿状态并返回新 ID。
+     * 创建业务数据。
      */
-    @Test
     public void create_returns_id_and_sets_draft() {
         SpuCreateDTO dto = new SpuCreateDTO();
         dto.setShopId(1L);
@@ -169,10 +178,10 @@ public class SpuServiceImplTest {
         service.create(10L, dto);
     }
 
+
     /**
-     * 验证 create 携带 SKU 清单时批量保存，并回填 spuId 与商家ID，价格/库存原样落库。
+     * 创建业务数据。
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void create_saves_skus_with_spu_id() {
         SpuCreateDTO dto = new SpuCreateDTO();
@@ -197,10 +206,10 @@ public class SpuServiceImplTest {
         assertNotNull(saved.getSpuId());
     }
 
+
     /**
-     * 验证库存联动在本地事务提交后才执行，失败不会污染本地写入。
+     * 创建业务数据。
      */
-    @Test
     public void create_defers_stock_init_until_after_commit() {
         SpuCreateDTO dto = new SpuCreateDTO();
         dto.setShopId(1L);
@@ -215,21 +224,21 @@ public class SpuServiceImplTest {
         TransactionSynchronizationManager.initSynchronization();
         try {
             service.create(10L, dto);
-            verify(stockFeignClient, never()).initStock(any());
+            verify(goodsRemoteGateway, never()).initStock(any());
 
             TransactionSynchronizationManager.getSynchronizations()
                 .forEach(TransactionSynchronization::afterCommit);
-            verify(stockFeignClient).initStock(any());
+            verify(goodsRemoteGateway).initStock(any());
         }
         finally {
             TransactionSynchronizationManager.clearSynchronization();
         }
     }
 
+
     /**
-     * 验证 create 未携带 SKU 清单时不触发批量保存，兼容仅建 SPU 的场景。
+     * 创建业务数据。
      */
-    @Test
     public void create_without_skus_skips_batch_save() {
         SpuCreateDTO dto = new SpuCreateDTO();
         dto.setShopId(1L);
@@ -241,10 +250,10 @@ public class SpuServiceImplTest {
         verify(skuManager, org.mockito.Mockito.never()).saveBatch(anyList());
     }
 
+
     /**
-     * 验证 create 缺店铺（shopId 为空）时拒绝，无店铺商家不能发布商品。
+     * 创建业务数据。
      */
-    @Test
     public void create_throws_when_shop_id_missing() {
         SpuCreateDTO dto = new SpuCreateDTO();
         dto.setCategoryId(1L);
@@ -254,55 +263,55 @@ public class SpuServiceImplTest {
         verify(spuManager, org.mockito.Mockito.never()).save(any(SpuPO.class));
     }
 
+
     /**
-     * 验证 create 绑定他人店铺时拒绝，防止越权把商品挂到别的商家店铺下。
+     * 创建业务数据。
      */
-    @Test
     public void create_throws_when_shop_not_owned() {
         SpuCreateDTO dto = new SpuCreateDTO();
         dto.setShopId(1L);
         dto.setCategoryId(1L);
         dto.setTitle("new-spu");
-        when(merchantFeignClient.shopSnapshot(1L))
+        when(goodsRemoteGateway.shopSnapshot(1L))
             .thenReturn(Result.success(new ShopSnapshotDTO(1L, 99L, "shop-1", "ACTIVE")));
 
         assertThrows(BizException.class, () -> service.create(10L, dto));
     }
 
+
     /**
-     * 验证 create 绑定停业/冻结店铺时拒绝。
+     * 创建业务数据。
      */
-    @Test
     public void create_throws_when_shop_inactive() {
         SpuCreateDTO dto = new SpuCreateDTO();
         dto.setShopId(1L);
         dto.setCategoryId(1L);
         dto.setTitle("new-spu");
-        when(merchantFeignClient.shopSnapshot(1L))
+        when(goodsRemoteGateway.shopSnapshot(1L))
             .thenReturn(Result.success(new ShopSnapshotDTO(1L, 10L, "shop-1", "INACTIVE")));
 
         assertThrows(BizException.class, () -> service.create(10L, dto));
     }
 
+
     /**
-     * 验证 create 在 merchant-service 不可用（Feign 降级哨兵）时拒绝发布，fail-closed 而非放行。
+     * 创建业务数据。
      */
-    @Test
     public void create_throws_when_shop_service_down() {
         SpuCreateDTO dto = new SpuCreateDTO();
         dto.setShopId(1L);
         dto.setCategoryId(1L);
         dto.setTitle("new-spu");
-        when(merchantFeignClient.shopSnapshot(1L))
+        when(goodsRemoteGateway.shopSnapshot(1L))
             .thenReturn(Result.success(new ShopSnapshotDTO(-1L, -1L, "unknown", "DOWN")));
 
         assertThrows(BizException.class, () -> service.create(10L, dto));
     }
 
+
     /**
-     * 验证 getDetail 装配 SKU 列表，供商家端编辑页回显。
+     * 获取相关数据。
      */
-    @Test
     public void getDetail_assembles_skus() {
         SpuPO po = new SpuPO();
         po.setId(100L);
@@ -324,10 +333,10 @@ public class SpuServiceImplTest {
         assertEquals(5, vo.getSkus().get(0).getStock());
     }
 
+
     /**
-     * 验证 update 携带 skus 时按 id 增改、未出现者删除：已有 SKU 更新价格/库存，无 id 新建，被移除 SKU 删除。
+     * 更新业务数据。
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void update_syncs_skus() {
         SpuPO po = new SpuPO();
@@ -347,7 +356,7 @@ public class SpuServiceImplTest {
         goneSku.setSpuId(100L);
         goneSku.setSkuName("被移除");
         when(skuManager.list(any(Wrapper.class))).thenReturn(List.of(keptSku, goneSku));
-        when(stockFeignClient.adjustStock(any(StockAdjustDTO.class))).thenReturn(Result.success());
+        when(goodsRemoteGateway.adjustStock(any(StockAdjustDTO.class))).thenReturn(Result.success());
         when(skuManager.updateBatchById(anyList())).thenReturn(true);
 
         SpuUpdateDTO dto = new SpuUpdateDTO();
@@ -381,15 +390,15 @@ public class SpuServiceImplTest {
         assertEquals(List.of(2L), deleteCaptor.getValue());
 
         ArgumentCaptor<StockAdjustDTO> adjustCaptor = ArgumentCaptor.forClass(StockAdjustDTO.class);
-        verify(stockFeignClient).adjustStock(adjustCaptor.capture());
+        verify(goodsRemoteGateway).adjustStock(adjustCaptor.capture());
         assertEquals(1L, adjustCaptor.getValue().getSkuId());
         assertEquals(4L, adjustCaptor.getValue().getQuantity());
     }
 
+
     /**
-     * 验证 page 返回游标分页结果并装配 SKU。
+     * 分页查询数据。
      */
-    @Test
     public void page_returns_results() {
         SpuPO po = new SpuPO();
         po.setId(1L);
@@ -409,10 +418,10 @@ public class SpuServiceImplTest {
         assertTrue(result.getRecords().get(0).getSkus().isEmpty());
     }
 
+
     /**
-     * 验证 update 在 SPU 不存在时抛出 BizException。
+     * 更新业务数据。
      */
-    @Test
     public void update_throws_when_missing() {
         when(spuManager.getById(999L)).thenReturn(null);
         SpuUpdateDTO dto = new SpuUpdateDTO();
@@ -420,10 +429,10 @@ public class SpuServiceImplTest {
         assertThrows(BizException.class, () -> service.update(999L, 10L, dto));
     }
 
+
     /**
-     * 验证 update 在 SPU 归属其他商家时抛出 BizException，防止越权修改。
+     * 更新业务数据。
      */
-    @Test
     public void update_throws_when_merchant_mismatch() {
         SpuPO existing = new SpuPO();
         existing.setId(100L);
@@ -435,10 +444,10 @@ public class SpuServiceImplTest {
         assertThrows(BizException.class, () -> service.update(100L, 99L, dto));
     }
 
+
     /**
-     * 验证 update 成功时返回 true 并更新字段。
+     * 更新业务数据。
      */
-    @Test
     public void update_returns_true_on_success() {
         SpuPO existing = new SpuPO();
         existing.setId(100L);
@@ -457,10 +466,10 @@ public class SpuServiceImplTest {
         verify(spuManager).updateById(any(SpuPO.class));
     }
 
+
     /**
-     * 验证库存服务调整失败时不写入 SKU，避免商品侧库存与权威库存漂移。
+     * 更新业务数据。
      */
-    @Test
     public void update_does_not_sync_skus_when_stock_adjust_fails() {
         SpuPO existing = new SpuPO();
         existing.setId(100L);
@@ -474,7 +483,7 @@ public class SpuServiceImplTest {
         sku.setSkuName("规格");
         sku.setStock(5);
         when(skuManager.list(any(Wrapper.class))).thenReturn(List.of(sku));
-        when(stockFeignClient.adjustStock(any(StockAdjustDTO.class)))
+        when(goodsRemoteGateway.adjustStock(any(StockAdjustDTO.class)))
             .thenReturn(Result.fail("20000", "stock unavailable"));
 
         SkuItemDTO item = new SkuItemDTO();
@@ -492,10 +501,10 @@ public class SpuServiceImplTest {
         verify(skuManager, never()).updateBatchById(anyList());
     }
 
+
     /**
-     * 验证在售商品编辑后状态置回待审核，且 ES 镜像 saleStatus 同步为非在售、退出前台搜索结果。
+     * 更新业务数据。
      */
-    @Test
     public void update_on_sale_returns_to_pending_audit() {
         SpuPO existing = new SpuPO();
         existing.setId(100L);
@@ -517,10 +526,10 @@ public class SpuServiceImplTest {
             captor.getValue().getSaleStatus());
     }
 
+
     /**
-     * 验证已驳回商品编辑后状态置回待审核，可重新送审。
+     * 更新业务数据。
      */
-    @Test
     public void update_rejected_returns_to_pending_audit() {
         SpuPO existing = new SpuPO();
         existing.setId(100L);
@@ -536,10 +545,10 @@ public class SpuServiceImplTest {
         assertEquals(SpuStatusEnum.PENDING_AUDIT.statusValue(), existing.getStatus());
     }
 
+
     /**
-     * 验证草稿商品编辑后保持草稿状态，不进入审核流。
+     * 更新业务数据。
      */
-    @Test
     public void update_draft_keeps_draft() {
         SpuPO existing = new SpuPO();
         existing.setId(100L);
@@ -555,19 +564,19 @@ public class SpuServiceImplTest {
         assertEquals(SpuStatusEnum.DRAFT.statusValue(), existing.getStatus());
     }
 
+
     /**
-     * 验证 delete 在 SPU 不存在时抛出 BizException。
+     * 删除业务数据。
      */
-    @Test
     public void delete_throws_when_missing() {
         when(spuManager.getById(999L)).thenReturn(null);
         assertThrows(BizException.class, () -> service.delete(999L, 10L));
     }
 
+
     /**
-     * 验证 delete 在 SPU 归属其他商家时抛出 BizException，防止越权删除。
+     * 删除业务数据。
      */
-    @Test
     public void delete_throws_when_merchant_mismatch() {
         SpuPO existing = new SpuPO();
         existing.setId(100L);
@@ -577,10 +586,10 @@ public class SpuServiceImplTest {
         assertThrows(BizException.class, () -> service.delete(100L, 99L));
     }
 
+
     /**
-     * 验证 delete 成功时返回 true。
+     * 删除业务数据。
      */
-    @Test
     public void delete_returns_true_on_success() {
         SpuPO existing = new SpuPO();
         existing.setId(100L);
@@ -592,10 +601,10 @@ public class SpuServiceImplTest {
         verify(spuManager).removeById(100L);
     }
 
+
     /**
-     * 验证 delete 成功后同步删除 ES 镜像文档，避免搜索结果残留已删除商品。
+     * 删除业务数据。
      */
-    @Test
     public void delete_removes_es_document() {
         SpuPO existing = new SpuPO();
         existing.setId(100L);
@@ -607,10 +616,10 @@ public class SpuServiceImplTest {
         verify(spuSearchService).deleteById(100L);
     }
 
+
     /**
-     * 验证 syncToEs 聚合 SPU 全部 SKU 的 min/max 价格写入 ES 文档，null 价格被过滤，元转分。
+     * 执行 sync_to_es_fills_price_range_from_skus 方法。
      */
-    @Test
     public void sync_to_es_fills_price_range_from_skus() {
         SpuPO existing = new SpuPO();
         existing.setId(100L);
@@ -638,19 +647,19 @@ public class SpuServiceImplTest {
         assertEquals(1990L, doc.getMaxPrice());
     }
 
+
     /**
-     * 验证 onShelf 在 SPU 不存在时抛出 BizException。
+     * 执行 onShelf_throws_when_missing 方法。
      */
-    @Test
     public void onShelf_throws_when_missing() {
         when(spuManager.getById(999L)).thenReturn(null);
         assertThrows(BizException.class, () -> service.onShelf(999L, 10L));
     }
 
+
     /**
-     * 验证 onShelf 在 SPU 归属其他商家时抛出 BizException，防止越权上架。
+     * 执行 onShelf_throws_when_merchant_mismatch 方法。
      */
-    @Test
     public void onShelf_throws_when_merchant_mismatch() {
         SpuPO existing = new SpuPO();
         existing.setId(100L);
@@ -660,10 +669,10 @@ public class SpuServiceImplTest {
         assertThrows(BizException.class, () -> service.onShelf(100L, 99L));
     }
 
+
     /**
-     * 验证 onShelf 在已在售/待审核状态时抛出状态非法异常。
+     * 执行 onShelf_throws_when_status_invalid 方法。
      */
-    @Test
     public void onShelf_throws_when_status_invalid() {
         SpuPO existing = new SpuPO();
         existing.setId(100L);
@@ -675,10 +684,10 @@ public class SpuServiceImplTest {
         assertThrows(BizException.class, () -> service.onShelf(100L, 10L));
     }
 
+
     /**
-     * 验证 onShelf 在草稿状态时成功提交审核并置为待审核。
+     * 执行 onShelf_returns_true_on_success 方法。
      */
-    @Test
     public void onShelf_returns_true_on_success() {
         SpuPO existing = new SpuPO();
         existing.setId(100L);
@@ -692,10 +701,10 @@ public class SpuServiceImplTest {
         assertEquals(SpuStatusEnum.PENDING_AUDIT.statusValue(), existing.getStatus());
     }
 
+
     /**
-     * 验证 onShelf 绑定店铺非营业中（如被冻结）时拒绝送审，防止店铺停业后仍发布商品。
+     * 执行 onShelf_throws_when_shop_not_active 方法。
      */
-    @Test
     public void onShelf_throws_when_shop_not_active() {
         SpuPO existing = new SpuPO();
         existing.setId(100L);
@@ -703,26 +712,26 @@ public class SpuServiceImplTest {
         existing.setShopId(1L);
         existing.setStatus(SpuStatusEnum.DRAFT.statusValue());
         when(spuManager.getById(100L)).thenReturn(existing);
-        when(merchantFeignClient.shopSnapshot(1L))
+        when(goodsRemoteGateway.shopSnapshot(1L))
             .thenReturn(Result.success(new ShopSnapshotDTO(1L, 10L, "shop-1", "SUSPENDED")));
 
         assertThrows(BizException.class, () -> service.onShelf(100L, 10L));
         verify(spuManager, org.mockito.Mockito.never()).updateById(any(SpuPO.class));
     }
 
+
     /**
-     * 验证 offShelf 在 SPU 不存在时抛出 BizException。
+     * 执行 offShelf_throws_when_missing 方法。
      */
-    @Test
     public void offShelf_throws_when_missing() {
         when(spuManager.getById(999L)).thenReturn(null);
         assertThrows(BizException.class, () -> service.offShelf(999L, 10L));
     }
 
+
     /**
-     * 验证 offShelf 在 SPU 归属其他商家时抛出 BizException，防止越权下架。
+     * 执行 offShelf_throws_when_merchant_mismatch 方法。
      */
-    @Test
     public void offShelf_throws_when_merchant_mismatch() {
         SpuPO existing = new SpuPO();
         existing.setId(100L);
@@ -732,10 +741,10 @@ public class SpuServiceImplTest {
         assertThrows(BizException.class, () -> service.offShelf(100L, 99L));
     }
 
+
     /**
-     * 验证 offShelf 在非在售状态时抛出状态非法异常。
+     * 执行 offShelf_throws_when_status_invalid 方法。
      */
-    @Test
     public void offShelf_throws_when_status_invalid() {
         SpuPO existing = new SpuPO();
         existing.setId(100L);
@@ -746,10 +755,10 @@ public class SpuServiceImplTest {
         assertThrows(BizException.class, () -> service.offShelf(100L, 10L));
     }
 
+
     /**
-     * 验证 offShelf 在在售状态时成功下架并置为下架。
+     * 执行 offShelf_returns_true_on_success 方法。
      */
-    @Test
     public void offShelf_returns_true_on_success() {
         SpuPO existing = new SpuPO();
         existing.setId(100L);
@@ -762,10 +771,10 @@ public class SpuServiceImplTest {
         assertEquals(SpuStatusEnum.OFF_SHELF.statusValue(), existing.getStatus());
     }
 
+
     /**
-     * 验证 pagePending 返回待审核游标分页结果。
+     * 分页查询数据。
      */
-    @Test
     public void pagePending_returns_results() {
         List<SpuPO> mockRecords = new ArrayList<>();
         SpuPO spu = new SpuPO();
@@ -778,10 +787,10 @@ public class SpuServiceImplTest {
         assertEquals(1, result.getRecords().size());
     }
 
+
     /**
-     * 验证 approve 在待审核状态时通过并置为在售、记录审核日志。
+     * 执行 approve_success_sets_on_sale_and_records_log 方法。
      */
-    @Test
     public void approve_success_sets_on_sale_and_records_log() {
         SpuPO existing = new SpuPO();
         existing.setId(100L);
@@ -796,10 +805,10 @@ public class SpuServiceImplTest {
         verify(spuAuditRecordManager).save(any(SpuAuditRecordPO.class));
     }
 
+
     /**
-     * 验证 approve 在非待审核状态时抛出 BizException。
+     * 执行 approve_throws_when_not_pending 方法。
      */
-    @Test
     public void approve_throws_when_not_pending() {
         SpuPO existing = new SpuPO();
         existing.setId(100L);
@@ -809,19 +818,19 @@ public class SpuServiceImplTest {
         assertThrows(BizException.class, () -> service.approve(100L, 888L));
     }
 
+
     /**
-     * 验证 approve 在 SPU 不存在时抛出 BizException。
+     * 执行 approve_throws_when_missing 方法。
      */
-    @Test
     public void approve_throws_when_missing() {
         when(spuManager.getById(999L)).thenReturn(null);
         assertThrows(BizException.class, () -> service.approve(999L, 888L));
     }
 
+
     /**
-     * 验证 reject 在待审核状态时驳回并置为驳回、记录含原因的审核日志。
+     * 执行 reject_success_sets_rejected_and_records_log 方法。
      */
-    @Test
     public void reject_success_sets_rejected_and_records_log() {
         SpuPO existing = new SpuPO();
         existing.setId(100L);
@@ -835,10 +844,10 @@ public class SpuServiceImplTest {
         verify(spuAuditRecordManager).save(any(SpuAuditRecordPO.class));
     }
 
+
     /**
-     * 验证 reject 在非待审核状态时抛出 BizException。
+     * 执行 reject_throws_when_not_pending 方法。
      */
-    @Test
     public void reject_throws_when_not_pending() {
         SpuPO existing = new SpuPO();
         existing.setId(100L);
@@ -848,10 +857,10 @@ public class SpuServiceImplTest {
         assertThrows(BizException.class, () -> service.reject(100L, 888L, "reason"));
     }
 
+
     /**
-     * 验证 listAuditRecords 返回指定 SPU 的审核记录列表。
+     * 查询列表数据。
      */
-    @Test
     public void listAuditRecords_returns_records() {
         SpuAuditRecordPO rec = new SpuAuditRecordPO();
         rec.setSpuId(100L);
@@ -864,10 +873,10 @@ public class SpuServiceImplTest {
         assertEquals(AuditDecisionEnum.APPROVE.getCode(), records.get(0).getDecision());
     }
 
+
     /**
-     * 验证 listSnapshots 返回 spuId -> 快照 Map，不存在的 SPU 不放入结果。
+     * 查询列表数据。
      */
-    @Test
     public void listSnapshots_returns_map() {
         SpuPO spu1 = new SpuPO();
         spu1.setId(1L);
@@ -887,10 +896,10 @@ public class SpuServiceImplTest {
         assertNull(result.get(3L));
     }
 
+
     /**
-     * 验证 listSnapshots 空入参返回空 Map。
+     * 查询列表数据。
      */
-    @Test
     public void listSnapshots_empty_returns_empty_map() {
         assertTrue(service.listSnapshots(List.of()).isEmpty());
     }

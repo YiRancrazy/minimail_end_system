@@ -22,11 +22,12 @@ import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 import com.yirancrazy.minimall.gateway.config.JwtVerifier;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: AuthGlobalFilter，网关全局安全过滤器，负责JWT鉴权、内部接口隔离、写接口幂等键校验和敏感接口防重放。
- * @Version: 2.1
- * @DateTime: 2026/08/04
+ * @Description: AuthGlobalFilter 类型，承载相关业务能力。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
  **/
 @Slf4j
 @Component
@@ -85,12 +86,12 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
     private final ReactiveStringRedisTemplate redisTemplate;
     private final String internalToken;
 
+
     /**
-     * 构造函数，注入JWT验签器、Redis模板和内部接口令牌。
-     *
-     * @param verifier JWT验签器
-     * @param redisTemplate 响应式Redis字符串模板
-     * @param internalToken 内部接口共享令牌
+     * 构造 AuthGlobalFilter 实例。
+     * @param verifier verifier 参数
+     * @param redisTemplate redisTemplate 参数
+     * @param internalToken internalToken 参数
      */
     public AuthGlobalFilter(JwtVerifier verifier,
                             ReactiveStringRedisTemplate redisTemplate,
@@ -100,12 +101,12 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
         this.internalToken = internalToken;
     }
 
+
     /**
-     * 全局认证过滤器，验证JWT令牌、隔离内部接口、校验写接口幂等键和敏感接口防重放。
-     *
-     * @param exchange 服务端交换上下文
-     * @param chain 过滤器链
-     * @return 过滤器执行结果
+     * 执行 filter 方法。
+     * @param exchange exchange 参数
+     * @param chain chain 参数
+     * @return 处理结果
      */
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
@@ -167,12 +168,12 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
         return postAuthChecks(mutated, chain, path, method);
     }
 
+
     /**
-     * 校验内部接口请求来源，要求携带正确的X-Internal-Token。
-     *
-     * @param exchange 服务端交换上下文
-     * @param chain 过滤器链
-     * @return 过滤器执行结果
+     * 处理Internal。
+     * @param exchange exchange
+     * @param chain chain
+     * @return 处理结果
      */
     private Mono<Void> handleInternal(ServerWebExchange exchange, GatewayFilterChain chain) {
         // 获取请求中携带的 X-Internal-Token
@@ -185,14 +186,14 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
         return chain.filter(exchange);
     }
 
+
     /**
-     * 认证后安全校验：写接口幂等键强制校验 + 敏感写接口防重放。
-     *
-     * @param exchange 已注入用户头的交换上下文
-     * @param chain 过滤器链
-     * @param path 请求路径
-     * @param method HTTP方法
-     * @return 过滤器执行结果
+     * 处理post认证Checks。
+     * @param exchange exchange
+     * @param chain chain
+     * @param path path
+     * @param method method
+     * @return 处理结果
      */
     private Mono<Void> postAuthChecks(ServerWebExchange exchange, GatewayFilterChain chain,
                                       String path, String method) {
@@ -213,11 +214,11 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
         return chain.filter(exchange);
     }
 
+
     /**
-     * 判断写路径是否为敏感接口，需要额外防重放校验。
-     *
-     * @param path 请求路径
-     * @return true如果为敏感写接口
+     * 校验SensitiveWrite。
+     * @param path path
+     * @return 是否满足条件
      */
     private boolean isSensitiveWrite(String path) {
         for (String prefix : SENSITIVE_WRITE_PREFIXES) {
@@ -228,12 +229,12 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
         return false;
     }
 
+
     /**
-     * 防重放校验：验证X-Client-Ts时间窗口和X-Client-Nonce一次性。
-     *
-     * @param exchange 服务端交换上下文
-     * @param chain 过滤器链
-     * @return 过滤器执行结果
+     * 校验AntiReplay。
+     * @param exchange exchange
+     * @param chain chain
+     * @return 处理结果
      */
     private Mono<Void> checkAntiReplay(ServerWebExchange exchange, GatewayFilterChain chain) {
         String ts = exchange.getRequest().getHeaders().getFirst("X-Client-Ts");
@@ -269,11 +270,11 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
             });
     }
 
+
     /**
-     * 安全解析时间戳字符串为epoch毫秒。
-     *
-     * @param ts 时间戳字符串
-     * @return epoch毫秒值，解析失败返回null
+     * 转换或解析Timestamp。
+     * @param ts ts
+     * @return 处理结果
      */
     private Long parseTimestamp(String ts) {
         try {
@@ -284,6 +285,12 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
         }
     }
 
+    /**
+     * 校验Authorized。
+     * @param path path
+     * @param role 角色
+     * @return 是否满足条件
+     */
     private boolean isAuthorized(String path, String role) {
         for (Map.Entry<String, Set<String>> entry : ROLE_PATHS.entrySet()) {
             if (path.startsWith(entry.getKey())) {
@@ -293,11 +300,11 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
         return false;
     }
 
+
     /**
-     * 判断路径是否无需认证：精确白名单命中，或落在匿名可读前缀下。
-     *
-     * @param path 请求路径
-     * @return true如果无需认证
+     * 校验Whitelisted。
+     * @param path path
+     * @return 是否满足条件
      */
     private boolean isWhitelisted(String path) {
         if (WHITELIST.contains(path)) {
@@ -311,12 +318,13 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
         return false;
     }
 
+
     /**
-     * 将用户信息写入请求头，供下游服务读取。
-     * @param exchange 服务端交换上下文
-     * @param claims JWT声明
-     * @param jti JWT的JTI
-     * @return 修改后的服务端交换上下文
+     * 处理mutate携带Headers。
+     * @param exchange exchange
+     * @param claims claims
+     * @param jti JWT ID
+     * @return 处理结果
      */
     private ServerWebExchange mutateWithHeaders(ServerWebExchange exchange, Claims claims, String jti) {
         String userId = claims.getSubject();
@@ -345,6 +353,14 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
     }
 
     // 拒绝请求并返回JSON错误响应
+    /**
+     * 处理reject。
+     * @param exchange exchange
+     * @param status 状态
+     * @param reason 原因
+     * @param code 编码
+     * @return 处理结果
+     */
     private Mono<Void> reject(ServerWebExchange exchange, HttpStatus status, String reason, String code) {
         ServerHttpResponse res = exchange.getResponse();
         res.setStatusCode(status);
@@ -354,10 +370,10 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
             body.getBytes(StandardCharsets.UTF_8))));
     }
 
+
     /**
-     * 获取过滤器执行顺序。
-     *
-     * @return 排序值
+     * 获取相关数据。
+     * @return 业务数值
      */
     @Override
     public int getOrder() {

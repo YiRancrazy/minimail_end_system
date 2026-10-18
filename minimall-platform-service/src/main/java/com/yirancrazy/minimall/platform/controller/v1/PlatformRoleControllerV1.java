@@ -16,11 +16,12 @@ import com.yirancrazy.minimall.platform.dto.RolePermissionUpdateDTO;
 import com.yirancrazy.minimall.platform.service.RolePermissionService;
 import com.yirancrazy.minimall.platform.vo.RoleVO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 平台角色权限管理控制器，提供角色与权限的只读查询与权限分配能力。
- * @Version: 1.1
- * @DateTime: 2026/08/13
+ * @Description: PlatformRoleControllerV1 控制器，提供相关接口。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
  **/
 @RestController
 @RequestMapping("/api/v1/platform/roles")
@@ -29,9 +30,10 @@ public class PlatformRoleControllerV1 {
 
     private final RolePermissionService rolePermissionService;
 
+
     /**
-     * 查询全部角色及其权限列表。
-     * @return 角色权限列表
+     * 查询列表数据。
+     * @return 统一响应结果
      */
     @GetMapping
     @RequirePermission(PermissionEnum.ROLE_VIEW)
@@ -39,10 +41,11 @@ public class PlatformRoleControllerV1 {
         return Result.success(rolePermissionService.listRoles());
     }
 
+
     /**
-     * 查询指定角色的权限列表。
-     * @param roleCode 角色编码
-     * @return 角色权限详情；角色不存在时 data 为 null（防止存在性枚举）
+     * 获取相关数据。
+     * @param roleCode roleCode 参数
+     * @return 统一响应结果
      */
     @GetMapping("/{roleCode}/permissions")
     @RequirePermission(PermissionEnum.ROLE_VIEW)
@@ -50,12 +53,12 @@ public class PlatformRoleControllerV1 {
         return Result.success(rolePermissionService.getRolePermissions(roleCode));
     }
 
+
     /**
-     * 修改指定角色的权限列表，不允许修改 USER 角色权限。
-     * 写操作与只读查询权限分离：修改需 ROLE_MANAGE，查询仅需 ROLE_VIEW。
-     * @param roleCode 角色编码
-     * @param dto 权限分配请求体
-     * @return 无业务数据的成功响应
+     * 更新业务数据。
+     * @param roleCode roleCode 参数
+     * @param dto dto 参数
+     * @return 统一响应结果
      */
     @PostMapping("/{roleCode}/permissions")
     @RequirePermission(PermissionEnum.ROLE_MANAGE)

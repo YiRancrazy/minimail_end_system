@@ -7,11 +7,12 @@ import javax.crypto.Cipher;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: AES-256-GCM加密工具类，提供静态加密/解密方法。IV为12字节随机数，认证标签为16字节，输出格式为Base64(IV || Ciphertext || Tag)。
+ * @Description: AesEncryptor 类型，承载相关业务能力。
  * @Version: 1.0
- * @DateTime: 2026/08/04
+ * @DateTime: 2026/10/16
  **/
 public final class AesEncryptor {
 
@@ -21,15 +22,18 @@ public final class AesEncryptor {
     private static final int TAG_LENGTH_BITS = 128;
     private static final SecureRandom RANDOM = new SecureRandom();
 
+    /**
+     * 构造 AesEncryptor 实例。
+     */
     private AesEncryptor() {
     }
 
+
     /**
-     * 使用AES-256-GCM加密明文字符串。
-     *
-     * @param plaintext 明文字符串
-     * @param key 32字节AES-256密钥
-     * @return Base64编码的密文（IV || Ciphertext || Tag）
+     * 执行 encrypt 方法。
+     * @param plaintext plaintext 参数
+     * @param key key 参数
+     * @return 处理结果
      */
     public static String encrypt(String plaintext, byte[] key) {
         if (plaintext == null || plaintext.isEmpty()) {
@@ -53,12 +57,12 @@ public final class AesEncryptor {
         }
     }
 
+
     /**
-     * 使用AES-256-GCM解密密文字符串。
-     *
-     * @param ciphertext Base64编码的密文（IV || Ciphertext || Tag）
-     * @param key 32字节AES-256密钥
-     * @return 明文字符串
+     * 执行 decrypt 方法。
+     * @param ciphertext ciphertext 参数
+     * @param key key 参数
+     * @return 处理结果
      */
     public static String decrypt(String ciphertext, byte[] key) {
         if (ciphertext == null || ciphertext.isEmpty()) {

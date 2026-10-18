@@ -1,8 +1,6 @@
 package com.yirancrazy.minimall.pay.controller.v1;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,15 +18,16 @@ import com.yirancrazy.minimall.common.annotation.Idempotent;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.pay.dto.PayCallbackDTO;
 import com.yirancrazy.minimall.pay.dto.PayPageDTO;
-import com.yirancrazy.minimall.pay.entity.PayTransactionPO;
 import com.yirancrazy.minimall.pay.service.PayService;
+import com.yirancrazy.minimall.pay.vo.PayTransactionVO;
+
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 支付内部控制器，提供Pay相关内部接口
- * @Version: 1.1
- * @DateTime: 2026/08/02
- */
+ * @Description: InternalPayControllerV1 控制器，提供相关接口。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 @Slf4j
 @RestController
 @RequestMapping("/internal/pay")
@@ -36,15 +35,19 @@ public class InternalPayControllerV1 {
 
     private final PayService payService;
 
+    /**
+     * 构造 InternalPayControllerV1 实例。
+     * @param payService payService 参数
+     */
     public InternalPayControllerV1(PayService payService) {
         this.payService = payService;
     }
 
+
     /**
-     * 创建支付单并返回支付单标识。
-     *
-     * @param dto 支付单创建参数
-     * @return 支付单标识
+     * 创建业务数据。
+     * @param dto dto 参数
+     * @return 统一响应结果
      */
     @PostMapping("/create")
     @Idempotent(key = "#dto.orderNo", expire = 30, unit = TimeUnit.SECONDS)
@@ -54,11 +57,11 @@ public class InternalPayControllerV1 {
         return Result.success(paymentId);
     }
 
+
     /**
-     * 模拟支付回调入口，供订单服务内部调用以推进支付单状态。
-     *
-     * @param dto 支付回调请求参数
-     * @return 回调处理是否成功
+     * 执行 callback 方法。
+     * @param dto dto 参数
+     * @return 统一响应结果
      */
     @PostMapping("/callback")
     public Result<Boolean> callback(@Valid @RequestBody PayCallbackDTO dto) {
@@ -66,12 +69,11 @@ public class InternalPayControllerV1 {
         return Result.success(true);
     }
 
+
     /**
-     * 为已有支付创建退款，并将结果通知订单服务，以便订单服务推进状态。
-     * 幂等键取网关注入的 X-Idempotency-Key，防内部重复退款重放。
-     *
-     * @param dto 退款创建参数
-     * @return 退款是否成功
+     * 执行 refund 方法。
+     * @param dto dto 参数
+     * @return 统一响应结果
      */
     @PostMapping("/refund")
     @Idempotent
@@ -80,48 +82,30 @@ public class InternalPayControllerV1 {
         return Result.success(true);
     }
 
+
     /**
-     * 全平台支付流水导出列表，按创建时间倒序，服务端限制最大导出行数。
-     * 内部接口：仅内网调用，禁止 Gateway 暴露。
-     * @param startDate 起始日期（yyyy-MM-dd），null 表示不限制
-     * @param endDate 结束日期（yyyy-MM-dd），null 表示不限制
-     * @return 支付流水导出项列表
+     * 执行 exportTransactions 方法。
+     * @param startDate startDate 参数
+     * @param endDate endDate 参数
+     * @return 统一响应结果
      */
     @GetMapping("/export-transactions")
     public Result<List<PayExportItemDTO>> exportTransactions(
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate) {
-        PayPageDTO dto = new PayPageDTO();
-        dto.setStartTime(parseStartDate(startDate));
-        dto.setEndTime(parseEndDate(endDate));
-        return Result.success(payService.exportTransactions(dto).stream().map(this::toExportItem).toList());
+        return Result.success(payService.exportTransactionVOs(startDate, endDate).stream()
+            .map(this::toExportItem)
+            .toList());
     }
 
-    /**
-     * 起始日期 → 当日零点。
-     * @param date 日期字符串（yyyy-MM-dd），空返回 null
-     * @return 当日零点时间
-     */
-    private LocalDateTime parseStartDate(String date) {
-        return date == null || date.isBlank() ? null : LocalDate.parse(date).atStartOfDay();
-    }
 
     /**
-     * 结束日期 → 当日最后一毫秒。
-     * @param date 日期字符串（yyyy-MM-dd），空返回 null
-     * @return 当日末刻时间
+     * 转换或解析导出Item。
+     * @param vo vo
+     * @return 处理结果
      */
-    private LocalDateTime parseEndDate(String date) {
-        return date == null || date.isBlank() ? null : LocalDate.parse(date).atTime(LocalTime.MAX);
-    }
-
-    /**
-     * 支付流水PO → 导出项DTO。
-     * @param po 支付流水持久化对象
-     * @return 支付流水导出项DTO
-     */
-    private PayExportItemDTO toExportItem(PayTransactionPO po) {
-        return new PayExportItemDTO(po.getPaymentNo(), po.getOrderNo(), po.getUserId(), po.getMerchantId(),
-            po.getAmount(), po.getChannel(), po.getStatus(), po.getCreateTime());
+    private PayExportItemDTO toExportItem(PayTransactionVO vo) {
+        return new PayExportItemDTO(vo.getPaymentNo(), vo.getOrderNo(), vo.getUserId(), vo.getMerchantId(),
+            vo.getAmount(), vo.getChannel(), vo.getStatus(), vo.getCreateTime());
     }
 }

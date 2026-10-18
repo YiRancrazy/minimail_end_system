@@ -13,12 +13,13 @@ import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.common.filter.TraceIdFilter;
 import com.yirancrazy.minimall.common.result.Result;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: RocketMqEvent消费者，消费RocketMqEvent相关消息
+ * @Description: RocketMqEventConsumer 类型，承载相关业务能力。
  * @Version: 1.0
- * @DateTime: 2026/07/31
- */
+ * @DateTime: 2026/10/16
+ **/
 @Slf4j
 public class RocketMqEventConsumer {
 
@@ -28,20 +29,24 @@ public class RocketMqEventConsumer {
     private DefaultMQConsumerWrapper wrapper;
     private final Map<Class<?>, Consumer<Object>> handlers = new ConcurrentHashMap<>();
 
+    /**
+     * 构造 RocketMqEventConsumer 实例。
+     * @param namesrvAddr namesrvAddr 参数
+     * @param topic topic 参数
+     * @param group group 参数
+     */
     public RocketMqEventConsumer(String namesrvAddr, String topic, String group) {
         this.namesrvAddr = namesrvAddr;
         this.topic = topic;
         this.group = group;
     }
 
+
     /**
-     * 注册 handler，当收到与 {@code eventType} 对应 Tag 的消息时调用。
-     * handler 会被提前存储，以便 {@link #start()} 时重放；如果 consumer
-     * 已启动，handler 也会挂到实时 wrapper 上。
-     *
-     * @param eventType 当前 handler 要响应的事件 {@link Class} Tag
-     * @param handler 处理解码后载荷的强类型 {@link Consumer}
-     * @param <T> {@code handler} 处理的事件类型
+     * 执行 subscribe 方法。
+     * @param <T> 泛型参数
+     * @param eventType eventType 参数
+     * @param handler handler 参数
      */
     public <T> void subscribe(Class<T> eventType, Consumer<T> handler) {
         handlers.put(eventType, e -> handler.accept(eventType.cast(e)));
@@ -50,10 +55,9 @@ public class RocketMqEventConsumer {
         }
     }
 
+
     /**
-     * 启动底层 push consumer，并连接所有此前注册的 handler。
-     * 未注册 handler 时只记录日志并直接返回；启动失败时丢弃 wrapper，
-     * 事件被静默忽略。
+     * 执行 start 方法。
      */
     public void start() {
         if (handlers.isEmpty()) {
@@ -72,9 +76,9 @@ public class RocketMqEventConsumer {
         }
     }
 
+
     /**
-     * 如果底层 push consumer 已启动则关闭，释放 RocketMQ 客户端资源。
-     * consumer 从未成功启动时调用也安全。
+     * 执行 stop 方法。
      */
     public void stop() {
         if (wrapper != null) {
@@ -82,10 +86,24 @@ public class RocketMqEventConsumer {
         }
     }
 
+    /**
+     * @Author: yirancrazy@gmail.com
+     * @Description: DefaultMQConsumerWrapper 类型，承载相关业务能力。
+     * @Version: 1.0
+     * @DateTime: 2026/10/16
+     **/
     static class DefaultMQConsumerWrapper {
         private final DefaultMQPushConsumer consumer;
         private final Map<Class<?>, Consumer<Object>> handlers;
 
+        /**
+         * 构造 DefaultMQConsumerWrapper 实例。
+         * @param namesrvAddr namesrvAddr
+         * @param topic topic
+         * @param group group
+         * @param handlers handlers
+         * @throws Exception 处理失败时抛出
+         */
         DefaultMQConsumerWrapper(String namesrvAddr, String topic, String group,
                                  Map<Class<?>, Consumer<Object>> handlers) throws Exception {
             this.handlers = handlers;
@@ -136,14 +154,27 @@ public class RocketMqEventConsumer {
             });
         }
 
+        /**
+         * 创建Handler。
+         * @param <T> 泛型参数
+         * @param type 类型
+         * @param handler handler
+         */
         <T> void registerHandler(Class<T> type, Consumer<T> handler) {
             handlers.put(type, e -> handler.accept(type.cast(e)));
         }
 
+        /**
+         * 启动start。
+         * @throws Exception 处理失败时抛出
+         */
         void start() throws Exception {
             consumer.start();
         }
 
+        /**
+         * 处理shutdown。
+         */
         void shutdown() {
             consumer.shutdown();
         }

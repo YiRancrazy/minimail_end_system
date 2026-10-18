@@ -3,11 +3,12 @@ package com.yirancrazy.minimall.notify.vo;
 import lombok.Data;
 import com.yirancrazy.minimall.notify.entity.PreferencePO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 通知偏好视图对象
+ * @Description: PreferenceVO 视图对象。
  * @Version: 1.0
- * @DateTime: 2026/08/10
+ * @DateTime: 2026/10/16
  **/
 @Data
 public class PreferenceVO {
@@ -18,10 +19,11 @@ public class PreferenceVO {
     private Integer smsEnabled;
     private Integer emailEnabled;
 
+
     /**
-     * PO → VO 转换。
-     * @param po 偏好持久化对象
-     * @return 偏好视图对象
+     * 执行 from 方法。
+     * @param po po 参数
+     * @return 处理结果
      */
     public static PreferenceVO from(PreferencePO po) {
         if (po == null) {

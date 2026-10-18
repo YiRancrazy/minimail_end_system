@@ -6,12 +6,13 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 商品服务向库存服务提交的库存增量调整请求
+ * @Description: StockAdjustDTO 数据传输对象。
  * @Version: 1.0
- * @DateTime: 2026/09/25
- */
+ * @DateTime: 2026/10/16
+ **/
 @Data
 @AllArgsConstructor
 @NoArgsConstructor

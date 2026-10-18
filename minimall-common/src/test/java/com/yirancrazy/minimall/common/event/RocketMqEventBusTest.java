@@ -19,12 +19,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.yirancrazy.minimall.common.filter.TraceIdFilter;
 import com.yirancrazy.minimall.common.result.Result;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: RocketMqEventBus traceId 透传的单元测试类，验证生产者将 MDC traceId 写入消息属性。
+ * @Description: RocketMqEventBusTest 单元测试。
  * @Version: 1.0
- * @DateTime: 2026/08/16
- */
+ * @DateTime: 2026/10/16
+ **/
 class RocketMqEventBusTest {
 
     @AfterEach
@@ -153,6 +154,12 @@ class RocketMqEventBusTest {
         return (Map<String, ?>) field.get(bus);
     }
 
+    /**
+     * @Author: yirancrazy@gmail.com
+     * @Description: DummyEvent 类型，承载相关业务能力。
+     * @Version: 1.0
+     * @DateTime: 2026/10/16
+     **/
     static class DummyEvent {
         private final String value;
 
@@ -160,6 +167,10 @@ class RocketMqEventBusTest {
             this.value = value;
         }
 
+        /**
+         * 获取相关数据。
+         * @return 处理结果
+         */
         public String getValue() {
             return value;
         }

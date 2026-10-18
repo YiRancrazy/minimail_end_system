@@ -4,12 +4,13 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import com.yirancrazy.minimall.common.base.BaseEnum;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 购物车错误码枚举，定义购物车相关错误码
+ * @Description: CartCodeEnum 枚举，定义相关业务状态。
  * @Version: 1.0
- * @DateTime: 2026/08/02
- */
+ * @DateTime: 2026/10/16
+ **/
 @Getter
 @AllArgsConstructor
 public enum CartCodeEnum implements BaseEnum {

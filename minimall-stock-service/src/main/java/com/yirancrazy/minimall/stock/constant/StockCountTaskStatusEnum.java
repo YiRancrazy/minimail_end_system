@@ -4,11 +4,12 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import com.yirancrazy.minimall.common.base.BaseEnum;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 库存盘点任务状态枚举，定义盘点任务生命周期状态
+ * @Description: StockCountTaskStatusEnum 枚举，定义相关业务状态。
  * @Version: 1.0
- * @DateTime: 2026/08/03
+ * @DateTime: 2026/10/16
  **/
 @Getter
 @AllArgsConstructor
@@ -21,14 +22,19 @@ public enum StockCountTaskStatusEnum implements BaseEnum {
     private final String alias;
     private final String message;
 
+    /**
+     * 获取相关数据。
+     * @return 处理结果
+     */
     @Override
     public String getCode() {
         return String.valueOf(code);
     }
 
+
     /**
-     * 获取用于持久化的整数状态编码。
-     * @return 整数编码值
+     * 执行 intCode 方法。
+     * @return 业务数值
      */
     public int intCode() {
         return code;

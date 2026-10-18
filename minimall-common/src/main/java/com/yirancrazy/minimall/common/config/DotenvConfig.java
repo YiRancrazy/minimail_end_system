@@ -10,16 +10,20 @@ import org.springframework.context.ApplicationContextInitializer;
 import org.springframework.context.ConfigurableApplicationContext;
 import lombok.extern.slf4j.Slf4j;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 加载 .env 文件并设置为系统属性，只读取文件，不读取系统环境变量。
- * @Version: 1.1
- * @DateTime: 2026/08/01
- */
+ * @Description: DotenvConfig 配置类。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 @Slf4j
 public class DotenvConfig implements ApplicationContextInitializer {
 
-    @Override
+    /**
+     * 初始化相关资源。
+     * @param applicationContext applicationContext 参数
+     */
     public void initialize(ConfigurableApplicationContext applicationContext) {
         Path envFile = findEnvFile();
         if (envFile == null) {
@@ -57,6 +61,10 @@ public class DotenvConfig implements ApplicationContextInitializer {
         }
     }
 
+    /**
+     * 加载环境文件。
+     * @return 查询结果
+     */
     private Path findEnvFile() {
         // 从工作目录向上最多搜索 3 层
         Path dir = Paths.get(System.getProperty("user.dir"));
@@ -73,11 +81,12 @@ public class DotenvConfig implements ApplicationContextInitializer {
         return null;
     }
 
+
     /**
-     * 按配置键名脱敏敏感值，供启动日志安全输出。
-     * @param key 配置键名
-     * @param value 配置原始值
-     * @return 敏感配置返回星号，否则返回原值
+     * 处理脱敏值。
+     * @param key 键
+     * @param value 值
+     * @return 处理结果
      */
     static String redactedValue(String key, String value) {
         String normalizedKey = key == null ? "" : key.toUpperCase(Locale.ROOT);

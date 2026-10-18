@@ -6,12 +6,13 @@ import com.yirancrazy.minimall.stock.entity.StockTransferPO;
 import com.yirancrazy.minimall.stock.manager.StockTransferManager;
 import com.yirancrazy.minimall.stock.mapper.StockTransferMapper;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: StockTransfer数据访问层实现，封装t_stock_transfer表 CRUD 操作
+ * @Description: StockTransferManagerImpl 管理器实现，封装数据访问逻辑。
  * @Version: 1.0
- * @DateTime: 2026/08/03
- */
+ * @DateTime: 2026/10/16
+ **/
 @Manager
 public class StockTransferManagerImpl extends ServiceImpl<StockTransferMapper, StockTransferPO>
     implements StockTransferManager {

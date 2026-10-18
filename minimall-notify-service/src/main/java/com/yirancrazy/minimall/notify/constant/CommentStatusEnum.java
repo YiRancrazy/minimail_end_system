@@ -4,11 +4,12 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import com.yirancrazy.minimall.common.base.BaseEnum;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 商品评价状态枚举，code 持久化为 TINYINT
+ * @Description: CommentStatusEnum 枚举，定义相关业务状态。
  * @Version: 1.0
- * @DateTime: 2026/08/10
+ * @DateTime: 2026/10/16
  **/
 @Getter
 @AllArgsConstructor
@@ -21,14 +22,19 @@ public enum CommentStatusEnum implements BaseEnum {
     private final String alias;
     private final String message;
 
+    /**
+     * 获取相关数据。
+     * @return 处理结果
+     */
     @Override
     public String getCode() {
         return String.valueOf(code);
     }
 
+
     /**
-     * 获取持久化整数码。
-     * @return 整数码
+     * 执行 intCode 方法。
+     * @return 业务数值
      */
     public int intCode() {
         return code;

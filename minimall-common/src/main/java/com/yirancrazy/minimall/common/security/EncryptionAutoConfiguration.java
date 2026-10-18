@@ -6,16 +6,21 @@ import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 加密自动装配：提供默认 VaultKeyProvider（prod 可用自定义实现替换），并随容器启动初始化
- *               EncryptionContext，使各服务（user/pay/merchant 等）字段级加密 typeHandler 生效。
- * @Version: 2.0
- * @DateTime: 2026/08/13
- */
+ * @Description: EncryptionAutoConfiguration 类型，承载相关业务能力。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 @AutoConfiguration
 public class EncryptionAutoConfiguration {
 
+    /**
+     * 执行 vaultKeyProvider 方法。
+     * @param base64Key base64Key 参数
+     * @return 处理结果
+     */
     @Bean
     @ConditionalOnMissingBean(VaultKeyProvider.class)
     public VaultKeyProvider vaultKeyProvider(
@@ -23,23 +28,38 @@ public class EncryptionAutoConfiguration {
         return new LocalVaultKeyProvider(base64Key);
     }
 
+    /**
+     * 执行 encryptionInitializer 方法。
+     * @param keyProvider keyProvider 参数
+     * @return 处理结果
+     */
     @Bean
     public EncryptionInitializer encryptionInitializer(VaultKeyProvider keyProvider) {
         return new EncryptionInitializer(keyProvider);
     }
 
+
     /**
-     * 初始化加密上下文，使静态持有的密钥在 MyBatis typeHandler 中可用。
-     */
+     * @Author: yirancrazy@gmail.com
+     * @Description: EncryptionInitializer 类型，承载相关业务能力。
+     * @Version: 1.0
+     * @DateTime: 2026/10/16
+     **/
     static class EncryptionInitializer implements InitializingBean {
 
         private final VaultKeyProvider keyProvider;
 
+        /**
+         * 构造 EncryptionInitializer 实例。
+         * @param keyProvider keyProvider
+         */
         EncryptionInitializer(VaultKeyProvider keyProvider) {
             this.keyProvider = keyProvider;
         }
 
-        @Override
+        /**
+         * 执行 afterPropertiesSet 方法。
+         */
         public void afterPropertiesSet() {
             EncryptionContext.initialize(keyProvider.getKey());
         }

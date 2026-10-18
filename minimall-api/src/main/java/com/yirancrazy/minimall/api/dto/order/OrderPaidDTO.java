@@ -6,16 +6,17 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-/**
- * @Author: yirancrazy@gmail.com
- * @Description: OrderPaid数据传输对象，用于OrderPaid相关数据传输
- * @Version: 1.0
- * @DateTime: 2026/07/31
- */
+
 @Data
 
 @AllArgsConstructor
 
+/**
+ * @Author: yirancrazy@gmail.com
+ * @Description: OrderPaidDTO 数据传输对象。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 @NoArgsConstructor
 public class OrderPaidDTO {
     private Long orderId;

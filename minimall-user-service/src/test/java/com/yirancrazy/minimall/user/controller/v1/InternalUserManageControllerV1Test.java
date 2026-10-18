@@ -1,51 +1,44 @@
 package com.yirancrazy.minimall.user.controller.v1;
 
-import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import com.baomidou.mybatisplus.core.MybatisConfiguration;
-import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.yirancrazy.minimall.api.dto.common.InternalPageQuery;
 import com.yirancrazy.minimall.api.dto.user.UserManageVO;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.result.Result;
-import com.yirancrazy.minimall.user.entity.UserPO;
-import com.yirancrazy.minimall.user.manager.UserManager;
+import com.yirancrazy.minimall.user.service.UserService;
+
 
 /**
- * InternalUserManageControllerV1 单元测试，覆盖分页查询与详情查询的正常/失败路径。
- */
+ * @Author: yirancrazy@gmail.com
+ * @Description: InternalUserManageControllerV1Test 单元测试。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 public class InternalUserManageControllerV1Test {
 
-    private UserManager userManager;
+    private UserService userService;
     private InternalUserManageControllerV1 controller;
 
     @BeforeEach
     void setUp() {
-        MybatisConfiguration configuration = new MybatisConfiguration();
-        MapperBuilderAssistant assistant = new MapperBuilderAssistant(configuration, "");
-        assistant.setCurrentNamespace("com.yirancrazy.minimall.user.mapper.UserMapper");
-        TableInfoHelper.initTableInfo(assistant, UserPO.class);
-
-        userManager = mock(UserManager.class);
-        controller = new InternalUserManageControllerV1(userManager);
+        userService = mock(UserService.class);
+        controller = new InternalUserManageControllerV1(userService);
     }
 
+
     /**
-     * 验证 page 在无 keyword 时返回空分页。
+     * 分页查询数据。
      */
-    @Test
     public void page_returns_empty_when_no_records() {
-        when(userManager.page(any(com.baomidou.mybatisplus.extension.plugins.pagination.Page.class),
-                any(com.baomidou.mybatisplus.core.conditions.Wrapper.class)))
-                .thenReturn(new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>());
+        when(userService.pageManage(any(InternalPageQuery.class)))
+                .thenReturn(CursorPageVO.of(java.util.List.of(), 20, UserManageVO::getId));
 
         InternalPageQuery query = new InternalPageQuery();
         query.setLimit(20);
@@ -55,18 +48,14 @@ public class InternalUserManageControllerV1Test {
         assertEquals(0, r.getData().getRecords().size());
     }
 
+
     /**
-     * 验证 page 委托 manager 并按 keyword 模糊匹配。
+     * 分页查询数据。
      */
-    @Test
     public void page_delegates_with_keyword() {
-        UserPO u = buildUser(1L, "alice", "小荷");
-        com.baomidou.mybatisplus.extension.plugins.pagination.Page<UserPO> page =
-                new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>();
-        page.setRecords(java.util.List.of(u));
-        lenient().when(userManager.page(any(com.baomidou.mybatisplus.extension.plugins.pagination.Page.class),
-                any(com.baomidou.mybatisplus.core.conditions.Wrapper.class)))
-                .thenReturn(page);
+        UserManageVO user = buildUser(1L, "alice", "小荷");
+        when(userService.pageManage(any(InternalPageQuery.class)))
+                .thenReturn(CursorPageVO.of(java.util.List.of(user), 20, UserManageVO::getId));
 
         InternalPageQuery query = new InternalPageQuery();
         query.setLimit(20);
@@ -77,12 +66,12 @@ public class InternalUserManageControllerV1Test {
         assertEquals("alice", r.getData().getRecords().get(0).getUsername());
     }
 
+
     /**
-     * 验证 detail 正常返回。
+     * 执行 detail_returns_vo 方法。
      */
-    @Test
     public void detail_returns_vo() {
-        when(userManager.getById(1L)).thenReturn(buildUser(1L, "alice", "小荷"));
+        when(userService.getManageDetail(1L)).thenReturn(buildUser(1L, "alice", "小荷"));
 
         Result<UserManageVO> r = controller.detail(1L);
 
@@ -90,18 +79,19 @@ public class InternalUserManageControllerV1Test {
         assertEquals("138****0001", r.getData().getPhoneMasked());
     }
 
+
     /**
-     * 验证 detail 在用户不存在时抛 USER_NOT_FOUND。
+     * 执行 detail_throws_when_not_found 方法。
      */
-    @Test
     public void detail_throws_when_not_found() {
-        when(userManager.getById(99L)).thenReturn(null);
+        when(userService.getManageDetail(99L))
+                .thenThrow(new BizException(com.yirancrazy.minimall.user.constant.UserCodeEnum.USER_NOT_FOUND));
 
         assertThrows(BizException.class, () -> controller.detail(99L));
     }
 
-    private UserPO buildUser(Long id, String username, String nickname) {
-        UserPO u = new UserPO();
+    private UserManageVO buildUser(Long id, String username, String nickname) {
+        UserManageVO u = new UserManageVO();
         u.setId(id);
         u.setUsername(username);
         u.setNickname(nickname);

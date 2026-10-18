@@ -13,11 +13,12 @@ import com.yirancrazy.minimall.notify.dto.PreferenceBatchUpdateDTO;
 import com.yirancrazy.minimall.notify.service.PreferenceService;
 import com.yirancrazy.minimall.notify.vo.PreferenceVO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 用户端通知偏好控制器，提供查询与批量更新能力
+ * @Description: UserPreferenceControllerV1 控制器，提供相关接口。
  * @Version: 1.0
- * @DateTime: 2026/08/10
+ * @DateTime: 2026/10/16
  **/
 @RestController
 @RequestMapping("/api/v1/user/preferences")
@@ -25,25 +26,31 @@ public class UserPreferenceControllerV1 {
 
     private final PreferenceService preferenceService;
 
+    /**
+     * 构造 UserPreferenceControllerV1 实例。
+     * @param preferenceService preferenceService 参数
+     */
     public UserPreferenceControllerV1(PreferenceService preferenceService) {
         this.preferenceService = preferenceService;
     }
 
+
     /**
-     * 查询当前用户全部通知偏好，缺失类别返回默认值。
-     * @param userId 用户ID（Header 注入）
-     * @return 偏好视图列表
+     * 查询列表数据。
+     * @param userId userId 参数
+     * @return 统一响应结果
      */
     @GetMapping
     public Result<List<PreferenceVO>> list(@RequestHeader("X-User-Id") Long userId) {
         return Result.success(preferenceService.listByUser(userId));
     }
 
+
     /**
-     * 批量更新当前用户通知偏好。
-     * @param userId 用户ID（Header 注入）
-     * @param dto 批量更新入参
-     * @return 操作结果
+     * 更新业务数据。
+     * @param userId userId 参数
+     * @param dto dto 参数
+     * @return 统一响应结果
      */
     @PostMapping
     public Result<Void> updateBatch(@RequestHeader("X-User-Id") Long userId,

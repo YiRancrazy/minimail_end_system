@@ -5,12 +5,13 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 import com.yirancrazy.minimall.common.base.BasePO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: Spu持久化对象，映射t_goods_spu表，记录商品SPU核心信息。
+ * @Description: SpuPO 持久化对象，对应数据库表。
  * @Version: 1.0
- * @DateTime: 2026/08/02
- */
+ * @DateTime: 2026/10/16
+ **/
 @Data
 @TableName("t_goods_spu")
 public class SpuPO extends BasePO {

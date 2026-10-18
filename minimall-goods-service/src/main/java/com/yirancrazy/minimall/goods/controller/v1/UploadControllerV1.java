@@ -1,7 +1,5 @@
 package com.yirancrazy.minimall.goods.controller.v1;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -10,16 +8,15 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
-import com.yirancrazy.minimall.common.constant.UploadCodeEnum;
-import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.common.service.ChunkUploadService;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 商家端文件上传控制器，提供分片上传与断点查询（商品图等）。
- * @Version: 2.0
- * @DateTime: 2026/08/12
+ * @Description: UploadControllerV1 控制器，提供相关接口。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
  **/
 @RestController
 @RequestMapping("/api/v1/merchant/upload")
@@ -27,18 +24,24 @@ public class UploadControllerV1 {
 
     private final ChunkUploadService chunkUploadService;
 
+    /**
+     * 构造 UploadControllerV1 实例。
+     * @param chunkUploadService chunkUploadService 参数
+     */
     public UploadControllerV1(ChunkUploadService chunkUploadService) {
         this.chunkUploadService = chunkUploadService;
     }
 
+
     /**
-     * 上传单个分片；分片全部到齐后后端合并并存储 MinIO。
-     * @param file 分片文件
-     * @param uploadId 上传任务 ID
-     * @param chunkIndex 分片序号（0 起）
-     * @param totalChunks 总分片数
-     * @param fileName 原始文件名，用于生成 objectKey 后缀（可空）
-     * @return 分片结果；done=true 时 data.objectKey 为最终文件 key
+     * 执行 chunk 方法。
+     * @param userId userId 参数
+     * @param file file 参数
+     * @param uploadId uploadId 参数
+     * @param chunkIndex chunkIndex 参数
+     * @param totalChunks totalChunks 参数
+     * @param fileName fileName 参数
+     * @return 统一响应结果
      */
     @PostMapping("/chunk")
     public Result<ChunkResultVO> chunk(@RequestHeader("X-User-Id") Long userId,
@@ -47,24 +50,20 @@ public class UploadControllerV1 {
                                        @RequestParam("chunkIndex") int chunkIndex,
                                        @RequestParam("totalChunks") int totalChunks,
                                        @RequestParam(value = "fileName", required = false) String fileName) {
-        ChunkUploadService.ChunkResult result;
-        try (InputStream in = file.getInputStream()) {
-            result = chunkUploadService.saveChunk(
-                userId, uploadId, chunkIndex, totalChunks,
-                file.getContentType() != null ? file.getContentType() : "application/octet-stream",
-                fileName, in);
-        }
-        catch (IOException e) {
-            throw new BizException(UploadCodeEnum.CHUNK_UPLOAD_FAIL);
-        }
+        String contentType = file.getContentType() != null
+            ? file.getContentType() : "application/octet-stream";
+        ChunkUploadService.ChunkResult result = chunkUploadService.saveChunk(
+            userId, uploadId, chunkIndex, totalChunks, contentType, fileName, file::getInputStream);
         return Result.success(new ChunkResultVO(result.done(), result.received(), result.objectKey()));
     }
 
+
     /**
-     * 查询已接收分片序号，用于断点续传。
-     * @param uploadId 上传任务 ID
-     * @param totalChunks 总分片数
-     * @return 已接收分片序号列表
+     * 执行 status 方法。
+     * @param userId userId 参数
+     * @param uploadId uploadId 参数
+     * @param totalChunks totalChunks 参数
+     * @return 统一响应结果
      */
     @GetMapping("/status")
     public Result<ChunkStatusVO> status(@RequestHeader("X-User-Id") Long userId,
@@ -74,11 +73,23 @@ public class UploadControllerV1 {
         return Result.success(new ChunkStatusVO(uploadId, received, received.size() == totalChunks));
     }
 
-    /** 分片上传结果 VO */
+
+    /**
+     * @Author: yirancrazy@gmail.com
+     * @Description: ChunkResultVO 视图对象。
+     * @Version: 1.0
+     * @DateTime: 2026/10/16
+     **/
     public record ChunkResultVO(boolean done, int received, String objectKey) {
     }
 
-    /** 分片状态 VO */
+
+    /**
+     * @Author: yirancrazy@gmail.com
+     * @Description: ChunkStatusVO 视图对象。
+     * @Version: 1.0
+     * @DateTime: 2026/10/16
+     **/
     public record ChunkStatusVO(String uploadId, List<Integer> receivedChunks, boolean done) {
     }
 }

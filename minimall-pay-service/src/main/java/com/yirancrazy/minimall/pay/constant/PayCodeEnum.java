@@ -4,14 +4,15 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import com.yirancrazy.minimall.common.base.BaseEnum;
 
-/**
- * @Author: yirancrazy@gmail.com
- * @Description: 支付Pay错误码枚举，定义支付相关错误码
- * @Version: 1.0
- * @DateTime: 2026/07/31
- */
+
 @Getter
 
+/**
+ * @Author: yirancrazy@gmail.com
+ * @Description: PayCodeEnum 枚举，定义相关业务状态。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 @AllArgsConstructor
 public enum PayCodeEnum implements BaseEnum {
     PAY_NOT_FOUND("17001", "PAY_NOT_FOUND", "支付单不存在"),

@@ -7,15 +7,20 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.reactive.CorsWebFilter;
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: Cors配置类，配置Cors相关 Bean
- * @Version: 1.1
- * @DateTime: 2026/08/05
+ * @Description: CorsConfig 配置类。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
  **/
 @Configuration
 public class CorsConfig {
 
+    /**
+     * 执行 corsWebFilter 方法。
+     * @return 处理结果
+     */
     @Bean
     public CorsWebFilter corsWebFilter() {
         CorsConfiguration cfg = new CorsConfiguration();

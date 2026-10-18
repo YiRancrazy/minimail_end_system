@@ -7,12 +7,13 @@ import com.yirancrazy.minimall.user.entity.UserPO;
 import com.yirancrazy.minimall.user.manager.UserManager;
 import com.yirancrazy.minimall.user.mapper.UserMapper;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: User数据访问层实现，封装User表 CRUD 操作
+ * @Description: UserManagerImpl 管理器实现，封装数据访问逻辑。
  * @Version: 1.0
- * @DateTime: 2026/07/31
- */
+ * @DateTime: 2026/10/16
+ **/
 @Manager
 public class UserManagerImpl extends ServiceImpl<UserMapper, UserPO>
     implements UserManager {

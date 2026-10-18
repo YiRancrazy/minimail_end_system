@@ -12,28 +12,39 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.common.result.Result;
 
-/**
- * @Author: YiRanCrazy@gmail.com
- * @Description: Service 与 Controller 层方法日志切面，记录方法调用耗时、异常信息与 traceId。
- *               不记录入参与返回结果：登录/注册/改密 DTO 含密码明文、返回值含手机号等敏感字段，禁止落日志。
- * @Version: 1.0
- * @DateTime: 2026/8/16 8:15
- **/
 
+/**
+ * @Author: yirancrazy@gmail.com
+ * @Description: LoggingAspect 类型，承载相关业务能力。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 @Aspect
 @Component
 @Slf4j
 public class LoggingAspect {
     // 匹配所有 service 包及其子包（含 service.impl）下的 bean 方法
-    @Pointcut("execution(* com.yirancrazy.minimall..service..*.*(..))")
+    /**
+     * 匹配服务层方法。
+     */
     public void servicePointcut() {}
 
-    @Pointcut("execution(* com.yirancrazy.minimall..controller..*.*(..))")
+    /**
+     * 执行 controllerPointcut 方法。
+     */
     public void controllerPointcut() {}
 
-    @Pointcut("@annotation(org.springframework.transaction.annotation.Transactional)")
+    /**
+     * 执行 transactionalPointcut 方法。
+     */
     public void transactionalPointcut() {}
 
+    /**
+     * 执行 logAround 方法。
+     * @param joinPoint joinPoint 参数
+     * @return 处理结果
+     * @throws Throwable 处理失败时抛出
+     */
     @Around("servicePointcut()")
     public Object logAround(ProceedingJoinPoint joinPoint) throws Throwable {
         String methodName = joinPoint.getSignature().toShortString();
@@ -51,6 +62,12 @@ public class LoggingAspect {
         }
     }
 
+    /**
+     * 执行 logAroundController 方法。
+     * @param joinPoint joinPoint 参数
+     * @return 处理结果
+     * @throws Throwable 处理失败时抛出
+     */
     @Around("controllerPointcut()")
     public Object logAroundController(ProceedingJoinPoint joinPoint) throws Throwable {
         String className = joinPoint.getSignature().getDeclaringTypeName();
@@ -72,7 +89,7 @@ public class LoggingAspect {
 
         // 从 MDC 取当前链路 traceId（由 TraceIdFilter 写入），便于按链路聚合日志
         String traceId = MDC.get(Result.TRACE_ID_KEY);
-        
+
         // 记录方法调用信息
         long start = System.currentTimeMillis();
         log.info("【开始】 traceId: {}，方法: {}.{}, HTTP方法: {}, URI: {}",

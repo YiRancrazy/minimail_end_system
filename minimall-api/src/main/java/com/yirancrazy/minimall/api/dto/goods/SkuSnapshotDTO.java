@@ -5,12 +5,13 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: SkuSnapshot数据传输对象，用于SkuSnapshot相关数据传输
+ * @Description: SkuSnapshotDTO 数据传输对象。
  * @Version: 1.0
- * @DateTime: 2026/07/31
- */
+ * @DateTime: 2026/10/16
+ **/
 @Data
 @AllArgsConstructor
 @NoArgsConstructor

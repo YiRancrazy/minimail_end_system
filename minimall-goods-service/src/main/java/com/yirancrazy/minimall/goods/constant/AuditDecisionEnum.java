@@ -3,11 +3,12 @@ package com.yirancrazy.minimall.goods.constant;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 商品审核决策枚举，1=通过 2=驳回
+ * @Description: AuditDecisionEnum 枚举，定义相关业务状态。
  * @Version: 1.0
- * @DateTime: 2026/08/02
+ * @DateTime: 2026/10/16
  **/
 @Getter
 @AllArgsConstructor

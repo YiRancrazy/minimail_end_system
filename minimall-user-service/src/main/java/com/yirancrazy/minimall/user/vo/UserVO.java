@@ -6,11 +6,12 @@ import com.yirancrazy.minimall.common.util.MinioUtil;
 import com.yirancrazy.minimall.common.util.SensitiveDataUtils;
 import com.yirancrazy.minimall.user.entity.UserPO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 用户VO，用于Controller边界输出，隐藏内部字段并对敏感数据脱敏
+ * @Description: UserVO 视图对象。
  * @Version: 1.0
- * @DateTime: 2026/08/04
+ * @DateTime: 2026/10/16
  **/
 @Data
 public class UserVO {
@@ -24,20 +25,22 @@ public class UserVO {
     private Integer gender;
     private LocalDateTime createTime;
 
+
     /**
-     * 将 UserPO 转换为 UserVO，对手机号和邮箱进行脱敏处理。
-     * @param po 用户持久化对象
-     * @return 脱敏后的用户VO
+     * 执行 from 方法。
+     * @param po po 参数
+     * @return 处理结果
      */
     public static UserVO from(UserPO po) {
         return from(po, null);
     }
 
+
     /**
-     * 将 UserPO 转换为 UserVO，对手机号和邮箱进行脱敏，并将头像 objectKey 解析为可访问 URL。
-     * @param po 用户持久化对象
-     * @param minioUtil 对象存储工具，用于生成头像预签名 URL；为 null 时头像原样返回
-     * @return 脱敏后的用户VO
+     * 执行 from 方法。
+     * @param po po 参数
+     * @param minioUtil minioUtil 参数
+     * @return 处理结果
      */
     public static UserVO from(UserPO po, MinioUtil minioUtil) {
         UserVO vo = new UserVO();
@@ -52,10 +55,11 @@ public class UserVO {
         return vo;
     }
 
+
     /**
-     * 邮箱脱敏：保留@前缀前至少1个字符，其余前缀用*替换后保留@域名后缀。
-     * @param email 原始邮箱
-     * @return 脱敏后的邮箱
+     * 处理maskEmail。
+     * @param email email
+     * @return 处理结果
      */
     private static String maskEmail(String email) {
         if (email == null || email.isEmpty()) {

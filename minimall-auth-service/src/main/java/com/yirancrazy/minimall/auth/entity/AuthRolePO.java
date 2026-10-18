@@ -5,12 +5,13 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import com.yirancrazy.minimall.common.base.BasePO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: AuthRole持久化对象，映射t_auth_role表
+ * @Description: AuthRolePO 持久化对象，对应数据库表。
  * @Version: 1.0
- * @DateTime: 2026/08/04
- */
+ * @DateTime: 2026/10/16
+ **/
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName("t_auth_role")

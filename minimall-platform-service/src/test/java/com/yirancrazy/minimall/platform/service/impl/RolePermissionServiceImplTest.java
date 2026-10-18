@@ -22,12 +22,13 @@ import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.platform.constant.PlatformCodeEnum;
 import com.yirancrazy.minimall.platform.vo.RoleVO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: RolePermissionServiceImpl 单元测试，验证角色不存在、权限不可修改与写入等分支。
+ * @Description: RolePermissionServiceImplTest 单元测试。
  * @Version: 1.0
- * @DateTime: 2026/08/13
- */
+ * @DateTime: 2026/10/16
+ **/
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class RolePermissionServiceImplTest {

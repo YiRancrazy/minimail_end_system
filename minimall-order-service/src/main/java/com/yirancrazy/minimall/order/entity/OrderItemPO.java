@@ -6,12 +6,13 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import com.yirancrazy.minimall.common.base.BasePO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: OrderItem持久化对象，映射t_order_item表，存储多SKU订单明细行及其下单快照。
- * @Version: 1.1
- * @DateTime: 2026/08/13
- */
+ * @Description: OrderItemPO 持久化对象，对应数据库表。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
+ **/
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName("t_order_item")

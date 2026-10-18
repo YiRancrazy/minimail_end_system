@@ -4,11 +4,12 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import com.yirancrazy.minimall.common.dto.CursorPageDTO;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 系统告警分页查询入参，固定查询 PLATFORM + SYSTEM 类型消息
- * @Version: 1.1
- * @DateTime: 2026/08/04
+ * @Description: SystemAlertPageDTO 数据传输对象。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
  **/
 @Data
 @EqualsAndHashCode(callSuper = true)

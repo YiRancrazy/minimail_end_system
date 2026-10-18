@@ -9,11 +9,12 @@ import com.yirancrazy.minimall.common.result.CommonCode;
 import com.yirancrazy.minimall.common.result.Result;
 
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: IdFeignFallbackFactory 的单元测试类。
- * @Version: 1.1
- * @DateTime: 2026/8/16
+ * @Description: IdFeignFallbackFactoryTest 单元测试。
+ * @Version: 1.0
+ * @DateTime: 2026/10/16
  **/
 class IdFeignFallbackFactoryTest {
 

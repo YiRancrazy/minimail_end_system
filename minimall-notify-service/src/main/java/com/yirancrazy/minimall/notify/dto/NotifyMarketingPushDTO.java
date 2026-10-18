@@ -4,11 +4,12 @@ import java.util.List;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: 营销推送入参，支持指定用户列表或全量广播
+ * @Description: NotifyMarketingPushDTO 数据传输对象。
  * @Version: 1.0
- * @DateTime: 2026/08/03
+ * @DateTime: 2026/10/16
  **/
 @Data
 public class NotifyMarketingPushDTO {
@@ -19,6 +20,6 @@ public class NotifyMarketingPushDTO {
     @NotBlank(message = "content cannot be blank")
     private String content;
 
-    /** 目标用户ID列表；null 表示全量广播（落库 userId=0 占位） */
+
     private List<Long> userIds;
 }

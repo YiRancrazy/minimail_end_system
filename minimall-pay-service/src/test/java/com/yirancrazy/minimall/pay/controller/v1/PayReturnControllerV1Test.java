@@ -8,11 +8,12 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: PayReturnControllerV1 单元测试，验证支付宝同步跳转落地页返回支付成功页面。
+ * @Description: PayReturnControllerV1Test 单元测试。
  * @Version: 1.0
- * @DateTime: 2026/08/15
+ * @DateTime: 2026/10/16
  **/
 class PayReturnControllerV1Test {
 
@@ -23,9 +24,7 @@ class PayReturnControllerV1Test {
         mockMvc = MockMvcBuilders.standaloneSetup(new PayReturnControllerV1()).build();
     }
 
-    /**
-     * 验证 GET /api/v1/pay/success 返回 200 且包含支付成功提示。
-     */
+
     @Test
     void success_returns_success_page() throws Exception {
         mockMvc.perform(get("/api/v1/pay/success")
@@ -38,9 +37,7 @@ class PayReturnControllerV1Test {
             .andExpect(content().string(org.hamcrest.Matchers.containsString("899.00")));
     }
 
-    /**
-     * 验证参数缺失时页面仍正常返回，不抛异常。
-     */
+
     @Test
     void success_without_params_still_returns_page() throws Exception {
         mockMvc.perform(get("/api/v1/pay/success"))

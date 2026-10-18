@@ -12,11 +12,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import com.yirancrazy.minimall.id.service.IdService;
 
+
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: IdControllerV1 MockMvc 单元测试，验证 /internal/id/next 的路由、参数绑定与 Result 包装。
+ * @Description: IdControllerV1Test 单元测试。
  * @Version: 1.0
- * @DateTime: 2026/08/16
+ * @DateTime: 2026/10/16
  **/
 class IdControllerV1Test {
 
@@ -29,9 +30,7 @@ class IdControllerV1Test {
         mockMvc = MockMvcBuilders.standaloneSetup(new IdControllerV1(idService)).build();
     }
 
-    /**
-     * 验证 GET /internal/id/next 按 bizTag 返回 Long 型 ID。
-     */
+
     @Test
     void next_returns_long_id() throws Exception {
         when(idService.nextId("ORDER")).thenReturn(42L);

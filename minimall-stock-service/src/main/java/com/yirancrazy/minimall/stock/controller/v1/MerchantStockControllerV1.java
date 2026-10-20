@@ -110,6 +110,7 @@ public class MerchantStockControllerV1 {
      * @param response response 参数
      * @throws IOException 处理失败时抛出
      */
+    @GetMapping("/{skuId}/journal/export")
     public void exportJournal(@RequestHeader("X-Merchant-Id") Long merchantId,
                               @PathVariable Long skuId,
                               HttpServletResponse response) throws IOException {

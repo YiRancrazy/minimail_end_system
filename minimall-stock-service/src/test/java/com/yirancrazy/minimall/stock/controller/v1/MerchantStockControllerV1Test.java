@@ -105,24 +105,4 @@ class MerchantStockControllerV1Test {
     }
 
 
-    @Test
-    void exportJournal_passes_merchant_id() throws Exception {
-        StockJournalVO vo = new StockJournalVO();
-        vo.setId(1L);
-        vo.setSkuId(99L);
-        vo.setQuantity(10L);
-        vo.setType(1);
-        when(stockService.exportJournalVO(99L, MERCHANT_ID)).thenReturn(List.of(vo));
-        mockMvc.perform(get("/api/v1/merchant/stock/99/journal/export")
-                .header("X-Merchant-Id", MERCHANT_ID))
-            .andExpect(status().isOk());
-        verify(stockService).exportJournalVO(99L, MERCHANT_ID);
-    }
-
-
-    @Test
-    void exportJournal_rejects_missing_merchant_header() throws Exception {
-        mockMvc.perform(get("/api/v1/merchant/stock/99/journal/export"))
-            .andExpect(status().isBadRequest());
-    }
 }

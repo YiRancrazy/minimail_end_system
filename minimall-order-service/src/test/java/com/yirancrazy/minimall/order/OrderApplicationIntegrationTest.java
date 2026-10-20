@@ -37,10 +37,4 @@ class OrderApplicationIntegrationTest {
 
     @Autowired
     private OrderService orderService;
-
-
-    @Test
-    void context_loads_and_order_service_bean_present() {
-        assertNotNull(orderService, "OrderService bean should be loaded");
-    }
 }

@@ -1,0 +1,2 @@
+ALTER TABLE t_order
+    MODIFY COLUMN order_no VARCHAR(32) NOT NULL COMMENT '业务单号（唯一）';

@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS t_auth_role (
     description     VARCHAR(255)    NULL COMMENT '角色描述',
     status          TINYINT         NOT NULL DEFAULT 1 COMMENT '状态：0=禁用 1=启用',
     version         INT             NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
-    is_deleted      TINYINT         DEFAULT 0 COMMENT '是否删除：0=未删除 1=已删除（允许NULL）',
+    is_deleted      TINYINT         DEFAULT 0 COMMENT '是否删除：NULL=已删除 0=未删除',
     create_time     DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time     DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (id),
@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS t_auth_permission (
     description     VARCHAR(255)    NULL COMMENT '权限描述',
     status          TINYINT         NOT NULL DEFAULT 1 COMMENT '状态：0=禁用 1=启用',
     version         INT             NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
-    is_deleted      TINYINT         DEFAULT 0 COMMENT '是否删除：0=未删除 1=已删除（允许NULL）',
+    is_deleted      TINYINT         DEFAULT 0 COMMENT '是否删除：NULL=已删除 0=未删除',
     create_time     DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time     DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (id),
@@ -57,7 +57,7 @@ CREATE TABLE IF NOT EXISTS t_auth_user (
     status          INT             NOT NULL DEFAULT 1 COMMENT '状态（预留）',
     last_login_at   DATETIME(3)     NULL COMMENT '最后登录时间',
     version         INT             NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
-    is_deleted      TINYINT         DEFAULT 0 COMMENT '是否删除：0=未删除 1=已删除（允许NULL）',
+    is_deleted      TINYINT         DEFAULT 0 COMMENT '是否删除：NULL=已删除 0=未删除',
     create_time     DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time     DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (id),
@@ -69,7 +69,7 @@ CREATE TABLE IF NOT EXISTS t_auth_role_permission (
                                                       role_id         BIGINT UNSIGNED NOT NULL COMMENT '角色ID',
                                                       permission_id   BIGINT UNSIGNED NOT NULL COMMENT '权限ID',
                                                       version         INT             NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
-                                                      is_deleted      TINYINT         DEFAULT 0 COMMENT '是否删除：0=未删除 1=已删除（允许NULL）',
+                                                      is_deleted      TINYINT         DEFAULT 0 COMMENT '是否删除：NULL=已删除 0=未删除',
                                                       create_time     DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
                                                       update_time     DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
                                                       PRIMARY KEY (id),
@@ -83,7 +83,7 @@ CREATE TABLE IF NOT EXISTS t_auth_token_blacklist (
     expires_at      DATETIME(3)     NOT NULL COMMENT '令牌过期时间',
     revoked_at      DATETIME(3)     NOT NULL COMMENT '撤销时间',
     reason          VARCHAR(64)     NULL COMMENT '撤销原因',
-    is_deleted      TINYINT         DEFAULT 0 COMMENT '是否删除：0=未删除 1=已删除（允许NULL）',
+    is_deleted      TINYINT         DEFAULT 0 COMMENT '是否删除：NULL=已删除 0=未删除',
     create_time     DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
     update_time     DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '更新时间',
     version         INT             NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
@@ -107,7 +107,7 @@ CREATE TABLE IF NOT EXISTS t_user (
     gender          TINYINT         DEFAULT 0 COMMENT '性别：0=未知 1=男 2=女',
     phone_masked    VARCHAR(32)     DEFAULT NULL COMMENT '手机号脱敏，用于模糊查询（如138****8001）',
     version         INT             NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
-    is_deleted      TINYINT         DEFAULT 0 COMMENT '是否删除：0=未删除 1=已删除（允许NULL）',
+    is_deleted      TINYINT         DEFAULT 0 COMMENT '是否删除：NULL=已删除 0=未删除',
     create_time     DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time     DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (id),
@@ -124,14 +124,14 @@ CREATE TABLE IF NOT EXISTS t_user_address (
     city            VARCHAR(32)     NOT NULL COMMENT '城市',
     district        VARCHAR(32)     NOT NULL COMMENT '区/县',
     detail_address  VARCHAR(512)    NOT NULL COMMENT '详细地址，AES加密存储',
-    is_default      TINYINT         DEFAULT 0 COMMENT '是否默认地址：0=否 1=是',
+    is_default      TINYINT         NULL DEFAULT NULL COMMENT '是否默认地址：1=是 NULL=否',
     version         INT             NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
-    is_deleted      TINYINT         DEFAULT 0 COMMENT '是否删除：0=未删除 1=已删除（允许NULL）',
+    is_deleted      TINYINT         DEFAULT 0 COMMENT '是否删除：NULL=已删除 0=未删除',
     create_time     DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time     DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (id),
-    INDEX idx_user_id (user_id),
-    UNIQUE KEY uk_user_address_default (user_id, is_default, is_deleted)
+    UNIQUE KEY uk_user_address_default (user_id, is_default, is_deleted),
+    CONSTRAINT chk_user_address_default_flag CHECK (is_default IS NULL OR is_default = 1)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='用户收货地址表';
 
 CREATE TABLE IF NOT EXISTS t_user_favorite (
@@ -139,12 +139,11 @@ CREATE TABLE IF NOT EXISTS t_user_favorite (
                                                user_id         BIGINT          NOT NULL COMMENT '用户ID',
                                                sku_id          BIGINT          NOT NULL COMMENT '商品SKU ID',
                                                version         INT             NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
-                                               is_deleted      TINYINT         DEFAULT 0 COMMENT '是否删除：0=未删除 1=已删除（允许NULL）',
+                                               is_deleted      TINYINT         DEFAULT 0 COMMENT '是否删除：NULL=已删除 0=未删除',
                                                create_time     DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
                                                update_time     DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
                                                PRIMARY KEY (id),
-    UNIQUE KEY uk_user_favorite_user_sku (user_id, sku_id, is_deleted),
-    INDEX idx_user_favorite_user_id (user_id)
+    UNIQUE KEY uk_user_favorite_user_sku (user_id, sku_id, is_deleted)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='用户收藏表';
 
 -- ============================================================
@@ -165,7 +164,7 @@ CREATE TABLE IF NOT EXISTS t_merch_merchant (
     business_license_no_enc VARCHAR(512)    NULL COMMENT '营业执照号 AES-256-GCM 密文',
     bank_account_enc        VARCHAR(512)    NULL COMMENT '提现银行卡 AES-256-GCM 密文',
     version                 INT             NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
-    is_deleted              TINYINT         DEFAULT 0 COMMENT '是否删除：0=未删除 1=已删除（允许NULL）',
+    is_deleted              TINYINT         DEFAULT 0 COMMENT '是否删除：NULL=已删除 0=未删除',
     create_time             DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time             DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (id),
@@ -178,9 +177,9 @@ CREATE TABLE IF NOT EXISTS t_merch_shop (
                                             merchant_id     BIGINT          NULL COMMENT '所属商家ID',
                                             shop_name       VARCHAR(128)    NOT NULL COMMENT '店铺名称',
     license_no      VARCHAR(64)     NULL COMMENT '店铺许可证号',
-    status          VARCHAR(32)     DEFAULT 'PENDING' COMMENT '店铺状态：PENDING/ACTIVE/CLOSED',
+    status          TINYINT         NOT NULL DEFAULT 1 COMMENT '状态：1=营业中 2=已停业 3=已冻结',
     version         INT             NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
-    is_deleted      TINYINT         DEFAULT 0 COMMENT '是否删除：0=未删除 1=已删除（允许NULL）',
+    is_deleted      TINYINT         DEFAULT 0 COMMENT '是否删除：NULL=已删除 0=未删除',
     create_time     DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time     DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (id),
@@ -200,10 +199,11 @@ CREATE TABLE IF NOT EXISTS t_goods_spu (
     title           VARCHAR(128)    NOT NULL COMMENT '商品标题',
     subtitle        VARCHAR(255)    NULL COMMENT '副标题',
     main_image_url  VARCHAR(255)    NULL COMMENT '主图URL',
-    status          TINYINT         NOT NULL DEFAULT 0 COMMENT '状态（0=待审核 1=上架 2=下架）',
+    status          TINYINT         NOT NULL DEFAULT 0
+        COMMENT '状态：0=草稿 1=待审 2=在售 3=下架 4=审核驳回',
     publish_at      DATETIME(3)     NULL COMMENT '上架时间',
     version         INT             NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
-    is_deleted      TINYINT         DEFAULT 0 COMMENT '是否删除：0=未删除 1=已删除（允许NULL）',
+    is_deleted      TINYINT         DEFAULT 0 COMMENT '是否删除：NULL=已删除 0=未删除',
     create_time     DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time     DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (id),
@@ -218,9 +218,9 @@ CREATE TABLE IF NOT EXISTS t_sku (
                                      merchant_id     BIGINT          NULL COMMENT '所属商家ID',
                                      sku_name        VARCHAR(128)    NOT NULL COMMENT 'SKU名称（规格）',
     price           DECIMAL(12,2)   DEFAULT 0 COMMENT '单价（元）',
-    stock           INT             DEFAULT 0 COMMENT '库存数量（冗余）',
+    stock           INT             NOT NULL DEFAULT 0 COMMENT '库存展示缓存，权威库存见t_stock.available',
     version         INT             NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
-    is_deleted      TINYINT         DEFAULT 0 COMMENT '是否删除：0=未删除 1=已删除（允许NULL）',
+    is_deleted      TINYINT         DEFAULT 0 COMMENT '是否删除：NULL=已删除 0=未删除',
     create_time     DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time     DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (id),
@@ -236,7 +236,7 @@ CREATE TABLE IF NOT EXISTS t_goods_audit_record (
                                                     reason          VARCHAR(512)    NULL COMMENT '审核理由',
     audit_at        DATETIME(3)     NULL COMMENT '审核时间',
     version         INT             NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
-    is_deleted      TINYINT         DEFAULT 0 COMMENT '是否删除：0=未删除 1=已删除（允许NULL）',
+    is_deleted      TINYINT         DEFAULT 0 COMMENT '是否删除：NULL=已删除 0=未删除',
     create_time     DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time     DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (id),
@@ -254,17 +254,16 @@ CREATE TABLE IF NOT EXISTS t_cart_item (
                                            quantity        INT             DEFAULT 1 COMMENT '数量',
                                            selected        INT             DEFAULT 1 COMMENT '是否选中：0=否 1=是',
                                            version         INT             NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
-                                           is_deleted      TINYINT         DEFAULT 0 COMMENT '是否删除：0=未删除 1=已删除（允许NULL）',
+                                           is_deleted      TINYINT         DEFAULT 0 COMMENT '是否删除：NULL=已删除 0=未删除',
                                            create_time     DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
                                            update_time     DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
                                            PRIMARY KEY (id),
-    INDEX idx_user (user_id),
     UNIQUE KEY uk_user_sku (user_id, sku_id, is_deleted)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='购物车项表';
 
 CREATE TABLE IF NOT EXISTS t_order (
                                        id                      BIGINT          NOT NULL COMMENT '主键ID',
-                                       order_no                VARCHAR(32)     NULL COMMENT '业务单号（唯一）',
+                                       order_no                VARCHAR(32)     NOT NULL COMMENT '业务单号（唯一）',
     order_type              TINYINT         NOT NULL DEFAULT 1 COMMENT '订单类型：1=普通 2=拼团 3=秒杀（预留）',
     user_id                 BIGINT          NOT NULL COMMENT '下单用户ID',
     merchant_id             BIGINT          NULL COMMENT '商家ID',
@@ -287,12 +286,13 @@ CREATE TABLE IF NOT EXISTS t_order (
     closed_at               DATETIME        NULL COMMENT '关闭时间',
     close_reason            VARCHAR(128)    NULL COMMENT '关闭原因',
     order_group_no          VARCHAR(32)     NULL COMMENT '订单组号，跨商家拆单时同一结算单的子订单共享',
-    status                  TINYINT         NOT NULL DEFAULT 1 COMMENT '状态：1=待支付 2=已支付 3=已发货 4=已收货 5=已取消 6=退款中 7=已退款',
+    status                  TINYINT         NOT NULL DEFAULT 1
+        COMMENT '状态：1=待支付 2=已支付 3=已发货 4=已完成 5=已取消 6=退款中 7=已退款',
     refund_from_status      TINYINT         NULL COMMENT '退款前状态，用于退款失败回退',
     client_ip               VARCHAR(45)     NULL COMMENT '客户端IP',
     idempotency_key         CHAR(36)        NULL COMMENT '幂等键（唯一）',
     version                 INT             NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
-    is_deleted              TINYINT         DEFAULT 0 COMMENT '是否删除：0=未删除 1=已删除（允许NULL）',
+    is_deleted              TINYINT         DEFAULT 0 COMMENT '是否删除：NULL=已删除 0=未删除',
     create_time             DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time             DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (id),
@@ -324,11 +324,10 @@ CREATE TABLE IF NOT EXISTS t_order_item (
     pay_amount          DECIMAL(12,2)   NOT NULL DEFAULT 0 COMMENT '行实付',
     refund_status       TINYINT         NOT NULL DEFAULT 0 COMMENT '退款状态：0=无 1=部分退款 2=全额退款',
     version             INT             NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
-    is_deleted          TINYINT         DEFAULT 0 COMMENT '是否删除：0=未删除 1=已删除（允许NULL）',
+    is_deleted          TINYINT         DEFAULT 0 COMMENT '是否删除：NULL=已删除 0=未删除',
     create_time         DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time         DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (id),
-    INDEX idx_order (order_id),
     INDEX idx_order_item_merchant (merchant_id),
     UNIQUE KEY uk_order_item_order_sku (order_id, sku_id, is_deleted)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='订单商品明细表';
@@ -340,7 +339,7 @@ CREATE TABLE IF NOT EXISTS t_order_logistics (
     description     VARCHAR(255)    NULL COMMENT '节点描述',
     created_time    DATETIME        NULL COMMENT '物流节点时间',
     version         INT             NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
-    is_deleted      TINYINT         DEFAULT 0 COMMENT '是否删除：0=未删除 1=已删除（允许NULL）',
+    is_deleted      TINYINT         DEFAULT 0 COMMENT '是否删除：NULL=已删除 0=未删除',
     create_time     DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time     DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (id),
@@ -356,7 +355,7 @@ CREATE TABLE IF NOT EXISTS t_order_status_log (
     operator_id     BIGINT UNSIGNED DEFAULT NULL COMMENT '操作人用户ID，系统操作为NULL',
     note            VARCHAR(255)    DEFAULT NULL COMMENT '附加备注',
     version         INT             NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
-    is_deleted      TINYINT         DEFAULT 0 COMMENT '是否删除：0=未删除 1=已删除（允许NULL）',
+    is_deleted      TINYINT         DEFAULT 0 COMMENT '是否删除：NULL=已删除 0=未删除',
     create_time     DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
     update_time     DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '更新时间',
     PRIMARY KEY (id),
@@ -370,7 +369,7 @@ CREATE TABLE IF NOT EXISTS t_order_payment_snapshot (
     pay_method      TINYINT         NOT NULL COMMENT '支付方式：1=支付宝 2=微信',
     expire_at       DATETIME(3)     DEFAULT NULL COMMENT '支付过期时间',
     version         INT             NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
-    is_deleted      TINYINT         DEFAULT 0 COMMENT '是否删除：0=未删除 1=已删除（允许NULL）',
+    is_deleted      TINYINT         DEFAULT 0 COMMENT '是否删除：NULL=已删除 0=未删除',
     create_time     DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
     update_time     DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '更新时间',
     PRIMARY KEY (id),
@@ -381,7 +380,7 @@ CREATE TABLE IF NOT EXISTS t_order_outbox (
                                               id              BIGINT          NOT NULL COMMENT '主键ID',
                                               transaction_id  VARCHAR(64)     NOT NULL COMMENT '事务ID',
     version         INT             NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
-    is_deleted      TINYINT         DEFAULT 0 COMMENT '是否删除：0=未删除 1=已删除（允许NULL）',
+    is_deleted      TINYINT         DEFAULT 0 COMMENT '是否删除：NULL=已删除 0=未删除',
     create_time     DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time     DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (id),
@@ -400,7 +399,7 @@ CREATE TABLE IF NOT EXISTS t_stock (
                                        reserved        BIGINT          DEFAULT 0 COMMENT '预占库存',
                                        alert_threshold BIGINT          NOT NULL DEFAULT 10 COMMENT '预警阈值',
                                        version         INT             NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
-                                       is_deleted      TINYINT         DEFAULT 0 COMMENT '是否删除：0=未删除 1=已删除（允许NULL）',
+                                       is_deleted      TINYINT         DEFAULT 0 COMMENT '是否删除：NULL=已删除 0=未删除',
                                        create_time     DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
                                        update_time     DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
                                        PRIMARY KEY (id),
@@ -412,15 +411,15 @@ CREATE TABLE IF NOT EXISTS t_stock_journal (
                                                id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '自增主键',
                                                sku_id          BIGINT UNSIGNED NOT NULL COMMENT 'SKU ID',
                                                quantity        BIGINT          NOT NULL COMMENT '变动数量，正=入 负=出',
-                                               type            TINYINT         NOT NULL COMMENT '变动类型：1=预占 2=释放 3=调整',
+                                               type            TINYINT         NOT NULL
+        COMMENT '变动类型：1=预占 2=释放 3=调整 4=调出 5=调入 6=纠正',
                                                reason          VARCHAR(255)    NULL COMMENT '变动原因',
     order_no        VARCHAR(32)     NULL COMMENT '关联订单号',
-    is_deleted      TINYINT         DEFAULT 0 COMMENT '是否删除：0=未删除 1=已删除（允许NULL）',
+    is_deleted      TINYINT         DEFAULT 0 COMMENT '是否删除：NULL=已删除 0=未删除',
     create_time     DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
     update_time     DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '更新时间',
     version         INT             NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
     PRIMARY KEY (id),
-    INDEX idx_journal_sku_id (sku_id),
     UNIQUE KEY uk_stock_journal_release_idem (sku_id, order_no, type, is_deleted)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='库存流水表';
 
@@ -432,7 +431,7 @@ CREATE TABLE IF NOT EXISTS t_stock_transfer (
                                                 reason          VARCHAR(256)    NULL COMMENT '调拨原因',
     operator_id     BIGINT          NOT NULL COMMENT '操作人（平台管理员ID）',
     version         INT             NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
-    is_deleted      TINYINT         DEFAULT 0 COMMENT '是否删除：0=未删除 1=已删除（允许NULL）',
+    is_deleted      TINYINT         DEFAULT 0 COMMENT '是否删除：NULL=已删除 0=未删除',
     create_time     DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time     DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (id),
@@ -450,7 +449,7 @@ CREATE TABLE IF NOT EXISTS t_stock_count_task (
                                                   remark              VARCHAR(256)    NULL COMMENT '备注',
     operator_id         BIGINT          NOT NULL COMMENT '操作人ID',
     version             INT             NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
-    is_deleted          TINYINT         DEFAULT 0 COMMENT '是否删除：0=未删除 1=已删除（允许NULL）',
+    is_deleted          TINYINT         DEFAULT 0 COMMENT '是否删除：NULL=已删除 0=未删除',
     create_time         DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time         DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (id),
@@ -472,14 +471,15 @@ CREATE TABLE IF NOT EXISTS t_pay_transaction (
     merchant_id         BIGINT UNSIGNED NOT NULL COMMENT '收款商家ID',
     amount              DECIMAL(12,2)   NOT NULL COMMENT '支付金额(元)',
     currency            VARCHAR(8)      NOT NULL DEFAULT 'CNY' COMMENT '币种',
-    status              TINYINT         NOT NULL DEFAULT 0 COMMENT '状态：0=待支付 1=已支付 2=关闭 3=失败',
+    status              TINYINT         NOT NULL DEFAULT 1
+        COMMENT '状态：1=PENDING 2=SUCCESS 3=FAILED 4=CLOSED 5=REFUNDING 6=REFUNDED 7=FROZEN',
     channel             TINYINT         NOT NULL DEFAULT 0 COMMENT '支付渠道：1=支付宝 2=微信',
     channel_response    TEXT            DEFAULT NULL COMMENT '第三方回调原始报文',
     paid_at             DATETIME(3)     DEFAULT NULL COMMENT '支付成功时间',
     expire_at           DATETIME(3)     DEFAULT NULL COMMENT '支付过期时间',
     idempotency_key     VARCHAR(64)     DEFAULT NULL COMMENT '幂等键',
     version             INT             NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
-    is_deleted          TINYINT         DEFAULT 0 COMMENT '是否删除：0=未删除 1=已删除（允许NULL）',
+    is_deleted          TINYINT         DEFAULT 0 COMMENT '是否删除：NULL=已删除 0=未删除',
     create_time         DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
     update_time         DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '更新时间',
     PRIMARY KEY (id),
@@ -498,13 +498,14 @@ CREATE TABLE IF NOT EXISTS t_pay_refund (
     refund_trade_no     VARCHAR(64)     DEFAULT NULL COMMENT '第三方退款交易号',
     amount              DECIMAL(12,2)   NOT NULL COMMENT '退款金额(元)',
     reason              VARCHAR(512)    DEFAULT NULL COMMENT '退款原因',
-    status              TINYINT         NOT NULL DEFAULT 0 COMMENT '状态：0=待退款 1=已退款 2=失败',
+    status              TINYINT         NOT NULL DEFAULT 0
+        COMMENT '状态：0=待退款 1=已退款 2=失败 3=已关闭',
     notified_at         DATETIME(3)     DEFAULT NULL COMMENT '退款通知时间',
     idempotency_key     VARCHAR(64)     DEFAULT NULL COMMENT '幂等键',
     retry_count         INT             NOT NULL DEFAULT 0 COMMENT '退款补偿重试次数',
     next_retry_at       DATETIME(3)     DEFAULT NULL COMMENT '下次退款补偿时间',
     version             INT             NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
-    is_deleted          TINYINT         DEFAULT 0 COMMENT '是否删除：0=未删除 1=已删除（允许NULL）',
+    is_deleted          TINYINT         DEFAULT 0 COMMENT '是否删除：NULL=已删除 0=未删除',
     create_time         DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
     update_time         DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '更新时间',
     PRIMARY KEY (id),
@@ -529,13 +530,13 @@ CREATE TABLE IF NOT EXISTS t_notify_message (
     content         VARCHAR(1024)   NULL COMMENT '消息内容',
     read_flag       INT             DEFAULT 0 COMMENT '已读标志：0=未读 1=已读',
     version         INT             NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
-    is_deleted      TINYINT         DEFAULT 0 COMMENT '是否删除：0=未删除 1=已删除（允许NULL）',
+    is_deleted      TINYINT         DEFAULT 0 COMMENT '是否删除：NULL=已删除 0=未删除',
     create_time     DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time     DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (id),
     INDEX idx_notify_message_user (user_id),
     INDEX idx_recipient (recipient_type, user_id, read_flag),
-    UNIQUE KEY uk_notify_message_receiver_unread (recipient_type, user_id, read_flag, create_time DESC, is_deleted),
+    UNIQUE KEY uk_notify_biz (recipient_type, user_id, message_type, biz_id, is_deleted),
     INDEX idx_notify_message_biz (biz_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='站内消息表';
 
@@ -553,7 +554,7 @@ CREATE TABLE IF NOT EXISTS t_notify_complaint (
     handler_id          BIGINT          NULL COMMENT '处理人ID',
     handler_result      TEXT            NULL COMMENT '处理结果',
     version             INT             NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
-    is_deleted          TINYINT         DEFAULT 0 COMMENT '是否删除：0=未删除 1=已删除（允许NULL）',
+    is_deleted          TINYINT         DEFAULT 0 COMMENT '是否删除：NULL=已删除 0=未删除',
     create_time         DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time         DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (id),
@@ -575,14 +576,13 @@ CREATE TABLE IF NOT EXISTS t_notify_comment (
     status                  TINYINT         DEFAULT 1 COMMENT '状态：1=正常 2=隐藏 3=已删除',
     merchant_reply          VARCHAR(1024)   NULL COMMENT '商家回复内容',
     merchant_reply_time     DATETIME        NULL COMMENT '商家回复时间',
-    is_deleted              TINYINT         DEFAULT 0 COMMENT '是否删除：0=未删除 1=已删除（允许NULL）',
+    is_deleted              TINYINT         DEFAULT 0 COMMENT '是否删除：NULL=已删除 0=未删除',
     create_time             DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time             DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (id),
     INDEX idx_spu (spu_id, status),
     INDEX idx_notify_comment_user (user_id),
     INDEX idx_merchant (merchant_id),
-    INDEX idx_notify_comment_order (order_no),
     UNIQUE KEY uk_notify_comment_order_spu_user (order_no, spu_id, user_id, is_deleted)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='商品评价表';
 
@@ -593,12 +593,11 @@ CREATE TABLE IF NOT EXISTS t_notify_preference (
     site_enabled    TINYINT         DEFAULT 1 COMMENT '站内信开关：0=关 1=开',
     sms_enabled     TINYINT         DEFAULT 1 COMMENT '短信开关：0=关 1=开',
     email_enabled   TINYINT         DEFAULT 1 COMMENT '邮件开关：0=关 1=开',
-    is_deleted      TINYINT         DEFAULT 0 COMMENT '是否删除：0=未删除 1=已删除（允许NULL）',
+    is_deleted      TINYINT         DEFAULT 0 COMMENT '是否删除：NULL=已删除 0=未删除',
     create_time     DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time     DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (id),
-    UNIQUE KEY uk_user_category (user_id, category_code, is_deleted),
-    INDEX idx_notify_preference_user (user_id)
+    UNIQUE KEY uk_user_category (user_id, category_code, is_deleted)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='通知偏好设置表';
 
 -- ============================================================
@@ -611,7 +610,7 @@ CREATE TABLE IF NOT EXISTS t_id_segment (
     current_max BIGINT          DEFAULT 0 COMMENT '当前最大ID值',
     step        BIGINT          DEFAULT 1000 COMMENT '步长',
     version     INT             DEFAULT 0 COMMENT '乐观锁版本',
-    is_deleted  TINYINT         DEFAULT 0 COMMENT '是否删除：0=未删除 1=已删除（允许NULL）',
+    is_deleted  TINYINT         DEFAULT 0 COMMENT '是否删除：NULL=已删除 0=未删除',
     create_time DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (id),
@@ -649,5 +648,135 @@ CREATE TABLE IF NOT EXISTS `undo_log` (
     PRIMARY KEY (`id`),
     UNIQUE KEY `ux_undo_log` (`xid`, `branch_id`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AT事务模式undo日志表';
+
+ALTER TABLE t_auth_role ADD CONSTRAINT chk_auth_role_is_deleted CHECK (is_deleted IS NULL OR is_deleted = 0);
+ALTER TABLE t_auth_permission ADD CONSTRAINT chk_auth_permission_is_deleted CHECK (is_deleted IS NULL OR is_deleted = 0);
+ALTER TABLE t_auth_user ADD CONSTRAINT chk_auth_user_is_deleted CHECK (is_deleted IS NULL OR is_deleted = 0);
+ALTER TABLE t_auth_role_permission ADD CONSTRAINT chk_auth_role_permission_is_deleted CHECK (is_deleted IS NULL OR is_deleted = 0);
+ALTER TABLE t_auth_token_blacklist ADD CONSTRAINT chk_auth_token_blacklist_is_deleted CHECK (is_deleted IS NULL OR is_deleted = 0);
+ALTER TABLE t_user ADD CONSTRAINT chk_user_is_deleted CHECK (is_deleted IS NULL OR is_deleted = 0);
+ALTER TABLE t_user_address ADD CONSTRAINT chk_user_address_is_deleted CHECK (is_deleted IS NULL OR is_deleted = 0);
+ALTER TABLE t_user_favorite ADD CONSTRAINT chk_user_favorite_is_deleted CHECK (is_deleted IS NULL OR is_deleted = 0);
+ALTER TABLE t_merch_merchant ADD CONSTRAINT chk_merch_merchant_is_deleted CHECK (is_deleted IS NULL OR is_deleted = 0);
+ALTER TABLE t_merch_shop ADD CONSTRAINT chk_merch_shop_is_deleted CHECK (is_deleted IS NULL OR is_deleted = 0);
+ALTER TABLE t_goods_spu ADD CONSTRAINT chk_goods_spu_is_deleted CHECK (is_deleted IS NULL OR is_deleted = 0);
+ALTER TABLE t_sku ADD CONSTRAINT chk_sku_is_deleted CHECK (is_deleted IS NULL OR is_deleted = 0);
+ALTER TABLE t_goods_audit_record ADD CONSTRAINT chk_goods_audit_record_is_deleted CHECK (is_deleted IS NULL OR is_deleted = 0);
+ALTER TABLE t_cart_item ADD CONSTRAINT chk_cart_item_is_deleted CHECK (is_deleted IS NULL OR is_deleted = 0);
+ALTER TABLE t_order ADD CONSTRAINT chk_order_is_deleted CHECK (is_deleted IS NULL OR is_deleted = 0);
+ALTER TABLE t_order_item ADD CONSTRAINT chk_order_item_is_deleted CHECK (is_deleted IS NULL OR is_deleted = 0);
+ALTER TABLE t_order_logistics ADD CONSTRAINT chk_order_logistics_is_deleted CHECK (is_deleted IS NULL OR is_deleted = 0);
+ALTER TABLE t_order_status_log ADD CONSTRAINT chk_order_status_log_is_deleted CHECK (is_deleted IS NULL OR is_deleted = 0);
+ALTER TABLE t_order_payment_snapshot ADD CONSTRAINT chk_order_payment_snapshot_is_deleted CHECK (is_deleted IS NULL OR is_deleted = 0);
+ALTER TABLE t_order_outbox ADD CONSTRAINT chk_order_outbox_is_deleted CHECK (is_deleted IS NULL OR is_deleted = 0);
+ALTER TABLE t_stock ADD CONSTRAINT chk_stock_is_deleted CHECK (is_deleted IS NULL OR is_deleted = 0);
+ALTER TABLE t_stock_journal ADD CONSTRAINT chk_stock_journal_is_deleted CHECK (is_deleted IS NULL OR is_deleted = 0);
+ALTER TABLE t_stock_transfer ADD CONSTRAINT chk_stock_transfer_is_deleted CHECK (is_deleted IS NULL OR is_deleted = 0);
+ALTER TABLE t_stock_count_task ADD CONSTRAINT chk_stock_count_task_is_deleted CHECK (is_deleted IS NULL OR is_deleted = 0);
+ALTER TABLE t_pay_transaction ADD CONSTRAINT chk_pay_transaction_is_deleted CHECK (is_deleted IS NULL OR is_deleted = 0);
+ALTER TABLE t_pay_refund ADD CONSTRAINT chk_pay_refund_is_deleted CHECK (is_deleted IS NULL OR is_deleted = 0);
+ALTER TABLE t_notify_message ADD CONSTRAINT chk_notify_message_is_deleted CHECK (is_deleted IS NULL OR is_deleted = 0);
+ALTER TABLE t_notify_complaint ADD CONSTRAINT chk_notify_complaint_is_deleted CHECK (is_deleted IS NULL OR is_deleted = 0);
+ALTER TABLE t_notify_comment ADD CONSTRAINT chk_notify_comment_is_deleted CHECK (is_deleted IS NULL OR is_deleted = 0);
+ALTER TABLE t_notify_preference ADD CONSTRAINT chk_notify_preference_is_deleted CHECK (is_deleted IS NULL OR is_deleted = 0);
+ALTER TABLE t_id_segment ADD CONSTRAINT chk_id_segment_is_deleted CHECK (is_deleted IS NULL OR is_deleted = 0);
+
+ALTER TABLE t_merch_merchant
+    ADD CONSTRAINT chk_merch_audit_status CHECK (audit_status BETWEEN 0 AND 2);
+ALTER TABLE t_merch_shop
+    ADD CONSTRAINT chk_merch_shop_status CHECK (status BETWEEN 1 AND 3);
+
+ALTER TABLE t_goods_spu
+    ADD CONSTRAINT chk_goods_spu_status CHECK (status BETWEEN 0 AND 4);
+ALTER TABLE t_sku
+    MODIFY COLUMN price DECIMAL(12,2) NOT NULL DEFAULT 0,
+    ADD CONSTRAINT chk_sku_values CHECK (price >= 0 AND stock >= 0);
+ALTER TABLE t_goods_audit_record
+    ADD CONSTRAINT chk_goods_audit_decision CHECK (decision IN (1, 2));
+
+ALTER TABLE t_cart_item
+    MODIFY COLUMN quantity INT NOT NULL DEFAULT 1,
+    ADD CONSTRAINT chk_cart_quantity CHECK (quantity > 0);
+
+ALTER TABLE t_order
+    ADD CONSTRAINT chk_order_trade_values CHECK (
+        order_type BETWEEN 1 AND 3
+        AND status BETWEEN 1 AND 7
+        AND stock_release_status BETWEEN 0 AND 2
+        AND (refund_from_status IS NULL OR refund_from_status BETWEEN 1 AND 7)
+        AND (quantity IS NULL OR quantity > 0)
+        AND (amount IS NULL OR amount >= 0)
+        AND (refund_amount IS NULL OR refund_amount >= 0)
+        AND total_refunded_amount >= 0
+        AND total_amount >= 0
+        AND pay_amount >= 0
+        AND freight_amount >= 0
+        AND discount_amount >= 0
+    );
+ALTER TABLE t_order_item
+    ADD CONSTRAINT chk_order_item_values CHECK (
+        quantity > 0
+        AND unit_price >= 0
+        AND amount >= 0
+        AND subtotal_amount >= 0
+        AND discount_amount >= 0
+        AND pay_amount >= 0
+        AND refund_status IN (0, 1, 2)
+    );
+ALTER TABLE t_order_status_log
+    ADD CONSTRAINT chk_order_status_log_values CHECK (
+        (from_status IS NULL OR from_status BETWEEN 1 AND 7)
+        AND to_status BETWEEN 1 AND 7
+    );
+ALTER TABLE t_order_payment_snapshot
+    ADD CONSTRAINT chk_order_payment_amount CHECK (pay_amount >= 0);
+
+ALTER TABLE t_stock
+    MODIFY COLUMN available BIGINT NOT NULL DEFAULT 0,
+    MODIFY COLUMN reserved BIGINT NOT NULL DEFAULT 0,
+    ADD CONSTRAINT chk_stock_values
+        CHECK (available >= 0 AND reserved >= 0 AND alert_threshold >= 0);
+ALTER TABLE t_stock_journal
+    ADD CONSTRAINT chk_stock_journal_values
+        CHECK (type BETWEEN 1 AND 6 AND quantity <> 0);
+ALTER TABLE t_stock_transfer
+    ADD CONSTRAINT chk_stock_transfer_quantity CHECK (quantity > 0);
+ALTER TABLE t_stock_count_task
+    ADD CONSTRAINT chk_stock_count_values CHECK (
+        expected_quantity >= 0
+        AND (actual_quantity IS NULL OR actual_quantity >= 0)
+        AND status BETWEEN 1 AND 3
+    );
+
+ALTER TABLE t_pay_transaction
+    ADD CONSTRAINT chk_pay_transaction_values
+        CHECK (status BETWEEN 1 AND 7 AND amount >= 0);
+ALTER TABLE t_pay_refund
+    ADD CONSTRAINT chk_pay_refund_values
+        CHECK (status BETWEEN 0 AND 3 AND amount >= 0 AND retry_count >= 0);
+
+ALTER TABLE t_notify_message
+    MODIFY COLUMN read_flag INT NOT NULL DEFAULT 0,
+    ADD CONSTRAINT chk_notify_message_read_flag CHECK (read_flag IN (0, 1));
+ALTER TABLE t_notify_complaint
+    MODIFY COLUMN status TINYINT NOT NULL DEFAULT 0,
+    ADD CONSTRAINT chk_notify_complaint_status CHECK (status BETWEEN 0 AND 3);
+ALTER TABLE t_notify_comment
+    MODIFY COLUMN anonymous TINYINT NOT NULL DEFAULT 0,
+    MODIFY COLUMN status TINYINT NOT NULL DEFAULT 1,
+    ADD CONSTRAINT chk_notify_comment_values CHECK (
+        rating BETWEEN 1 AND 5
+        AND anonymous IN (0, 1)
+        AND status BETWEEN 1 AND 3
+    );
+ALTER TABLE t_notify_preference
+    MODIFY COLUMN site_enabled TINYINT NOT NULL DEFAULT 1,
+    MODIFY COLUMN sms_enabled TINYINT NOT NULL DEFAULT 1,
+    MODIFY COLUMN email_enabled TINYINT NOT NULL DEFAULT 1,
+    ADD CONSTRAINT chk_notify_preference_flags CHECK (
+        site_enabled IN (0, 1)
+        AND sms_enabled IN (0, 1)
+        AND email_enabled IN (0, 1)
+    );
 
 SET FOREIGN_KEY_CHECKS = 1;

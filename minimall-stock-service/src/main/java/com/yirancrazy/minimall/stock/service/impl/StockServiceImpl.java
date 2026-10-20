@@ -2,15 +2,18 @@ package com.yirancrazy.minimall.stock.service.impl;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.extern.slf4j.Slf4j;
+import com.yirancrazy.minimall.api.dto.stock.StockAvailabilityDTO;
 import com.yirancrazy.minimall.api.dto.stock.StockReserveDTO;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CommonCode;
@@ -55,6 +58,7 @@ public class StockServiceImpl implements StockService {
     private static final int EXPORT_MAX_ROWS = 10000;
     private static final int QUERY_MAX_ROWS = 200;
     private static final int MAX_RESERVE_BATCH_SIZE = 100;
+    private static final int MAX_AVAILABILITY_BATCH_SIZE = 500;
 
     private final StockManager stockManager;
     private final StockJournalManager journalManager;
@@ -233,6 +237,38 @@ public class StockServiceImpl implements StockService {
         }
         checkMerchantOwnership(s, merchantId);
         return s.getAvailable();
+    }
+
+
+    /**
+     * 批量查询SKU可用库存。
+     * @param skuIds SKU ID列表
+     * @return 库存快照列表
+     */
+    @Override
+    public List<StockAvailabilityDTO> queryAvailability(List<Long> skuIds) {
+        if (skuIds == null || skuIds.isEmpty()) {
+            return List.of();
+        }
+        List<Long> normalizedIds = skuIds.stream()
+            .filter(Objects::nonNull)
+            .distinct()
+            .limit(MAX_AVAILABILITY_BATCH_SIZE)
+            .toList();
+        if (normalizedIds.isEmpty()) {
+            return List.of();
+        }
+        Map<Long, Long> availableBySku = new LinkedHashMap<>(normalizedIds.size() * 2);
+        List<StockPO> stocks = stockManager.list(
+            Wrappers.lambdaQuery(StockPO.class).in(StockPO::getSkuId, normalizedIds));
+        for (StockPO stock : stocks) {
+            availableBySku.put(stock.getSkuId(), stock.getAvailable());
+        }
+        List<StockAvailabilityDTO> result = new ArrayList<>(normalizedIds.size());
+        for (Long skuId : normalizedIds) {
+            result.add(new StockAvailabilityDTO(skuId, availableBySku.getOrDefault(skuId, 0L)));
+        }
+        return result;
     }
 
 

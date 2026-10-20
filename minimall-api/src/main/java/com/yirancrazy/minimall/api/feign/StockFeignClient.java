@@ -1,9 +1,12 @@
 package com.yirancrazy.minimall.api.feign;
 
+import java.util.List;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import com.yirancrazy.minimall.api.dto.stock.StockAdjustDTO;
+import com.yirancrazy.minimall.api.dto.stock.StockAvailabilityDTO;
+import com.yirancrazy.minimall.api.dto.stock.StockAvailabilityQueryDTO;
 import com.yirancrazy.minimall.api.dto.stock.StockBatchReserveDTO;
 import com.yirancrazy.minimall.api.dto.stock.StockInitDTO;
 import com.yirancrazy.minimall.api.dto.stock.StockReserveDTO;
@@ -62,4 +65,13 @@ public interface StockFeignClient {
      */
     @PostMapping("/internal/stock/adjust")
     Result<Void> adjustStock(@RequestBody StockAdjustDTO dto);
+
+
+    /**
+     * 批量查询SKU可用库存。
+     * @param dto 查询参数
+     * @return 库存快照列表
+     */
+    @PostMapping("/internal/stock/availability")
+    Result<List<StockAvailabilityDTO>> queryAvailability(@RequestBody StockAvailabilityQueryDTO dto);
 }

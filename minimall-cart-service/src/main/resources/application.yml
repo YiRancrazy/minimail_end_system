@@ -10,7 +10,7 @@ spring:
     active: dev
   flyway:
     enabled: true
-    locations: classpath:db/migration
+    locations: classpath:db/migration/cart
     baseline-on-migrate: true
   cloud:
     inetutils:
@@ -27,7 +27,7 @@ spring:
             connect-timeout: 1000
             read-timeout: 3000
   datasource:
-    url: jdbc:mysql://${MYSQL_HOST:127.0.0.1}:${MYSQL_PORT:3306}/minimall_db?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC&createDatabaseIfNotExist=true
+    url: jdbc:mysql://${MYSQL_HOST:127.0.0.1}:${MYSQL_PORT:3306}/cart_db?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC&createDatabaseIfNotExist=true
     username: ${MYSQL_USER:root}
     password: ${MYSQL_PASSWORD:${MYSQL_ROOT_PASSWORD:root}}
   knife4j:

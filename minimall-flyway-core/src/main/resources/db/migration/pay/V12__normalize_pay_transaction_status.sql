@@ -1,0 +1,7 @@
+UPDATE t_pay_transaction
+SET status = 1
+WHERE status = 0;
+
+ALTER TABLE t_pay_transaction
+    MODIFY COLUMN status TINYINT NOT NULL DEFAULT 1
+        COMMENT '状态：1=PENDING 2=SUCCESS 3=FAILED 4=CLOSED 5=REFUNDING 6=REFUNDED 7=FROZEN';

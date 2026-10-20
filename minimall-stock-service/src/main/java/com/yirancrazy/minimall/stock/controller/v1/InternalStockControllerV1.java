@@ -1,11 +1,14 @@
 package com.yirancrazy.minimall.stock.controller.v1;
 
+import java.util.List;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
 import com.yirancrazy.minimall.api.dto.stock.StockAdjustDTO;
+import com.yirancrazy.minimall.api.dto.stock.StockAvailabilityDTO;
+import com.yirancrazy.minimall.api.dto.stock.StockAvailabilityQueryDTO;
 import com.yirancrazy.minimall.api.dto.stock.StockBatchReserveDTO;
 import com.yirancrazy.minimall.api.dto.stock.StockInitDTO;
 import com.yirancrazy.minimall.api.dto.stock.StockReserveDTO;
@@ -89,5 +92,17 @@ public class InternalStockControllerV1 {
         stockService.adjustStock(dto.getSkuId(), dto.getQuantity(), dto.getReason(),
             dto.getMerchantId());
         return Result.success();
+    }
+
+
+    /**
+     * 批量查询SKU可用库存。
+     * @param dto 查询参数
+     * @return 库存快照列表
+     */
+    @PostMapping("/availability")
+    public Result<List<StockAvailabilityDTO>> availability(
+            @Valid @RequestBody StockAvailabilityQueryDTO dto) {
+        return Result.success(stockService.queryAvailability(dto.getSkuIds()));
     }
 }

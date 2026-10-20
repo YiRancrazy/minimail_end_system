@@ -1,9 +1,12 @@
 package com.yirancrazy.minimall.goods.gateway.impl;
 
+import java.util.List;
 import org.springframework.stereotype.Component;
 import lombok.RequiredArgsConstructor;
 import com.yirancrazy.minimall.api.dto.merchant.ShopSnapshotDTO;
 import com.yirancrazy.minimall.api.dto.stock.StockAdjustDTO;
+import com.yirancrazy.minimall.api.dto.stock.StockAvailabilityDTO;
+import com.yirancrazy.minimall.api.dto.stock.StockAvailabilityQueryDTO;
 import com.yirancrazy.minimall.api.dto.stock.StockInitDTO;
 import com.yirancrazy.minimall.api.feign.MerchantFeignClient;
 import com.yirancrazy.minimall.api.feign.StockFeignClient;
@@ -52,5 +55,15 @@ public class GoodsRemoteGatewayImpl implements GoodsRemoteGateway {
     @Override
     public Result<Void> adjustStock(StockAdjustDTO dto) {
         return stockFeignClient.adjustStock(dto);
+    }
+
+    /**
+     * 批量查询SKU可用库存。
+     * @param dto 查询参数
+     * @return 库存快照列表
+     */
+    @Override
+    public Result<List<StockAvailabilityDTO>> queryAvailability(StockAvailabilityQueryDTO dto) {
+        return stockFeignClient.queryAvailability(dto);
     }
 }

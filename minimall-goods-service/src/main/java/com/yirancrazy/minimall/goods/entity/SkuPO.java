@@ -22,5 +22,6 @@ public class SkuPO extends BasePO {
     private Long merchantId;
     private String skuName;
     private BigDecimal price;
+    // 库存展示缓存，权威库存由库存服务的 t_stock.available 维护
     private Integer stock;
 }

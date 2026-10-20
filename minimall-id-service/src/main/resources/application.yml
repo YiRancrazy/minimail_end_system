@@ -7,7 +7,7 @@ spring:
     active: dev
   flyway:
     enabled: true
-    locations: classpath:db/migration
+    locations: classpath:db/migration/id
     baseline-on-migrate: true
   cloud:
     inetutils:

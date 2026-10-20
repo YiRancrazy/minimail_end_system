@@ -1,6 +1,7 @@
 package com.yirancrazy.minimall.stock.service;
 
 import java.util.List;
+import com.yirancrazy.minimall.api.dto.stock.StockAvailabilityDTO;
 import com.yirancrazy.minimall.api.dto.stock.StockReserveDTO;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.stock.dto.StockCountTaskCompleteDTO;
@@ -109,6 +110,14 @@ public interface StockService {
      * @return 业务数值
      */
     long query(Long skuId, Long merchantId);
+
+
+    /**
+     * 批量查询SKU可用库存。
+     * @param skuIds SKU ID列表
+     * @return 库存快照列表
+     */
+    List<StockAvailabilityDTO> queryAvailability(List<Long> skuIds);
 
 
     /**

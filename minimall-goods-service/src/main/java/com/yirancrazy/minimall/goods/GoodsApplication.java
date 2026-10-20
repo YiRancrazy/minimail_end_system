@@ -5,6 +5,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 import org.springframework.cloud.openfeign.EnableFeignClients;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 
         /**
@@ -20,6 +21,7 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
 @SpringBootApplication
 @MapperScan("com.yirancrazy.minimall.goods.mapper")
 @EnableFeignClients(basePackages = "com.yirancrazy.minimall.api.feign")
+@EnableScheduling
 public class GoodsApplication {
     /**
     * 应用启动入口。

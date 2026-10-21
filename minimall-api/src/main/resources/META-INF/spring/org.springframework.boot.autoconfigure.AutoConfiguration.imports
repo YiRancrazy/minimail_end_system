@@ -1,1 +1,2 @@
 com.yirancrazy.minimall.api.config.TraceIdFeignAutoConfiguration
+com.yirancrazy.minimall.api.config.FeignFallbackAutoConfiguration

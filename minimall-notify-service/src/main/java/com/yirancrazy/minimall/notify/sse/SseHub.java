@@ -9,6 +9,7 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
@@ -23,6 +24,7 @@ import com.yirancrazy.minimall.notify.constant.NotifyCodeEnum;
  * @DateTime: 2026/10/16
  **/
 @Slf4j
+@Component
 public class SseHub {
 
 

@@ -54,6 +54,7 @@ minimall:
     enabled: ${MINIMALL_SCHEDULE_ENABLED:true}
     scan-callback-ms: 30000
     scan-refund-ms: 30000
+    scan-init-ms: 30000
 logging:
   level:
     root: INFO

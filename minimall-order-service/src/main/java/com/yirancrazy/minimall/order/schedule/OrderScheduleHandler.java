@@ -48,7 +48,7 @@ public class OrderScheduleHandler {
 
 
     /**
-     * 扫描并处理待办数据。
+     * 扫描并处理过期订单。
      */
     public void scanExpiredOrders() {
         String lockKey = "order:schedule:scanExpiredOrders";
@@ -68,7 +68,7 @@ public class OrderScheduleHandler {
 
 
     /**
-     * 扫描并处理待办数据。
+     * 扫描并处理自动确认订单。
      */
     public void scanAutoConfirm() {
         String lockKey = "order:schedule:scanAutoConfirm";

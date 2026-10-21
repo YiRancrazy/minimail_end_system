@@ -13,7 +13,7 @@ import com.yirancrazy.minimall.id.service.Snowflake;
  * @DateTime: 2026/10/16
  **/
 @Service
-public final class IdServiceImpl implements IdService {
+public class IdServiceImpl implements IdService {
 
     private final Snowflake snowflake;
 

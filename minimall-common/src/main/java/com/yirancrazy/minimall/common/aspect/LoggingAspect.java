@@ -27,16 +27,19 @@ public class LoggingAspect {
     /**
      * 匹配服务层方法。
      */
+    @Pointcut("execution(* com.yirancrazy.minimall..service..*.*(..))")
     public void servicePointcut() {}
 
     /**
      * 执行 controllerPointcut 方法。
      */
+    @Pointcut("execution(* com.yirancrazy.minimall..controller..*.*(..))")
     public void controllerPointcut() {}
 
     /**
      * 执行 transactionalPointcut 方法。
      */
+    @Pointcut("@annotation(org.springframework.transaction.annotation.Transactional)")
     public void transactionalPointcut() {}
 
     /**

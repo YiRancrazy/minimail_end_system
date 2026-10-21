@@ -55,6 +55,11 @@ minimall:
     scan-callback-ms: 30000
     scan-refund-ms: 30000
     scan-init-ms: 30000
+    pay:
+      scan-paid-but-order-pending-ms: 30000
+      scan-unnotified-refunds-ms: 30000
+      scan-pending-refunds-ms: 30000
+      scan-init-ms: 10000
 logging:
   level:
     root: INFO

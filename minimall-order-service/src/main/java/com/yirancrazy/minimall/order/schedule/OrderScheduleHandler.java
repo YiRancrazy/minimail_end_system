@@ -50,6 +50,7 @@ public class OrderScheduleHandler {
     /**
      * 扫描并处理过期订单。
      */
+    @Scheduled(fixedDelayString = "${minimall.schedule.order.scan-expired-orders-ms}", initialDelayString = "${minimall.schedule.order.scan-init-ms}")
     public void scanExpiredOrders() {
         String lockKey = "order:schedule:scanExpiredOrders";
         String lockToken = tryLock(lockKey);
@@ -70,6 +71,7 @@ public class OrderScheduleHandler {
     /**
      * 扫描并处理自动确认订单。
      */
+    @Scheduled(fixedDelayString = "${minimall.schedule.order.scan-auto-confirm-ms}", initialDelayString = "${minimall.schedule.order.scan-init-ms}")
     public void scanAutoConfirm() {
         String lockKey = "order:schedule:scanAutoConfirm";
         String lockToken = tryLock(lockKey);
@@ -90,10 +92,12 @@ public class OrderScheduleHandler {
     /**
      * 扫描并处理待办数据。
      */
+    @Scheduled(fixedDelayString = "${minimall.schedule.order.scan-stock-release-pending-ms}", initialDelayString = "${minimall.schedule.order.scan-init-ms}")
     public void scanStockReleasePending() {
         String lockKey = "order:schedule:scanStockReleasePending";
         String lockToken = tryLock(lockKey);
         if (lockToken == null) {
+            log.debug("scanStockReleasePending 已跳过，锁被其他实例持有");
             return;
         }
         try {

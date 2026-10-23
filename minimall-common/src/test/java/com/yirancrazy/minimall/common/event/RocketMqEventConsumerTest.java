@@ -22,7 +22,7 @@ import com.yirancrazy.minimall.common.result.Result;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: RocketMqEventConsumerTest 单元测试。
+ * @Description: 验证 RocketMQ 事件消费者的消息分发、重试和链路追踪行为。
  * @Version: 1.0
  * @DateTime: 2026/10/16
  **/
@@ -117,7 +117,7 @@ class RocketMqEventConsumerTest {
 
     /**
      * @Author: yirancrazy@gmail.com
-     * @Description: SampleEvent 记录对象，承载不可变数据。
+     * @Description: 测试事件，携带字符串载荷。
      * @Version: 1.0
      * @DateTime: 2026/10/16
      **/

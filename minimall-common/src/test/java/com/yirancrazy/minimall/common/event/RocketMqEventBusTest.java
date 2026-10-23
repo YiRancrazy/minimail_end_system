@@ -22,7 +22,7 @@ import com.yirancrazy.minimall.common.result.Result;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: RocketMqEventBusTest 单元测试。
+ * @Description: 验证 RocketMQ 事件总线的消息发送、事务状态和链路追踪行为。
  * @Version: 1.0
  * @DateTime: 2026/10/16
  **/
@@ -156,7 +156,7 @@ class RocketMqEventBusTest {
 
     /**
      * @Author: yirancrazy@gmail.com
-     * @Description: DummyEvent 类型，承载相关业务能力。
+     * @Description: 测试事件，携带字符串值。
      * @Version: 1.0
      * @DateTime: 2026/10/16
      **/
@@ -168,8 +168,9 @@ class RocketMqEventBusTest {
         }
 
         /**
-         * 获取相关数据。
-         * @return 处理结果
+         * 获取事件值。
+         *
+         * @return 字符串值
          */
         public String getValue() {
             return value;

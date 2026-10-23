@@ -9,7 +9,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: EventBusAutoConfigurationTest 单元测试。
+ * @Description: 验证事件总线自动配置默认注册本地事件总线实现。
  * @Version: 1.0
  * @DateTime: 2026/10/16
  **/
@@ -20,7 +20,7 @@ public class EventBusAutoConfigurationTest {
 
 
     /**
-     * 执行 default_eventbus_is_local 方法。
+     * 验证默认事件总线为本地实现。
      */
     public void default_eventbus_is_local() {
         runner.run(ctx -> {
@@ -31,7 +31,7 @@ public class EventBusAutoConfigurationTest {
 
     /**
      * @Author: yirancrazy@gmail.com
-     * @Description: TestConfig 配置类。
+     * @Description: 测试用自动配置，提供本地事件总线 Bean。
      * @Version: 1.0
      * @DateTime: 2026/10/16
      **/

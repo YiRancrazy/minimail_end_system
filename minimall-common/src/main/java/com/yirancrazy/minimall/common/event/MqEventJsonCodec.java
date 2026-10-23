@@ -7,7 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: MqEventJsonCodec 类型，承载相关业务能力。
+ * @Description: 事件消息的 JSON 编解码工具，并使用事件类简单名作为 RocketMQ tag。
  * @Version: 1.0
  * @DateTime: 2026/10/16
  **/
@@ -15,16 +15,18 @@ public final class MqEventJsonCodec {
     private static final ObjectMapper M = new ObjectMapper().findAndRegisterModules();
 
     /**
-     * 构造 MqEventJsonCodec 实例。
+     * 禁止实例化工具类。
      */
     private MqEventJsonCodec() {
     }
 
 
     /**
-     * 执行 encode 方法。
-     * @param event event 参数
-     * @return 结果列表
+     * 将事件对象编码为 JSON 字节数组。
+     *
+     * @param event 待编码的事件对象
+     * @return JSON 字节数组
+     * @throws IllegalStateException 事件编码失败时抛出
      */
     public static byte[] encode(Object event) {
         try {
@@ -37,11 +39,13 @@ public final class MqEventJsonCodec {
 
 
     /**
-     * 执行 decode 方法。
-     * @param <T> 泛型参数
-     * @param body body 参数
-     * @param type type 参数
-     * @return 处理结果
+     * 将 JSON 字节数组解码为指定类型的事件对象。
+     *
+     * @param <T> 事件类型
+     * @param body JSON 字节数组
+     * @param type 目标事件类型
+     * @return 解码后的事件对象
+     * @throws IllegalStateException 事件解码失败时抛出
      */
     public static <T> T decode(byte[] body, Class<T> type) {
         try {
@@ -54,9 +58,10 @@ public final class MqEventJsonCodec {
 
 
     /**
-     * 执行 tagFor 方法。
-     * @param eventType eventType 参数
-     * @return 处理结果
+     * 获取事件类型对应的 RocketMQ tag。
+     *
+     * @param eventType 事件类型
+     * @return 事件类简单名
      */
     public static String tagFor(Class<?> eventType) {
         return eventType.getSimpleName();

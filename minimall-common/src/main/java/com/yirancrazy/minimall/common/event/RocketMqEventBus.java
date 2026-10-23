@@ -22,7 +22,8 @@ import com.yirancrazy.minimall.common.result.Result;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: RocketMqEventBus 类型，承载相关业务能力。
+ * @Description: 基于 RocketMQ 事务消息的事件总线实现。
+ *               普通事件直接发送；事务事件通过本地事务回调提交，并通过 OutboxStore 或 checker 完成状态回查。
  * @Version: 1.0
  * @DateTime: 2026/10/16
  **/
@@ -38,9 +39,10 @@ public class RocketMqEventBus implements EventBus {
     private final Map<String, Class<?>> tagTypes = new ConcurrentHashMap<>();
 
     /**
-     * 构造 RocketMqEventBus 实例。
-     * @param namesrvAddr namesrvAddr 参数
-     * @param topic topic 参数
+     * 创建 RocketMQ 事件总线。
+     *
+     * @param namesrvAddr RocketMQ NameServer 地址
+     * @param topic 事件消息主题
      */
     public RocketMqEventBus(
         @Value("${minimall.eventbus.rocketmq.namesrv-addr:127.0.0.1:9876}") String namesrvAddr,
@@ -51,15 +53,18 @@ public class RocketMqEventBus implements EventBus {
 
 
     /**
-     * 设置相关数据。
-     * @param outboxStore outboxStore 参数
+     * 设置本地消息表存储，用于事务消息回查。
+     *
+     * @param outboxStore 本地消息表存储
      */
     public void setOutboxStore(OutboxStore outboxStore) {
         this.outboxStore = outboxStore;
     }
 
     /**
-     * 启动start。
+     * 创建并启动 RocketMQ 事务生产者。
+     *
+     * @throws IllegalStateException 生产者启动失败时抛出
      */
     @PostConstruct
     void start() {
@@ -67,10 +72,11 @@ public class RocketMqEventBus implements EventBus {
         producer.setNamesrvAddr(namesrvAddr);
         producer.setTransactionListener(new TransactionListener() {
             /**
-             * 执行 executeLocalTransaction 方法。
-             * @param msg msg 参数
-             * @param arg arg 参数
-             * @return 处理结果
+             * 执行本地事务，并决定事务消息的初始状态。
+             *
+             * @param msg RocketMQ 消息
+             * @param arg 本地事务回调
+             * @return 事务消息状态
              */
             @Override
             public LocalTransactionState executeLocalTransaction(Message msg, Object arg) {
@@ -87,9 +93,11 @@ public class RocketMqEventBus implements EventBus {
             }
 
             /**
-             * 校验业务条件。
-             * @param msg msg 参数
-             * @return 处理结果
+             * 回查本地事务状态。
+             * 优先使用 OutboxStore；未配置时使用当前 tag 对应的 checker。
+             *
+             * @param msg RocketMQ 消息
+             * @return 事务消息状态；无法判断时返回 UNKNOW
              */
             @Override
             public LocalTransactionState checkLocalTransaction(MessageExt msg) {
@@ -132,7 +140,7 @@ public class RocketMqEventBus implements EventBus {
     }
 
     /**
-     * 停止stop。
+     * 关闭 RocketMQ 事务生产者。
      */
     @PreDestroy
     void stop() {
@@ -143,8 +151,10 @@ public class RocketMqEventBus implements EventBus {
 
 
     /**
-     * 执行 publish 方法。
-     * @param event event 参数
+     * 立即发送事件消息，不绑定本地事务。
+     *
+     * @param event 待发布的事件对象
+     * @throws IllegalStateException 生产者未启动或消息发送失败时抛出
      */
     public void publish(Object event) {
         if (producer == null) {
@@ -165,9 +175,11 @@ public class RocketMqEventBus implements EventBus {
 
 
     /**
-     * 执行 publishInTx 方法。
-     * @param event event 参数
-     * @param localTx localTx 参数
+     * 使用默认校验器发送事务消息。
+     *
+     * @param event 待发布的事件对象
+     * @param localTx 本地事务回调，接收 RocketMQ 事务 ID
+     * @throws IllegalStateException 生产者未启动或事务消息发送失败时抛出
      */
     public void publishInTx(Object event, Consumer<String> localTx) {
         publishInTx(event, localTx, e -> Boolean.TRUE);
@@ -175,10 +187,13 @@ public class RocketMqEventBus implements EventBus {
 
 
     /**
-     * 执行 publishInTx 方法。
-     * @param event event 参数
-     * @param localTx localTx 参数
-     * @param checker checker 参数
+     * 发送事务消息，并在 broker 回查时使用 checker 判断事务状态。
+     * checker 仅在发送窗口期有效；需要跨进程重启回查时配置 OutboxStore。
+     *
+     * @param event 待发布的事件对象
+     * @param localTx 本地事务回调，接收 RocketMQ 事务 ID
+     * @param checker 事务回查函数，入参为反序列化后的事件对象
+     * @throws IllegalStateException 生产者未启动或事务消息发送失败时抛出
      */
     public void publishInTx(Object event, Consumer<String> localTx, Function<Object, Boolean> checker) {
         if (producer == null) {
@@ -208,9 +223,10 @@ public class RocketMqEventBus implements EventBus {
 
 
     /**
-     * 转换或解析本地事务状态。
-     * @param status 状态
-     * @return 处理结果
+     * 将本地消息表状态转换为 RocketMQ 事务状态。
+     *
+     * @param status 本地消息表提交状态
+     * @return RocketMQ 事务状态
      */
     static LocalTransactionState toLocalTransactionState(OutboxStore.CommitStatus status) {
         if (status == OutboxStore.CommitStatus.COMMITTED) {
@@ -224,8 +240,9 @@ public class RocketMqEventBus implements EventBus {
 
 
     /**
-     * 附加链路追踪ID。
-     * @param msg 提示消息
+     * 将当前 MDC 中的 traceId 写入消息用户属性。
+     *
+     * @param msg RocketMQ 消息
      */
     static void attachTraceId(Message msg) {
         String traceId = MDC.get(Result.TRACE_ID_KEY);

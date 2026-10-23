@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: LocalEventBusTest 单元测试。
+ * @Description: 验证进程内事件总线向 Spring 事件监听器发布事件。
  * @Version: 1.0
  * @DateTime: 2026/10/16
  **/
@@ -20,23 +20,26 @@ public class LocalEventBusTest {
 
     /**
      * @Author: yirancrazy@gmail.com
-     * @Description: SampleEvent 类型，承载相关业务能力。
+     * @Description: 测试事件，携带字符串载荷。
      * @Version: 1.0
      * @DateTime: 2026/10/16
      **/
     public static class SampleEvent {
         private final String payload;
+
         /**
-         * 构造 SampleEvent 实例。
-         * @param p p 参数
+         * 创建测试事件。
+         *
+         * @param p 事件载荷
          */
         public SampleEvent(String p) {
             this.payload = p;
         }
 
         /**
-         * 获取相关数据。
-         * @return 处理结果
+         * 获取事件载荷。
+         *
+         * @return 字符串载荷
          */
         public String getPayload() {
             return payload;
@@ -45,7 +48,7 @@ public class LocalEventBusTest {
 
     /**
      * @Author: yirancrazy@gmail.com
-     * @Description: Recorder 类型，承载相关业务能力。
+     * @Description: 记录收到事件的测试监听器。
      * @Version: 1.0
      * @DateTime: 2026/10/16
      **/
@@ -55,8 +58,9 @@ public class LocalEventBusTest {
         public final AtomicInteger calls = new AtomicInteger();
 
         /**
-         * 执行 onSample 方法。
-         * @param e e 参数
+         * 记录事件并累加调用次数。
+         *
+         * @param e 收到的事件
          */
         public void onSample(SampleEvent e) {
             received.add(e.getPayload());
@@ -66,7 +70,7 @@ public class LocalEventBusTest {
 
 
     /**
-     * 执行 publish_invokes_event_listener 方法。
+     * 发布事件时应调用 Spring 事件监听器。
      */
     public void publish_invokes_event_listener() {
         AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();

@@ -16,7 +16,7 @@ import com.yirancrazy.minimall.common.result.Result;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: RocketMqEventConsumer 类型，承载相关业务能力。
+ * @Description: RocketMQ 事件消费者，按事件类型注册处理器并将消息分发到对应处理器。
  * @Version: 1.0
  * @DateTime: 2026/10/16
  **/
@@ -30,10 +30,11 @@ public class RocketMqEventConsumer {
     private final Map<Class<?>, Consumer<Object>> handlers = new ConcurrentHashMap<>();
 
     /**
-     * 构造 RocketMqEventConsumer 实例。
-     * @param namesrvAddr namesrvAddr 参数
-     * @param topic topic 参数
-     * @param group group 参数
+     * 创建 RocketMQ 事件消费者。
+     *
+     * @param namesrvAddr RocketMQ NameServer 地址
+     * @param topic 事件消息主题
+     * @param group 消费者组
      */
     public RocketMqEventConsumer(String namesrvAddr, String topic, String group) {
         this.namesrvAddr = namesrvAddr;
@@ -43,10 +44,11 @@ public class RocketMqEventConsumer {
 
 
     /**
-     * 执行 subscribe 方法。
-     * @param <T> 泛型参数
-     * @param eventType eventType 参数
-     * @param handler handler 参数
+     * 订阅指定类型的事件。
+     *
+     * @param <T> 事件类型
+     * @param eventType 事件类型
+     * @param handler 事件处理器
      */
     public <T> void subscribe(Class<T> eventType, Consumer<T> handler) {
         handlers.put(eventType, e -> handler.accept(eventType.cast(e)));
@@ -57,7 +59,10 @@ public class RocketMqEventConsumer {
 
 
     /**
-     * 执行 start 方法。
+     * 启动 RocketMQ 消费者。
+     * 未注册任何处理器时不启动消费者。
+     *
+     * @throws IllegalStateException 消费者启动失败时抛出
      */
     public void start() {
         if (handlers.isEmpty()) {
@@ -78,7 +83,7 @@ public class RocketMqEventConsumer {
 
 
     /**
-     * 执行 stop 方法。
+     * 关闭 RocketMQ 消费者。
      */
     public void stop() {
         if (wrapper != null) {
@@ -88,7 +93,7 @@ public class RocketMqEventConsumer {
 
     /**
      * @Author: yirancrazy@gmail.com
-     * @Description: DefaultMQConsumerWrapper 类型，承载相关业务能力。
+     * @Description: RocketMQ 默认推送消费者包装器，负责订阅、消息分发和消费状态返回。
      * @Version: 1.0
      * @DateTime: 2026/10/16
      **/
@@ -97,12 +102,13 @@ public class RocketMqEventConsumer {
         private final Map<Class<?>, Consumer<Object>> handlers;
 
         /**
-         * 构造 DefaultMQConsumerWrapper 实例。
-         * @param namesrvAddr namesrvAddr
-         * @param topic topic
-         * @param group group
-         * @param handlers handlers
-         * @throws Exception 处理失败时抛出
+         * 创建默认推送消费者包装器。
+         *
+         * @param namesrvAddr RocketMQ NameServer 地址
+         * @param topic 事件消息主题
+         * @param group 消费者组
+         * @param handlers 事件类型与处理器的映射
+         * @throws Exception 消费者初始化失败时抛出
          */
         DefaultMQConsumerWrapper(String namesrvAddr, String topic, String group,
                                  Map<Class<?>, Consumer<Object>> handlers) throws Exception {
@@ -155,25 +161,27 @@ public class RocketMqEventConsumer {
         }
 
         /**
-         * 创建Handler。
-         * @param <T> 泛型参数
-         * @param type 类型
-         * @param handler handler
+         * 注册或替换指定类型的事件处理器。
+         *
+         * @param <T> 事件类型
+         * @param type 事件类型
+         * @param handler 事件处理器
          */
         <T> void registerHandler(Class<T> type, Consumer<T> handler) {
             handlers.put(type, e -> handler.accept(type.cast(e)));
         }
 
         /**
-         * 启动start。
-         * @throws Exception 处理失败时抛出
+         * 启动底层推送消费者。
+         *
+         * @throws Exception 消费者启动失败时抛出
          */
         void start() throws Exception {
             consumer.start();
         }
 
         /**
-         * 处理shutdown。
+         * 关闭底层推送消费者。
          */
         void shutdown() {
             consumer.shutdown();

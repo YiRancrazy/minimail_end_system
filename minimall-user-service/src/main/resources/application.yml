@@ -42,3 +42,14 @@ minimall:
     access-key: ${MINIO_ACCESS_KEY:minioadmin}
     secret-key: ${MINIO_SECRET_KEY:minioadmin}
     bucket: ${MINIO_BUCKET:mall-files}
+seata:
+  tx-service-group: default_tx_group
+  service:
+    vgroup-mapping:
+      default_tx_group: default
+    grouplist:
+      default: ${SEATA_HOST:127.0.0.1}:${SEATA_PORT:8091}
+  registry:
+    type: file
+  config:
+    type: file

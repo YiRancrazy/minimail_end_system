@@ -185,7 +185,8 @@ public class MerchantAuthServiceImpl implements MerchantAuthService {
                 AuthCodeEnum.TOKEN_INVALID.getAlias(),
                 AuthCodeEnum.TOKEN_INVALID.getMessage());
         }
-        return new UserInfoVO(Long.parseLong(c.getSubject()),
+        Long authUserId = Long.parseLong(c.getSubject());
+        return new UserInfoVO(authUserId, authUserId,
             c.get("account", String.class),
             c.get("role", String.class),
             c.get("roleId", Long.class));
@@ -256,7 +257,7 @@ public class MerchantAuthServiceImpl implements MerchantAuthService {
     private TokenVO issueTokens(Long accountId, String account, Long roleId) {
         String roleCode = resolveRoleCode(roleId);
         String jti = UUID.randomUUID().toString().replace("-", "");
-        String accessToken = jwtUtil.sign(accountId, account, roleCode, roleId, jti);
+        String accessToken = jwtUtil.sign(accountId, accountId, account, roleCode, roleId, jti);
         String refreshToken = jwtUtil.generateRefreshToken();
         redisTemplate.opsForValue().set(
             REFRESH_KEY_PREFIX + accountId + ":" + jti,

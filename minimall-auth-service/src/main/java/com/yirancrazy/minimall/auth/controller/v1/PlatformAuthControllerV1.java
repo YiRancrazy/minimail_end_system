@@ -14,7 +14,6 @@ import com.yirancrazy.minimall.api.dto.auth.TokenVO;
 import com.yirancrazy.minimall.auth.dto.AdminCreateDTO;
 import com.yirancrazy.minimall.auth.dto.AdminPageDTO;
 import com.yirancrazy.minimall.auth.dto.AdminRoleDTO;
-import com.yirancrazy.minimall.auth.dto.AdminUpdateDTO;
 import com.yirancrazy.minimall.auth.dto.ChangePasswordDTO;
 import com.yirancrazy.minimall.auth.dto.LoginDTO;
 import com.yirancrazy.minimall.auth.service.PlatformAuthService;
@@ -63,7 +62,7 @@ public class PlatformAuthControllerV1 {
      * @return 统一响应结果
      */
     @PostMapping("/logout")
-    public Result<Void> logout(@RequestHeader("X-User-Id") Long adminAccountId,
+    public Result<Void> logout(@RequestHeader("X-Auth-User-Id") Long adminAccountId,
                                @RequestHeader("X-User-Jti") String jti) {
         platformAuthService.signOut(adminAccountId, jti);
         return Result.success();
@@ -106,19 +105,6 @@ public class PlatformAuthControllerV1 {
 
 
     /**
-     * 执行 adminUpdate 方法。
-     * @param id id 参数
-     * @param dto dto 参数
-     * @return 统一响应结果
-     */
-    @PutMapping("/admins/{id}")
-    public Result<Boolean> adminUpdate(@PathVariable("id") Long id,
-                                       @Valid @RequestBody AdminUpdateDTO dto) {
-        return Result.success(platformAuthService.adminUpdate(id, dto));
-    }
-
-
-    /**
      * 执行 adminAssignRole 方法。
      * @param id id 参数
      * @param dto dto 参数
@@ -139,7 +125,7 @@ public class PlatformAuthControllerV1 {
      * @return 统一响应结果
      */
     @PutMapping("/password")
-    public Result<Void> changePassword(@RequestHeader("X-User-Id") Long adminAccountId,
+    public Result<Void> changePassword(@RequestHeader("X-Auth-User-Id") Long adminAccountId,
                                        @Valid @RequestBody ChangePasswordDTO dto) {
         platformAuthService.changePassword(adminAccountId, dto);
         return Result.success(null);
@@ -153,7 +139,7 @@ public class PlatformAuthControllerV1 {
      * @return 统一响应结果
      */
     @DeleteMapping("/admins/{id}")
-    public Result<Void> adminDelete(@RequestHeader("X-User-Id") Long operatorId,
+    public Result<Void> adminDelete(@RequestHeader("X-Auth-User-Id") Long operatorId,
                                     @PathVariable("id") Long id) {
         platformAuthService.adminDelete(operatorId, id);
         return Result.success(null);

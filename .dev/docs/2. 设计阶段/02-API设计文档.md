@@ -479,7 +479,7 @@ public interface StockInternalClient {
 
 | 方法 | 路径 | 权限码 | 说明 |
 |---|---|---|---|
-| POST | `/auth/register` | USER-AUTH-0002 | 注册；需要图形验证码 |
+| POST | `/auth/register` | USER-AUTH-0002 | 注册；同一 Seata 全局事务创建 auth 账号与 user 业务档案，任一失败整体回滚 |
 | POST | `/auth/login` | USER-AUTH-0001 | 登录；需图验/滑块；返回 access/refresh |
 | POST | `/auth/logout` | USER-AUTH-0003 | 注销当前 token |
 | PUT | `/auth/password` | USER-AUTH-0004 | 改密（旧密 + 新密） |
@@ -487,6 +487,12 @@ public interface StockInternalClient {
 | POST | `/auth/password/reset/confirm` | USER-AUTH-0005 | 提交验证码 + 新密 |
 | POST | `/auth/token/refresh` | USER-AUTH-0007 | 用 refresh 换 access |
 | GET | `/auth/me` | — | 取当前 token 中的用户基本信息（前端导航用） |
+
+认证与业务身份 header：
+
+- `X-Auth-User-Id`：`t_auth_user.id`，仅 auth 服务用于退出、改密等认证操作。
+- `X-User-Id`：普通用户为 `t_user.id`，供 user/cart/order/pay/notify 等业务服务使用；商家和平台账号回退为认证账号 ID。
+- JWT `sub` 保存认证账号 ID，`userId` claim 保存业务用户 ID。
 
 请求体示例（登录）：
 

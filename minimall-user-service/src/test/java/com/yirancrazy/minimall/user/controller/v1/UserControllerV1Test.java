@@ -22,7 +22,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yirancrazy.minimall.common.exception.GlobalExceptionHandler;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
-import com.yirancrazy.minimall.user.dto.UserCreateDTO;
 import com.yirancrazy.minimall.user.dto.UserProfileDTO;
 import com.yirancrazy.minimall.user.dto.UserUpdateDTO;
 import com.yirancrazy.minimall.user.service.UserService;
@@ -65,32 +64,24 @@ class UserControllerV1Test {
     void get_returns_user() throws Exception {
         UserVO vo = new UserVO();
         vo.setId(99L);
-        vo.setUsername("yiran");
         vo.setNickname("薄荷");
         when(userService.getVO(99L)).thenReturn(vo);
         mockMvc.perform(get("/api/v1/user/users/99").header("X-User-Role", "PLATFORM"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.code").value("00000"))
             .andExpect(jsonPath("$.data.id").value(99))
-            .andExpect(jsonPath("$.data.username").value("yiran"));
+            .andExpect(jsonPath("$.data.nickname").value("薄荷"));
         verify(userService).getVO(99L);
     }
 
-
     @Test
-    void create_returns_id() throws Exception {
-        when(userService.create(any(UserCreateDTO.class))).thenReturn(100L);
-        UserCreateDTO dto = new UserCreateDTO();
-        dto.setUsername("yiran");
-        dto.setNickname("薄荷");
+    void create_endpoint_no_longer_exists() throws Exception {
         mockMvc.perform(post("/api/v1/user/users")
                 .header("X-User-Role", "PLATFORM")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(mapper.writeValueAsString(dto)))
+                .content("{\"nickname\":\"demo\"}"))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.code").value("00000"))
-            .andExpect(jsonPath("$.data").value(100));
-        verify(userService).create(any(UserCreateDTO.class));
+            .andExpect(jsonPath("$.code").value("20000"));
     }
 
 
@@ -115,7 +106,6 @@ class UserControllerV1Test {
     @Test
     void update_rejects_non_platform_role() throws Exception {
         UserUpdateDTO dto = new UserUpdateDTO();
-        dto.setUsername("yiran");
         dto.setNickname("薄荷");
         mockMvc.perform(put("/api/v1/user/users/99")
                 .header("X-User-Role", "USER")
@@ -140,7 +130,6 @@ class UserControllerV1Test {
     void get_profile_with_header_returns_vo() throws Exception {
         UserVO vo = new UserVO();
         vo.setId(1L);
-        vo.setUsername("yiran");
         vo.setNickname("薄荷");
         when(userService.getProfileVO(anyLong())).thenReturn(vo);
         mockMvc.perform(get("/api/v1/user/users/profile").header("X-User-Id", 1L))

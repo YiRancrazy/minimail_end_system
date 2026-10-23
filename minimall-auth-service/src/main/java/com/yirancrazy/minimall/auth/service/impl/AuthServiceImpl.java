@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
+import io.seata.spring.annotation.GlobalTransactional;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.api.dto.auth.TokenVO;
 import com.yirancrazy.minimall.auth.constant.AuthCodeEnum;
@@ -23,6 +24,7 @@ import com.yirancrazy.minimall.auth.dto.SendResetCodeDTO;
 import com.yirancrazy.minimall.auth.entity.AuthRolePO;
 import com.yirancrazy.minimall.auth.entity.AuthTokenBlacklistPO;
 import com.yirancrazy.minimall.auth.entity.AuthUserPO;
+import com.yirancrazy.minimall.auth.gateway.AuthRemoteGateway;
 import com.yirancrazy.minimall.auth.manager.AuthRoleManager;
 import com.yirancrazy.minimall.auth.manager.AuthTokenBlacklistManager;
 import com.yirancrazy.minimall.auth.manager.AuthUserManager;
@@ -68,6 +70,7 @@ public class AuthServiceImpl implements AuthService {
     private final AuthUserManager authUserManager;
     private final AuthRoleManager authRoleManager;
     private final AuthTokenBlacklistManager tokenBlacklistManager;
+    private final AuthRemoteGateway authRemoteGateway;
     private final JwtUtil jwtUtil;
     private final StringRedisTemplate redisTemplate;
     private final long ttlSeconds;
@@ -78,6 +81,7 @@ public class AuthServiceImpl implements AuthService {
      * @param authUserManager authUserManager 参数
      * @param authRoleManager authRoleManager 参数
      * @param tokenBlacklistManager tokenBlacklistManager 参数
+     * @param authRemoteGateway authRemoteGateway 参数
      * @param jwtUtil jwtUtil 参数
      * @param redisTemplate redisTemplate 参数
      * @param ttlSeconds ttlSeconds 参数
@@ -86,6 +90,7 @@ public class AuthServiceImpl implements AuthService {
     public AuthServiceImpl(AuthUserManager authUserManager,
                            AuthRoleManager authRoleManager,
                            AuthTokenBlacklistManager tokenBlacklistManager,
+                           AuthRemoteGateway authRemoteGateway,
                            JwtUtil jwtUtil,
                            StringRedisTemplate redisTemplate,
                            @Value("${minimall.jwt.ttl-seconds:900}") long ttlSeconds,
@@ -93,6 +98,7 @@ public class AuthServiceImpl implements AuthService {
         this.authUserManager = authUserManager;
         this.authRoleManager = authRoleManager;
         this.tokenBlacklistManager = tokenBlacklistManager;
+        this.authRemoteGateway = authRemoteGateway;
         this.jwtUtil = jwtUtil;
         this.redisTemplate = redisTemplate;
         this.ttlSeconds = ttlSeconds;
@@ -106,15 +112,20 @@ public class AuthServiceImpl implements AuthService {
      * @return 处理结果
      */
     @Override
+    @GlobalTransactional
     public TokenVO register(RegisterDTO dto) {
         AuthUserPO existing = authUserManager.getOne(
             Wrappers.lambdaQuery(AuthUserPO.class).eq(AuthUserPO::getAccount, dto.getAccount()));
         if (existing != null) {
             throw new BizException(AuthCodeEnum.USER_EXISTS);
         }
+        Long userId = authRemoteGateway.nextUserId();
+        authRemoteGateway.provisionUserProfile(userId);
+
         String salt = UUID.randomUUID().toString().replace("-", "");
         String hash = BCrypt.hashpw(dto.getPassword() + salt, BCrypt.gensalt(BCRYPT_COST));
         AuthUserPO po = new AuthUserPO();
+        po.setUserId(userId);
         po.setAccount(dto.getAccount());
         po.setPasswordHash(hash);
         po.setSalt(salt);
@@ -123,7 +134,7 @@ public class AuthServiceImpl implements AuthService {
         po.setStatus(1);
         authUserManager.save(po);
         String roleCode = resolveRoleCode(po.getRoleId());
-        return issueTokens(po.getId(), po.getAccount(), roleCode, po.getRoleId());
+        return issueTokens(po.getId(), userId, po.getAccount(), roleCode, po.getRoleId());
     }
 
 
@@ -157,10 +168,11 @@ public class AuthServiceImpl implements AuthService {
             redisTemplate.expire(failKey, LOGIN_FAIL_TTL_SECONDS, TimeUnit.SECONDS);
             throw new BizException(AuthCodeEnum.PWD_INVALID);
         }
+        Long userId = requireUserProfileId(po);
         redisTemplate.delete(failKey);
         updateLastLoginAt(po);
         String roleCode = resolveRoleCode(po.getRoleId());
-        return issueTokens(po.getId(), po.getAccount(), roleCode, po.getRoleId());
+        return issueTokens(po.getId(), userId, po.getAccount(), roleCode, po.getRoleId());
     }
 
 
@@ -194,9 +206,10 @@ public class AuthServiceImpl implements AuthService {
         if (po == null) {
             throw new BizException(AuthCodeEnum.USER_NOT_FOUND);
         }
+        Long userProfileId = requireUserProfileId(po);
         log.info("refresh token 已轮换，userId={}", userId);
         String roleCode = resolveRoleCode(po.getRoleId());
-        return issueTokens(po.getId(), po.getAccount(), roleCode, po.getRoleId());
+        return issueTokens(po.getId(), userProfileId, po.getAccount(), roleCode, po.getRoleId());
     }
 
 
@@ -231,7 +244,11 @@ public class AuthServiceImpl implements AuthService {
                 AuthCodeEnum.TOKEN_INVALID.getAlias(),
                 AuthCodeEnum.TOKEN_INVALID.getMessage());
         }
-        return new UserInfoVO(Long.parseLong(c.getSubject()),
+        Long authUserId = Long.parseLong(c.getSubject());
+        String userProfileId = c.get("userId", String.class);
+        Long businessUserId = userProfileId == null || userProfileId.isBlank()
+            ? authUserId : Long.parseLong(userProfileId);
+        return new UserInfoVO(authUserId, businessUserId,
             c.get("account", String.class),
             c.get("role", String.class),
             c.get("roleId", Long.class));
@@ -386,14 +403,29 @@ public class AuthServiceImpl implements AuthService {
      * @param roleId 角色 ID
      * @return Token 信息
      */
-    private TokenVO issueTokens(Long userId, String account, String roleCode, Long roleId) {
+    private TokenVO issueTokens(Long authUserId, Long userId, String account,
+                                String roleCode, Long roleId) {
         String jti = UUID.randomUUID().toString().replace("-", "");
-        String accessToken = jwtUtil.sign(userId, account, roleCode, roleId, jti);
+        String accessToken = jwtUtil.sign(authUserId, userId, account, roleCode, roleId, jti);
         // 刷新令牌签发为JWT（含 userId/jti），refreshToken 可解析后直查 Redis 索引键
-        String refreshToken = jwtUtil.sign(userId, account, roleCode, roleId, jti, refreshTtlSeconds * 1000L);
+        String refreshToken = jwtUtil.sign(authUserId, userId, account, roleCode, roleId,
+            jti, refreshTtlSeconds * 1000L);
         redisTemplate.opsForValue().set(
-            REFRESH_KEY_PREFIX + userId + ":" + jti,
+            REFRESH_KEY_PREFIX + authUserId + ":" + jti,
             refreshToken, refreshTtlSeconds, TimeUnit.SECONDS);
         return new TokenVO(accessToken, refreshToken, "Bearer", ttlSeconds);
+    }
+
+
+    /**
+     * 校验并返回业务用户 ID。
+     * @param po 认证账号
+     * @return 业务用户 ID
+     */
+    private Long requireUserProfileId(AuthUserPO po) {
+        if (po.getUserId() == null) {
+            throw new BizException(AuthCodeEnum.USER_PROFILE_MISSING);
+        }
+        return po.getUserId();
     }
 }

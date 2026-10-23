@@ -42,7 +42,6 @@ public class UserVOTest {
     public void from_mapsAllFields() {
         UserPO po = new UserPO();
         po.setId(1L);
-        po.setUsername("alice");
         po.setNickname("Alice");
         po.setPhone("13812345678");
         po.setEmail("test@example.com");
@@ -54,7 +53,6 @@ public class UserVOTest {
 
         assertNotNull(vo);
         assertEquals(1L, vo.getId());
-        assertEquals("alice", vo.getUsername());
         assertEquals("Alice", vo.getNickname());
         assertEquals("138****5678", vo.getPhone());
         assertEquals("te***@example.com", vo.getEmail());

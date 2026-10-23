@@ -2,8 +2,12 @@ package com.yirancrazy.minimall.user.controller.v1;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import jakarta.validation.Valid;
+import com.yirancrazy.minimall.api.dto.user.UserProvisionDTO;
 import com.yirancrazy.minimall.api.dto.user.UserSnapshotDTO;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.user.service.UserService;
@@ -27,6 +31,17 @@ public class InternalUserControllerV1 {
      */
     public InternalUserControllerV1(UserService userService) {
         this.userService = userService;
+    }
+
+    /**
+     * 创建用户业务档案。
+     * @param dto 建档请求
+     * @return 统一响应结果
+     */
+    @PostMapping("/provision")
+    public Result<Void> provision(@Valid @RequestBody UserProvisionDTO dto) {
+        userService.provision(dto.getUserId());
+        return Result.success();
     }
 
 

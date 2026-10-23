@@ -4,7 +4,6 @@ import com.yirancrazy.minimall.api.dto.common.InternalPageQuery;
 import com.yirancrazy.minimall.api.dto.user.UserManageVO;
 import com.yirancrazy.minimall.api.dto.user.UserSnapshotDTO;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
-import com.yirancrazy.minimall.user.dto.UserCreateDTO;
 import com.yirancrazy.minimall.user.dto.UserPageDTO;
 import com.yirancrazy.minimall.user.dto.UserProfileDTO;
 import com.yirancrazy.minimall.user.dto.UserUpdateDTO;
@@ -42,11 +41,10 @@ public interface UserService {
      */
     CursorPageVO<UserPO> page(UserPageDTO dto);
     /**
-     * 创建业务数据。
-     * @param dto dto 参数
-     * @return 业务数值
+     * 创建用户业务档案。
+     * @param userId 业务用户 ID
      */
-    Long create(UserCreateDTO dto);
+    void provision(Long userId);
 
 
     /**

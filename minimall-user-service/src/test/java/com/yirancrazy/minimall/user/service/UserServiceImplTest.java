@@ -8,6 +8,7 @@ import org.mockito.ArgumentCaptor;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -15,6 +16,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
@@ -22,7 +24,6 @@ import com.yirancrazy.minimall.api.dto.user.UserSnapshotDTO;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.util.MinioUtil;
-import com.yirancrazy.minimall.user.dto.UserCreateDTO;
 import com.yirancrazy.minimall.user.dto.UserPageDTO;
 import com.yirancrazy.minimall.user.dto.UserProfileDTO;
 import com.yirancrazy.minimall.user.dto.UserUpdateDTO;
@@ -59,6 +60,34 @@ public class UserServiceImplTest {
         service = new UserServiceImpl(userManager, minioUtil);
     }
 
+    @Test
+    public void provision_creates_profile_with_explicit_id_and_random_nickname() {
+        when(userManager.getById(9001L)).thenReturn(null);
+
+        service.provision(9001L);
+
+        ArgumentCaptor<UserPO> captor = ArgumentCaptor.forClass(UserPO.class);
+        verify(userManager).save(captor.capture());
+        UserPO saved = captor.getValue();
+        assertEquals(9001L, saved.getId());
+        assertTrue(saved.getNickname().matches("薄荷用户\\d{6}"));
+        assertEquals(0, saved.getGender());
+        assertNull(saved.getAvatar());
+    }
+
+    @Test
+    public void provision_existing_profile_is_idempotent() {
+        UserPO existing = new UserPO();
+        existing.setId(9001L);
+        existing.setNickname("薄荷用户123456");
+        when(userManager.getById(9001L)).thenReturn(existing);
+
+        service.provision(9001L);
+
+        verify(userManager, never()).save(any(UserPO.class));
+        verify(userManager, never()).updateById(any(UserPO.class));
+    }
+
 
     /**
      * 获取相关数据。
@@ -66,12 +95,12 @@ public class UserServiceImplTest {
     public void getById_returns_user_when_exists() {
         UserPO u = new UserPO();
         u.setId(1L);
-        u.setUsername("alice");
+        u.setNickname("Alice");
         when(userManager.getById(1L)).thenReturn(u);
 
         UserPO result = service.getById(1L);
         assertEquals(1L, result.getId());
-        assertEquals("alice", result.getUsername());
+        assertEquals("Alice", result.getNickname());
     }
 
 
@@ -90,48 +119,14 @@ public class UserServiceImplTest {
     public void getSnapshot_returns_user_snapshot() {
         UserPO user = new UserPO();
         user.setId(1L);
-        user.setUsername("alice");
+        user.setNickname("Alice");
         when(userManager.getById(1L)).thenReturn(user);
 
         UserSnapshotDTO result = service.getSnapshot(1L);
 
         assertEquals(1L, result.getUserId());
-        assertEquals("alice", result.getUsername());
+        assertEquals("Alice", result.getNickname());
         assertEquals("USER", result.getRole());
-    }
-
-
-    /**
-     * 创建业务数据。
-     */
-    public void create_persists_and_returns_id() {
-        UserCreateDTO dto = new UserCreateDTO();
-        dto.setUsername("bob");
-        dto.setNickname("Bob");
-        dto.setPhone("13800000000");
-        dto.setEmail("bob@example.com");
-
-        Long id = service.create(dto);
-        assertNotNull(id);
-        verify(userManager).save(any(UserPO.class));
-    }
-
-
-    /**
-     * 创建业务数据。
-     */
-    public void create_sets_phoneMasked() {
-        UserCreateDTO dto = new UserCreateDTO();
-        dto.setUsername("bob");
-        dto.setNickname("Bob");
-        dto.setPhone("13800000000");
-        dto.setEmail("bob@example.com");
-
-        service.create(dto);
-
-        ArgumentCaptor<UserPO> captor = ArgumentCaptor.forClass(UserPO.class);
-        verify(userManager).save(captor.capture());
-        assertEquals("138****0000", captor.getValue().getPhoneMasked());
     }
 
 
@@ -140,7 +135,6 @@ public class UserServiceImplTest {
      */
     public void update_returns_true_on_success() {
         UserUpdateDTO dto = new UserUpdateDTO();
-        dto.setUsername("alice-new");
         dto.setNickname("Alice New");
 
         boolean ok = service.update(1L, dto);
@@ -154,7 +148,6 @@ public class UserServiceImplTest {
      */
     public void update_sets_phoneMasked() {
         UserUpdateDTO dto = new UserUpdateDTO();
-        dto.setUsername("alice-new");
         dto.setNickname("Alice New");
         dto.setPhone("13812345678");
 
@@ -172,7 +165,7 @@ public class UserServiceImplTest {
     public void update_returns_false_on_failure() {
         when(userManager.updateById(any(UserPO.class))).thenReturn(false);
         UserUpdateDTO dto = new UserUpdateDTO();
-        dto.setUsername("x");
+        dto.setNickname("X");
 
         boolean ok = service.update(1L, dto);
         assertFalse(ok);
@@ -222,7 +215,6 @@ public class UserServiceImplTest {
     public void getProfile_returns_user_with_avatar_and_gender() {
         UserPO u = new UserPO();
         u.setId(1L);
-        u.setUsername("alice");
         u.setNickname("Alice");
         u.setAvatar("https://example.com/avatar.png");
         u.setGender(1);
@@ -251,7 +243,6 @@ public class UserServiceImplTest {
     public void getVO_returns_masked_user_vo() {
         UserPO u = new UserPO();
         u.setId(1L);
-        u.setUsername("alice");
         u.setPhone("13800000000");
         u.setAvatar("avatar/alice.png");
         when(userManager.getById(1L)).thenReturn(u);
@@ -279,7 +270,6 @@ public class UserServiceImplTest {
     public void getProfileVO_returns_vo() {
         UserPO u = new UserPO();
         u.setId(1L);
-        u.setUsername("alice");
         u.setNickname("Alice");
         when(userManager.getById(1L)).thenReturn(u);
 

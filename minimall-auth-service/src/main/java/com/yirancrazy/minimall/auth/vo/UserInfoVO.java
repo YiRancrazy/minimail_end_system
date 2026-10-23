@@ -14,6 +14,7 @@ import lombok.Data;
  **/
 @AllArgsConstructor
 public class UserInfoVO {
+    private Long authUserId;
     private Long userId;
     private String account;
     private String role;

@@ -17,7 +17,6 @@ import com.yirancrazy.minimall.auth.constant.AuthCodeEnum;
 import com.yirancrazy.minimall.auth.dto.AdminCreateDTO;
 import com.yirancrazy.minimall.auth.dto.AdminPageDTO;
 import com.yirancrazy.minimall.auth.dto.AdminRoleDTO;
-import com.yirancrazy.minimall.auth.dto.AdminUpdateDTO;
 import com.yirancrazy.minimall.auth.dto.ChangePasswordDTO;
 import com.yirancrazy.minimall.auth.dto.LoginDTO;
 import com.yirancrazy.minimall.auth.entity.AuthRolePO;
@@ -150,7 +149,6 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
         po.setAccountType(ACCOUNT_TYPE_PLATFORM);
         po.setRoleId(resolveRoleId(dto.getRoleCode()));
         po.setStatus(1);
-        po.setNickname(dto.getNickname());
         po.setContact(dto.getContact());
         authUserManager.save(po);
         log.info("管理员已创建，id={}，account={}，roleId={}", po.getId(), po.getAccount(), po.getRoleId());
@@ -176,7 +174,6 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
         return poPage.map(po -> new AdminVO(
             po.getId(),
             po.getAccount(),
-            po.getNickname(),
             po.getStatus(),
             po.getCreateTime(),
             resolveRoleCode(po.getRoleId()),
@@ -244,25 +241,6 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
 
 
     /**
-     * 执行 adminUpdate 方法。
-     * @param id id 参数
-     * @param dto dto 参数
-     * @return 是否处理成功
-     */
-    @Override
-    public boolean adminUpdate(Long id, AdminUpdateDTO dto) {
-        AuthUserPO po = authUserManager.getById(id);
-        if (po == null) {
-            throw new BizException(AuthCodeEnum.USER_NOT_FOUND);
-        }
-        po.setNickname(dto.getNickname());
-        boolean ok = authUserManager.updateById(po);
-        log.info("管理员已更新，id={}", id);
-        return ok;
-    }
-
-
-    /**
      * 执行 adminDelete 方法。
      * @param operatorId operatorId 参数
      * @param targetId targetId 参数
@@ -296,7 +274,8 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
                 AuthCodeEnum.TOKEN_INVALID.getAlias(),
                 AuthCodeEnum.TOKEN_INVALID.getMessage());
         }
-        return new UserInfoVO(Long.parseLong(claims.getSubject()),
+        Long authUserId = Long.parseLong(claims.getSubject());
+        return new UserInfoVO(authUserId, authUserId,
             claims.get("account", String.class),
             claims.get("role", String.class),
             claims.get("roleId", Long.class));
@@ -361,7 +340,7 @@ public class PlatformAuthServiceImpl implements PlatformAuthService {
     private TokenVO issueTokens(Long accountId, String account, Long roleId) {
         String roleCode = resolveRoleCode(roleId);
         String jti = UUID.randomUUID().toString().replace("-", "");
-        String accessToken = jwtUtil.sign(accountId, account, roleCode, roleId, jti);
+        String accessToken = jwtUtil.sign(accountId, accountId, account, roleCode, roleId, jti);
         String refreshToken = jwtUtil.generateRefreshToken();
         redisTemplate.opsForValue().set(
             REFRESH_KEY_PREFIX + accountId + ":" + jti,

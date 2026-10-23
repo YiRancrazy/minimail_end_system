@@ -66,7 +66,7 @@ public class MerchantAuthControllerV1 {
      * @return 统一响应结果
      */
     @PostMapping("/logout")
-    public Result<Void> logout(@RequestHeader("X-User-Id") Long merchantAccountId,
+    public Result<Void> logout(@RequestHeader("X-Auth-User-Id") Long merchantAccountId,
                                @RequestHeader("X-User-Jti") String jti) {
         merchantAuthService.signOut(merchantAccountId, jti);
         return Result.success();
@@ -80,7 +80,7 @@ public class MerchantAuthControllerV1 {
      * @return 统一响应结果
      */
     @PostMapping("/password/change")
-    public Result<Void> changePassword(@RequestHeader("X-User-Id") Long merchantAccountId,
+    public Result<Void> changePassword(@RequestHeader("X-Auth-User-Id") Long merchantAccountId,
                                        @Valid @RequestBody ChangePasswordDTO dto) {
         merchantAuthService.changePassword(merchantAccountId, dto);
         return Result.success();

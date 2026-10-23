@@ -16,7 +16,6 @@ import lombok.Data;
 public class AdminVO {
     private Long id;
     private String account;
-    private String nickname;
     private Integer status;
     private LocalDateTime createTime;
     private String role;

@@ -17,7 +17,6 @@ import com.yirancrazy.minimall.user.entity.UserPO;
 public class UserVO {
 
     private Long id;
-    private String username;
     private String nickname;
     private String phone;
     private String email;
@@ -45,7 +44,6 @@ public class UserVO {
     public static UserVO from(UserPO po, MinioUtil minioUtil) {
         UserVO vo = new UserVO();
         vo.setId(po.getId());
-        vo.setUsername(po.getUsername());
         vo.setNickname(po.getNickname());
         vo.setPhone(SensitiveDataUtils.maskPhone(po.getPhone()));
         vo.setEmail(maskEmail(po.getEmail()));

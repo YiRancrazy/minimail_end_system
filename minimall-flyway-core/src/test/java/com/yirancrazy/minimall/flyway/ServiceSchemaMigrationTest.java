@@ -28,7 +28,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class ServiceSchemaMigrationTest {
 
     private static final String ROOT_SCHEMA = "bootstrap";
-    private static final Set<String> UNDO_LOG_SCHEMAS = Set.of("order", "stock", "pay");
+    private static final Set<String> UNDO_LOG_SCHEMAS = Set.of(
+        "auth", "user", "order", "stock", "pay");
     private static final Map<String, Set<String>> EXPECTED_TABLES = Map.of(
         "auth", Set.of("t_auth_role", "t_auth_permission", "t_auth_user",
             "t_auth_role_permission", "t_auth_token_blacklist"),

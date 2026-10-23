@@ -32,6 +32,7 @@ import com.yirancrazy.minimall.api.dto.auth.TokenVO;
 import com.yirancrazy.minimall.auth.constant.AuthCodeEnum;
 import com.yirancrazy.minimall.auth.entity.AuthRolePO;
 import com.yirancrazy.minimall.auth.entity.AuthUserPO;
+import com.yirancrazy.minimall.auth.gateway.AuthRemoteGateway;
 import com.yirancrazy.minimall.auth.manager.AuthRoleManager;
 import com.yirancrazy.minimall.auth.manager.AuthTokenBlacklistManager;
 import com.yirancrazy.minimall.auth.manager.AuthUserManager;
@@ -54,6 +55,7 @@ class RefreshTokenRotationConcurrencyTest {
     @Mock private AuthUserManager authUserManager;
     @Mock private AuthRoleManager authRoleManager;
     @Mock private AuthTokenBlacklistManager tokenBlacklistManager;
+    @Mock private AuthRemoteGateway authRemoteGateway;
     @Mock private JwtUtil jwtUtil;
     @Mock private StringRedisTemplate redisTemplate;
 
@@ -68,9 +70,10 @@ class RefreshTokenRotationConcurrencyTest {
         when(claims.getSubject()).thenReturn("1");
         when(claims.get("jti", String.class)).thenReturn("race-jti");
         when(jwtUtil.parse("refresh-jwt")).thenReturn(claims);
-        when(jwtUtil.sign(anyLong(), anyString(), anyString(), anyLong(), anyString()))
+        when(jwtUtil.sign(anyLong(), anyLong(), anyString(), anyString(), anyLong(), anyString()))
             .thenReturn("access-token");
-        when(jwtUtil.sign(anyLong(), anyString(), anyString(), anyLong(), anyString(), anyLong()))
+        when(jwtUtil.sign(anyLong(), anyLong(), anyString(), anyString(), anyLong(),
+            anyString(), anyLong()))
             .thenReturn("refresh-token");
 
         AuthRolePO role = new AuthRolePO();
@@ -81,6 +84,7 @@ class RefreshTokenRotationConcurrencyTest {
         user.setId(1L);
         user.setAccount("alice");
         user.setRoleId(1L);
+        user.setUserId(9001L);
         when(authUserManager.getById(1L)).thenReturn(user);
 
         // Redis 侧比较并删除只可能成功一次，其余并发请求全部拿到 0
@@ -89,7 +93,7 @@ class RefreshTokenRotationConcurrencyTest {
             .thenAnswer(invocation -> remainingWinners.getAndDecrement() > 0 ? 1L : 0L);
 
         authService = new AuthServiceImpl(authUserManager, authRoleManager, tokenBlacklistManager,
-            jwtUtil, redisTemplate, 900L, 604800L);
+            authRemoteGateway, jwtUtil, redisTemplate, 900L, 604800L);
     }
 
     @Test

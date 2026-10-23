@@ -109,6 +109,7 @@ class AuthGlobalFilterTest {
             .subject("42")
             .claim("username", "alice")
             .claim("role", "USER")
+            .claim("userId", "9001")
             .claim("jti", "test-jti")
             .issuedAt(new Date())
             .expiration(new Date(System.currentTimeMillis() + 3600_000))
@@ -122,7 +123,8 @@ class AuthGlobalFilterTest {
                 .header("Authorization", "Bearer " + token));
         StepVerifier.create(filter.filter(ex, e -> Mono.empty()))
             .verifyComplete();
-        assertEquals("42", ex.getRequest().getHeaders().getFirst("X-User-Id"));
+        assertEquals("42", ex.getRequest().getHeaders().getFirst("X-Auth-User-Id"));
+        assertEquals("9001", ex.getRequest().getHeaders().getFirst("X-User-Id"));
         assertEquals("USER", ex.getRequest().getHeaders().getFirst("X-User-Role"));
     }
 
@@ -147,6 +149,7 @@ class AuthGlobalFilterTest {
         StepVerifier.create(filter.filter(ex, e -> Mono.empty()))
             .verifyComplete();
         assertEquals("200", ex.getRequest().getHeaders().getFirst("X-User-Id"));
+        assertEquals("200", ex.getRequest().getHeaders().getFirst("X-Auth-User-Id"));
         assertEquals("MERCHANT", ex.getRequest().getHeaders().getFirst("X-User-Role"));
         assertEquals("200", ex.getRequest().getHeaders().getFirst("X-Merchant-Id"));
     }

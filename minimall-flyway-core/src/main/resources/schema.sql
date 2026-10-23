@@ -46,14 +46,12 @@ CREATE TABLE IF NOT EXISTS t_auth_permission (
 
 CREATE TABLE IF NOT EXISTS t_auth_user (
                                            id              BIGINT          NOT NULL COMMENT '主键ID',
+                                           user_id         BIGINT          NULL COMMENT '业务用户ID，关联t_user.id',
                                            account         VARCHAR(64)     NOT NULL DEFAULT '' COMMENT '登录账号',
-    phone_enc       VARBINARY(256)  NULL COMMENT '加密手机号（AES）',
-    email_enc       VARBINARY(256)  NULL COMMENT '加密邮箱（AES）',
     password_hash   VARCHAR(255)    NOT NULL COMMENT '密码哈希值',
     salt            VARCHAR(64)     NOT NULL COMMENT '密码盐值',
     account_type    TINYINT         NOT NULL DEFAULT 1 COMMENT '账号类型：1=用户 2=商家 3=平台',
     role_id         BIGINT UNSIGNED NOT NULL DEFAULT 1 COMMENT '角色ID，关联t_auth_role',
-    nickname        VARCHAR(64)     NULL COMMENT '昵称',
     status          INT             NOT NULL DEFAULT 1 COMMENT '状态（预留）',
     last_login_at   DATETIME(3)     NULL COMMENT '最后登录时间',
     version         INT             NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
@@ -61,7 +59,9 @@ CREATE TABLE IF NOT EXISTS t_auth_user (
     create_time     DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time     DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (id),
-    UNIQUE KEY uk_auth_user_account (account, is_deleted)
+    UNIQUE KEY uk_auth_user_account (account, is_deleted),
+    UNIQUE KEY uk_auth_user_user_id (user_id),
+    CONSTRAINT chk_auth_user_profile_link CHECK (account_type <> 1 OR user_id IS NOT NULL)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='认证用户表';
 
 CREATE TABLE IF NOT EXISTS t_auth_role_permission (
@@ -99,7 +99,6 @@ CREATE TABLE IF NOT EXISTS t_auth_token_blacklist (
 
 CREATE TABLE IF NOT EXISTS t_user (
                                       id              BIGINT          NOT NULL COMMENT '主键ID',
-                                      username        VARCHAR(64)     NOT NULL COMMENT '用户名（唯一）',
     nickname        VARCHAR(64)     NULL COMMENT '昵称',
     phone           VARCHAR(512)    NULL COMMENT '手机号，AES加密存储',
     email           VARCHAR(512)    NULL COMMENT '邮箱，AES加密存储',
@@ -111,7 +110,6 @@ CREATE TABLE IF NOT EXISTS t_user (
     create_time     DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time     DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (id),
-    UNIQUE KEY uk_username (username, is_deleted),
     INDEX idx_user_phone_masked (phone_masked)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='用户基本信息表';
 

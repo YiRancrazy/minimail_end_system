@@ -43,8 +43,9 @@ public class PlatformUserServiceImplTest {
     /**
      * 分页查询数据。
      */
+    @Test
     public void page_delegates_to_feign() {
-        UserManageVO vo = new UserManageVO(1L, "alice", "小荷",
+        UserManageVO vo = new UserManageVO(1L, "小荷",
                 null, "138****0001", 1, LocalDateTime.now());
         when(platformRemoteGateway.pageUsers(any(InternalPageQuery.class)))
                 .thenReturn(Result.success(CursorPageVO.of(List.of(vo), 20, UserManageVO::getId)));
@@ -55,7 +56,7 @@ public class PlatformUserServiceImplTest {
         CursorPageVO<com.yirancrazy.minimall.platform.vo.PlatformUserVO> page = service.page(dto);
 
         assertEquals(1, page.getRecords().size());
-        assertEquals("alice", page.getRecords().get(0).getUsername());
+        assertEquals("小荷", page.getRecords().get(0).getNickname());
         verify(platformRemoteGateway).pageUsers(any(InternalPageQuery.class));
     }
 
@@ -63,6 +64,7 @@ public class PlatformUserServiceImplTest {
     /**
      * 分页查询数据。
      */
+    @Test
     public void page_returns_empty_when_feign_data_null() {
         when(platformRemoteGateway.pageUsers(any(InternalPageQuery.class)))
                 .thenReturn(Result.success(null));
@@ -78,19 +80,21 @@ public class PlatformUserServiceImplTest {
     /**
      * 执行 detail_returns_vo 方法。
      */
+    @Test
     public void detail_returns_vo() {
         when(platformRemoteGateway.userDetail(1L))
-                .thenReturn(Result.success(new UserManageVO(1L, "alice", "小荷",
+                .thenReturn(Result.success(new UserManageVO(1L, "小荷",
                         null, "138****0001", 1, LocalDateTime.now())));
 
         com.yirancrazy.minimall.platform.vo.PlatformUserVO vo = service.detail(1L);
-        assertEquals("alice", vo.getUsername());
+        assertEquals("小荷", vo.getNickname());
     }
 
 
     /**
      * 执行 detail_throws_when_feign_data_null 方法。
      */
+    @Test
     public void detail_throws_when_feign_data_null() {
         when(platformRemoteGateway.userDetail(99L)).thenReturn(Result.success(null));
 

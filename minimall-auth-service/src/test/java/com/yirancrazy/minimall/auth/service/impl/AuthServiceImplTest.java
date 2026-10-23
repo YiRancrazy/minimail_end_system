@@ -22,6 +22,7 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -40,6 +41,7 @@ import com.yirancrazy.minimall.auth.dto.ResetPasswordDTO;
 import com.yirancrazy.minimall.auth.dto.SendResetCodeDTO;
 import com.yirancrazy.minimall.auth.entity.AuthRolePO;
 import com.yirancrazy.minimall.auth.entity.AuthUserPO;
+import com.yirancrazy.minimall.auth.gateway.AuthRemoteGateway;
 import com.yirancrazy.minimall.auth.manager.AuthRoleManager;
 import com.yirancrazy.minimall.auth.manager.AuthTokenBlacklistManager;
 import com.yirancrazy.minimall.auth.manager.AuthUserManager;
@@ -62,6 +64,7 @@ class AuthServiceImplTest {
     @Mock private AuthUserManager authUserManager;
     @Mock private AuthRoleManager authRoleManager;
     @Mock private AuthTokenBlacklistManager tokenBlacklistManager;
+    @Mock private AuthRemoteGateway authRemoteGateway;
     @Mock private JwtUtil jwtUtil;
     @Mock private StringRedisTemplate redisTemplate;
     @Mock private ValueOperations<String, String> valueOperations;
@@ -73,7 +76,7 @@ class AuthServiceImplTest {
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
         authService = new AuthServiceImpl(
             authUserManager, authRoleManager, tokenBlacklistManager,
-            jwtUtil, redisTemplate, 900L, 604800L);
+            authRemoteGateway, jwtUtil, redisTemplate, 900L, 604800L);
     }
 
     private AuthRolePO stubUserRole() {
@@ -89,25 +92,41 @@ class AuthServiceImplTest {
     void register_success() {
         stubUserRole();
         when(authUserManager.getOne(any())).thenReturn(null);
+        when(authRemoteGateway.nextUserId()).thenReturn(9001L);
         when(authUserManager.save(any(AuthUserPO.class))).thenAnswer(invocation -> {
             AuthUserPO po = invocation.getArgument(0);
             po.setId(42L);
             return true;
         });
-        when(jwtUtil.sign(anyLong(), anyString(), anyString(), anyLong(), anyString())).thenReturn("access-token");
-        when(jwtUtil.sign(anyLong(), anyString(), anyString(), anyLong(), anyString(), anyLong()))
+        when(jwtUtil.sign(anyLong(), anyLong(), anyString(), anyString(), anyLong(), anyString()))
+            .thenReturn("access-token");
+        when(jwtUtil.sign(anyLong(), anyLong(), anyString(), anyString(), anyLong(),
+            anyString(), anyLong()))
             .thenReturn("refresh-token");
 
         TokenVO vo = authService.register(new RegisterDTO("testuser", "pass123"));
         assertNotNull(vo.getAccessToken());
         assertNotNull(vo.getRefreshToken());
         assertEquals("Bearer", vo.getTokenType());
+        verify(authRemoteGateway).provisionUserProfile(9001L);
     }
 
     @Test
     void register_userExists_throws() {
         when(authUserManager.getOne(any())).thenReturn(new AuthUserPO());
         assertThrows(BizException.class, () -> authService.register(new RegisterDTO("exists", "pass")));
+    }
+
+    @Test
+    void register_profileFailure_doesNotSaveAuthAccount() {
+        when(authUserManager.getOne(any())).thenReturn(null);
+        when(authRemoteGateway.nextUserId()).thenReturn(9001L);
+        doThrow(new BizException(AuthCodeEnum.USER_PROFILE_CREATE_FAIL))
+            .when(authRemoteGateway).provisionUserProfile(9001L);
+
+        assertThrows(BizException.class,
+            () -> authService.register(new RegisterDTO("testuser", "pass123")));
+        verify(authUserManager, never()).save(any(AuthUserPO.class));
     }
 
     @Test
@@ -125,21 +144,24 @@ class AuthServiceImplTest {
         po.setId(1L);
         po.setAccount("alice");
         po.setAccountType(1);
+        po.setUserId(9001L);
         po.setRoleId(1L);
         po.setStatus(1);
         po.setSalt(salt);
         po.setPasswordHash(hash);
         when(authUserManager.getOne(any())).thenReturn(po);
         when(authUserManager.updateById(any(AuthUserPO.class))).thenReturn(true);
-        when(jwtUtil.sign(anyLong(), anyString(), anyString(), anyLong(), anyString())).thenReturn("access-token");
-        when(jwtUtil.sign(anyLong(), anyString(), anyString(), anyLong(), anyString(), anyLong()))
+        when(jwtUtil.sign(anyLong(), anyLong(), anyString(), anyString(), anyLong(), anyString()))
+            .thenReturn("access-token");
+        when(jwtUtil.sign(anyLong(), anyLong(), anyString(), anyString(), anyLong(),
+            anyString(), anyLong()))
             .thenReturn("refresh-token");
 
         TokenVO vo = authService.login(new LoginDTO("alice", "pass123"));
 
         assertNotNull(vo.getAccessToken());
         assertNotNull(vo.getRefreshToken());
-        verify(jwtUtil).sign(eq(1L), eq("alice"), eq("USER"), eq(1L), anyString());
+        verify(jwtUtil).sign(eq(1L), eq(9001L), eq("alice"), eq("USER"), eq(1L), anyString());
     }
 
     @Test
@@ -199,13 +221,16 @@ class AuthServiceImplTest {
         // 索引键 refresh:1:abc 命中且原子比较删除成功，才允许轮换
         when(redisTemplate.execute(any(RedisScript.class), anyList(), any())).thenReturn(1L);
         when(tokenBlacklistManager.save(any())).thenReturn(true);
-        when(jwtUtil.sign(anyLong(), anyString(), anyString(), anyLong(), anyString())).thenReturn("new-access");
-        when(jwtUtil.sign(anyLong(), anyString(), anyString(), anyLong(), anyString(), anyLong()))
+        when(jwtUtil.sign(anyLong(), anyLong(), anyString(), anyString(), anyLong(), anyString()))
+            .thenReturn("new-access");
+        when(jwtUtil.sign(anyLong(), anyLong(), anyString(), anyString(), anyLong(),
+            anyString(), anyLong()))
             .thenReturn("new-refresh");
         AuthUserPO po = new AuthUserPO();
         po.setId(1L);
         po.setAccount("alice");
         po.setRoleId(1L);
+        po.setUserId(9001L);
         when(authUserManager.getById(1L)).thenReturn(po);
 
         TokenVO vo = authService.refreshToken("refresh-jwt");
@@ -226,7 +251,8 @@ class AuthServiceImplTest {
         when(redisTemplate.execute(any(RedisScript.class), anyList(), any())).thenReturn(0L);
 
         assertThrows(BizException.class, () -> authService.refreshToken("refresh-jwt"));
-        verify(jwtUtil, never()).sign(anyLong(), anyString(), anyString(), anyLong(), anyString());
+        verify(jwtUtil, never()).sign(anyLong(), anyLong(), anyString(), anyString(),
+            anyLong(), anyString());
     }
 
     @Test
@@ -441,13 +467,16 @@ class AuthServiceImplTest {
         po.setAccountType(1);
         po.setRoleId(1L);
         po.setStatus(1);
+        po.setUserId(9001L);
         po.setSalt(salt);
         po.setPasswordHash(hash);
         when(authUserManager.getOne(any())).thenReturn(po);
         when(authUserManager.updateById(any(AuthUserPO.class))).thenReturn(true);
         when(valueOperations.get("login:fail:alice")).thenReturn("3");
-        when(jwtUtil.sign(anyLong(), anyString(), anyString(), anyLong(), anyString())).thenReturn("access-token");
-        when(jwtUtil.sign(anyLong(), anyString(), anyString(), anyLong(), anyString(), anyLong()))
+        when(jwtUtil.sign(anyLong(), anyLong(), anyString(), anyString(), anyLong(), anyString()))
+            .thenReturn("access-token");
+        when(jwtUtil.sign(anyLong(), anyLong(), anyString(), anyString(), anyLong(),
+            anyString(), anyLong()))
             .thenReturn("refresh-token");
 
         authService.login(new LoginDTO("alice", "pass123"));

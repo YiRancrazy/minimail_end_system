@@ -16,10 +16,6 @@ import lombok.Data;
 @Data
 public class UserUpdateDTO {
 
-    @NotBlank(message = "username cannot be blank")
-    @Size(min = 3, max = 50, message = "username length must be between 3 and 50")
-    private String username;
-
     @NotBlank(message = "nickname cannot be blank")
     @Size(min = 1, max = 100, message = "nickname length must be between 1 and 100")
     private String nickname;

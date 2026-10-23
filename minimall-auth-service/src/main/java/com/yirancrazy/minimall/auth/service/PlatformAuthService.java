@@ -4,7 +4,6 @@ import com.yirancrazy.minimall.api.dto.auth.TokenVO;
 import com.yirancrazy.minimall.auth.dto.AdminCreateDTO;
 import com.yirancrazy.minimall.auth.dto.AdminPageDTO;
 import com.yirancrazy.minimall.auth.dto.AdminRoleDTO;
-import com.yirancrazy.minimall.auth.dto.AdminUpdateDTO;
 import com.yirancrazy.minimall.auth.dto.ChangePasswordDTO;
 import com.yirancrazy.minimall.auth.dto.LoginDTO;
 import com.yirancrazy.minimall.auth.vo.AdminVO;
@@ -51,15 +50,6 @@ public interface PlatformAuthService {
      * @return 处理结果
      */
     CursorPageVO<AdminVO> adminPage(AdminPageDTO dto);
-
-
-    /**
-     * 执行 adminUpdate 方法。
-     * @param id id 参数
-     * @param dto dto 参数
-     * @return 是否处理成功
-     */
-    boolean adminUpdate(Long id, AdminUpdateDTO dto);
 
 
     /**

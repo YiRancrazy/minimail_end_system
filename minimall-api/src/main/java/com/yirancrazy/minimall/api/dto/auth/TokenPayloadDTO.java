@@ -11,6 +11,7 @@ import lombok.Data;
  **/
 @Data
 public class TokenPayloadDTO {
+    private Long authUserId;
     private Long userId;
     private String role;
     private Long issuedAt;

@@ -18,7 +18,6 @@ import com.yirancrazy.minimall.common.security.EncryptedStringTypeHandler;
 @EqualsAndHashCode(callSuper = true)
 @TableName(value = "t_user", autoResultMap = true)
 public class UserPO extends BasePO {
-    private String username;
     private String nickname;
 
     @TableField(typeHandler = EncryptedStringTypeHandler.class)

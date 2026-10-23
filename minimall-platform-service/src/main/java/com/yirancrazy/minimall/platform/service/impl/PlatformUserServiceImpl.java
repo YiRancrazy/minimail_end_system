@@ -84,7 +84,7 @@ public class PlatformUserServiceImpl implements PlatformUserService {
      */
     private PlatformUserVO toPlatformVO(UserManageVO v) {
         String avatarUrl = minioUtil.resolvePublicUrl(v.getAvatar());
-        return new PlatformUserVO(v.getId(), v.getUsername(), v.getNickname(),
+        return new PlatformUserVO(v.getId(), v.getNickname(),
                 avatarUrl, v.getPhoneMasked(), v.getGender(), v.getCreateTime());
     }
 }

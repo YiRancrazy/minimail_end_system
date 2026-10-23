@@ -5,8 +5,10 @@ import org.springframework.cloud.openfeign.SpringQueryMap;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import com.yirancrazy.minimall.api.dto.common.InternalPageQuery;
 import com.yirancrazy.minimall.api.dto.user.UserManageVO;
+import com.yirancrazy.minimall.api.dto.user.UserProvisionDTO;
 import com.yirancrazy.minimall.api.dto.user.UserSnapshotDTO;
 import com.yirancrazy.minimall.api.fallback.UserFeignFallbackFactory;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
@@ -21,6 +23,14 @@ import com.yirancrazy.minimall.common.result.Result;
  **/
 @FeignClient(name = "minimall-user-service", fallbackFactory = UserFeignFallbackFactory.class)
 public interface UserFeignClient {
+
+    /**
+     * 创建用户业务档案。
+     * @param dto 建档请求
+     * @return 统一响应结果
+     */
+    @PostMapping("/internal/user/provision")
+    Result<Void> provision(@RequestBody UserProvisionDTO dto);
 
     /**
      * 执行 snapshot 方法。

@@ -35,7 +35,6 @@ import com.yirancrazy.minimall.auth.constant.AuthCodeEnum;
 import com.yirancrazy.minimall.auth.dto.AdminCreateDTO;
 import com.yirancrazy.minimall.auth.dto.AdminPageDTO;
 import com.yirancrazy.minimall.auth.dto.AdminRoleDTO;
-import com.yirancrazy.minimall.auth.dto.AdminUpdateDTO;
 import com.yirancrazy.minimall.auth.dto.ChangePasswordDTO;
 import com.yirancrazy.minimall.auth.dto.LoginDTO;
 import com.yirancrazy.minimall.auth.entity.AuthRolePO;
@@ -108,14 +107,16 @@ class PlatformAuthServiceImplTest {
         po.setSalt(salt);
         po.setPasswordHash(hash);
         when(authUserManager.getOne(any())).thenReturn(po);
-        when(jwtUtil.sign(anyLong(), anyString(), anyString(), anyLong(), anyString())).thenReturn("access-token");
+        when(jwtUtil.sign(anyLong(), anyLong(), anyString(), anyString(), anyLong(), anyString()))
+            .thenReturn("access-token");
         when(jwtUtil.generateRefreshToken()).thenReturn("refresh-token");
 
         TokenVO vo = service.login(new LoginDTO("admin", "pass123"));
 
         assertNotNull(vo.getAccessToken());
         assertNotNull(vo.getRefreshToken());
-        verify(jwtUtil).sign(eq(300L), eq("admin"), eq("PLATFORM"), eq(3L), anyString());
+        verify(jwtUtil).sign(eq(300L), eq(300L), eq("admin"), eq("PLATFORM"),
+            eq(3L), anyString());
     }
 
     @Test
@@ -174,7 +175,6 @@ class PlatformAuthServiceImplTest {
         AdminCreateDTO dto = new AdminCreateDTO();
         dto.setAccount("admin01");
         dto.setPassword("pass1234");
-        dto.setNickname("管理员01");
 
         Long id = service.adminCreate(dto);
 
@@ -226,37 +226,6 @@ class PlatformAuthServiceImplTest {
 
         assertNotNull(result);
         verify(authUserManager).list(any(Wrapper.class));
-    }
-
-
-    @Test
-    void adminUpdate_updates_nickname_only() {
-        AuthUserPO po = new AuthUserPO();
-        po.setId(1L);
-        po.setAccount("admin01");
-        po.setNickname("旧昵称");
-        po.setAccountType(3);
-        when(authUserManager.getById(1L)).thenReturn(po);
-
-        AdminUpdateDTO dto = new AdminUpdateDTO();
-        dto.setNickname("新昵称");
-
-        boolean ok = service.adminUpdate(1L, dto);
-
-        assertEquals(true, ok);
-        assertEquals("新昵称", po.getNickname());
-        verify(authUserManager).updateById(po);
-    }
-
-
-    @Test
-    void adminUpdate_throws_when_not_found() {
-        when(authUserManager.getById(999L)).thenReturn(null);
-
-        AdminUpdateDTO dto = new AdminUpdateDTO();
-        dto.setNickname("新昵称");
-
-        assertThrows(BizException.class, () -> service.adminUpdate(999L, dto));
     }
 
 

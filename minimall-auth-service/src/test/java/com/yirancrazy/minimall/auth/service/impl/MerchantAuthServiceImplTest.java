@@ -90,14 +90,16 @@ class MerchantAuthServiceImplTest {
         po.setPasswordHash(hash);
         when(authUserManager.getOne(any())).thenReturn(po);
         when(authUserManager.updateById(any(AuthUserPO.class))).thenReturn(true);
-        when(jwtUtil.sign(anyLong(), anyString(), anyString(), anyLong(), anyString())).thenReturn("access-token");
+        when(jwtUtil.sign(anyLong(), anyLong(), anyString(), anyString(), anyLong(), anyString()))
+            .thenReturn("access-token");
         when(jwtUtil.generateRefreshToken()).thenReturn("refresh-token");
 
         TokenVO vo = service.login(new LoginDTO("shopowner", "pass123"));
 
         assertNotNull(vo.getAccessToken());
         assertNotNull(vo.getRefreshToken());
-        verify(jwtUtil).sign(eq(100L), eq("shopowner"), eq("MERCHANT"), eq(2L), anyString());
+        verify(jwtUtil).sign(eq(100L), eq(100L), eq("shopowner"), eq("MERCHANT"),
+            eq(2L), anyString());
     }
 
     @Test
@@ -195,7 +197,8 @@ class MerchantAuthServiceImplTest {
             po.setId(200L);
             return true;
         });
-        when(jwtUtil.sign(anyLong(), anyString(), anyString(), anyLong(), anyString())).thenReturn("access-token");
+        when(jwtUtil.sign(anyLong(), anyLong(), anyString(), anyString(), anyLong(), anyString()))
+            .thenReturn("access-token");
         when(jwtUtil.generateRefreshToken()).thenReturn("refresh-token");
 
         TokenVO vo = service.register(new RegisterDTO("shopowner", "pass123"));

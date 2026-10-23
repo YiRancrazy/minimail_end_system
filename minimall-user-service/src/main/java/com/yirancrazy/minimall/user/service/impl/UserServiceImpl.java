@@ -1,7 +1,9 @@
 package com.yirancrazy.minimall.user.service.impl;
 
+import java.security.SecureRandom;
 import java.util.List;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.extern.slf4j.Slf4j;
@@ -15,7 +17,6 @@ import com.yirancrazy.minimall.common.util.CursorUtils;
 import com.yirancrazy.minimall.common.util.MinioUtil;
 import com.yirancrazy.minimall.common.util.SensitiveDataUtils;
 import com.yirancrazy.minimall.user.constant.UserCodeEnum;
-import com.yirancrazy.minimall.user.dto.UserCreateDTO;
 import com.yirancrazy.minimall.user.dto.UserPageDTO;
 import com.yirancrazy.minimall.user.dto.UserProfileDTO;
 import com.yirancrazy.minimall.user.dto.UserUpdateDTO;
@@ -34,6 +35,9 @@ import com.yirancrazy.minimall.user.vo.UserVO;
 @Slf4j
 @Service
 public class UserServiceImpl implements UserService {
+
+    private static final String NICKNAME_PREFIX = "薄荷用户";
+    private static final SecureRandom NICKNAME_RANDOM = new SecureRandom();
 
     private final UserManager userManager;
     private final MinioUtil minioUtil;
@@ -71,25 +75,25 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserSnapshotDTO getSnapshot(Long id) {
         UserPO user = getById(id);
-        return new UserSnapshotDTO(user.getId(), user.getUsername(), RoleEnum.USER.getCode());
+        return new UserSnapshotDTO(user.getId(), user.getNickname(), RoleEnum.USER.getCode());
     }
 
 
     /**
-     * 创建业务数据。
-     * @param dto dto 参数
-     * @return 业务数值
+     * 创建用户业务档案。
+     * @param userId 业务用户 ID
      */
     @Override
-    public Long create(UserCreateDTO dto) {
+    @Transactional(rollbackFor = Exception.class)
+    public void provision(Long userId) {
+        if (userManager.getById(userId) != null) {
+            return;
+        }
         UserPO user = new UserPO();
-        user.setUsername(dto.getUsername());
-        user.setNickname(dto.getNickname());
-        user.setPhone(dto.getPhone());
-        user.setPhoneMasked(SensitiveDataUtils.maskPhone(dto.getPhone()));
-        user.setEmail(dto.getEmail());
+        user.setId(userId);
+        user.setNickname(generateNickname());
+        user.setGender(0);
         userManager.save(user);
-        return user.getId();
     }
 
 
@@ -103,7 +107,6 @@ public class UserServiceImpl implements UserService {
     public boolean update(Long id, UserUpdateDTO dto) {
         UserPO user = new UserPO();
         user.setId(id);
-        user.setUsername(dto.getUsername());
         user.setNickname(dto.getNickname());
         user.setPhone(dto.getPhone());
         user.setPhoneMasked(SensitiveDataUtils.maskPhone(dto.getPhone()));
@@ -166,8 +169,7 @@ public class UserServiceImpl implements UserService {
         List<UserPO> records = userManager.list(Wrappers.lambdaQuery(UserPO.class)
             .lt(lastId != null, UserPO::getId, lastId)
             .and(dto.getKeyword() != null && !dto.getKeyword().isBlank(),
-                w -> w.like(UserPO::getUsername, dto.getKeyword())
-                    .or().like(UserPO::getNickname, dto.getKeyword()))
+                w -> w.like(UserPO::getNickname, dto.getKeyword()))
             .orderByDesc(UserPO::getId)
             .last("LIMIT " + (limit + 1)));
         return CursorPageVO.of(records, limit, UserPO::getId);
@@ -186,8 +188,7 @@ public class UserServiceImpl implements UserService {
         LambdaQueryWrapper<UserPO> wrapper = Wrappers.lambdaQuery(UserPO.class)
             .lt(lastId != null, UserPO::getId, lastId)
             .and(query.getKeyword() != null && !query.getKeyword().isBlank(),
-                w -> w.like(UserPO::getUsername, query.getKeyword())
-                    .or().like(UserPO::getNickname, query.getKeyword()))
+                w -> w.like(UserPO::getNickname, query.getKeyword()))
             .orderByDesc(UserPO::getId)
             .last("LIMIT " + (limit + 1));
         List<UserPO> records = userManager.list(wrapper);
@@ -266,7 +267,16 @@ public class UserServiceImpl implements UserService {
      * @return 视图对象
      */
     private UserManageVO toUserManageVO(UserPO user) {
-        return new UserManageVO(user.getId(), user.getUsername(), user.getNickname(),
+        return new UserManageVO(user.getId(), user.getNickname(),
                 user.getAvatar(), user.getPhoneMasked(), user.getGender(), user.getCreateTime());
+    }
+
+
+    /**
+     * 生成随机昵称。
+     * @return 随机昵称
+     */
+    private String generateNickname() {
+        return String.format("%s%06d", NICKNAME_PREFIX, NICKNAME_RANDOM.nextInt(1_000_000));
     }
 }

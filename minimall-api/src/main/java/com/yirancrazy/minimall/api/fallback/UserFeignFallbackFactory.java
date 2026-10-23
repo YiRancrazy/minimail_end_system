@@ -5,6 +5,7 @@ import org.springframework.stereotype.Component;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.api.dto.common.InternalPageQuery;
 import com.yirancrazy.minimall.api.dto.user.UserManageVO;
+import com.yirancrazy.minimall.api.dto.user.UserProvisionDTO;
 import com.yirancrazy.minimall.api.dto.user.UserSnapshotDTO;
 import com.yirancrazy.minimall.api.feign.UserFeignClient;
 import com.yirancrazy.minimall.common.result.CommonCode;
@@ -30,6 +31,16 @@ public class UserFeignFallbackFactory implements FallbackFactory<UserFeignClient
     public UserFeignClient create(Throwable cause) {
         log.warn("user-service 不可达: {}", cause.getMessage());
         return new UserFeignClient() {
+            /**
+             * 创建用户业务档案。
+             * @param dto 建档请求
+             * @return 统一响应结果
+             */
+            @Override
+            public Result<Void> provision(UserProvisionDTO dto) {
+                return Result.fail(CommonCode.SYS_ERROR, "user-service 不可达");
+            }
+
             /**
              * 执行 snapshot 方法。
              * @param id id 参数

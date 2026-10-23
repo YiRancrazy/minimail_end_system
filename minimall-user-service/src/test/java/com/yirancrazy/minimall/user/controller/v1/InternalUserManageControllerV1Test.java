@@ -53,7 +53,7 @@ public class InternalUserManageControllerV1Test {
      * 分页查询数据。
      */
     public void page_delegates_with_keyword() {
-        UserManageVO user = buildUser(1L, "alice", "小荷");
+        UserManageVO user = buildUser(1L, "小荷");
         when(userService.pageManage(any(InternalPageQuery.class)))
                 .thenReturn(CursorPageVO.of(java.util.List.of(user), 20, UserManageVO::getId));
 
@@ -63,7 +63,7 @@ public class InternalUserManageControllerV1Test {
         Result<CursorPageVO<UserManageVO>> r = controller.page(query);
 
         assertEquals(1, r.getData().getRecords().size());
-        assertEquals("alice", r.getData().getRecords().get(0).getUsername());
+        assertEquals("小荷", r.getData().getRecords().get(0).getNickname());
     }
 
 
@@ -71,11 +71,11 @@ public class InternalUserManageControllerV1Test {
      * 执行 detail_returns_vo 方法。
      */
     public void detail_returns_vo() {
-        when(userService.getManageDetail(1L)).thenReturn(buildUser(1L, "alice", "小荷"));
+        when(userService.getManageDetail(1L)).thenReturn(buildUser(1L, "小荷"));
 
         Result<UserManageVO> r = controller.detail(1L);
 
-        assertEquals("alice", r.getData().getUsername());
+        assertEquals("小荷", r.getData().getNickname());
         assertEquals("138****0001", r.getData().getPhoneMasked());
     }
 
@@ -90,10 +90,9 @@ public class InternalUserManageControllerV1Test {
         assertThrows(BizException.class, () -> controller.detail(99L));
     }
 
-    private UserManageVO buildUser(Long id, String username, String nickname) {
+    private UserManageVO buildUser(Long id, String nickname) {
         UserManageVO u = new UserManageVO();
         u.setId(id);
-        u.setUsername(username);
         u.setNickname(nickname);
         u.setPhoneMasked("138****0001");
         u.setGender(1);

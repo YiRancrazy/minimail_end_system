@@ -327,18 +327,24 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
      * @return 处理结果
      */
     private ServerWebExchange mutateWithHeaders(ServerWebExchange exchange, Claims claims, String jti) {
-        String userId = claims.getSubject();
+        String authUserId = claims.getSubject();
+        String userId = claims.get("userId", String.class);
+        if (userId == null || userId.isBlank()) {
+            userId = authUserId;
+        }
         String role = claims.get("role", String.class);
         String resolvedRole = role == null ? "USER" : role;
         ServerHttpRequest.Builder builder = exchange.getRequest().mutate();
         // 身份头以网关解析值为准：先清除客户端可能伪造的同名头再注入，防止水平越权
         builder.headers(h -> {
+            h.remove("X-Auth-User-Id");
             h.remove("X-User-Id");
             h.remove("X-User-Role");
             h.remove("X-User-Jti");
             h.remove("X-Merchant-Id");
         });
-        builder.header("X-User-Id", userId)
+        builder.header("X-Auth-User-Id", authUserId)
+               .header("X-User-Id", userId)
                .header("X-User-Role", resolvedRole)
                .header("X-User-Jti", jti == null ? "" : jti)
                .header("X-Trace-Id",

@@ -4,7 +4,6 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -16,7 +15,6 @@ import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CommonCode;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.result.Result;
-import com.yirancrazy.minimall.user.dto.UserCreateDTO;
 import com.yirancrazy.minimall.user.dto.UserPageDTO;
 import com.yirancrazy.minimall.user.dto.UserProfileDTO;
 import com.yirancrazy.minimall.user.dto.UserUpdateDTO;
@@ -68,19 +66,6 @@ public class UserControllerV1 {
     public Result<UserVO> get(@PathVariable("id") Long id, @RequestHeader("X-User-Role") String role) {
         requirePlatform(role);
         return Result.success(userService.getVO(id));
-    }
-
-
-    /**
-     * 创建业务数据。
-     * @param dto dto 参数
-     * @param role role 参数
-     * @return 统一响应结果
-     */
-    @PostMapping
-    public Result<Long> create(@Valid @RequestBody UserCreateDTO dto, @RequestHeader("X-User-Role") String role) {
-        requirePlatform(role);
-        return Result.success(userService.create(dto));
     }
 
 

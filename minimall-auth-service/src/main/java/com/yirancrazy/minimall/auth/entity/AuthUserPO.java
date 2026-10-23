@@ -17,11 +17,9 @@ import com.yirancrazy.minimall.common.base.BasePO;
 @EqualsAndHashCode(callSuper = true)
 @TableName("t_auth_user")
 public class AuthUserPO extends BasePO {
+    private Long userId;
+
     private String account;
-
-    private byte[] phoneEnc;
-
-    private byte[] emailEnc;
 
     private String passwordHash;
 
@@ -32,8 +30,6 @@ public class AuthUserPO extends BasePO {
     private Long roleId;
 
     private Integer status;
-
-    private String nickname;
 
     private String contact;
 

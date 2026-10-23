@@ -44,8 +44,9 @@ public class JwtUtil {
      * @param jti jti 参数
      * @return 处理结果
      */
-    public String sign(Long userId, String account, String role, Long roleId, String jti) {
-        return sign(userId, account, role, roleId, jti, ttlMillis);
+    public String sign(Long authUserId, Long userId, String account, String role,
+                       Long roleId, String jti) {
+        return sign(authUserId, userId, account, role, roleId, jti, ttlMillis);
     }
 
 
@@ -59,18 +60,22 @@ public class JwtUtil {
      * @param ttlMillis ttlMillis 参数
      * @return 处理结果
      */
-    public String sign(Long userId, String account, String role, Long roleId, String jti, long ttlMillis) {
+    public String sign(Long authUserId, Long userId, String account, String role,
+                       Long roleId, String jti, long ttlMillis) {
         long now = System.currentTimeMillis();
-        return Jwts.builder()
-            .subject(String.valueOf(userId))
+        var builder = Jwts.builder()
+            .subject(String.valueOf(authUserId))
             .claim("account", account)
             .claim("role", role)
             .claim("roleId", roleId)
             .claim("jti", jti)
             .issuedAt(new Date(now))
             .expiration(new Date(now + ttlMillis))
-            .signWith(key)
-            .compact();
+            .signWith(key);
+        if (userId != null) {
+            builder.claim("userId", String.valueOf(userId));
+        }
+        return builder.compact();
     }
 
 

@@ -18,7 +18,6 @@ import lombok.NoArgsConstructor;
 public class UserManageVO {
 
     private Long id;
-    private String username;
     private String nickname;
     private String avatar;
 

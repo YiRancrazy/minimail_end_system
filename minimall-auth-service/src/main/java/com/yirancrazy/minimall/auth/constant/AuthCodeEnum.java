@@ -31,7 +31,10 @@ public enum AuthCodeEnum implements BaseEnum {
     RESET_CODE_TOO_FREQUENT("14015", "RESET_CODE_TOO_FREQUENT", "验证码发送过于频繁"),
     VERIFY_CODE_ATTEMPT_EXCEEDED("14016", "VERIFY_CODE_ATTEMPT_EXCEEDED", "验证码错误次数过多，请重新获取"),
     LOGIN_ATTEMPT_EXCEEDED("14017", "LOGIN_ATTEMPT_EXCEEDED", "登录失败次数过多，请稍后再试"),
-    ROLE_NOT_FOUND("14018", "ROLE_NOT_FOUND", "角色不存在");
+    ROLE_NOT_FOUND("14018", "ROLE_NOT_FOUND", "角色不存在"),
+    USER_ID_GENERATE_FAIL("14019", "USER_ID_GENERATE_FAIL", "用户ID生成失败"),
+    USER_PROFILE_CREATE_FAIL("14020", "USER_PROFILE_CREATE_FAIL", "用户档案创建失败"),
+    USER_PROFILE_MISSING("14021", "USER_PROFILE_MISSING", "用户档案不存在");
 
     private final String code;
     private final String alias;

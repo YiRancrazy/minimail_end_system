@@ -82,7 +82,7 @@ public class AuthControllerV1 {
      * @return 统一响应结果
      */
     @PostMapping("/logout")
-    public Result<Void> logout(@RequestHeader("X-User-Id") Long userId,
+    public Result<Void> logout(@RequestHeader("X-Auth-User-Id") Long userId,
                                @RequestHeader("X-User-Jti") String jti) {
         authService.signOut(userId, jti);
         return Result.success();
@@ -109,7 +109,7 @@ public class AuthControllerV1 {
      * @return 统一响应结果
      */
     @PutMapping("/password")
-    public Result<Void> changePassword(@RequestHeader("X-User-Id") Long userId,
+    public Result<Void> changePassword(@RequestHeader("X-Auth-User-Id") Long userId,
                                        @Valid @RequestBody ChangePasswordDTO dto) {
         authService.changePassword(userId, dto);
         return Result.success();

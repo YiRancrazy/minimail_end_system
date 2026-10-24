@@ -4,12 +4,17 @@ import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Component;
 import lombok.RequiredArgsConstructor;
+import com.yirancrazy.minimall.api.dto.cart.CartCheckoutCleanupDTO;
+import com.yirancrazy.minimall.api.dto.cart.CartCheckoutItemDTO;
+import com.yirancrazy.minimall.api.dto.cart.CartCheckoutQueryDTO;
 import com.yirancrazy.minimall.api.dto.goods.SkuSnapshotDTO;
 import com.yirancrazy.minimall.api.dto.goods.SpuSnapshotDTO;
 import com.yirancrazy.minimall.api.dto.pay.PayCreateDTO;
 import com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO;
 import com.yirancrazy.minimall.api.dto.stock.StockBatchReserveDTO;
 import com.yirancrazy.minimall.api.dto.stock.StockReserveDTO;
+import com.yirancrazy.minimall.api.feign.CartCleanupFeignClient;
+import com.yirancrazy.minimall.api.feign.CartFeignClient;
 import com.yirancrazy.minimall.api.feign.GoodsFeignClient;
 import com.yirancrazy.minimall.api.feign.IdFeignClient;
 import com.yirancrazy.minimall.api.feign.PayFeignClient;
@@ -29,6 +34,8 @@ import com.yirancrazy.minimall.order.gateway.OrderRemoteGateway;
 public class OrderRemoteGatewayImpl implements OrderRemoteGateway {
 
     private final GoodsFeignClient goodsFeignClient;
+    private final CartFeignClient cartFeignClient;
+    private final CartCleanupFeignClient cartCleanupFeignClient;
     private final StockFeignClient stockFeignClient;
     private final PayFeignClient payFeignClient;
     private final IdFeignClient idFeignClient;
@@ -61,6 +68,28 @@ public class OrderRemoteGatewayImpl implements OrderRemoteGateway {
     @Override
     public Result<Map<Long, SpuSnapshotDTO>> batchSpuSnapshot(List<Long> spuIds) {
         return goodsFeignClient.batchSpuSnapshot(spuIds);
+    }
+
+
+    /**
+     * 查询购物车结算快照。
+     * @param dto 查询参数
+     * @return 购物车条目快照
+     */
+    @Override
+    public Result<List<CartCheckoutItemDTO>> cartCheckoutSnapshot(CartCheckoutQueryDTO dto) {
+        return cartFeignClient.getCheckoutItems(dto);
+    }
+
+
+    /**
+     * 清理已结算购物车条目。
+     * @param dto 清理参数
+     * @return 统一响应结果
+     */
+    @Override
+    public Result<Void> cleanupCheckoutCart(CartCheckoutCleanupDTO dto) {
+        return cartCleanupFeignClient.cleanupCheckout(dto);
     }
 
     /**

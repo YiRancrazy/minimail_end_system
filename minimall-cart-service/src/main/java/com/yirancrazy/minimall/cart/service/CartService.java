@@ -1,6 +1,7 @@
 package com.yirancrazy.minimall.cart.service;
 
 import java.util.List;
+import com.yirancrazy.minimall.api.dto.cart.CartCheckoutItemDTO;
 import com.yirancrazy.minimall.cart.dto.CartItemAddDTO;
 import com.yirancrazy.minimall.cart.dto.CartUpdateDTO;
 import com.yirancrazy.minimall.cart.vo.CartItemVO;
@@ -81,4 +82,21 @@ public interface CartService {
      * @param itemIds itemIds 参数
      */
     void moveToFavorite(Long userId, List<Long> itemIds);
+
+
+    /**
+     * 查询购物车结算快照。
+     * @param userId 用户 ID
+     * @param itemIds 购物车条目 ID
+     * @return 购物车结算条目
+     */
+    List<CartCheckoutItemDTO> getCheckoutItems(Long userId, List<Long> itemIds);
+
+
+    /**
+     * 原子清理已结算购物车条目。
+     * @param userId 用户 ID
+     * @param items 清理条目
+     */
+    void cleanupCheckout(Long userId, List<CartCheckoutItemDTO> items);
 }

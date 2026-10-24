@@ -42,6 +42,7 @@ import static org.mockito.Mockito.when;
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
+import com.yirancrazy.minimall.api.dto.cart.CartCheckoutItemDTO;
 import com.yirancrazy.minimall.api.dto.goods.SkuSnapshotDTO;
 import com.yirancrazy.minimall.api.dto.goods.SpuSnapshotDTO;
 import com.yirancrazy.minimall.cart.dto.CartItemAddDTO;
@@ -677,6 +678,66 @@ public class CartServiceImplTest {
         verify(cartRemoteGateway).addFavorite(eq(7L), eq(100L));
         verify(cartRemoteGateway).addFavorite(eq(7L), eq(200L));
         verify(cartItemManager).removeByIds(List.of(1L, 2L));
+    }
+
+
+    /**
+     * 快照查询应拒绝缺失条目。
+     */
+    @Test
+    void getCheckoutItems_rejectsMissingItem() {
+        when(cartItemManager.list(any(Wrapper.class)))
+            .thenReturn(List.of(cartItem(1L, 7L, 100L, 2, 1)));
+
+        assertThrows(BizException.class,
+            () -> service.getCheckoutItems(7L, List.of(1L, 2L)));
+    }
+
+
+    /**
+     * 快照查询应拒绝未勾选条目。
+     */
+    @Test
+    void getCheckoutItems_rejectsUnselectedItem() {
+        when(cartItemManager.list(any(Wrapper.class)))
+            .thenReturn(List.of(cartItem(1L, 7L, 100L, 2, 0)));
+
+        assertThrows(BizException.class,
+            () -> service.getCheckoutItems(7L, List.of(1L)));
+    }
+
+
+    /**
+     * 购买量小于购物车数量时只扣减。
+     */
+    @Test
+    void cleanupCheckout_greaterQuantity_keepsDifference() {
+        CartItemPO item = cartItem(1L, 7L, 100L, 5, 1);
+        when(cartItemManager.list(any(Wrapper.class))).thenReturn(List.of(item));
+        when(cartItemManager.updateById(any(CartItemPO.class))).thenReturn(true);
+
+        service.cleanupCheckout(7L,
+            List.of(new CartCheckoutItemDTO(1L, 100L, 2)));
+
+        assertEquals(3, item.getQuantity());
+        verify(cartItemManager, never()).removeByIds(any());
+    }
+
+
+    /**
+     * SKU 冲突时整批不做变更。
+     */
+    @Test
+    void cleanupCheckout_skuMismatch_deletesNothing() {
+        CartItemPO item = cartItem(1L, 7L, 200L, 5, 1);
+        when(cartItemManager.list(any(Wrapper.class))).thenReturn(List.of(item));
+
+        assertThrows(BizException.class,
+            () -> service.cleanupCheckout(7L,
+                List.of(new CartCheckoutItemDTO(1L, 100L, 2))));
+
+        verify(cartItemManager, never()).removeByIds(any());
+        verify(cartItemManager, never()).updateById(any(CartItemPO.class));
     }
 
     private CartItemPO cartItem(Long id, Long userId, Long skuId, int quantity, int selected) {

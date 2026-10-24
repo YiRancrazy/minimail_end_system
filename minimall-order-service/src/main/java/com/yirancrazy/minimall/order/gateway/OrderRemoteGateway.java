@@ -2,6 +2,9 @@ package com.yirancrazy.minimall.order.gateway;
 
 import java.util.List;
 import java.util.Map;
+import com.yirancrazy.minimall.api.dto.cart.CartCheckoutCleanupDTO;
+import com.yirancrazy.minimall.api.dto.cart.CartCheckoutItemDTO;
+import com.yirancrazy.minimall.api.dto.cart.CartCheckoutQueryDTO;
 import com.yirancrazy.minimall.api.dto.goods.SkuSnapshotDTO;
 import com.yirancrazy.minimall.api.dto.goods.SpuSnapshotDTO;
 import com.yirancrazy.minimall.api.dto.pay.PayCreateDTO;
@@ -42,6 +45,22 @@ public interface OrderRemoteGateway {
      * @return 统一响应结果
      */
     Result<Map<Long, SpuSnapshotDTO>> batchSpuSnapshot(List<Long> spuIds);
+
+
+    /**
+     * 查询购物车结算快照。
+     * @param dto 查询参数
+     * @return 购物车条目快照
+     */
+    Result<List<CartCheckoutItemDTO>> cartCheckoutSnapshot(CartCheckoutQueryDTO dto);
+
+
+    /**
+     * 清理已结算购物车条目。
+     * @param dto 清理参数
+     * @return 统一响应结果
+     */
+    Result<Void> cleanupCheckoutCart(CartCheckoutCleanupDTO dto);
 
 
     /**

@@ -9,6 +9,7 @@ import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import lombok.extern.slf4j.Slf4j;
+import com.yirancrazy.minimall.order.service.CartCleanupService;
 import com.yirancrazy.minimall.order.service.OrderService;
 
 
@@ -34,15 +35,20 @@ public class OrderScheduleHandler {
         Long.class);
 
     private final OrderService orderService;
+    private final CartCleanupService cartCleanupService;
     private final StringRedisTemplate redisTemplate;
 
     /**
      * 构造 OrderScheduleHandler 实例。
      * @param orderService orderService 参数
+     * @param cartCleanupService cartCleanupService 参数
      * @param redisTemplate redisTemplate 参数
      */
-    public OrderScheduleHandler(OrderService orderService, StringRedisTemplate redisTemplate) {
+    public OrderScheduleHandler(OrderService orderService,
+                                CartCleanupService cartCleanupService,
+                                StringRedisTemplate redisTemplate) {
         this.orderService = orderService;
+        this.cartCleanupService = cartCleanupService;
         this.redisTemplate = redisTemplate;
     }
 
@@ -50,7 +56,9 @@ public class OrderScheduleHandler {
     /**
      * 扫描并处理过期订单。
      */
-    @Scheduled(fixedDelayString = "${minimall.schedule.order.scan-expired-orders-ms}", initialDelayString = "${minimall.schedule.order.scan-init-ms}")
+    @Scheduled(
+        fixedDelayString = "${minimall.schedule.order.scan-expired-orders-ms}",
+        initialDelayString = "${minimall.schedule.order.scan-init-ms}")
     public void scanExpiredOrders() {
         String lockKey = "order:schedule:scanExpiredOrders";
         String lockToken = tryLock(lockKey);
@@ -71,7 +79,9 @@ public class OrderScheduleHandler {
     /**
      * 扫描并处理自动确认订单。
      */
-    @Scheduled(fixedDelayString = "${minimall.schedule.order.scan-auto-confirm-ms}", initialDelayString = "${minimall.schedule.order.scan-init-ms}")
+    @Scheduled(
+        fixedDelayString = "${minimall.schedule.order.scan-auto-confirm-ms}",
+        initialDelayString = "${minimall.schedule.order.scan-init-ms}")
     public void scanAutoConfirm() {
         String lockKey = "order:schedule:scanAutoConfirm";
         String lockToken = tryLock(lockKey);
@@ -92,7 +102,9 @@ public class OrderScheduleHandler {
     /**
      * 扫描并处理待办数据。
      */
-    @Scheduled(fixedDelayString = "${minimall.schedule.order.scan-stock-release-pending-ms}", initialDelayString = "${minimall.schedule.order.scan-init-ms}")
+    @Scheduled(
+        fixedDelayString = "${minimall.schedule.order.scan-stock-release-pending-ms}",
+        initialDelayString = "${minimall.schedule.order.scan-init-ms}")
     public void scanStockReleasePending() {
         String lockKey = "order:schedule:scanStockReleasePending";
         String lockToken = tryLock(lockKey);
@@ -103,6 +115,29 @@ public class OrderScheduleHandler {
         try {
             int count = orderService.scanStockReleasePending();
             log.debug("scanStockReleasePending 执行完成，processed={}", count);
+        }
+        finally {
+            releaseLock(lockKey, lockToken);
+        }
+    }
+
+
+    /**
+     * 扫描并处理待清理购物车任务。
+     */
+    @Scheduled(
+        fixedDelayString = "${minimall.schedule.order.scan-cart-cleanup-ms}",
+        initialDelayString = "${minimall.schedule.order.scan-init-ms}")
+    public void scanCartCleanupPending() {
+        String lockKey = "order:schedule:scanCartCleanupPending";
+        String lockToken = tryLock(lockKey);
+        if (lockToken == null) {
+            log.debug("scanCartCleanupPending 已跳过，锁被其他实例持有");
+            return;
+        }
+        try {
+            int count = cartCleanupService.scanPending();
+            log.debug("scanCartCleanupPending 执行完成，processed={}", count);
         }
         finally {
             releaseLock(lockKey, lockToken);

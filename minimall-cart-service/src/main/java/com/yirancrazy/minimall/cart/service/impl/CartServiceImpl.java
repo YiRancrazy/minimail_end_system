@@ -1,12 +1,18 @@
 package com.yirancrazy.minimall.cart.service.impl;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.extern.slf4j.Slf4j;
+import com.yirancrazy.minimall.api.dto.cart.CartCheckoutItemDTO;
 import com.yirancrazy.minimall.api.dto.goods.SkuSnapshotDTO;
 import com.yirancrazy.minimall.api.dto.goods.SpuSnapshotDTO;
 import com.yirancrazy.minimall.cart.constant.CartCodeEnum;
@@ -214,5 +220,97 @@ public class CartServiceImpl implements CartService {
             throw new BizException(CartCodeEnum.MOVE_TO_FAVORITE_FAIL);
         }
         log.info("购物车商品已移入收藏，userId={}，itemIds={}", userId, itemIds);
+    }
+
+
+    /**
+     * 查询购物车结算快照。
+     * @param userId 用户 ID
+     * @param itemIds 购物车条目 ID
+     * @return 购物车结算条目
+     */
+    @Override
+    public List<CartCheckoutItemDTO> getCheckoutItems(Long userId, List<Long> itemIds) {
+        if (itemIds == null || itemIds.isEmpty()) {
+            throw new BizException(CommonCode.PARAM_INVALID, "购物车条目不能为空");
+        }
+        List<Long> distinctIds = itemIds.stream().distinct().toList();
+        List<CartItemPO> rows = cartItemManager.list(Wrappers.lambdaQuery(CartItemPO.class)
+            .eq(CartItemPO::getUserId, userId)
+            .in(CartItemPO::getId, distinctIds));
+        if (rows.size() != distinctIds.size()) {
+            throw new BizException(CartCodeEnum.CART_ITEM_NOT_FOUND);
+        }
+        Map<Long, CartItemPO> rowMap = rows.stream()
+            .collect(Collectors.toMap(CartItemPO::getId, Function.identity()));
+        List<CartCheckoutItemDTO> result = new ArrayList<>(distinctIds.size());
+        for (Long itemId : distinctIds) {
+            CartItemPO row = rowMap.get(itemId);
+            if (row.getSelected() == null || row.getSelected() != 1) {
+                throw new BizException(CartCodeEnum.CART_ITEM_NOT_SELECTED);
+            }
+            result.add(new CartCheckoutItemDTO(
+                row.getId(), row.getSkuId(), row.getQuantity()));
+        }
+        return result;
+    }
+
+
+    /**
+     * 原子清理已结算购物车条目。
+     * @param userId 用户 ID
+     * @param items 清理条目
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void cleanupCheckout(Long userId, List<CartCheckoutItemDTO> items) {
+        if (items == null || items.isEmpty()) {
+            throw new BizException(CommonCode.PARAM_INVALID, "购物车清理项不能为空");
+        }
+        Map<Long, CartCheckoutItemDTO> expectedMap = new HashMap<>(items.size() * 2);
+        for (CartCheckoutItemDTO item : items) {
+            if (item == null || item.getCartItemId() == null || item.getSkuId() == null
+                || item.getQuantity() == null || item.getQuantity() <= 0) {
+                throw new BizException(CommonCode.PARAM_INVALID, "购物车清理项非法");
+            }
+            if (expectedMap.putIfAbsent(item.getCartItemId(), item) != null) {
+                throw new BizException(CommonCode.PARAM_INVALID, "购物车条目重复");
+            }
+        }
+        List<CartItemPO> rows = cartItemManager.list(Wrappers.lambdaQuery(CartItemPO.class)
+            .eq(CartItemPO::getUserId, userId)
+            .in(CartItemPO::getId, expectedMap.keySet()));
+        Map<Long, CartItemPO> rowMap = rows.stream()
+            .collect(Collectors.toMap(CartItemPO::getId, Function.identity()));
+        for (Map.Entry<Long, CartCheckoutItemDTO> entry : expectedMap.entrySet()) {
+            CartItemPO row = rowMap.get(entry.getKey());
+            if (row != null && !row.getSkuId().equals(entry.getValue().getSkuId())) {
+                throw new BizException(CartCodeEnum.CART_ITEM_MISMATCH);
+            }
+        }
+
+        List<Long> removeIds = new ArrayList<>(expectedMap.size());
+        List<CartItemPO> updates = new ArrayList<>(expectedMap.size());
+        for (Map.Entry<Long, CartCheckoutItemDTO> entry : expectedMap.entrySet()) {
+            CartItemPO row = rowMap.get(entry.getKey());
+            if (row == null) {
+                continue;
+            }
+            int currentQuantity = row.getQuantity() == null ? 0 : row.getQuantity();
+            if (currentQuantity <= entry.getValue().getQuantity()) {
+                removeIds.add(row.getId());
+                continue;
+            }
+            row.setQuantity(currentQuantity - entry.getValue().getQuantity());
+            updates.add(row);
+        }
+        if (!removeIds.isEmpty() && !cartItemManager.removeByIds(removeIds)) {
+            throw new BizException(CartCodeEnum.CART_CHECKOUT_CLEANUP_FAIL);
+        }
+        for (CartItemPO row : updates) {
+            if (!cartItemManager.updateById(row)) {
+                throw new BizException(CartCodeEnum.CART_CHECKOUT_CLEANUP_FAIL);
+            }
+        }
     }
 }

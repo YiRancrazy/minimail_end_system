@@ -3,6 +3,7 @@ package com.yirancrazy.minimall.api.fallback;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import com.yirancrazy.minimall.api.dto.cart.CartCheckoutQueryDTO;
 import com.yirancrazy.minimall.api.feign.CartFeignClient;
 
 
@@ -21,5 +22,7 @@ class CartFeignFallbackFactoryTest {
         CartFeignClient client = f.create(new RuntimeException("down"));
         assertNotNull(client);
         assertEquals(-1L, client.countByUser(1L).getData());
+        assertEquals("20000", client.getCheckoutItems(
+            new CartCheckoutQueryDTO(1L, java.util.List.of(9L))).getCode());
     }
 }

@@ -36,6 +36,8 @@ spring:
     pathmatch:
       matching-strategy: ant_path_matcher
 minimall:
+  security:
+    internal-token: ${MINIMALL_INTERNAL_TOKEN:}
   minio:
     endpoint: ${MINIO_ENDPOINT:http://127.0.0.1:9000}
     public-endpoint: ${MINIO_PUBLIC_ENDPOINT:}

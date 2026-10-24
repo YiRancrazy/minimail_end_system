@@ -6,6 +6,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 import com.xxl.job.core.handler.annotation.XxlJob;
 import lombok.extern.slf4j.Slf4j;
+import com.yirancrazy.minimall.order.service.CartCleanupService;
 import com.yirancrazy.minimall.order.service.OrderService;
 
 
@@ -24,15 +25,20 @@ public class OrderXxlJobHandler {
     private static final Duration LOCK_TTL = Duration.ofSeconds(60);
 
     private final OrderService orderService;
+    private final CartCleanupService cartCleanupService;
     private final StringRedisTemplate redisTemplate;
 
     /**
      * 构造 OrderXxlJobHandler 实例。
      * @param orderService orderService 参数
+     * @param cartCleanupService cartCleanupService 参数
      * @param redisTemplate redisTemplate 参数
      */
-    public OrderXxlJobHandler(OrderService orderService, StringRedisTemplate redisTemplate) {
+    public OrderXxlJobHandler(OrderService orderService,
+                              CartCleanupService cartCleanupService,
+                              StringRedisTemplate redisTemplate) {
         this.orderService = orderService;
+        this.cartCleanupService = cartCleanupService;
         this.redisTemplate = redisTemplate;
     }
 
@@ -87,6 +93,25 @@ public class OrderXxlJobHandler {
         try {
             int count = orderService.scanStockReleasePending();
             log.info("xxl-job scanStockReleasePending 执行完成，processed={}", count);
+        }
+        finally {
+            redisTemplate.delete(lockKey);
+        }
+    }
+
+
+    /**
+     * 扫描并处理待清理购物车任务。
+     */
+    public void scanCartCleanupPending() {
+        String lockKey = "order:schedule:scanCartCleanupPending";
+        if (!tryLock(lockKey)) {
+            log.info("xxl-job scanCartCleanupPending 已跳过，锁被其他实例持有");
+            return;
+        }
+        try {
+            int count = cartCleanupService.scanPending();
+            log.info("xxl-job scanCartCleanupPending 执行完成，processed={}", count);
         }
         finally {
             redisTemplate.delete(lockKey);

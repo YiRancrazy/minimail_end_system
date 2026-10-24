@@ -16,6 +16,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import com.yirancrazy.minimall.order.service.CartCleanupService;
 import com.yirancrazy.minimall.order.service.OrderService;
 
 
@@ -29,16 +30,18 @@ public class OrderScheduleHandlerTest {
 
     private OrderScheduleHandler handler;
     private OrderService orderService;
+    private CartCleanupService cartCleanupService;
     private StringRedisTemplate redisTemplate;
 
     @SuppressWarnings("unchecked")
     private void setUpHandler() {
         orderService = mock(OrderService.class);
+        cartCleanupService = mock(CartCleanupService.class);
         redisTemplate = mock(StringRedisTemplate.class);
         ValueOperations<String, String> valueOps = mock(ValueOperations.class);
         when(redisTemplate.opsForValue()).thenReturn(valueOps);
         when(valueOps.setIfAbsent(anyString(), anyString(), any(Duration.class))).thenReturn(true);
-        handler = new OrderScheduleHandler(orderService, redisTemplate);
+        handler = new OrderScheduleHandler(orderService, cartCleanupService, redisTemplate);
     }
 
 
@@ -114,5 +117,34 @@ public class OrderScheduleHandlerTest {
         verify(redisTemplate).execute(any(RedisScript.class), anyList(), eq(tokenCaptor.getValue()));
         assertTrue(ttlCaptor.getValue().compareTo(Duration.ofMinutes(1)) > 0,
             "lock ttl must cover a batched scan");
+    }
+
+
+    /**
+     * 购物车清理扫描应委派给服务。
+     */
+    @Test
+    void scanCartCleanupPending_delegatesToServiceWithLock() {
+        setUpHandler();
+        when(cartCleanupService.scanPending()).thenReturn(2);
+
+        handler.scanCartCleanupPending();
+
+        verify(cartCleanupService).scanPending();
+    }
+
+
+    /**
+     * 分布式锁被占用时跳过购物车清理扫描。
+     */
+    @Test
+    void scanCartCleanupPending_skipsWhenLockHeld() {
+        setUpHandler();
+        when(redisTemplate.opsForValue().setIfAbsent(
+            anyString(), anyString(), any(Duration.class))).thenReturn(false);
+
+        handler.scanCartCleanupPending();
+
+        verify(cartCleanupService, times(0)).scanPending();
     }
 }

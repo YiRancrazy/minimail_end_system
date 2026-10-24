@@ -1,5 +1,6 @@
 package com.yirancrazy.minimall.api.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
@@ -20,8 +21,21 @@ public class TraceIdFeignAutoConfiguration {
      * @return 处理结果
      */
     @Bean
-    @ConditionalOnMissingBean
+    @ConditionalOnMissingBean(name = "traceIdFeignInterceptor")
     public RequestInterceptor traceIdFeignInterceptor() {
         return new TraceIdFeignInterceptor();
+    }
+
+
+    /**
+     * 创建内部令牌 Feign 拦截器。
+     * @param internalToken 服务间访问令牌
+     * @return Feign 请求拦截器
+     */
+    @Bean
+    @ConditionalOnMissingBean(name = "internalTokenFeignInterceptor")
+    public RequestInterceptor internalTokenFeignInterceptor(
+            @Value("${minimall.security.internal-token:}") String internalToken) {
+        return new InternalTokenFeignInterceptor(internalToken);
     }
 }

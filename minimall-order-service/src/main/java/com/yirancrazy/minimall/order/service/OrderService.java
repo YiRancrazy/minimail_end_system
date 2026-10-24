@@ -1,10 +1,12 @@
 package com.yirancrazy.minimall.order.service;
 
 import java.util.List;
+import com.yirancrazy.minimall.api.dto.cart.CartCheckoutItemDTO;
 import com.yirancrazy.minimall.api.dto.order.OrderCommentEligibilityDTO;
 import com.yirancrazy.minimall.api.dto.order.OrderPaySnapshotDTO;
 import com.yirancrazy.minimall.api.dto.order.RefundCallbackDTO;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
+import com.yirancrazy.minimall.order.dto.CheckoutResultDTO;
 import com.yirancrazy.minimall.order.dto.OrderCheckoutItemDTO;
 import com.yirancrazy.minimall.order.dto.OrderPageDTO;
 import com.yirancrazy.minimall.order.dto.ReceiverDTO;
@@ -64,6 +66,18 @@ public interface OrderService {
      * @return 业务数值
      */
     Long checkout(Long userId, List<OrderCheckoutItemDTO> items, ReceiverDTO receiver);
+
+
+    /**
+     * 创建结算订单并持久化购物车清理任务。
+     * @param userId 用户 ID
+     * @param items 订单条目
+     * @param cleanupItems 购物车清理条目
+     * @param receiver 收货信息
+     * @return 结算结果
+     */
+    CheckoutResultDTO checkout(Long userId, List<OrderCheckoutItemDTO> items,
+                               List<CartCheckoutItemDTO> cleanupItems, ReceiverDTO receiver);
 
 
     /**

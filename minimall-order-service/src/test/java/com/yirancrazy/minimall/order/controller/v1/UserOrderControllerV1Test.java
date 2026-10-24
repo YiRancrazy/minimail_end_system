@@ -12,6 +12,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -20,10 +21,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
+import com.yirancrazy.minimall.order.constant.CheckoutSourceEnum;
 import com.yirancrazy.minimall.order.dto.OrderCheckoutDTO;
 import com.yirancrazy.minimall.order.dto.OrderCheckoutItemDTO;
 import com.yirancrazy.minimall.order.dto.OrderCreateDTO;
 import com.yirancrazy.minimall.order.dto.OrderPageDTO;
+import com.yirancrazy.minimall.order.service.OrderCheckoutService;
 import com.yirancrazy.minimall.order.service.OrderService;
 import com.yirancrazy.minimall.order.vo.OrderVO;
 
@@ -38,12 +41,16 @@ class UserOrderControllerV1Test {
 
     private MockMvc mockMvc;
     private OrderService service;
+    private OrderCheckoutService checkoutService;
     private final ObjectMapper mapper = new ObjectMapper();
 
     @BeforeEach
     void setUp() {
         service = mock(OrderService.class);
-        mockMvc = MockMvcBuilders.standaloneSetup(new UserOrderControllerV1(service)).build();
+        checkoutService = mock(OrderCheckoutService.class);
+        mockMvc = MockMvcBuilders
+            .standaloneSetup(new UserOrderControllerV1(service, checkoutService))
+            .build();
     }
 
 
@@ -96,8 +103,9 @@ class UserOrderControllerV1Test {
 
     @Test
     void checkout_returns_created() throws Exception {
-        when(service.checkout(anyLong(), any(), any())).thenReturn(100L);
+        when(checkoutService.checkout(anyLong(), any())).thenReturn(100L);
         OrderCheckoutDTO dto = new OrderCheckoutDTO();
+        dto.setCheckoutSource(CheckoutSourceEnum.BUY_NOW);
         dto.setItems(java.util.List.of(new OrderCheckoutItemDTO(1L, 2)));
         mockMvc.perform(post("/api/v1/user/orders/checkout")
                 .header("X-User-Id", 1L)
@@ -105,7 +113,18 @@ class UserOrderControllerV1Test {
                 .content(mapper.writeValueAsString(dto)))
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.data").value(100));
-        verify(service).checkout(anyLong(), any(), any());
+        verify(checkoutService).checkout(anyLong(), any());
+    }
+
+
+    @Test
+    void checkout_missingSource_returnsBadRequest() throws Exception {
+        mockMvc.perform(post("/api/v1/user/orders/checkout")
+                .header("X-User-Id", 1L)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"cartItemIds\":[9]}"))
+            .andExpect(status().isBadRequest());
+        verify(checkoutService, never()).checkout(anyLong(), any());
     }
 
 

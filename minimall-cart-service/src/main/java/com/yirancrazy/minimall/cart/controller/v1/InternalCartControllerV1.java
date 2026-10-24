@@ -1,9 +1,15 @@
 package com.yirancrazy.minimall.cart.controller.v1;
 
+import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
+import com.yirancrazy.minimall.api.dto.cart.CartCheckoutCleanupDTO;
+import com.yirancrazy.minimall.api.dto.cart.CartCheckoutItemDTO;
+import com.yirancrazy.minimall.api.dto.cart.CartCheckoutQueryDTO;
 import com.yirancrazy.minimall.cart.dto.CartCountDTO;
 import com.yirancrazy.minimall.cart.service.CartService;
 import com.yirancrazy.minimall.common.result.Result;
@@ -38,5 +44,30 @@ public class InternalCartControllerV1 {
     @GetMapping("/count")
     public Result<Long> count(@Valid CartCountDTO dto) {
         return Result.success(cartService.countByUser(dto.getUserId()));
+    }
+
+
+    /**
+     * 查询购物车结算快照。
+     * @param dto 查询参数
+     * @return 购物车结算条目
+     */
+    @PostMapping("/checkout-snapshot")
+    public Result<List<CartCheckoutItemDTO>> checkoutSnapshot(
+            @Valid @RequestBody CartCheckoutQueryDTO dto) {
+        return Result.success(cartService.getCheckoutItems(dto.getUserId(), dto.getItemIds()));
+    }
+
+
+    /**
+     * 清理已结算购物车条目。
+     * @param dto 清理参数
+     * @return 统一响应结果
+     */
+    @PostMapping("/checkout-cleanup")
+    public Result<Void> checkoutCleanup(
+            @Valid @RequestBody CartCheckoutCleanupDTO dto) {
+        cartService.cleanupCheckout(dto.getUserId(), dto.getItems());
+        return Result.success();
     }
 }

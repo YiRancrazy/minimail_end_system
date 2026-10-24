@@ -30,6 +30,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
+import com.yirancrazy.minimall.api.dto.cart.CartCheckoutItemDTO;
 import com.yirancrazy.minimall.api.dto.goods.SkuSnapshotDTO;
 import com.yirancrazy.minimall.api.dto.order.OrderCommentEligibilityDTO;
 import com.yirancrazy.minimall.api.dto.order.OrderPaySnapshotDTO;
@@ -42,20 +43,24 @@ import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.common.util.MinioUtil;
+import com.yirancrazy.minimall.order.constant.CartCleanupStatusEnum;
 import com.yirancrazy.minimall.order.constant.OrderCodeEnum;
 import com.yirancrazy.minimall.order.constant.OrderStatusEnum;
 import com.yirancrazy.minimall.order.constant.OrderStatusMachine;
 import com.yirancrazy.minimall.order.constant.StockReleaseStatusEnum;
+import com.yirancrazy.minimall.order.dto.CheckoutResultDTO;
 import com.yirancrazy.minimall.order.dto.OrderCheckoutItemDTO;
 import com.yirancrazy.minimall.order.dto.OrderPageDTO;
 import com.yirancrazy.minimall.order.dto.OrderStatusCountDTO;
 import com.yirancrazy.minimall.order.dto.OrderSummaryResultDTO;
 import com.yirancrazy.minimall.order.dto.OrderTrendPointDTO;
+import com.yirancrazy.minimall.order.entity.CartCleanupTaskPO;
 import com.yirancrazy.minimall.order.entity.OrderItemPO;
 import com.yirancrazy.minimall.order.entity.OrderLogisticsPO;
 import com.yirancrazy.minimall.order.entity.OrderPO;
 import com.yirancrazy.minimall.order.entity.OrderStatusLogPO;
 import com.yirancrazy.minimall.order.gateway.OrderRemoteGateway;
+import com.yirancrazy.minimall.order.manager.CartCleanupTaskManager;
 import com.yirancrazy.minimall.order.manager.OrderItemManager;
 import com.yirancrazy.minimall.order.manager.OrderLogisticsManager;
 import com.yirancrazy.minimall.order.manager.OrderManager;
@@ -78,6 +83,7 @@ public class OrderServiceImplTest {
     private OrderLogisticsManager logisticsManager;
     private OrderStatusLogManager statusLogManager;
     private OrderRemoteGateway orderRemoteGateway;
+    private CartCleanupTaskManager cartCleanupTaskManager;
     private EventBus eventBus;
     private OrderStatusMachine statusMachine;
     private MinioUtil minioUtil;
@@ -90,6 +96,7 @@ public class OrderServiceImplTest {
         logisticsManager = mock(OrderLogisticsManager.class);
         statusLogManager = mock(OrderStatusLogManager.class);
         orderRemoteGateway = mock(OrderRemoteGateway.class);
+        cartCleanupTaskManager = mock(CartCleanupTaskManager.class);
         eventBus = mock(EventBus.class);
         OutboxStore outboxStore = mock(OutboxStore.class);
         TransactionTemplate transactionTemplate = mock(TransactionTemplate.class);
@@ -108,6 +115,11 @@ public class OrderServiceImplTest {
         lenient().when(orderItemManager.list(any(Wrapper.class))).thenReturn(java.util.Collections.emptyList());
         lenient().when(logisticsManager.save(any(OrderLogisticsPO.class))).thenReturn(true);
         lenient().when(statusLogManager.save(any(OrderStatusLogPO.class))).thenReturn(true);
+        lenient().doAnswer(inv -> {
+            CartCleanupTaskPO task = inv.getArgument(0);
+            task.setId(3001L);
+            return true;
+        }).when(cartCleanupTaskManager).save(any(CartCleanupTaskPO.class));
         lenient().when(orderRemoteGateway.skuSnapshot(any())).thenReturn(Result.success(
             new SkuSnapshotDTO(100L, 1L, "sku-100", new BigDecimal("9.90"), 100, 10L)));
         lenient().when(orderRemoteGateway.batchSkuSnapshot(any())).thenReturn(Result.success(
@@ -132,7 +144,8 @@ public class OrderServiceImplTest {
         service = new OrderServiceImpl(manager, orderItemManager, logisticsManager, statusLogManager,
             orderRemoteGateway,
             eventBus, outboxStore, transactionTemplate, statusMachine,
-            new com.fasterxml.jackson.databind.ObjectMapper(), minioUtil);
+            new com.fasterxml.jackson.databind.ObjectMapper(), minioUtil,
+            cartCleanupTaskManager);
     }
 
 
@@ -1184,6 +1197,48 @@ public class OrderServiceImplTest {
         verify(orderRemoteGateway).reserveBatch(any());
         verify(orderItemManager, times(2)).save(any(OrderItemPO.class));
         verify(orderRemoteGateway).createPayment(any());
+    }
+
+
+    /**
+     * 购物车来源应持久化清理任务。
+     * @throws Exception JSON 解析失败
+     */
+    @Test
+    void checkout_withCleanupItems_createsCleanupTask() throws Exception {
+        List<OrderCheckoutItemDTO> orderItems =
+            List.of(new OrderCheckoutItemDTO(100L, 2));
+        List<CartCheckoutItemDTO> cleanupItems =
+            List.of(new CartCheckoutItemDTO(9001L, 100L, 2));
+
+        CheckoutResultDTO result =
+            service.checkout(7L, orderItems, cleanupItems, null);
+
+        assertEquals(3001L, result.getCartCleanupTaskId());
+        ArgumentCaptor<CartCleanupTaskPO> captor =
+            ArgumentCaptor.forClass(CartCleanupTaskPO.class);
+        verify(cartCleanupTaskManager).save(captor.capture());
+        CartCleanupTaskPO task = captor.getValue();
+        assertEquals(7L, task.getUserId());
+        assertEquals(CartCleanupStatusEnum.PENDING.intCode(), task.getStatus());
+        com.fasterxml.jackson.databind.JsonNode items =
+            new com.fasterxml.jackson.databind.ObjectMapper().readTree(task.getItemsJson());
+        assertEquals(9001L, items.get(0).get("cartItemId").asLong());
+        assertEquals(100L, items.get(0).get("skuId").asLong());
+        assertEquals(2, items.get(0).get("quantity").asInt());
+    }
+
+
+    /**
+     * 立即购买不应创建购物车清理任务。
+     */
+    @Test
+    void checkout_withoutCleanupItems_doesNotCreateTask() {
+        CheckoutResultDTO result = service.checkout(
+            7L, List.of(new OrderCheckoutItemDTO(100L, 1)), List.of(), null);
+
+        assertNull(result.getCartCleanupTaskId());
+        verify(cartCleanupTaskManager, never()).save(any());
     }
 
 

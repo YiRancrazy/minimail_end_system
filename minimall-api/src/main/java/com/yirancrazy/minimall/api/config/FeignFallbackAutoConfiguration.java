@@ -2,6 +2,7 @@ package com.yirancrazy.minimall.api.config;
 
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.context.annotation.Import;
+import com.yirancrazy.minimall.api.fallback.CartCleanupFeignFallbackFactory;
 import com.yirancrazy.minimall.api.fallback.CartFeignFallbackFactory;
 import com.yirancrazy.minimall.api.fallback.GoodsFeignFallbackFactory;
 import com.yirancrazy.minimall.api.fallback.IdFeignFallbackFactory;
@@ -21,6 +22,7 @@ import com.yirancrazy.minimall.api.fallback.UserFeignFallbackFactory;
  **/
 @AutoConfiguration
 @Import({
+    CartCleanupFeignFallbackFactory.class,
     CartFeignFallbackFactory.class,
     GoodsFeignFallbackFactory.class,
     IdFeignFallbackFactory.class,

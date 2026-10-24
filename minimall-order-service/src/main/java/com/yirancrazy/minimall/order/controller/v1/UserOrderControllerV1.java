@@ -2,7 +2,11 @@ package com.yirancrazy.minimall.order.controller.v1;
 
 import java.util.List;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -13,11 +17,14 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
 import com.yirancrazy.minimall.common.annotation.Idempotent;
+import com.yirancrazy.minimall.common.exception.BizException;
+import com.yirancrazy.minimall.common.result.CommonCode;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.order.dto.OrderCheckoutDTO;
 import com.yirancrazy.minimall.order.dto.OrderCreateDTO;
 import com.yirancrazy.minimall.order.dto.OrderPageDTO;
+import com.yirancrazy.minimall.order.service.OrderCheckoutService;
 import com.yirancrazy.minimall.order.service.OrderService;
 import com.yirancrazy.minimall.order.vo.OrderLogisticsVO;
 import com.yirancrazy.minimall.order.vo.OrderStatusCountsVO;
@@ -35,13 +42,17 @@ import com.yirancrazy.minimall.order.vo.OrderVO;
 public class UserOrderControllerV1 {
 
     private final OrderService orderService;
+    private final OrderCheckoutService orderCheckoutService;
 
     /**
      * 构造 UserOrderControllerV1 实例。
      * @param orderService orderService 参数
+     * @param orderCheckoutService orderCheckoutService 参数
      */
-    public UserOrderControllerV1(OrderService orderService) {
+    public UserOrderControllerV1(OrderService orderService,
+                                 OrderCheckoutService orderCheckoutService) {
         this.orderService = orderService;
+        this.orderCheckoutService = orderCheckoutService;
     }
 
 
@@ -96,7 +107,48 @@ public class UserOrderControllerV1 {
     @Idempotent
     public Result<Long> checkout(@RequestHeader("X-User-Id") Long userId,
                                  @Valid @RequestBody OrderCheckoutDTO dto) {
-        return Result.success(orderService.checkout(userId, dto.getItems(), dto.getReceiver()));
+        return Result.success(orderCheckoutService.checkout(userId, dto));
+    }
+
+
+    /**
+     * 将结算参数校验失败转换为 HTTP 400。
+     * @param exception 参数校验异常
+     * @return 统一响应结果
+     */
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<Result<Void>> checkoutValidation(
+            MethodArgumentNotValidException exception) {
+        return ResponseEntity.badRequest()
+            .body(Result.fail(CommonCode.PARAM_INVALID, "结算参数校验失败"));
+    }
+
+
+    /**
+     * 将无法解析的结算请求转换为 HTTP 400。
+     * @param exception 请求体解析异常
+     * @return 统一响应结果
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<Result<Void>> checkoutUnreadable(
+            HttpMessageNotReadableException exception) {
+        return ResponseEntity.badRequest()
+            .body(Result.fail(CommonCode.PARAM_INVALID, "结算来源或请求体格式错误"));
+    }
+
+
+    /**
+     * 将结算参数业务异常转换为 HTTP 400。
+     * @param exception 业务异常
+     * @return 统一响应结果
+     */
+    @ExceptionHandler(BizException.class)
+    public ResponseEntity<Result<Void>> checkoutBiz(BizException exception) {
+        if (CommonCode.PARAM_INVALID.equals(exception.getCode())) {
+            return ResponseEntity.badRequest()
+                .body(Result.fail(exception.getCode(), exception.getMessage()));
+        }
+        return ResponseEntity.ok(Result.fail(exception.getCode(), exception.getMessage()));
     }
 
 

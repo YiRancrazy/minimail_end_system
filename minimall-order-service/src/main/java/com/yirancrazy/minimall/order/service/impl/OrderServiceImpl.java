@@ -22,6 +22,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.seata.spring.annotation.GlobalTransactional;
 import lombok.extern.slf4j.Slf4j;
+import com.yirancrazy.minimall.api.dto.cart.CartCheckoutItemDTO;
 import com.yirancrazy.minimall.api.dto.goods.SkuSnapshotDTO;
 import com.yirancrazy.minimall.api.dto.goods.SpuSnapshotDTO;
 import com.yirancrazy.minimall.api.dto.order.OrderCommentEligibilityDTO;
@@ -41,10 +42,12 @@ import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.common.util.CsvExporter;
 import com.yirancrazy.minimall.common.util.CursorUtils;
 import com.yirancrazy.minimall.common.util.MinioUtil;
+import com.yirancrazy.minimall.order.constant.CartCleanupStatusEnum;
 import com.yirancrazy.minimall.order.constant.OrderCodeEnum;
 import com.yirancrazy.minimall.order.constant.OrderStatusEnum;
 import com.yirancrazy.minimall.order.constant.OrderStatusMachine;
 import com.yirancrazy.minimall.order.constant.StockReleaseStatusEnum;
+import com.yirancrazy.minimall.order.dto.CheckoutResultDTO;
 import com.yirancrazy.minimall.order.dto.OrderCheckoutItemDTO;
 import com.yirancrazy.minimall.order.dto.OrderPageDTO;
 import com.yirancrazy.minimall.order.dto.OrderStatisticsResultDTO;
@@ -52,11 +55,13 @@ import com.yirancrazy.minimall.order.dto.OrderStatusCountDTO;
 import com.yirancrazy.minimall.order.dto.OrderSummaryResultDTO;
 import com.yirancrazy.minimall.order.dto.OrderTrendPointDTO;
 import com.yirancrazy.minimall.order.dto.ReceiverDTO;
+import com.yirancrazy.minimall.order.entity.CartCleanupTaskPO;
 import com.yirancrazy.minimall.order.entity.OrderItemPO;
 import com.yirancrazy.minimall.order.entity.OrderLogisticsPO;
 import com.yirancrazy.minimall.order.entity.OrderPO;
 import com.yirancrazy.minimall.order.entity.OrderStatusLogPO;
 import com.yirancrazy.minimall.order.gateway.OrderRemoteGateway;
+import com.yirancrazy.minimall.order.manager.CartCleanupTaskManager;
 import com.yirancrazy.minimall.order.manager.OrderItemManager;
 import com.yirancrazy.minimall.order.manager.OrderLogisticsManager;
 import com.yirancrazy.minimall.order.manager.OrderManager;
@@ -110,6 +115,7 @@ public class OrderServiceImpl implements OrderService {
     private final OrderStatusMachine statusMachine;
     private final ObjectMapper objectMapper;
     private final MinioUtil minioUtil;
+    private final CartCleanupTaskManager cartCleanupTaskManager;
 
     /**
      * 构造 OrderServiceImpl 实例。
@@ -124,6 +130,7 @@ public class OrderServiceImpl implements OrderService {
      * @param statusMachine statusMachine 参数
      * @param objectMapper objectMapper 参数
      * @param minioUtil minioUtil 参数
+     * @param cartCleanupTaskManager cartCleanupTaskManager 参数
      */
     public OrderServiceImpl(OrderManager orderManager,
                             OrderItemManager orderItemManager,
@@ -135,7 +142,8 @@ public class OrderServiceImpl implements OrderService {
                             TransactionTemplate transactionTemplate,
                             OrderStatusMachine statusMachine,
                             ObjectMapper objectMapper,
-                            MinioUtil minioUtil) {
+                            MinioUtil minioUtil,
+                            CartCleanupTaskManager cartCleanupTaskManager) {
         this.orderManager = orderManager;
         this.orderItemManager = orderItemManager;
         this.orderLogisticsManager = orderLogisticsManager;
@@ -147,6 +155,7 @@ public class OrderServiceImpl implements OrderService {
         this.statusMachine = statusMachine;
         this.objectMapper = objectMapper;
         this.minioUtil = minioUtil;
+        this.cartCleanupTaskManager = cartCleanupTaskManager;
     }
 
 
@@ -244,7 +253,6 @@ public class OrderServiceImpl implements OrderService {
      * @return 业务数值
      */
     @Override
-    @GlobalTransactional
     public Long checkout(Long userId, List<OrderCheckoutItemDTO> items) {
         return checkout(userId, items, null);
     }
@@ -257,8 +265,24 @@ public class OrderServiceImpl implements OrderService {
      * @return 业务数值
      */
     @Override
-    @GlobalTransactional
     public Long checkout(Long userId, List<OrderCheckoutItemDTO> items, ReceiverDTO receiver) {
+        return checkout(userId, items, List.of(), receiver).getMainOrderId();
+    }
+
+
+    /**
+     * 创建结算订单并持久化购物车清理任务。
+     * @param userId 用户 ID
+     * @param items 订单条目
+     * @param cleanupItems 购物车清理条目
+     * @param receiver 收货信息
+     * @return 结算结果
+     */
+    @Override
+    @GlobalTransactional
+    public CheckoutResultDTO checkout(Long userId, List<OrderCheckoutItemDTO> items,
+                                      List<CartCheckoutItemDTO> cleanupItems,
+                                      ReceiverDTO receiver) {
         Map<Long, Integer> quantityBySku = mergeCheckoutItems(items);
         List<Long> skuIds = new ArrayList<>(quantityBySku.keySet());
         Map<Long, SkuSnapshotDTO> snapshots = loadCheckoutSnapshots(skuIds);
@@ -341,9 +365,29 @@ public class OrderServiceImpl implements OrderService {
                 po.getId(), userId, merchantId, orderGroupNo, merchantItems.size(), groupAmount);
         }
 
+        Long cleanupTaskId = createCartCleanupTask(userId, orderGroupNo, cleanupItems);
         log.info("订单结算完成，userId={}，groupNo={}，subOrders={}",
             userId, orderGroupNo, itemsByMerchant.size());
-        return mainOrderId;
+        return new CheckoutResultDTO(mainOrderId, orderGroupNo, cleanupTaskId);
+    }
+
+
+    private Long createCartCleanupTask(Long userId, String orderGroupNo,
+                                       List<CartCheckoutItemDTO> cleanupItems) {
+        if (cleanupItems == null || cleanupItems.isEmpty()) {
+            return null;
+        }
+        CartCleanupTaskPO task = new CartCleanupTaskPO();
+        task.setOrderGroupNo(orderGroupNo);
+        task.setUserId(userId);
+        task.setItemsJson(toSnapshotJson(cleanupItems));
+        task.setStatus(CartCleanupStatusEnum.PENDING.intCode());
+        task.setRetryCount(0);
+        task.setNextRetryAt(LocalDateTime.now());
+        if (task.getItemsJson() == null || !cartCleanupTaskManager.save(task)) {
+            throw new BizException(CommonCode.SYS_ERROR, "购物车清理任务创建失败");
+        }
+        return task.getId();
     }
 
 

@@ -292,17 +292,18 @@ public class PayServiceImpl implements PayService {
             return;
         }
 
-        // 推进订单
-        Result<Void> advanceResult = advanceOrder(po.getOrderNo());
-        if (advanceResult == null || !CommonCode.SUCCESS.equals(advanceResult.getCode())) {
-            throw new BizException(PayCodeEnum.PAY_ORDER_ADVANCE_FAILED);
-        }
-
         po.setTradeNo(dto.getTradeNo());
         po.setStatus(Integer.parseInt(PayStatusEnum.SUCCESS.getCode()));
         po.setChannelResponse(dto.getChannelResponse());
         po.setPaidAt(LocalDateTime.now());
         payManager.updateById(po);
+
+        // 支付结果先落库，订单推进失败由 scanPaidButOrderPending 重试，避免已收款但支付单长期待支付
+        Result<Void> advanceResult = advanceOrder(po.getOrderNo());
+        if (advanceResult == null || !CommonCode.SUCCESS.equals(advanceResult.getCode())) {
+            log.warn("支付已成功但订单推进失败，等待补偿，paymentNo={}，orderNo={}",
+                po.getPaymentNo(), po.getOrderNo());
+        }
     }
 
 

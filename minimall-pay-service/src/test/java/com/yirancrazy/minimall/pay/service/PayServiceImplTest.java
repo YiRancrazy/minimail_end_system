@@ -26,6 +26,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -43,6 +44,7 @@ import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.pay.constant.PayCodeEnum;
+import com.yirancrazy.minimall.pay.constant.PayStatusEnum;
 import com.yirancrazy.minimall.pay.dto.AlipayCallbackDTO;
 import com.yirancrazy.minimall.pay.dto.PayCallbackDTO;
 import com.yirancrazy.minimall.pay.dto.PayPageDTO;
@@ -1541,6 +1543,7 @@ public class PayServiceImplTest {
     /**
      * 处理业务事件。
      */
+    @Test
     public void handleAlipayCallback_verify_failure_returns_false() {
         when(payGateway.verifyCallback(any())).thenThrow(new RuntimeException("bad signature"));
 
@@ -1555,6 +1558,7 @@ public class PayServiceImplTest {
     /**
      * 处理业务事件。
      */
+    @Test
     public void handleAlipayCallback_success_advances_order() {
         PayTransactionPO po = new PayTransactionPO();
         po.setId(1L);
@@ -1570,5 +1574,34 @@ public class PayServiceImplTest {
 
         assertTrue(ack);
         verify(payRemoteGateway).payByOrderNo("ORDER100");
+    }
+
+
+    /**
+     * 支付单先落成功状态；订单服务不可用时仍向支付宝确认，后续由补偿任务推进订单。
+     */
+    @Test
+    public void handleAlipayCallback_order_advance_failure_keeps_payment_success() {
+        PayTransactionPO po = new PayTransactionPO();
+        po.setId(1L);
+        po.setPaymentNo("PAY1");
+        po.setOrderNo("ORDER100");
+        po.setAmount(new BigDecimal("10.00"));
+        po.setStatus(Integer.parseInt(PayStatusEnum.PENDING.getCode()));
+        when(manager.getOne(any(Wrapper.class))).thenReturn(po);
+        when(payGateway.verifyCallback(any())).thenReturn("T1");
+        when(payRemoteGateway.payByOrderNo("ORDER100"))
+            .thenReturn(Result.fail("20000", "订单服务不可用"));
+
+        boolean ack = service.handleAlipayCallback(new AlipayCallbackDTO(java.util.Map.of(
+            "out_trade_no", "PAY1", "trade_status", "TRADE_SUCCESS", "total_amount", "10.00")));
+
+        assertTrue(ack);
+        assertEquals(Integer.parseInt(PayStatusEnum.SUCCESS.getCode()), po.getStatus());
+        assertEquals("T1", po.getTradeNo());
+        assertNotNull(po.getPaidAt());
+        var ordered = inOrder(manager, payRemoteGateway);
+        ordered.verify(manager).updateById(po);
+        ordered.verify(payRemoteGateway).payByOrderNo("ORDER100");
     }
 }

@@ -3,7 +3,10 @@ package com.yirancrazy.minimall.order.manager.impl;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.stereotype.Service;
+import com.baomidou.mybatisplus.core.conditions.Wrapper;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import lombok.RequiredArgsConstructor;
 import com.yirancrazy.minimall.common.annotation.Manager;
 import com.yirancrazy.minimall.order.dto.OrderStatisticsResultDTO;
 import com.yirancrazy.minimall.order.dto.OrderStatusCountDTO;
@@ -21,8 +24,11 @@ import com.yirancrazy.minimall.order.mapper.OrderMapper;
  * @DateTime: 2026/10/16
  **/
 @Manager
+@RequiredArgsConstructor
 public class OrderManagerImpl extends ServiceImpl<OrderMapper, OrderPO>
     implements OrderManager {
+
+    private final OrderMapper orderMapper;
 
 
     /**
@@ -75,5 +81,25 @@ public class OrderManagerImpl extends ServiceImpl<OrderMapper, OrderPO>
     public List<OrderTrendPointDTO> trend(
             Long merchantId, LocalDateTime startTime, LocalDateTime endTime) {
         return baseMapper.trend(merchantId, startTime, endTime);
+    }
+
+    /**
+     * 列出过期的待处理订单。
+     * @param status 订单状态
+     * @param lastId 最后一个订单ID
+     * @param pageSize 每页大小
+     * @return 订单列表
+     */
+    @Override
+    public List<OrderPO> listExpiredPendingOrders(Integer status, Long lastId, Integer pageSize) {
+        Wrapper<OrderPO> wrappers = new LambdaQueryWrapper<OrderPO>()
+                .eq(status != null, OrderPO::getStatus, status)
+                .and(e -> e.isNull(OrderPO::getPayExpireAt)
+                        .or()
+                        .le(OrderPO::getPayExpireAt, LocalDateTime.now()))
+                .gt(lastId != null, OrderPO::getId, lastId)
+                .orderByAsc(OrderPO::getId)
+                .last(pageSize != null, "LIMIT " + pageSize);
+        return orderMapper.selectList(wrappers);
     }
 }

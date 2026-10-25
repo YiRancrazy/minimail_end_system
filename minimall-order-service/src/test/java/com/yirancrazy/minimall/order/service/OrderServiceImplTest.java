@@ -155,6 +155,7 @@ public class OrderServiceImplTest {
     /**
      * 创建业务数据。
      */
+    @Test
     public void create_sets_pending_status() {
         Long orderId = service.create(1L, 100L, 2);
         assertNotNull(orderId);
@@ -183,6 +184,7 @@ public class OrderServiceImplTest {
     /**
      * 创建业务数据。
      */
+    @Test
     public void create_saves_order_item_snapshot() {
         service.create(1L, 100L, 2);
         org.mockito.ArgumentCaptor<OrderItemPO> captor =
@@ -198,6 +200,7 @@ public class OrderServiceImplTest {
     /**
      * 查询列表数据。
      */
+    @Test
     public void listItemVO_resolves_sku_image_url() {
         OrderItemPO item = new OrderItemPO();
         item.setSpuId(1L);
@@ -223,6 +226,7 @@ public class OrderServiceImplTest {
     /**
      * 创建业务数据。
      */
+    @Test
     public void create_snapshot_missing_throws() {
         when(orderRemoteGateway.skuSnapshot(any())).thenReturn(Result.success(null));
         assertThrows(BizException.class, () -> service.create(1L, 100L, 2));
@@ -232,6 +236,7 @@ public class OrderServiceImplTest {
     /**
      * 创建业务数据。
      */
+    @Test
     public void create_stock_reserve_fail_throws() {
         when(orderRemoteGateway.reserve(any())).thenReturn(Result.success(Boolean.FALSE));
         assertThrows(BizException.class, () -> service.create(1L, 100L, 2));
@@ -241,6 +246,7 @@ public class OrderServiceImplTest {
     /**
      * 创建业务数据。
      */
+    @Test
     public void create_pay_create_fail_throws() {
         when(orderRemoteGateway.createPayment(any())).thenReturn(Result.success(-1L));
         assertThrows(BizException.class, () -> service.create(1L, 100L, 2));
@@ -280,6 +286,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 pay_missing_order_throws 方法。
      */
+    @Test
     public void pay_missing_order_throws() {
         when(manager.getById(99L)).thenReturn(null);
         assertThrows(BizException.class, () -> service.pay(99L));
@@ -289,6 +296,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 pay_already_paid_is_idempotent 方法。
      */
+    @Test
     public void pay_already_paid_is_idempotent() {
         OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.PAID.intCode());
         when(manager.getById(99L)).thenReturn(existing);
@@ -303,6 +311,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 pay_refunding_order_throws 方法。
      */
+    @Test
     public void pay_refunding_order_throws() {
         OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.REFUNDING.intCode());
         when(manager.getById(99L)).thenReturn(existing);
@@ -318,6 +327,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 pay_refunded_order_throws 方法。
      */
+    @Test
     public void pay_refunded_order_throws() {
         OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.REFUNDED.intCode());
         when(manager.getById(99L)).thenReturn(existing);
@@ -333,6 +343,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 payByOrderNo_transitions_to_paid 方法。
      */
+    @Test
     public void payByOrderNo_transitions_to_paid() {
         OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.PENDING.intCode());
         when(manager.getOne(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class))).thenReturn(existing);
@@ -347,6 +358,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 payByOrderNo_missing_throws 方法。
      */
+    @Test
     public void payByOrderNo_missing_throws() {
         when(manager.getOne(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class))).thenReturn(null);
         assertThrows(BizException.class, () -> service.payByOrderNo("NOPE"));
@@ -356,6 +368,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 cancel_pending_order_succeeds 方法。
      */
+    @Test
     public void cancel_pending_order_succeeds() {
         OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.PENDING.intCode());
         when(manager.getById(99L)).thenReturn(existing);
@@ -368,6 +381,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 cancel_wrong_user_throws 方法。
      */
+    @Test
     public void cancel_wrong_user_throws() {
         OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.PENDING.intCode());
         when(manager.getById(99L)).thenReturn(existing);
@@ -379,6 +393,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 cancel_paid_order_throws 方法。
      */
+    @Test
     public void cancel_paid_order_throws() {
         OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.PAID.intCode());
         when(manager.getById(99L)).thenReturn(existing);
@@ -390,6 +405,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 cancel_refunding_order_throws 方法。
      */
+    @Test
     public void cancel_refunding_order_throws() {
         OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.REFUNDING.intCode());
         when(manager.getById(99L)).thenReturn(existing);
@@ -401,6 +417,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 ship_transitions_to_shipped 方法。
      */
+    @Test
     public void ship_transitions_to_shipped() {
         OrderPO existing = buildOrder(99L, 1L, 10L, OrderStatusEnum.PAID.intCode());
         when(manager.getById(99L)).thenReturn(existing);
@@ -413,6 +430,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 confirm_transitions_to_received 方法。
      */
+    @Test
     public void confirm_transitions_to_received() {
         OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.SHIPPED.intCode());
         when(manager.getById(99L)).thenReturn(existing);
@@ -425,6 +443,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 confirm_wrong_user_throws 方法。
      */
+    @Test
     public void confirm_wrong_user_throws() {
         OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.SHIPPED.intCode());
         when(manager.getById(99L)).thenReturn(existing);
@@ -436,6 +455,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 refund_transitions_to_refunding 方法。
      */
+    @Test
     public void refund_transitions_to_refunding() {
         OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.PAID.intCode());
         when(manager.getById(99L)).thenReturn(existing);
@@ -449,6 +469,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 refund_does_not_call_pay_gateway 方法。
      */
+    @Test
     public void refund_does_not_call_pay_gateway() {
         OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.PAID.intCode());
         when(manager.getById(99L)).thenReturn(existing);
@@ -461,6 +482,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 refund_verifies_order_ownership 方法。
      */
+    @Test
     public void refund_verifies_order_ownership() {
         OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.PAID.intCode());
         when(manager.getById(99L)).thenReturn(existing);
@@ -472,6 +494,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 refundCallback_full_refund_transitions_to_refunded 方法。
      */
+    @Test
     public void refundCallback_full_refund_transitions_to_refunded() {
         OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.REFUNDING.intCode());
         existing.setRefundFromStatus(OrderStatusEnum.PAID.intCode());
@@ -488,6 +511,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 refundCallback_partial_refund_reverts_and_allows_next_request 方法。
      */
+    @Test
     public void refundCallback_partial_refund_reverts_and_allows_next_request() {
         OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.REFUNDING.intCode());
         existing.setRefundFromStatus(OrderStatusEnum.SHIPPED.intCode());
@@ -508,6 +532,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 refundCallback_second_partial_refund_finishes_order 方法。
      */
+    @Test
     public void refundCallback_second_partial_refund_finishes_order() {
         OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.REFUNDING.intCode());
         existing.setRefundFromStatus(OrderStatusEnum.PAID.intCode());
@@ -525,6 +550,7 @@ public class OrderServiceImplTest {
     /**
      * 处理业务事件。
      */
+    @Test
     public void handleRefundCallback_ignores_duplicate_cumulative_amount() {
         OrderPO existing = buildOrder(100L, 7L, OrderStatusEnum.REFUNDED.intCode());
         existing.setPayAmount(new BigDecimal("100.00"));
@@ -540,6 +566,7 @@ public class OrderServiceImplTest {
     /**
      * 处理业务事件。
      */
+    @Test
     public void handleRefundCallback_rejects_state_other_than_refunding() {
         OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.PAID.intCode());
         existing.setPayAmount(new BigDecimal("100.00"));
@@ -553,6 +580,7 @@ public class OrderServiceImplTest {
     /**
      * 获取相关数据。
      */
+    @Test
     public void getStatus_returns_order_status() {
         OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.PAID.intCode());
         when(manager.getById(99L)).thenReturn(existing);
@@ -565,6 +593,7 @@ public class OrderServiceImplTest {
     /**
      * 获取相关数据。
      */
+    @Test
     public void getStatus_missing_order_throws() {
         when(manager.getById(99L)).thenReturn(null);
         assertThrows(BizException.class, () -> service.getStatus(99L, 1L));
@@ -574,6 +603,7 @@ public class OrderServiceImplTest {
     /**
      * 获取相关数据。
      */
+    @Test
     public void getStatus_wrong_user_throws() {
         OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.PAID.intCode());
         when(manager.getById(99L)).thenReturn(existing);
@@ -585,6 +615,7 @@ public class OrderServiceImplTest {
     /**
      * 分页查询数据。
      */
+    @Test
     public void page_delegates_to_manager() {
         OrderPageDTO dto = new OrderPageDTO();
         dto.setUserId(1L);
@@ -601,6 +632,7 @@ public class OrderServiceImplTest {
     /**
      * 获取相关数据。
      */
+    @Test
     public void getDetail_returns_order_when_exists() {
         OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.PAID.intCode());
         when(manager.getById(99L)).thenReturn(existing);
@@ -613,6 +645,7 @@ public class OrderServiceImplTest {
     /**
      * 获取相关数据。
      */
+    @Test
     public void getDetail_missing_throws() {
         when(manager.getById(99L)).thenReturn(null);
         assertThrows(BizException.class, () -> service.getDetail(99L, 1L));
@@ -622,6 +655,7 @@ public class OrderServiceImplTest {
     /**
      * 获取相关数据。
      */
+    @Test
     public void getDetail_wrong_user_throws() {
         OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.PAID.intCode());
         when(manager.getById(99L)).thenReturn(existing);
@@ -633,6 +667,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 resolveMerchantId_by_id_returns_merchant 方法。
      */
+    @Test
     public void resolveMerchantId_by_id_returns_merchant() {
         OrderPO existing = buildOrder(99L, 1L, 42L, OrderStatusEnum.PENDING.intCode());
         when(manager.getById(99L)).thenReturn(existing);
@@ -644,6 +679,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 resolveMerchantId_by_order_no_returns_merchant 方法。
      */
+    @Test
     public void resolveMerchantId_by_order_no_returns_merchant() {
         OrderPO existing = buildOrder(99L, 1L, 42L, OrderStatusEnum.PENDING.intCode());
         when(manager.getById(any())).thenReturn(null);
@@ -656,6 +692,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 resolveMerchantId_missing_returns_null 方法。
      */
+    @Test
     public void resolveMerchantId_missing_returns_null() {
         when(manager.getById(any())).thenReturn(null);
         when(manager.getOne(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class))).thenReturn(null);
@@ -668,6 +705,7 @@ public class OrderServiceImplTest {
     /**
      * 获取相关数据。
      */
+    @Test
     public void getPaySnapshot_returns_order_payment_fields() {
         OrderPO existing = buildOrder(99L, 7L, 42L, OrderStatusEnum.PENDING.intCode());
         existing.setOrderNo("OD99");
@@ -690,6 +728,7 @@ public class OrderServiceImplTest {
     /**
      * 获取相关数据。
      */
+    @Test
     public void getPaySnapshot_missing_throws() {
         when(manager.getOne(any(Wrapper.class))).thenReturn(null);
         when(manager.getById(any())).thenReturn(null);
@@ -701,6 +740,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 merchantClose_pending_succeeds 方法。
      */
+    @Test
     public void merchantClose_pending_succeeds() {
         OrderPO existing = buildOrder(99L, 1L, 10L, OrderStatusEnum.PENDING.intCode());
         when(manager.getById(99L)).thenReturn(existing);
@@ -714,6 +754,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 merchantClose_wrong_merchant_throws 方法。
      */
+    @Test
     public void merchantClose_wrong_merchant_throws() {
         OrderPO existing = buildOrder(99L, 1L, 10L, OrderStatusEnum.PENDING.intCode());
         when(manager.getById(99L)).thenReturn(existing);
@@ -725,6 +766,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 merchantClose_paid_order_throws 方法。
      */
+    @Test
     public void merchantClose_paid_order_throws() {
         OrderPO existing = buildOrder(99L, 1L, 10L, OrderStatusEnum.PAID.intCode());
         when(manager.getById(99L)).thenReturn(existing);
@@ -736,6 +778,7 @@ public class OrderServiceImplTest {
     /**
      * 删除业务数据。
      */
+    @Test
     public void delete_cancelled_succeeds() {
         OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.CANCELED.intCode());
         when(manager.getById(99L)).thenReturn(existing);
@@ -748,6 +791,7 @@ public class OrderServiceImplTest {
     /**
      * 删除业务数据。
      */
+    @Test
     public void delete_pending_throws() {
         OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.PENDING.intCode());
         when(manager.getById(99L)).thenReturn(existing);
@@ -759,6 +803,7 @@ public class OrderServiceImplTest {
     /**
      * 删除业务数据。
      */
+    @Test
     public void delete_wrong_user_throws() {
         OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.CANCELED.intCode());
         when(manager.getById(99L)).thenReturn(existing);
@@ -770,6 +815,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 platformClose_pending_succeeds 方法。
      */
+    @Test
     public void platformClose_pending_succeeds() {
         OrderPO existing = buildOrder(99L, 1L, 10L, OrderStatusEnum.PENDING.intCode());
         when(manager.getById(99L)).thenReturn(existing);
@@ -783,6 +829,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 platformClose_paid_throws 方法。
      */
+    @Test
     public void platformClose_paid_throws() {
         OrderPO existing = buildOrder(99L, 1L, 10L, OrderStatusEnum.PAID.intCode());
         when(manager.getById(99L)).thenReturn(existing);
@@ -794,6 +841,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 platformClose_refunding_throws 方法。
      */
+    @Test
     public void platformClose_refunding_throws() {
         OrderPO existing = buildOrder(99L, 1L, 10L, OrderStatusEnum.REFUNDING.intCode());
         when(manager.getById(99L)).thenReturn(existing);
@@ -805,6 +853,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 pendingCount_returns_count 方法。
      */
+    @Test
     public void pendingCount_returns_count() {
         when(manager.count(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class))).thenReturn(5L);
         long count = service.pendingCount(10L);
@@ -815,6 +864,7 @@ public class OrderServiceImplTest {
     /**
      * 统计业务数据。
      */
+    @Test
     public void countStatusByUser_aggregates_by_status() {
         when(manager.countByStatus(7L)).thenReturn(java.util.List.of(
             statusCount(1, 1L), statusCount(2, 2L), statusCount(3, 1L), statusCount(4, 1L),
@@ -842,6 +892,7 @@ public class OrderServiceImplTest {
     /**
      * 统计业务数据。
      */
+    @Test
     public void countStatusByUser_returns_zero_when_empty() {
         when(manager.countByStatus(7L)).thenReturn(java.util.Collections.emptyList());
 
@@ -860,6 +911,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 orderSummary_delegates_to_mapper_with_parsed_range 方法。
      */
+    @Test
     public void orderSummary_delegates_to_mapper_with_parsed_range() {
         OrderSummaryResultDTO expected = new OrderSummaryResultDTO(
             3L, new BigDecimal("30.00"), new BigDecimal("30.00"), java.math.BigDecimal.ZERO,
@@ -878,6 +930,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 orderSummary_tolerates_invalid_params 方法。
      */
+    @Test
     public void orderSummary_tolerates_invalid_params() {
         OrderSummaryResultDTO expected = new OrderSummaryResultDTO();
         when(manager.summary(isNull(), isNull(), isNull())).thenReturn(expected);
@@ -893,6 +946,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 orderTrend_returns_empty_points_when_no_data 方法。
      */
+    @Test
     public void orderTrend_returns_empty_points_when_no_data() {
         when(manager.trend(isNull(), isNull(), isNull())).thenReturn(null);
 
@@ -906,6 +960,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 orderTrend_delegates_to_mapper 方法。
      */
+    @Test
     public void orderTrend_delegates_to_mapper() {
         OrderTrendPointDTO point =
                 new OrderTrendPointDTO("2026-08-26", 2L, java.math.BigDecimal.TEN);
@@ -921,6 +976,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 exportList_delegates_to_manager 方法。
      */
+    @Test
     public void exportList_delegates_to_manager() {
         when(manager.list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class)))
             .thenReturn(new java.util.ArrayList<>());
@@ -931,6 +987,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 platformExportList_delegates_to_manager 方法。
      */
+    @Test
     public void platformExportList_delegates_to_manager() {
         when(manager.list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class)))
             .thenReturn(new java.util.ArrayList<>());
@@ -941,6 +998,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 reviewRefund_approved_triggers_pay 方法。
      */
+    @Test
     public void reviewRefund_approved_triggers_pay() {
         OrderPO existing = buildOrder(99L, 1L, 10L, OrderStatusEnum.REFUNDING.intCode());
         existing.setRefundFromStatus(OrderStatusEnum.PAID.intCode());
@@ -961,6 +1019,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 reviewRefund_pay_returns_false_throws_and_keeps_refunding 方法。
      */
+    @Test
     public void reviewRefund_pay_returns_false_throws_and_keeps_refunding() {
         OrderPO existing = buildOrder(100L, 1L, 10L, OrderStatusEnum.REFUNDING.intCode());
         existing.setPayId(200L);
@@ -980,6 +1039,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 reviewRefund_rejected_reverts_status 方法。
      */
+    @Test
     public void reviewRefund_rejected_reverts_status() {
         OrderPO existing = buildOrder(99L, 1L, 10L, OrderStatusEnum.REFUNDING.intCode());
         existing.setRefundFromStatus(OrderStatusEnum.PAID.intCode());
@@ -994,6 +1054,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 reviewRefund_wrong_merchant_throws 方法。
      */
+    @Test
     public void reviewRefund_wrong_merchant_throws() {
         OrderPO existing = buildOrder(99L, 1L, 10L, OrderStatusEnum.REFUNDING.intCode());
         when(manager.getById(99L)).thenReturn(existing);
@@ -1005,6 +1066,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 reviewRefund_not_refunding_throws 方法。
      */
+    @Test
     public void reviewRefund_not_refunding_throws() {
         OrderPO existing = buildOrder(99L, 1L, 10L, OrderStatusEnum.PAID.intCode());
         when(manager.getById(99L)).thenReturn(existing);
@@ -1016,6 +1078,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 merchantInitiateRefund_partial_amount_persisted 方法。
      */
+    @Test
     public void merchantInitiateRefund_partial_amount_persisted() {
         OrderPO existing = buildOrder(99L, 1L, 10L, OrderStatusEnum.PAID.intCode());
         existing.setPayAmount(new BigDecimal("19.80"));
@@ -1032,6 +1095,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 merchantInitiateRefund_completed_throws 方法。
      */
+    @Test
     public void merchantInitiateRefund_completed_throws() {
         OrderPO existing = buildOrder(99L, 1L, 10L, OrderStatusEnum.COMPLETED.intCode());
         when(manager.getById(99L)).thenReturn(existing);
@@ -1044,6 +1108,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 merchantInitiateRefund_amount_exceeds_pay_throws 方法。
      */
+    @Test
     public void merchantInitiateRefund_amount_exceeds_pay_throws() {
         OrderPO existing = buildOrder(99L, 1L, 10L, OrderStatusEnum.PAID.intCode());
         existing.setPayAmount(new BigDecimal("19.80"));
@@ -1057,6 +1122,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 merchantInitiateRefund_rejects_more_than_two_decimals 方法。
      */
+    @Test
     public void merchantInitiateRefund_rejects_more_than_two_decimals() {
         OrderPO existing = buildOrder(99L, 1L, 10L, OrderStatusEnum.PAID.intCode());
         existing.setPayAmount(new BigDecimal("19.80"));
@@ -1073,6 +1139,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 reviewRefund_approved_uses_partial_refund_amount 方法。
      */
+    @Test
     public void reviewRefund_approved_uses_partial_refund_amount() {
         OrderPO existing = buildOrder(99L, 1L, 10L, OrderStatusEnum.REFUNDING.intCode());
         existing.setPayId(2001L);
@@ -1095,6 +1162,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 arbitrateRefund_approved_submits_pay_refund 方法。
      */
+    @Test
     public void arbitrateRefund_approved_submits_pay_refund() {
         OrderPO existing = buildOrder(99L, 1L, 10L, OrderStatusEnum.REFUNDING.intCode());
         existing.setRefundFromStatus(OrderStatusEnum.PAID.intCode());
@@ -1117,6 +1185,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 arbitrateRefund_approved_pay_failure_keeps_refunding 方法。
      */
+    @Test
     public void arbitrateRefund_approved_pay_failure_keeps_refunding() {
         OrderPO existing = buildOrder(99L, 1L, 10L, OrderStatusEnum.REFUNDING.intCode());
         existing.setRefundFromStatus(OrderStatusEnum.PAID.intCode());
@@ -1133,6 +1202,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 arbitrateRefund_rejected_reverts_status 方法。
      */
+    @Test
     public void arbitrateRefund_rejected_reverts_status() {
         OrderPO existing = buildOrder(99L, 1L, 10L, OrderStatusEnum.REFUNDING.intCode());
         existing.setRefundFromStatus(OrderStatusEnum.SHIPPED.intCode());
@@ -1147,6 +1217,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 arbitrateRefund_not_refunding_throws 方法。
      */
+    @Test
     public void arbitrateRefund_not_refunding_throws() {
         OrderPO existing = buildOrder(99L, 1L, 10L, OrderStatusEnum.PAID.intCode());
         when(manager.getById(99L)).thenReturn(existing);
@@ -1158,6 +1229,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 queryLogistics_returns_nodes_when_order_exists 方法。
      */
+    @Test
     public void queryLogistics_returns_nodes_when_order_exists() {
         OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.SHIPPED.intCode());
         when(manager.getById(99L)).thenReturn(existing);
@@ -1186,6 +1258,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 queryLogistics_missing_order_throws 方法。
      */
+    @Test
     public void queryLogistics_missing_order_throws() {
         when(manager.getById(99L)).thenReturn(null);
         assertThrows(BizException.class, () -> service.queryLogistics(99L, 1L));
@@ -1195,6 +1268,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 queryLogistics_wrong_user_throws 方法。
      */
+    @Test
     public void queryLogistics_wrong_user_throws() {
         OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.SHIPPED.intCode());
         when(manager.getById(99L)).thenReturn(existing);
@@ -1206,6 +1280,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 ship_inserts_logistics_node 方法。
      */
+    @Test
     public void ship_inserts_logistics_node() {
         OrderPO existing = buildOrder(99L, 1L, 10L, OrderStatusEnum.PAID.intCode());
         when(manager.getById(99L)).thenReturn(existing);
@@ -1219,6 +1294,7 @@ public class OrderServiceImplTest {
     /**
      * 校验业务条件。
      */
+    @Test
     public void checkout_multi_sku_succeeds() {
         List<OrderCheckoutItemDTO> items = List.of(
             new OrderCheckoutItemDTO(100L, 2),
@@ -1333,6 +1409,7 @@ public class OrderServiceImplTest {
     /**
      * 校验业务条件。
      */
+    @Test
     public void checkout_cross_merchant_splits_orders() {
         OrderCheckoutItemDTO itemA = new OrderCheckoutItemDTO(100L, 1);
         OrderCheckoutItemDTO itemB = new OrderCheckoutItemDTO(200L, 1);
@@ -1354,6 +1431,7 @@ public class OrderServiceImplTest {
     /**
      * 校验业务条件。
      */
+    @Test
     public void checkout_snapshot_without_merchant_throws() {
         when(orderRemoteGateway.batchSkuSnapshot(any())).thenReturn(Result.success(Map.of(
             100L, new SkuSnapshotDTO(100L, 1L, "sku-100",
@@ -1367,6 +1445,7 @@ public class OrderServiceImplTest {
     /**
      * 校验业务条件。
      */
+    @Test
     public void checkout_empty_items_throws() {
         assertThrows(BizException.class, () -> service.checkout(1L, java.util.Collections.emptyList()));
     }
@@ -1375,6 +1454,7 @@ public class OrderServiceImplTest {
     /**
      * 校验业务条件。
      */
+    @Test
     public void checkout_fails_when_id_service_unavailable() {
         when(orderRemoteGateway.nextId(anyString())).thenReturn(Result.fail("20000", "ID服务不可用"));
         List<OrderCheckoutItemDTO> items = List.of(new OrderCheckoutItemDTO(100L, 1));
@@ -1389,6 +1469,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 commentEligibility_eligible_uses_item_merchant_snapshot 方法。
      */
+    @Test
     public void commentEligibility_eligible_uses_item_merchant_snapshot() {
         OrderPO po = buildOrder(99L, 7L, OrderStatusEnum.COMPLETED.intCode());
         po.setOrderNo("OD99");
@@ -1411,6 +1492,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 commentEligibility_rejects_other_user_order 方法。
      */
+    @Test
     public void commentEligibility_rejects_other_user_order() {
         OrderPO po = buildOrder(99L, 7L, OrderStatusEnum.PAID.intCode());
         po.setOrderNo("OD99");
@@ -1426,6 +1508,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 commentEligibility_rejects_unpaid_order 方法。
      */
+    @Test
     public void commentEligibility_rejects_unpaid_order() {
         OrderPO po = buildOrder(99L, 7L, OrderStatusEnum.PENDING.intCode());
         po.setOrderNo("OD99");
@@ -1441,6 +1524,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 commentEligibility_rejects_spu_not_in_order 方法。
      */
+    @Test
     public void commentEligibility_rejects_spu_not_in_order() {
         OrderPO po = buildOrder(99L, 7L, OrderStatusEnum.SHIPPED.intCode());
         po.setOrderNo("OD99");
@@ -1456,6 +1540,7 @@ public class OrderServiceImplTest {
     /**
      * 校验业务条件。
      */
+    @Test
     public void checkout_snapshot_missing_throws() {
         when(orderRemoteGateway.batchSkuSnapshot(any())).thenReturn(Result.success(Map.of()));
         List<OrderCheckoutItemDTO> items = List.of(new OrderCheckoutItemDTO(100L, 1));
@@ -1467,6 +1552,7 @@ public class OrderServiceImplTest {
     /**
      * 校验业务条件。
      */
+    @Test
     public void checkout_stock_reserve_fail_throws() {
         when(orderRemoteGateway.batchSkuSnapshot(any())).thenReturn(Result.success(Map.of(
             100L, new SkuSnapshotDTO(100L, 1L, "sku-100",
@@ -1481,6 +1567,7 @@ public class OrderServiceImplTest {
     /**
      * 校验业务条件。
      */
+    @Test
     public void checkout_100_skus_uses_batch_calls_once() {
         List<OrderCheckoutItemDTO> items = new ArrayList<>(100);
         java.util.Map<Long, SkuSnapshotDTO> snapshots = new java.util.HashMap<>(200);
@@ -1501,6 +1588,7 @@ public class OrderServiceImplTest {
     /**
      * 校验业务条件。
      */
+    @Test
     public void checkout_merges_duplicate_skus() {
         when(orderRemoteGateway.batchSkuSnapshot(any())).thenReturn(Result.success(Map.of(
             100L, new SkuSnapshotDTO(100L, 1L, "sku-100",
@@ -1523,6 +1611,7 @@ public class OrderServiceImplTest {
     /**
      * 校验业务条件。
      */
+    @Test
     public void checkout_rejects_more_than_100_unique_skus() {
         List<OrderCheckoutItemDTO> items = new ArrayList<>(101);
         for (long skuId = 1L; skuId <= 101L; skuId++) {
@@ -1539,6 +1628,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 cancel_multi_sku_releases_all_items 方法。
      */
+    @Test
     public void cancel_multi_sku_releases_all_items() {
         OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.PENDING.intCode());
         when(manager.getById(99L)).thenReturn(existing);
@@ -1582,6 +1672,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 transitStatus_throws_when_update_returns_zero_rows 方法。
      */
+    @Test
     public void transitStatus_throws_when_update_returns_zero_rows() {
         OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.PENDING.intCode());
         when(manager.getById(99L)).thenReturn(existing);
@@ -1596,10 +1687,13 @@ public class OrderServiceImplTest {
     /**
      * 扫描并处理待办数据。
      */
+    @Test
     public void scanExpiredOrders_cancels_pending_orders() {
         OrderPO o1 = buildOrder(1L, 1L, OrderStatusEnum.PENDING.intCode());
         OrderPO o2 = buildOrder(2L, 1L, OrderStatusEnum.PENDING.intCode());
-        when(manager.list(any(Wrapper.class))).thenReturn(java.util.List.of(o1, o2));
+        when(manager.listExpiredPendingOrders(
+            eq(OrderStatusEnum.PENDING.intCode()), eq(0L), eq(200)))
+            .thenReturn(java.util.List.of(o1, o2));
         when(manager.getById(1L)).thenReturn(o1);
         when(manager.getById(2L)).thenReturn(o2);
 
@@ -1615,10 +1709,13 @@ public class OrderServiceImplTest {
     /**
      * 扫描并处理待办数据。
      */
+    @Test
     public void scanExpiredOrders_skips_failed_cancel() {
         OrderPO o1 = buildOrder(1L, 1L, OrderStatusEnum.COMPLETED.intCode());
         OrderPO o2 = buildOrder(2L, 1L, OrderStatusEnum.PENDING.intCode());
-        when(manager.list(any(Wrapper.class))).thenReturn(java.util.List.of(o1, o2));
+        when(manager.listExpiredPendingOrders(
+            eq(OrderStatusEnum.PENDING.intCode()), eq(0L), eq(200)))
+            .thenReturn(java.util.List.of(o1, o2));
         when(manager.getById(1L)).thenReturn(o1);
         when(manager.getById(2L)).thenReturn(o2);
 
@@ -1633,8 +1730,11 @@ public class OrderServiceImplTest {
     /**
      * 扫描并处理待办数据。
      */
+    @Test
     public void scanExpiredOrders_returns_zero_when_empty() {
-        when(manager.list(any(Wrapper.class))).thenReturn(java.util.Collections.emptyList());
+        when(manager.listExpiredPendingOrders(
+            eq(OrderStatusEnum.PENDING.intCode()), eq(0L), eq(200)))
+            .thenReturn(java.util.Collections.emptyList());
 
         assertEquals(0, service.scanExpiredOrders());
     }
@@ -1643,6 +1743,7 @@ public class OrderServiceImplTest {
     /**
      * 扫描并处理待办数据。
      */
+    @Test
     public void scanExpiredOrders_scans_in_cursor_batches() {
         java.util.List<OrderPO> fullBatch = new java.util.ArrayList<>(200);
         for (long id = 1L; id <= 200L; id++) {
@@ -1651,17 +1752,24 @@ public class OrderServiceImplTest {
             po.setStatus(OrderStatusEnum.PENDING.intCode());
             fullBatch.add(po);
         }
-        when(manager.list(any(Wrapper.class))).thenReturn(fullBatch, java.util.Collections.emptyList());
+        when(manager.listExpiredPendingOrders(
+            eq(OrderStatusEnum.PENDING.intCode()), eq(0L), eq(200)))
+            .thenReturn(fullBatch);
+        when(manager.listExpiredPendingOrders(
+            eq(OrderStatusEnum.PENDING.intCode()), eq(200L), eq(200)))
+            .thenReturn(java.util.Collections.emptyList());
 
         service.scanExpiredOrders();
 
-        verify(manager, times(2)).list(any(Wrapper.class));
+        verify(manager).listExpiredPendingOrders(OrderStatusEnum.PENDING.intCode(), 0L, 200);
+        verify(manager).listExpiredPendingOrders(OrderStatusEnum.PENDING.intCode(), 200L, 200);
     }
 
 
     /**
      * 扫描并处理待办数据。
      */
+    @Test
     public void scanStockReleasePending_marks_released_after_success() {
         OrderPO po = buildOrder(100L, 1L, OrderStatusEnum.CANCELED.intCode());
         po.setOrderNo("O100");
@@ -1682,6 +1790,7 @@ public class OrderServiceImplTest {
     /**
      * 扫描并处理待办数据。
      */
+    @Test
     public void scanStockReleasePending_refreshes_failed_order() {
         OrderPO po = buildOrder(100L, 1L, OrderStatusEnum.CANCELED.intCode());
         po.setOrderNo("O100");
@@ -1702,6 +1811,7 @@ public class OrderServiceImplTest {
     /**
      * 扫描并处理待办数据。
      */
+    @Test
     public void scanAutoConfirm_completes_shipped_orders() {
         OrderPO o1 = buildOrder(1L, 1L, OrderStatusEnum.SHIPPED.intCode());
         when(manager.list(any(Wrapper.class))).thenReturn(java.util.List.of(o1));
@@ -1717,6 +1827,7 @@ public class OrderServiceImplTest {
     /**
      * 扫描并处理待办数据。
      */
+    @Test
     public void scanAutoConfirm_returns_zero_when_empty() {
         when(manager.list(any(Wrapper.class))).thenReturn(java.util.Collections.emptyList());
 
@@ -1727,6 +1838,7 @@ public class OrderServiceImplTest {
     /**
      * 创建业务数据。
      */
+    @Test
     public void create_sets_order_metadata() {
         service.create(1L, 100L, 2);
 
@@ -1743,6 +1855,7 @@ public class OrderServiceImplTest {
     /**
      * 创建业务数据。
      */
+    @Test
     public void create_fails_when_id_service_unavailable() {
         when(orderRemoteGateway.nextId(anyString())).thenReturn(null);
 
@@ -1756,6 +1869,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 pay_sets_paid_at_and_writes_status_log 方法。
      */
+    @Test
     public void pay_sets_paid_at_and_writes_status_log() {
         OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.PENDING.intCode());
         when(manager.getById(99L)).thenReturn(existing);
@@ -1770,6 +1884,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 cancel_sets_closed_at_and_reason 方法。
      */
+    @Test
     public void cancel_sets_closed_at_and_reason() {
         OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.PENDING.intCode());
         when(manager.getById(99L)).thenReturn(existing);
@@ -1785,6 +1900,7 @@ public class OrderServiceImplTest {
     /**
      * 校验业务条件。
      */
+    @Test
     public void checkout_writes_item_snapshot() {
         List<OrderCheckoutItemDTO> items = List.of(new OrderCheckoutItemDTO(100L, 2));
         when(orderRemoteGateway.batchSkuSnapshot(any())).thenReturn(Result.success(Map.of(
@@ -1828,6 +1944,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 merchantPageVO_enriches_skuName_and_rejectReason 方法。
      */
+    @Test
     public void merchantPageVO_enriches_skuName_and_rejectReason() {
         OrderPO po = buildOrder(88L, 1L, 10L, OrderStatusEnum.REFUNDED.intCode());
         when(manager.list(any(Wrapper.class))).thenReturn(java.util.Collections.singletonList(po));
@@ -1850,6 +1967,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 merchantPageVO_fills_checkout_quantity_and_skuName_from_items 方法。
      */
+    @Test
     public void merchantPageVO_fills_checkout_quantity_and_skuName_from_items() {
         OrderPO po = buildOrder(90L, 1L, 10L, OrderStatusEnum.PAID.intCode());
         po.setSkuId(null);
@@ -1887,6 +2005,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 merchantDetailVO_returns_enriched_order 方法。
      */
+    @Test
     public void merchantDetailVO_returns_enriched_order() {
         OrderPO po = buildOrder(91L, 1L, 10L, OrderStatusEnum.PAID.intCode());
         po.setSkuId(null);
@@ -1912,6 +2031,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 merchantDetailVO_throws_when_order_not_found 方法。
      */
+    @Test
     public void merchantDetailVO_throws_when_order_not_found() {
         when(manager.getOne(any(Wrapper.class))).thenReturn(null);
 

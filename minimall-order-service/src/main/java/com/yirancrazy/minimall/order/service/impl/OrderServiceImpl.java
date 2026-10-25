@@ -1092,7 +1092,7 @@ public class OrderServiceImpl implements OrderService {
 
 
     /**
-     * 处理transition。
+     * 执行状态转换逻辑。
      * @param po 持久化对象
      * @param target 目标对象
      * @param triggerSource triggerSource
@@ -1955,25 +1955,29 @@ public class OrderServiceImpl implements OrderService {
      */
     @Override
     public int scanExpiredOrders() {
-        LocalDateTime expireThreshold = LocalDateTime.now().minusMinutes(PAY_EXPIRE_MINUTES);
         int count = 0;
         long lastId = 0L;
+
+        // 批量处理，避免单次扫描耗时过长
         for (int batch = 0; batch < SCAN_MAX_BATCHES; batch++) {
-            List<OrderPO> expired = orderManager.list(Wrappers.lambdaQuery(OrderPO.class)
-                .eq(OrderPO::getStatus, OrderStatusEnum.PENDING.intCode())
-                .and(w -> w.isNull(OrderPO::getPayExpireAt).lt(OrderPO::getCreateTime, expireThreshold)
-                    .or().lt(OrderPO::getPayExpireAt, expireThreshold))
-                .gt(OrderPO::getId, lastId)
-                .orderByAsc(OrderPO::getId)
-                .last("LIMIT " + SCAN_BATCH_SIZE));
-            if (expired.isEmpty()) {
+            // 获取待超时订单
+            List<OrderPO> expiredOrder = orderManager.listExpiredPendingOrders(
+                OrderStatusEnum.PENDING.intCode(), lastId, SCAN_BATCH_SIZE);
+
+            // 超时订单为空，直接返回
+            if (expiredOrder.isEmpty()) {
                 break;
             }
-            for (OrderPO po : expired) {
+
+            for (OrderPO po : expiredOrder) {
                 try {
+                    // 设置库存释放状态为待处理
                     po.setStockReleaseStatus(StockReleaseStatusEnum.PENDING.intCode());
+                    // 设置订单状态为取消
                     transition(po, OrderStatusEnum.CANCELED, "SYSTEM_TIMEOUT", "SYSTEM_TIMEOUT", null);
                     boolean released = releaseStockForOrder(po);
+
+                    // 标记库存释放结果
                     markStockReleaseResult(po, released);
                     if (!released) {
                         log.error("库存释放待处理，orderId={}", po.getId());
@@ -1984,8 +1988,8 @@ public class OrderServiceImpl implements OrderService {
                     log.warn("scanExpiredOrders 取消失败，orderId={}，err={}", po.getId(), e.getMessage());
                 }
             }
-            lastId = expired.get(expired.size() - 1).getId();
-            if (expired.size() < SCAN_BATCH_SIZE) {
+            lastId = expiredOrder.get(expiredOrder.size() - 1).getId();
+            if (expiredOrder.size() < SCAN_BATCH_SIZE) {
                 break;
             }
         }

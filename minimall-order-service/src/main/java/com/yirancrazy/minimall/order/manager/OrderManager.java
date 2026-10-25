@@ -48,11 +48,20 @@ public interface OrderManager extends IService<OrderPO> {
 
 
     /**
-     * 执行 trend 方法。
+     * 统计业务数据趋势。
      * @param merchantId merchantId 参数
      * @param startTime startTime 参数
      * @param endTime endTime 参数
      * @return 结果列表
      */
     List<OrderTrendPointDTO> trend(Long merchantId, LocalDateTime startTime, LocalDateTime endTime);
+
+    /**
+     * 列出过期的待处理订单。
+     * @param status 订单状态
+     * @param lastId 最后一个订单ID
+     * @param pageSize 每页大小
+     * @return 订单列表
+     */
+    List<OrderPO> listExpiredPendingOrders(Integer status, Long lastId, Integer pageSize);
 }

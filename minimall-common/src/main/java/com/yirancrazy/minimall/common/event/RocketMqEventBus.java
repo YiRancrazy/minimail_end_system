@@ -16,6 +16,8 @@ import org.springframework.beans.factory.annotation.Value;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
+import com.yirancrazy.minimall.common.exception.mq.RocketMqTransactionRollbackException;
+import com.yirancrazy.minimall.common.exception.mq.RocketMqTransactionUnknownException;
 import com.yirancrazy.minimall.common.filter.TraceIdFilter;
 import com.yirancrazy.minimall.common.result.Result;
 
@@ -202,22 +204,49 @@ public class RocketMqEventBus implements EventBus {
         String tag = MqEventJsonCodec.tagFor(event.getClass());
         checkers.put(tag, checker);
         tagTypes.put(tag, event.getClass());
+        TransactionSendResult transactionSendResult;
+
+        // 1. 半消息发送阶段
         try {
             Message msg = new Message(topic, tag, MqEventJsonCodec.encode(event));
             attachTraceId(msg);
-            TransactionSendResult r = producer.sendMessageInTransaction(msg, localTx);
+            transactionSendResult = producer.sendMessageInTransaction(msg, localTx);
             log.debug("rocketmq 事务消息发送成功，event={}，state={}", event.getClass().getSimpleName(),
-                r.getLocalTransactionState());
+                transactionSendResult.getLocalTransactionState());
         }
         catch (Exception e) {
+            // 半消息发送阶段失败，本地事务尚未执行（或执行结果不可知），清理注册。
             log.error("rocketmq 事务消息发送失败，event={}", event.getClass().getSimpleName(), e);
             throw new IllegalStateException("RocketMQ 事务消息发送失败", e);
         }
-        finally {
-            // checker 仅在发送窗口期供 broker 回查事务状态，发送流程结束即移除，避免注册表无界增长
-            // （持久化回查应配置 OutboxStore；内存 checker 在进程重启后本就丢失）
-            checkers.remove(tag);
-            tagTypes.remove(tag);
+
+        LocalTransactionState localTransactionState = transactionSendResult.getLocalTransactionState();
+        if(localTransactionState == null){
+            // 状态未知：保留 checker 供 broker 回查，同时让调用方感知
+            log.warn("rocketmq 事务消息状态未知，保留 checker 待回查，event={}", event.getClass().getSimpleName());
+            throw new RocketMqTransactionUnknownException(tag, event, null);
+        }
+
+        switch (localTransactionState) {
+            case COMMIT_MESSAGE:
+                removeCheckersAndTagTypes(tag);
+                log.debug("rocketmq 事务消息本地结果成功，event={}，state={}", event.getClass().getSimpleName(),
+                    localTransactionState);
+                break;
+            case ROLLBACK_MESSAGE:
+                // 本地事务回滚，broker 丢失半消息，不会回查 -> 可以安全清理。
+                removeCheckersAndTagTypes(tag);
+                log.debug("rocketmq 事务消息本地结果失败，event={}，state={}", event.getClass().getSimpleName(),
+                    localTransactionState);
+                throw new RocketMqTransactionRollbackException(tag, event, null);
+            case UNKNOW:
+                // 注意这里不能调用 removeCheckersAndTagTypes，因为本地事务状态未知，可能需要 broker 回查
+                log.warn("rocketmq 事务消息状态未知，保留 checker 待回查，event={}", event.getClass().getSimpleName());
+                throw new RocketMqTransactionUnknownException(tag, event, null);
+
+            default:
+                removeCheckersAndTagTypes(tag);
+                throw new IllegalStateException("未知的事务状态：" + localTransactionState);
         }
     }
 
@@ -249,5 +278,14 @@ public class RocketMqEventBus implements EventBus {
         if (traceId != null && !traceId.isBlank()) {
             msg.putUserProperty(TraceIdFilter.HEADER, traceId);
         }
+    }
+
+    /**
+     * 清理事务检查器注册表
+     * @param tag 标签
+     */
+    private void removeCheckersAndTagTypes(String tag) {
+        checkers.remove(tag);
+        tagTypes.remove(tag);
     }
 }

@@ -16,6 +16,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import com.yirancrazy.minimall.common.exception.mq.RocketMqTransactionRollbackException;
+import com.yirancrazy.minimall.common.exception.mq.RocketMqTransactionUnknownException;
 import com.yirancrazy.minimall.common.filter.TraceIdFilter;
 import com.yirancrazy.minimall.common.result.Result;
 
@@ -121,6 +123,41 @@ class RocketMqEventBusTest {
 
         assertThrows(IllegalStateException.class,
             () -> bus.publishInTx(new DummyEvent("x"), tx -> { }, e -> Boolean.TRUE));
+    }
+
+    @Test
+    void publishInTx_rollbackState_throwsRollbackAndClearsRegistry() throws Exception {
+        TransactionMQProducer mockProducer = Mockito.mock(TransactionMQProducer.class);
+        TransactionSendResult result = new TransactionSendResult();
+        result.setLocalTransactionState(LocalTransactionState.ROLLBACK_MESSAGE);
+        Mockito.when(mockProducer.sendMessageInTransaction(Mockito.any(), Mockito.any()))
+            .thenReturn(result);
+        RocketMqEventBus bus = new RocketMqEventBus("127.0.0.1:9876", "minimall-events");
+        setProducer(bus, mockProducer);
+
+        assertThrows(RocketMqTransactionRollbackException.class,
+            () -> bus.publishInTx(new DummyEvent("x"), tx -> { }, e -> Boolean.TRUE));
+
+        assertTrue(getFieldMap(bus, "checkers").isEmpty());
+        assertTrue(getFieldMap(bus, "tagTypes").isEmpty());
+    }
+
+    @Test
+    void publishInTx_unknownState_throwsUnknownAndKeepsRegistry() throws Exception {
+        TransactionMQProducer mockProducer = Mockito.mock(TransactionMQProducer.class);
+        TransactionSendResult result = new TransactionSendResult();
+        result.setLocalTransactionState(LocalTransactionState.UNKNOW);
+        Mockito.when(mockProducer.sendMessageInTransaction(Mockito.any(), Mockito.any()))
+            .thenReturn(result);
+        RocketMqEventBus bus = new RocketMqEventBus("127.0.0.1:9876", "minimall-events");
+        setProducer(bus, mockProducer);
+        String tag = MqEventJsonCodec.tagFor(DummyEvent.class);
+
+        assertThrows(RocketMqTransactionUnknownException.class,
+            () -> bus.publishInTx(new DummyEvent("x"), tx -> { }, e -> Boolean.TRUE));
+
+        assertTrue(getFieldMap(bus, "checkers").containsKey(tag));
+        assertTrue(getFieldMap(bus, "tagTypes").containsKey(tag));
     }
 
     @Test

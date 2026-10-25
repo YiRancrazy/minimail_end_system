@@ -472,19 +472,23 @@ public class OrderServiceImpl implements OrderService {
      */
     private void doPay(OrderPO po) {
         Long orderId = po.getId();
-        if (po.getStatus() == OrderStatusEnum.PAID.intCode()) {
+
+        // 确保订单状态为已支付的不会被重复处理
+        if (po.getStatus().equals(OrderStatusEnum.PAID.intCode())) {
             log.info("订单已支付，跳过重复推进，orderId={}", orderId);
             return;
         }
 
         // 确保订单状态为待支付
-        if (po.getStatus() != OrderStatusEnum.PENDING.intCode()) {
+        if (!po.getStatus().equals(OrderStatusEnum.PENDING.intCode())) {
             throw new BizException(OrderCodeEnum.ORDER_STATUS_TRANSITION_INVALID);
         }
+
         OrderPaidDTO event = new OrderPaidDTO(
             orderId, po.getUserId(), po.getAmount(), LocalDateTime.now().toString());
         eventBus.publishInTx(event, txId -> transactionTemplate.executeWithoutResult(status -> {
             transitStatus(orderId, OrderStatusEnum.PAID, "USER_PAY", null);
+
             if (txId != null) {
                 outboxStore.recordCommit(txId);
             }

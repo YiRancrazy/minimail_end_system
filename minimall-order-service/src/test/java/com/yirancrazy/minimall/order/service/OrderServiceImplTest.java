@@ -230,6 +230,7 @@ public class OrderServiceImplTest {
     /**
      * 执行 pay_transitions_to_paid 方法。
      */
+    @Test
     public void pay_transitions_to_paid() {
         OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.PENDING.intCode());
         when(manager.getById(99L)).thenReturn(existing);

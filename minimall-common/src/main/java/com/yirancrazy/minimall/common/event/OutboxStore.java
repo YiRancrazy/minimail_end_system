@@ -17,9 +17,10 @@ public interface OutboxStore {
      * @DateTime: 2026/10/16
      **/
     enum CommitStatus {
-        PENDING,
         COMMITTED,
-        ROLLED_BACK
+        ROLLED_BACK,
+        NOT_FOUND,
+        UNKNOWN
     }
 
     /**
@@ -41,12 +42,12 @@ public interface OutboxStore {
 
     /**
      * 查询本地事务状态。
-     * 默认实现仅区分已提交和待定。
+     * Outbox 记录必须与业务状态在同一本地事务中提交；查询不到记录表示本地事务未提交。
      *
      * @param messageKey 消息键
      * @return 提交状态
      */
     default CommitStatus commitStatus(String messageKey) {
-        return isCommitted(messageKey) ? CommitStatus.COMMITTED : CommitStatus.PENDING;
+        return isCommitted(messageKey) ? CommitStatus.COMMITTED : CommitStatus.NOT_FOUND;
     }
 }

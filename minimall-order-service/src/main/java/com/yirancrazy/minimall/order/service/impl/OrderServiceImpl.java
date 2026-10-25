@@ -492,7 +492,7 @@ public class OrderServiceImpl implements OrderService {
             if (txId != null) {
                 outboxStore.recordCommit(txId);
             }
-        }), e -> isOrderPaid(orderId));
+        }));
         log.info("订单已支付，orderId={}", orderId);
     }
 

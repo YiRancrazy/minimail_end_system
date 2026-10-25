@@ -1,7 +1,6 @@
 package com.yirancrazy.minimall.common.event;
 
 import java.util.function.Consumer;
-import java.util.function.Function;
 
 
 /**
@@ -27,16 +26,5 @@ public interface EventBus {
     default void publishInTx(Object event, Consumer<String> localTx) {
         localTx.accept(null);
         publish(event);
-    }
-
-
-    /**
-     * 带校验逻辑的事务内发布事件
-     * @param event 待发布的事件对象
-     * @param localTx 本地事务回调, 入参为事务标识
-     * @param checker 事务检查器, 入参为事件对象，返回值为是否发布事件
-     */
-    default void publishInTx(Object event, Consumer<String> localTx, Function<Object, Boolean> checker) {
-        publishInTx(event, localTx);
     }
 }

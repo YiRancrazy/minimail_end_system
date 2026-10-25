@@ -1,9 +1,6 @@
 package com.yirancrazy.minimall.common.event;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import org.apache.rocketmq.client.exception.MQClientException;
 import org.apache.rocketmq.client.producer.LocalTransactionState;
 import org.apache.rocketmq.client.producer.TransactionListener;
@@ -25,7 +22,7 @@ import com.yirancrazy.minimall.common.result.Result;
 /**
  * @Author: yirancrazy@gmail.com
  * @Description: 基于 RocketMQ 事务消息的事件总线实现。
- *               普通事件直接发送；事务事件通过本地事务回调提交，并通过 OutboxStore 或 checker 完成状态回查。
+ *               普通事件直接发送；事务事件通过本地事务回调提交，并通过 OutboxStore 完成状态回查。
  * @Version: 1.0
  * @DateTime: 2026/10/16
  **/
@@ -37,8 +34,6 @@ public class RocketMqEventBus implements EventBus {
     private TransactionMQProducer producer;
 
     private OutboxStore outboxStore;
-    private final Map<String, Function<Object, Boolean>> checkers = new ConcurrentHashMap<>();
-    private final Map<String, Class<?>> tagTypes = new ConcurrentHashMap<>();
 
     /**
      * 创建 RocketMQ 事件总线。
@@ -96,36 +91,29 @@ public class RocketMqEventBus implements EventBus {
 
             /**
              * 回查本地事务状态。
-             * 优先使用 OutboxStore；未配置时使用当前 tag 对应的 checker。
+             * 仅使用共享 OutboxStore，避免依赖发送实例的进程内状态。
              *
              * @param msg RocketMQ 消息
              * @return 事务消息状态；无法判断时返回 UNKNOW
              */
             @Override
             public LocalTransactionState checkLocalTransaction(MessageExt msg) {
-                if (outboxStore != null && msg.getTransactionId() != null) {
-                    try {
-                        return toLocalTransactionState(
-                            outboxStore.commitStatus(msg.getTransactionId()));
-                    }
-                    catch (Exception e) {
-                        log.warn("outbox 状态检查失败，tag={}: {}", msg.getTags(), e.getMessage());
-                        return LocalTransactionState.UNKNOW;
-                    }
+                String transactionId = msg.getTransactionId();
+                if (transactionId == null || transactionId.isBlank()) {
+                    log.warn("transactionId 为空，无法执行事务回查，tag={}", msg.getTags());
+                    return LocalTransactionState.UNKNOW;
                 }
-                Function<Object, Boolean> checker = checkers.get(msg.getTags());
-                Class<?> type = tagTypes.get(msg.getTags());
-                if (checker == null || type == null) {
-                    log.warn("tag={} 没有 checker，返回 UNKNOWN", msg.getTags());
+                if (outboxStore == null) {
+                    log.error("OutboxStore 未配置，无法执行事务回查，transactionId={}，tag={}",
+                        transactionId, msg.getTags());
                     return LocalTransactionState.UNKNOW;
                 }
                 try {
-                    Object decoded = MqEventJsonCodec.decode(msg.getBody(), type);
-                    return checker.apply(decoded) ? LocalTransactionState.COMMIT_MESSAGE
-                        : LocalTransactionState.ROLLBACK_MESSAGE;
+                    return toLocalTransactionState(outboxStore.commitStatus(transactionId));
                 }
                 catch (Exception e) {
-                    log.warn("checker 执行失败，tag={}: {}", msg.getTags(), e.getMessage());
+                    log.warn("outbox 状态检查失败，transactionId={}，tag={}: {}",
+                        transactionId, msg.getTags(), e.getMessage());
                     return LocalTransactionState.UNKNOW;
                 }
             }
@@ -177,33 +165,22 @@ public class RocketMqEventBus implements EventBus {
 
 
     /**
-     * 使用默认校验器发送事务消息。
+     * 发送事务消息。
      *
      * @param event 待发布的事件对象
      * @param localTx 本地事务回调，接收 RocketMQ 事务 ID
-     * @throws IllegalStateException 生产者未启动或事务消息发送失败时抛出
+     * @throws IllegalStateException 生产者未启动、OutboxStore 未配置或事务消息发送失败时抛出
+     * @throws RocketMqTransactionRollbackException 本地事务回滚时抛出
+     * @throws RocketMqTransactionUnknownException 本地事务状态未知时抛出
      */
     public void publishInTx(Object event, Consumer<String> localTx) {
-        publishInTx(event, localTx, e -> Boolean.TRUE);
-    }
-
-
-    /**
-     * 发送事务消息，并在 broker 回查时使用 checker 判断事务状态。
-     * checker 仅在发送窗口期有效；需要跨进程重启回查时配置 OutboxStore。
-     *
-     * @param event 待发布的事件对象
-     * @param localTx 本地事务回调，接收 RocketMQ 事务 ID
-     * @param checker 事务回查函数，入参为反序列化后的事件对象
-     * @throws IllegalStateException 生产者未启动或事务消息发送失败时抛出
-     */
-    public void publishInTx(Object event, Consumer<String> localTx, Function<Object, Boolean> checker) {
         if (producer == null) {
             throw new IllegalStateException("RocketMQ 生产者未启动");
         }
+        if (outboxStore == null) {
+            throw new IllegalStateException("RocketMQ 事务消息必须配置 OutboxStore");
+        }
         String tag = MqEventJsonCodec.tagFor(event.getClass());
-        checkers.put(tag, checker);
-        tagTypes.put(tag, event.getClass());
         TransactionSendResult transactionSendResult;
 
         // 1. 半消息发送阶段
@@ -215,37 +192,32 @@ public class RocketMqEventBus implements EventBus {
                 transactionSendResult.getLocalTransactionState());
         }
         catch (Exception e) {
-            // 半消息发送阶段失败，本地事务尚未执行（或执行结果不可知），清理注册。
             log.error("rocketmq 事务消息发送失败，event={}", event.getClass().getSimpleName(), e);
             throw new IllegalStateException("RocketMQ 事务消息发送失败", e);
         }
 
         LocalTransactionState localTransactionState = transactionSendResult.getLocalTransactionState();
         if(localTransactionState == null){
-            // 状态未知：保留 checker 供 broker 回查，同时让调用方感知
-            log.warn("rocketmq 事务消息状态未知，保留 checker 待回查，event={}", event.getClass().getSimpleName());
+            log.warn("rocketmq 事务消息状态未知，等待 broker 通过 Outbox 回查，event={}",
+                event.getClass().getSimpleName());
             throw new RocketMqTransactionUnknownException(tag, event, null);
         }
 
         switch (localTransactionState) {
             case COMMIT_MESSAGE:
-                removeCheckersAndTagTypes(tag);
                 log.debug("rocketmq 事务消息本地结果成功，event={}，state={}", event.getClass().getSimpleName(),
                     localTransactionState);
                 break;
             case ROLLBACK_MESSAGE:
-                // 本地事务回滚，broker 丢失半消息，不会回查 -> 可以安全清理。
-                removeCheckersAndTagTypes(tag);
                 log.debug("rocketmq 事务消息本地结果失败，event={}，state={}", event.getClass().getSimpleName(),
                     localTransactionState);
                 throw new RocketMqTransactionRollbackException(tag, event, null);
             case UNKNOW:
-                // 注意这里不能调用 removeCheckersAndTagTypes，因为本地事务状态未知，可能需要 broker 回查
-                log.warn("rocketmq 事务消息状态未知，保留 checker 待回查，event={}", event.getClass().getSimpleName());
+                log.warn("rocketmq 事务消息状态未知，等待 broker 通过 Outbox 回查，event={}",
+                    event.getClass().getSimpleName());
                 throw new RocketMqTransactionUnknownException(tag, event, null);
 
             default:
-                removeCheckersAndTagTypes(tag);
                 throw new IllegalStateException("未知的事务状态：" + localTransactionState);
         }
     }
@@ -261,7 +233,8 @@ public class RocketMqEventBus implements EventBus {
         if (status == OutboxStore.CommitStatus.COMMITTED) {
             return LocalTransactionState.COMMIT_MESSAGE;
         }
-        if (status == OutboxStore.CommitStatus.ROLLED_BACK) {
+        if (status == OutboxStore.CommitStatus.ROLLED_BACK
+            || status == OutboxStore.CommitStatus.NOT_FOUND) {
             return LocalTransactionState.ROLLBACK_MESSAGE;
         }
         return LocalTransactionState.UNKNOW;
@@ -280,12 +253,4 @@ public class RocketMqEventBus implements EventBus {
         }
     }
 
-    /**
-     * 清理事务检查器注册表
-     * @param tag 标签
-     */
-    private void removeCheckersAndTagTypes(String tag) {
-        checkers.remove(tag);
-        tagTypes.remove(tag);
-    }
 }

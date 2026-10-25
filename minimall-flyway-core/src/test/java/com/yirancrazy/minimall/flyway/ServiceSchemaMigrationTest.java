@@ -6,15 +6,26 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
@@ -74,23 +85,153 @@ public class ServiceSchemaMigrationTest {
         }
     }
 
+
+    /**
+     * 验证库存释放业务键由 MySQL 唯一索引兜底。
+     * @throws SQLException 数据库访问失败
+     */
+    @Test
+    void stockJournalReleaseIndexRejectsDuplicateBusinessKey() throws SQLException {
+        try (Connection root = DriverManager.getConnection(
+                MYSQL.getJdbcUrl(), MYSQL.getUsername(), MYSQL.getPassword())) {
+            createSchemas(root);
+            migrate("stock");
+            try (Connection stock = DriverManager.getConnection(
+                    schemaUrl("stock"), MYSQL.getUsername(), MYSQL.getPassword())) {
+                assertEquals(List.of("sku_id", "order_no", "type", "is_deleted"),
+                    readIndexColumns(stock, "stock_db", "uk_stock_journal_release_idem"));
+
+                insertReleaseJournal(stock, 100L, "OD100");
+                SQLException exception = assertThrows(SQLException.class,
+                    () -> insertReleaseJournal(stock, 100L, "OD100"));
+
+                assertEquals("23000", exception.getSQLState());
+                assertEquals(1, countReleaseJournal(stock, 100L, "OD100"));
+            }
+        }
+    }
+
+
+    /**
+     * 验证两个事务并发写入同一释放业务键时只允许一个成功。
+     * @throws Exception 并发测试执行失败
+     */
+    @Test
+    @Timeout(10)
+    void stockJournalReleaseIndexRejectsConcurrentDuplicateBusinessKey() throws Exception {
+        try (Connection root = DriverManager.getConnection(
+                MYSQL.getJdbcUrl(), MYSQL.getUsername(), MYSQL.getPassword())) {
+            createSchemas(root);
+            migrate("stock");
+        }
+
+        ExecutorService executor = new ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS,
+            new ArrayBlockingQueue<>(1), runnable -> {
+                Thread thread = new Thread(runnable, "stock-release-index-test");
+                thread.setDaemon(true);
+                return thread;
+            });
+        try (Connection first = DriverManager.getConnection(
+                schemaUrl("stock"), MYSQL.getUsername(), MYSQL.getPassword());
+             Connection second = DriverManager.getConnection(
+                 schemaUrl("stock"), MYSQL.getUsername(), MYSQL.getPassword())) {
+            first.setAutoCommit(false);
+            insertReleaseJournal(first, 101L, "OD101");
+
+            CountDownLatch secondStarted = new CountDownLatch(1);
+            Future<SQLException> duplicateResult = executor.submit(() -> {
+                secondStarted.countDown();
+                try {
+                    insertReleaseJournal(second, 101L, "OD101");
+                    return null;
+                }
+                catch (SQLException exception) {
+                    return exception;
+                }
+            });
+
+            assertTrue(secondStarted.await(5, TimeUnit.SECONDS));
+            first.commit();
+
+            SQLException exception = duplicateResult.get(5, TimeUnit.SECONDS);
+            assertNotNull(exception);
+            assertEquals("23000", exception.getSQLState());
+        }
+        finally {
+            executor.shutdownNow();
+        }
+    }
+
+
     private void createSchemas(Connection connection) throws SQLException {
         try (Statement statement = connection.createStatement()) {
             for (String domain : EXPECTED_TABLES.keySet()) {
-                statement.execute("CREATE DATABASE `" + domain + "_db` "
+                statement.execute("CREATE DATABASE IF NOT EXISTS `" + domain + "_db` "
                     + "DEFAULT CHARSET utf8mb4 COLLATE utf8mb4_unicode_ci");
             }
         }
     }
 
     private void migrate(String domain) {
-        String schemaUrl = MYSQL.getJdbcUrl().replace("/" + ROOT_SCHEMA, "/" + domain + "_db");
         Flyway.configure()
-            .dataSource(schemaUrl, MYSQL.getUsername(), MYSQL.getPassword())
+            .dataSource(schemaUrl(domain), MYSQL.getUsername(), MYSQL.getPassword())
             .locations("classpath:db/migration/" + domain)
             .load()
             .migrate();
     }
+
+    private String schemaUrl(String domain) {
+        return MYSQL.getJdbcUrl().replace("/" + ROOT_SCHEMA, "/" + domain + "_db");
+    }
+
+
+    private List<String> readIndexColumns(Connection connection, String schema, String indexName)
+            throws SQLException {
+        List<String> columns = new ArrayList<>(4);
+        String sql = "SELECT column_name FROM information_schema.statistics "
+            + "WHERE table_schema = ? AND table_name = 't_stock_journal' "
+            + "AND index_name = ? ORDER BY seq_in_index";
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, schema);
+            statement.setString(2, indexName);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                while (resultSet.next()) {
+                    columns.add(resultSet.getString(1));
+                }
+            }
+        }
+        return columns;
+    }
+
+
+    private void insertReleaseJournal(Connection connection, Long skuId, String orderNo)
+            throws SQLException {
+        String sql = "INSERT INTO t_stock_journal "
+            + "(sku_id, quantity, type, order_no, is_deleted) VALUES (?, ?, ?, ?, 0)";
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setLong(1, skuId);
+            statement.setLong(2, 1L);
+            statement.setInt(3, 2);
+            statement.setString(4, orderNo);
+            statement.executeUpdate();
+        }
+    }
+
+
+    private int countReleaseJournal(Connection connection, Long skuId, String orderNo)
+            throws SQLException {
+        String sql = "SELECT COUNT(*) FROM t_stock_journal "
+            + "WHERE sku_id = ? AND order_no = ? AND type = 2";
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setLong(1, skuId);
+            statement.setString(2, orderNo);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                resultSet.next();
+                return resultSet.getInt(1);
+            }
+        }
+    }
+
 
     private Set<String> readBusinessTables(Connection connection, String schema) throws SQLException {
         Set<String> tables = new HashSet<>();

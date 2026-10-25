@@ -7,6 +7,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -49,8 +50,8 @@ class InternalStockControllerV1Test {
     void reserveBatch_passes_items_to_service() throws Exception {
         mockMvc.perform(post("/internal/stock/reserve-batch")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"items\":[{\"skuId\":99,\"quantity\":2},"
-                    + "{\"skuId\":100,\"quantity\":3}]}"))
+                .content("{\"items\":[{\"skuId\":99,\"quantity\":2,\"orderNo\":\"OD99\"},"
+                    + "{\"skuId\":100,\"quantity\":3,\"orderNo\":\"OD100\"}]}"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.code").value("00000"));
 
@@ -58,7 +59,55 @@ class InternalStockControllerV1Test {
             items.size() == 2
                 && items.get(0).getSkuId() == 99L
                 && items.get(0).getQuantity() == 2
+                && "OD99".equals(items.get(0).getOrderNo())
                 && items.get(1).getSkuId() == 100L
-                && items.get(1).getQuantity() == 3));
+                && items.get(1).getQuantity() == 3
+                && "OD100".equals(items.get(1).getOrderNo())));
+    }
+
+
+    @Test
+    void reserve_rejects_missing_order_no() throws Exception {
+        mockMvc.perform(post("/internal/stock/reserve")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"skuId\":99,\"quantity\":2}"))
+            .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(stockService);
+    }
+
+
+    @Test
+    void reserve_passes_order_no_to_service() throws Exception {
+        mockMvc.perform(post("/internal/stock/reserve")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"skuId\":99,\"quantity\":2,\"orderNo\":\"OD99\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.code").value("00000"));
+
+        verify(stockService).reserve(99L, 2, "OD99");
+    }
+
+
+    @Test
+    void reserveBatch_rejects_missing_order_no() throws Exception {
+        mockMvc.perform(post("/internal/stock/reserve-batch")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"items\":[{\"skuId\":99,\"quantity\":2}]}"))
+            .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(stockService);
+    }
+
+
+    @Test
+    void release_passes_order_no_to_service() throws Exception {
+        mockMvc.perform(post("/internal/stock/release")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"skuId\":99,\"quantity\":2,\"orderNo\":\"OD99\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.code").value("00000"));
+
+        verify(stockService).release(99L, 2, "OD99");
     }
 }

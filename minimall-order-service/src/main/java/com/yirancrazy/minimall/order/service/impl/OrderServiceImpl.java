@@ -192,15 +192,17 @@ public class OrderServiceImpl implements OrderService {
         // 统一小数位数
         BigDecimal amount = normalizeAmount(snapshot.getPrice().multiply(BigDecimal.valueOf(quantity)));
 
+        String orderNo = generateOrderNo();
         // 锁库存
-        Boolean reserved = orderRemoteGateway.reserve(new StockReserveDTO(skuId, quantity)).getData();
+        Boolean reserved = orderRemoteGateway.reserve(
+            new StockReserveDTO(skuId, quantity, orderNo)).getData();
         if (reserved == null || !reserved) {
             throw new BizException(OrderCodeEnum.STOCK_RESERVE_FAIL);
         }
 
         // 创建订单
         OrderPO po = new OrderPO();
-        po.setOrderNo(generateOrderNo());
+        po.setOrderNo(orderNo);
         po.setOrderType(ORDER_TYPE_NORMAL);
         po.setUserId(userId);
         po.setSkuId(skuId);
@@ -286,7 +288,8 @@ public class OrderServiceImpl implements OrderService {
         Map<Long, Integer> quantityBySku = mergeCheckoutItems(items);
         List<Long> skuIds = new ArrayList<>(quantityBySku.keySet());
         Map<Long, SkuSnapshotDTO> snapshots = loadCheckoutSnapshots(skuIds);
-        reserveCheckoutStock(quantityBySku);
+        Map<Long, String> orderNoBySku = prepareCheckoutOrderNos(quantityBySku, snapshots);
+        reserveCheckoutStock(quantityBySku, orderNoBySku);
 
         String orderGroupNo = generateOrderGroupNo();
         Map<Long, List<OrderItemPO>> itemsByMerchant = new LinkedHashMap<>();
@@ -330,7 +333,7 @@ public class OrderServiceImpl implements OrderService {
             BigDecimal groupAmount = calcAmount(merchantItems);
 
             OrderPO po = new OrderPO();
-            po.setOrderNo(generateOrderNo());
+            po.setOrderNo(orderNoBySku.get(merchantItems.get(0).getSkuId()));
             po.setOrderType(ORDER_TYPE_NORMAL);
             po.setUserId(userId);
             po.setMerchantId(merchantId);
@@ -442,17 +445,44 @@ public class OrderServiceImpl implements OrderService {
     /**
      * 执行Checkout库存操作。
      * @param quantityBySku 数量根据SKU
+     * @param orderNoBySku 订单号根据SKU
      * @throws BizException 业务校验失败时抛出
      */
-    private void reserveCheckoutStock(Map<Long, Integer> quantityBySku) {
+    private void reserveCheckoutStock(Map<Long, Integer> quantityBySku,
+                                      Map<Long, String> orderNoBySku) {
         List<StockReserveDTO> reserveItems = quantityBySku.entrySet().stream()
-            .map(entry -> new StockReserveDTO(entry.getKey(), entry.getValue()))
+            .map(entry -> new StockReserveDTO(
+                entry.getKey(), entry.getValue(), orderNoBySku.get(entry.getKey())))
             .toList();
         Result<Boolean> result = orderRemoteGateway.reserveBatch(new StockBatchReserveDTO(reserveItems));
         if (result == null || !CommonCode.SUCCESS.equals(result.getCode())
             || !Boolean.TRUE.equals(result.getData())) {
             throw new BizException(OrderCodeEnum.STOCK_RESERVE_FAIL);
         }
+    }
+
+
+    /**
+     * 按商家生成结算子订单号，并映射到每个 SKU。
+     * @param quantityBySku 数量根据SKU
+     * @param snapshots 商品快照
+     * @return 订单号根据SKU
+     * @throws BizException 商品快照不完整时抛出
+     */
+    private Map<Long, String> prepareCheckoutOrderNos(Map<Long, Integer> quantityBySku,
+                                                      Map<Long, SkuSnapshotDTO> snapshots) {
+        Map<Long, String> orderNoByMerchant = new LinkedHashMap<>(quantityBySku.size() * 2);
+        Map<Long, String> orderNoBySku = new LinkedHashMap<>(quantityBySku.size() * 2);
+        for (Long skuId : quantityBySku.keySet()) {
+            SkuSnapshotDTO snapshot = snapshots.get(skuId);
+            if (snapshot == null || snapshot.getPrice() == null || snapshot.getMerchantId() == null) {
+                throw new BizException(OrderCodeEnum.ORDER_SKU_SNAPSHOT_MISSING);
+            }
+            String orderNo = orderNoByMerchant.computeIfAbsent(
+                snapshot.getMerchantId(), merchantId -> generateOrderNo());
+            orderNoBySku.put(skuId, orderNo);
+        }
+        return orderNoBySku;
     }
 
 

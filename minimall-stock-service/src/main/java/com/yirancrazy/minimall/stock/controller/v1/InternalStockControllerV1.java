@@ -44,7 +44,8 @@ public class InternalStockControllerV1 {
      */
     @PostMapping("/reserve")
     public Result<Boolean> reserve(@Valid @RequestBody StockReserveDTO dto) {
-        return Result.success(stockService.reserve(dto.getSkuId(), dto.getQuantity()));
+        return Result.success(stockService.reserve(
+            dto.getSkuId(), dto.getQuantity(), dto.getOrderNo()));
     }
 
 
@@ -66,7 +67,8 @@ public class InternalStockControllerV1 {
      */
     @PostMapping("/release")
     public Result<Boolean> release(@Valid @RequestBody StockReserveDTO dto) {
-        return Result.success(stockService.release(dto.getSkuId(), dto.getQuantity()));
+        return Result.success(stockService.release(
+            dto.getSkuId(), dto.getQuantity(), dto.getOrderNo()));
     }
 
 

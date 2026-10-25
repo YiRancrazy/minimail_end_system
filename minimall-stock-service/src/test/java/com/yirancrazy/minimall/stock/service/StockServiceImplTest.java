@@ -86,6 +86,7 @@ public class StockServiceImplTest {
     /**
      * 执行 reserve_atomic_success_records_journal 方法。
      */
+    @Test
     public void reserve_atomic_success_records_journal() {
         StockPO s = new StockPO();
         s.setId(1L);
@@ -95,18 +96,22 @@ public class StockServiceImplTest {
         when(manager.getOne(any())).thenReturn(s);
         when(manager.deductAvailable(100L, 2L)).thenReturn(1);
 
-        boolean ok = service.reserve(100L, 2);
+        boolean ok = service.reserve(100L, 2, "OD100");
         assertEquals(true, ok);
         assertEquals(8L, s.getAvailable());
         assertEquals(2L, s.getReserved());
         verify(manager).deductAvailable(100L, 2L);
-        verify(journalManager).save(any(StockJournalPO.class));
+        ArgumentCaptor<StockJournalPO> journalCaptor =
+            ArgumentCaptor.forClass(StockJournalPO.class);
+        verify(journalManager).save(journalCaptor.capture());
+        assertEquals("OD100", journalCaptor.getValue().getOrderNo());
     }
 
 
     /**
      * 执行 reserve_insufficient_stock_throws 方法。
      */
+    @Test
     public void reserve_insufficient_stock_throws() {
         StockPO s = new StockPO();
         s.setId(1L);
@@ -116,7 +121,7 @@ public class StockServiceImplTest {
         when(manager.getOne(any())).thenReturn(s);
         when(manager.deductAvailable(100L, 100L)).thenReturn(0);
 
-        assertThrows(BizException.class, () -> service.reserve(100L, 100));
+        assertThrows(BizException.class, () -> service.reserve(100L, 100, "OD100"));
         verify(journalManager, never()).save(any(StockJournalPO.class));
     }
 
@@ -124,16 +129,28 @@ public class StockServiceImplTest {
     /**
      * 执行 reserve_invalid_quantity_throws 方法。
      */
+    @Test
     public void reserve_invalid_quantity_throws() {
-        assertThrows(BizException.class, () -> service.reserve(100L, null));
-        assertThrows(BizException.class, () -> service.reserve(100L, 0));
-        assertThrows(BizException.class, () -> service.reserve(100L, -1));
+        assertThrows(BizException.class, () -> service.reserve(100L, null, "OD100"));
+        assertThrows(BizException.class, () -> service.reserve(100L, 0, "OD100"));
+        assertThrows(BizException.class, () -> service.reserve(100L, -1, "OD100"));
+    }
+
+
+    /**
+     * 预占库存必须携带订单号。
+     */
+    @Test
+    public void reserve_rejects_blank_order_no() {
+        assertThrows(BizException.class, () -> service.reserve(100L, 1, null));
+        assertThrows(BizException.class, () -> service.reserve(100L, 1, " "));
     }
 
 
     /**
      * 执行 reserveBatch_merges_duplicate_skus 方法。
      */
+    @Test
     public void reserveBatch_merges_duplicate_skus() {
         StockPO stock = new StockPO();
         stock.setId(1L);
@@ -144,12 +161,36 @@ public class StockServiceImplTest {
         when(manager.deductAvailable(100L, 5L)).thenReturn(1);
 
         boolean ok = service.reserveBatch(List.of(
-            new StockReserveDTO(100L, 2),
-            new StockReserveDTO(100L, 3)));
+            new StockReserveDTO(100L, 2, "OD100"),
+            new StockReserveDTO(100L, 3, "OD100")));
 
         assertTrue(ok);
         verify(manager).deductAvailable(100L, 5L);
-        verify(journalManager, times(1)).save(any(StockJournalPO.class));
+        ArgumentCaptor<StockJournalPO> journalCaptor =
+            ArgumentCaptor.forClass(StockJournalPO.class);
+        verify(journalManager, times(1)).save(journalCaptor.capture());
+        assertEquals("OD100", journalCaptor.getValue().getOrderNo());
+    }
+
+
+    /**
+     * 同一 SKU 的不同订单号不能合并为一次预占。
+     */
+    @Test
+    public void reserveBatch_rejects_different_orderNos_for_same_sku() {
+        StockPO stock = new StockPO();
+        stock.setId(1L);
+        stock.setSkuId(100L);
+        stock.setAvailable(10L);
+        stock.setReserved(0L);
+        when(manager.getOne(any())).thenReturn(stock);
+        when(manager.deductAvailable(100L, 5L)).thenReturn(1);
+
+        assertThrows(BizException.class, () -> service.reserveBatch(List.of(
+            new StockReserveDTO(100L, 2, "OD100"),
+            new StockReserveDTO(100L, 3, "OD200"))));
+
+        verify(manager, never()).deductAvailable(any(), anyLong());
     }
 
 
@@ -172,8 +213,8 @@ public class StockServiceImplTest {
         when(manager.deductAvailable(200L, 1L)).thenReturn(0);
 
         assertThrows(BizException.class, () -> service.reserveBatch(List.of(
-            new StockReserveDTO(100L, 1),
-            new StockReserveDTO(200L, 1))));
+            new StockReserveDTO(100L, 1, "OD100"),
+            new StockReserveDTO(200L, 1, "OD200"))));
 
         verify(manager).deductAvailable(100L, 1L);
         verify(manager).deductAvailable(200L, 1L);
@@ -186,7 +227,7 @@ public class StockServiceImplTest {
     public void reserveBatch_rejects_more_than_100_skus() {
         List<StockReserveDTO> items = new ArrayList<>(101);
         for (long skuId = 1L; skuId <= 101L; skuId++) {
-            items.add(new StockReserveDTO(skuId, 1));
+            items.add(new StockReserveDTO(skuId, 1, "OD" + skuId));
         }
 
         assertThrows(BizException.class, () -> service.reserveBatch(items));
@@ -197,19 +238,24 @@ public class StockServiceImplTest {
     /**
      * 执行 release_restores_stock 方法。
      */
+    @Test
     public void release_restores_stock() {
         when(manager.restoreReserved(100L, 3L)).thenReturn(1);
 
-        boolean ok = service.release(100L, 3);
+        boolean ok = service.release(100L, 3, "OD100");
         assertEquals(true, ok);
         verify(manager).restoreReserved(100L, 3L);
-        verify(journalManager).save(any(StockJournalPO.class));
+        ArgumentCaptor<StockJournalPO> journalCaptor =
+            ArgumentCaptor.forClass(StockJournalPO.class);
+        verify(journalManager).save(journalCaptor.capture());
+        assertEquals("OD100", journalCaptor.getValue().getOrderNo());
     }
 
 
     /**
      * 执行 release_same_order_is_idempotent 方法。
      */
+    @Test
     public void release_same_order_is_idempotent() {
         when(journalManager.save(any(StockJournalPO.class)))
             .thenThrow(new DuplicateKeyException("duplicate release"));
@@ -224,6 +270,7 @@ public class StockServiceImplTest {
     /**
      * 执行 release_order_insufficient_throws 方法。
      */
+    @Test
     public void release_order_insufficient_throws() {
         when(manager.restoreReserved(100L, 5L)).thenReturn(0);
 
@@ -235,30 +282,30 @@ public class StockServiceImplTest {
     /**
      * 执行 reserve_missing_throws_biz 方法。
      */
+    @Test
     public void reserve_missing_throws_biz() {
         when(manager.getOne(any())).thenReturn(null);
-        assertThrows(BizException.class, () -> service.reserve(999L, 1));
+        assertThrows(BizException.class, () -> service.reserve(999L, 1, "OD999"));
     }
 
 
     /**
-     * 执行 release_missing_returns_false 方法。
+     * 释放不存在的预占库存时抛出业务异常。
      */
-    public void release_missing_returns_false() {
+    @Test
+    public void release_missing_throws() {
         when(manager.restoreReserved(999L, 1L)).thenReturn(0);
-        boolean ok = service.release(999L, 1);
-        assertEquals(false, ok);
+        assertThrows(BizException.class, () -> service.release(999L, 1, "OD999"));
     }
 
 
     /**
-     * 执行 release_insufficient_reserved_returns_false 方法。
+     * 预占库存不足时释放抛出业务异常。
      */
-    public void release_insufficient_reserved_returns_false() {
+    @Test
+    public void release_insufficient_reserved_throws() {
         when(manager.restoreReserved(100L, 5L)).thenReturn(0);
-
-        boolean ok = service.release(100L, 5);
-        assertEquals(false, ok);
+        assertThrows(BizException.class, () -> service.release(100L, 5, "OD100"));
     }
 
 

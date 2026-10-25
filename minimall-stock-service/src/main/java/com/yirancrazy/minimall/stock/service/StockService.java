@@ -33,9 +33,10 @@ public interface StockService {
      * 执行 reserve 方法。
      * @param skuId skuId 参数
      * @param quantity quantity 参数
+     * @param orderNo orderNo 参数
      * @return 是否处理成功
      */
-    boolean reserve(Long skuId, Integer quantity);
+    boolean reserve(Long skuId, Integer quantity, String orderNo);
 
 
     /**
@@ -50,17 +51,6 @@ public interface StockService {
      * @return 是否处理成功
      */
     boolean reserveBatch(List<StockReserveDTO> items);
-
-
-    /**
-     * 执行 release 方法。
-     * @param skuId skuId 参数
-     * @param quantity quantity 参数
-     * @return 是否处理成功
-     */
-    default boolean release(Long skuId, Integer quantity) {
-        return release(skuId, quantity, null);
-    }
 
 
     /**

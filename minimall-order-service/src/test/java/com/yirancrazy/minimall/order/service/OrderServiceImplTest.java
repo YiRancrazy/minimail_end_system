@@ -38,6 +38,7 @@ import com.yirancrazy.minimall.api.dto.order.OrderPaySnapshotDTO;
 import com.yirancrazy.minimall.api.dto.order.RefundCallbackDTO;
 import com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO;
 import com.yirancrazy.minimall.api.dto.stock.StockBatchReserveDTO;
+import com.yirancrazy.minimall.api.dto.stock.StockReserveDTO;
 import com.yirancrazy.minimall.common.event.EventBus;
 import com.yirancrazy.minimall.common.event.OutboxStore;
 import com.yirancrazy.minimall.common.exception.BizException;
@@ -159,6 +160,23 @@ public class OrderServiceImplTest {
         assertNotNull(orderId);
         verify(orderRemoteGateway).reserve(any());
         verify(orderRemoteGateway).createPayment(any());
+    }
+
+
+    /**
+     * 预占库存时必须携带最终订单号。
+     */
+    @Test
+    void create_reserves_stock_with_final_order_no() {
+        service.create(1L, 100L, 2);
+
+        ArgumentCaptor<StockReserveDTO> reserveCaptor = ArgumentCaptor.forClass(StockReserveDTO.class);
+        verify(orderRemoteGateway).reserve(reserveCaptor.capture());
+        ArgumentCaptor<OrderPO> orderCaptor = ArgumentCaptor.forClass(OrderPO.class);
+        verify(manager).save(orderCaptor.capture());
+
+        assertNotNull(reserveCaptor.getValue().getOrderNo());
+        assertEquals(orderCaptor.getValue().getOrderNo(), reserveCaptor.getValue().getOrderNo());
     }
 
 
@@ -1220,6 +1238,57 @@ public class OrderServiceImplTest {
 
 
     /**
+     * 结算批量预占必须携带子订单号。
+     */
+    @Test
+    void checkout_reserves_stock_with_final_order_no() {
+        service.checkout(1L, List.of(new OrderCheckoutItemDTO(100L, 2)));
+
+        ArgumentCaptor<StockBatchReserveDTO> reserveCaptor =
+            ArgumentCaptor.forClass(StockBatchReserveDTO.class);
+        verify(orderRemoteGateway).reserveBatch(reserveCaptor.capture());
+        ArgumentCaptor<OrderPO> orderCaptor = ArgumentCaptor.forClass(OrderPO.class);
+        verify(manager).save(orderCaptor.capture());
+
+        StockReserveDTO reserveItem = reserveCaptor.getValue().getItems().get(0);
+        assertNotNull(reserveItem.getOrderNo());
+        assertEquals(orderCaptor.getValue().getOrderNo(), reserveItem.getOrderNo());
+    }
+
+
+    /**
+     * 多商家结算应按子订单号分别预占库存。
+     */
+    @Test
+    void checkout_multi_merchant_reserves_with_each_child_order_no() {
+        when(orderRemoteGateway.batchSkuSnapshot(any())).thenReturn(Result.success(Map.of(
+            100L, new SkuSnapshotDTO(100L, 1L, "sku-100", new BigDecimal("9.90"), 100, 10L),
+            200L, new SkuSnapshotDTO(200L, 1L, "sku-200", new BigDecimal("5.00"), 100, 20L))));
+        when(orderRemoteGateway.nextId(anyString())).thenReturn(
+            Result.success(10001L), Result.success(10002L), Result.success(10003L));
+
+        service.checkout(1L, List.of(
+            new OrderCheckoutItemDTO(100L, 2),
+            new OrderCheckoutItemDTO(200L, 1)));
+
+        ArgumentCaptor<StockBatchReserveDTO> reserveCaptor =
+            ArgumentCaptor.forClass(StockBatchReserveDTO.class);
+        verify(orderRemoteGateway).reserveBatch(reserveCaptor.capture());
+        ArgumentCaptor<OrderPO> orderCaptor = ArgumentCaptor.forClass(OrderPO.class);
+        verify(manager, times(2)).save(orderCaptor.capture());
+
+        java.util.Map<Long, String> orderNoByMerchant = new java.util.HashMap<>(4);
+        for (OrderPO order : orderCaptor.getAllValues()) {
+            orderNoByMerchant.put(order.getMerchantId(), order.getOrderNo());
+        }
+        for (StockReserveDTO reserveItem : reserveCaptor.getValue().getItems()) {
+            Long merchantId = reserveItem.getSkuId().equals(100L) ? 10L : 20L;
+            assertEquals(orderNoByMerchant.get(merchantId), reserveItem.getOrderNo());
+        }
+    }
+
+
+    /**
      * 购物车来源应持久化清理任务。
      * @throws Exception JSON 解析失败
      */
@@ -1490,6 +1559,23 @@ public class OrderServiceImplTest {
 
         assertEquals(OrderStatusEnum.CANCELED.intCode(), existing.getStatus());
         verify(orderRemoteGateway, times(2)).release(any());
+    }
+
+
+    /**
+     * 取消订单释放库存时必须携带订单号。
+     */
+    @Test
+    void cancel_releases_stock_with_order_no() {
+        OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.PENDING.intCode());
+        existing.setOrderNo("OD99");
+        when(manager.getById(99L)).thenReturn(existing);
+
+        service.cancel(99L, 1L);
+
+        ArgumentCaptor<StockReserveDTO> releaseCaptor = ArgumentCaptor.forClass(StockReserveDTO.class);
+        verify(orderRemoteGateway).release(releaseCaptor.capture());
+        assertEquals("OD99", releaseCaptor.getValue().getOrderNo());
     }
 
 

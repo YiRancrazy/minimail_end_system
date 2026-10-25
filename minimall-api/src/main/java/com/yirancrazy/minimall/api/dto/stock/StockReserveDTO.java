@@ -1,7 +1,9 @@
 package com.yirancrazy.minimall.api.dto.stock;
 
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -26,15 +28,7 @@ public class StockReserveDTO {
     @Min(value = 1, message = "数量至少为1")
     private Integer quantity;
 
+    @NotBlank(message = "订单号不能为空")
+    @Size(max = 32, message = "订单号不能超过32个字符")
     private String orderNo;
-
-
-    /**
-     * 构造 StockReserveDTO 实例。
-     * @param skuId skuId 参数
-     * @param quantity quantity 参数
-     */
-    public StockReserveDTO(Long skuId, Integer quantity) {
-        this(skuId, quantity, null);
-    }
 }

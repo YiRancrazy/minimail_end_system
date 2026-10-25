@@ -86,11 +86,13 @@ public class StockServiceImpl implements StockService {
      * 执行 reserve 方法。
      * @param skuId skuId 参数
      * @param quantity quantity 参数
+     * @param orderNo orderNo 参数
      * @return 是否处理成功
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public boolean reserve(Long skuId, Integer quantity) {
+    public boolean reserve(Long skuId, Integer quantity, String orderNo) {
+        requireOrderNo(orderNo);
         if (quantity == null || quantity <= 0) {
             throw new BizException(CommonCode.PARAM_INVALID, "预占数量必须大于0");
         }
@@ -102,7 +104,7 @@ public class StockServiceImpl implements StockService {
         s.setAvailable(s.getAvailable() - quantity.longValue());
         s.setReserved(s.getReserved() + quantity.longValue());
 
-        recordJournal(skuId, -quantity.longValue(), StockJournalTypeEnum.RESERVE, null, null);
+        recordJournal(skuId, -quantity.longValue(), StockJournalTypeEnum.RESERVE, null, orderNo);
         checkAlert(s);
         return true;
     }
@@ -120,14 +122,20 @@ public class StockServiceImpl implements StockService {
             throw new BizException(CommonCode.PARAM_INVALID, "预占明细不能为空");
         }
         Map<Long, Long> quantityBySku = new LinkedHashMap<>(items.size() * 2);
+        Map<Long, String> orderNoBySku = new LinkedHashMap<>(items.size() * 2);
         for (StockReserveDTO item : items) {
             if (item == null || item.getSkuId() == null || item.getQuantity() == null
                 || item.getQuantity() <= 0) {
                 throw new BizException(CommonCode.PARAM_INVALID, "预占数量必须大于0");
             }
+            requireOrderNo(item.getOrderNo());
             if (!quantityBySku.containsKey(item.getSkuId())
                 && quantityBySku.size() >= MAX_RESERVE_BATCH_SIZE) {
                 throw new BizException(CommonCode.PARAM_INVALID, "单次最多预占100个SKU");
+            }
+            String existingOrderNo = orderNoBySku.putIfAbsent(item.getSkuId(), item.getOrderNo());
+            if (existingOrderNo != null && !existingOrderNo.equals(item.getOrderNo())) {
+                throw new BizException(CommonCode.PARAM_INVALID, "同一SKU的订单号必须一致");
             }
             long merged = quantityBySku.getOrDefault(item.getSkuId(), 0L) + item.getQuantity();
             if (merged > Integer.MAX_VALUE) {
@@ -136,7 +144,7 @@ public class StockServiceImpl implements StockService {
             quantityBySku.put(item.getSkuId(), merged);
         }
         for (Map.Entry<Long, Long> entry : quantityBySku.entrySet()) {
-            reserve(entry.getKey(), entry.getValue().intValue());
+            reserve(entry.getKey(), entry.getValue().intValue(), orderNoBySku.get(entry.getKey()));
         }
         return true;
     }
@@ -152,30 +160,34 @@ public class StockServiceImpl implements StockService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean release(Long skuId, Integer quantity, String orderNo) {
+        requireOrderNo(orderNo);
         if (quantity == null || quantity <= 0) {
             return false;
         }
-        if (orderNo != null && !orderNo.isBlank()) {
-            try {
-                recordJournal(skuId, quantity.longValue(), StockJournalTypeEnum.RELEASE, null, orderNo);
-            }
-            catch (DuplicateKeyException e) {
-                log.info("库存释放已记录，skuId={}，orderNo={}", skuId, orderNo);
-                return true;
-            }
+        try {
+            recordJournal(skuId, quantity.longValue(), StockJournalTypeEnum.RELEASE, null, orderNo);
+        }
+        catch (DuplicateKeyException e) {
+            log.info("库存释放已记录，skuId={}，orderNo={}", skuId, orderNo);
+            return true;
         }
         // 原子释放：未命中（记录不存在或预占不足）按失败处理
         if (stockManager.restoreReserved(skuId, quantity.longValue()) <= 0) {
-            if (orderNo != null && !orderNo.isBlank()) {
-                throw new BizException(StockCodeEnum.STOCK_INSUFFICIENT);
-            }
-            return false;
-        }
-
-        if (orderNo == null || orderNo.isBlank()) {
-            recordJournal(skuId, quantity.longValue(), StockJournalTypeEnum.RELEASE, null, orderNo);
+            throw new BizException(StockCodeEnum.STOCK_INSUFFICIENT);
         }
         return true;
+    }
+
+
+    /**
+     * 校验库存业务幂等键。
+     * @param orderNo orderNo 参数
+     * @throws BizException 当订单号为空时
+     */
+    private void requireOrderNo(String orderNo) {
+        if (orderNo == null || orderNo.isBlank()) {
+            throw new BizException(CommonCode.PARAM_INVALID, "订单号不能为空");
+        }
     }
 
 

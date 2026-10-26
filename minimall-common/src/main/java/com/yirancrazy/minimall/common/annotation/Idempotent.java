@@ -11,7 +11,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: Idempotent 类型，承载相关业务能力。
+ * @Description: 接口幂等控制注解
  * @Version: 1.0
  * @DateTime: 2026/10/16
  **/
@@ -21,20 +21,22 @@ import java.util.concurrent.TimeUnit;
 public @interface Idempotent {
 
     /**
-     * 执行 key 方法。
-     * @return 处理结果
+     * 幂等键，支持 SpEL 表达式，例如 {@code "#userId + ':' + #orderId"}。
+     * 由切面解析后作为唯一标识（通常落到 Redis key）。
+     * 为空时回退请求头 X-Idempotency-Key；仍为空则拒绝执行。
+     * @return 幂等键的 SpEL 表达式字符串；如果为空则回退请求头
      */
     String key() default "";
 
     /**
-     * 执行 expire 方法。
-     * @return 业务数值
+     * 过期时间。
+     * @return 过期时间
      */
     long expire() default 24;
 
     /**
-     * 执行 unit 方法。
-     * @return 处理结果
+     * 过期时间单位。
+     * @return 时间单位
      */
     TimeUnit unit() default TimeUnit.HOURS;
 }

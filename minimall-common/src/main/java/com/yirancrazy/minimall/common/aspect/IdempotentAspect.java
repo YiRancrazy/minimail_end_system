@@ -54,21 +54,28 @@ public class IdempotentAspect {
      */
     @Around("@annotation(com.yirancrazy.minimall.common.annotation.Idempotent)")
     public Object checkIdempotent(ProceedingJoinPoint pjp) throws Throwable {
+
+        // 获取方法签名
         MethodSignature signature = (MethodSignature) pjp.getSignature();
         Method method = signature.getMethod();
         Idempotent idempotent = method.getAnnotation(Idempotent.class);
 
+        // 从方法注解中获取幂等键
         String key = resolveSpelKey(idempotent.key(), signature, pjp.getArgs());
+
+        // 如果方法注解中没有定义幂等键，则从请求头中获取
         if (key == null || key.isBlank()) {
             key = resolveFromHeader();
         }
+
+        // 如果仍然没有获取到幂等键，则拒绝执行
         if (key == null || key.isBlank()) {
-            // 未走网关的直连请求无幂等键，幂等检查不阻塞业务
-            log.warn("幂等键缺失，method={}，跳过幂等校验",
+            log.warn("幂等键缺失，method={}，拒绝执行",
                 pjp.getSignature().toShortString());
-            return pjp.proceed();
+            throw new BizException(CommonCode.IDEMPOTENT_KEY_NOT_EXIST, "幂等键缺失");
         }
 
+        // 生成redis 键
         String redisKey = IDEMPOTENT_KEY_PREFIX + key;
         Boolean acquired = redisTemplate.opsForValue()
             .setIfAbsent(redisKey, "1", idempotent.expire(), idempotent.unit());

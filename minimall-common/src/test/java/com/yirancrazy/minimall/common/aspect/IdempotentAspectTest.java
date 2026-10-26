@@ -143,14 +143,13 @@ class IdempotentAspectTest {
     }
 
     @Test
-    void missingKey_skipsCheckAndProceeds() throws Throwable {
+    void missingKey_throwsIdempotentKeyNotExist() throws Throwable {
         when(signature.getMethod()).thenReturn(Target.class.getMethod("headerOnly"));
-        when(pjp.proceed()).thenReturn("ok");
 
-        Object result = aspect.checkIdempotent(pjp);
+        BizException ex = assertThrows(BizException.class, () -> aspect.checkIdempotent(pjp));
 
-        assertEquals("ok", result);
-        verify(redisTemplate, never()).delete("idempotent:k1");
+        assertEquals(CommonCode.IDEMPOTENT_KEY_NOT_EXIST, ex.getCode());
+        verify(pjp, never()).proceed();
     }
 
     @Test

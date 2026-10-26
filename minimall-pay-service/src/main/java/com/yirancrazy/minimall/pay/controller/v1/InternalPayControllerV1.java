@@ -76,7 +76,7 @@ public class InternalPayControllerV1 {
      * @return 统一响应结果
      */
     @PostMapping("/refund")
-    @Idempotent
+    @Idempotent(key = "#dto.refundRequestNo")
     public Result<Boolean> refund(@Valid @RequestBody RefundCreateDTO dto) {
         payService.createRefund(dto);
         return Result.success(true);

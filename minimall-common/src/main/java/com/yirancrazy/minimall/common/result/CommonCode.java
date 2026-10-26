@@ -19,4 +19,6 @@ public final class CommonCode {
     public static final String FORBIDDEN = "20003";
 
     public static final String IDEMPOTENT_KEY_REUSED = "13002";
+    public static final String IDEMPOTENT_KEY_NOT_EXIST = "13003";
+
 }

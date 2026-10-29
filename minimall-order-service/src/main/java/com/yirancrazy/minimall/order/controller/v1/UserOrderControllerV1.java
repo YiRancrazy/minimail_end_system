@@ -87,6 +87,7 @@ public class UserOrderControllerV1 {
      * @param dto dto 参数
      * @return 统一响应结果
      */
+    @Deprecated
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @Idempotent

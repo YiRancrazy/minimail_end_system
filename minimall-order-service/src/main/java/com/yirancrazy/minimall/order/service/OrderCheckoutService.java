@@ -15,7 +15,7 @@ public interface OrderCheckoutService {
      * 创建结算订单并触发购物车清理。
      * @param userId 用户 ID
      * @param dto 结算参数
-     * @return 主订单 ID
+     * @return 订单 ID
      */
     Long checkout(Long userId, OrderCheckoutDTO dto);
 }

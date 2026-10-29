@@ -44,14 +44,14 @@ public class OrderCheckoutServiceImpl implements OrderCheckoutService {
      * 创建结算订单并触发购物车清理。
      * @param userId 用户 ID
      * @param dto 结算参数
-     * @return 主订单 ID
+     * @return 订单 ID
      */
     @Override
     public Long checkout(Long userId, OrderCheckoutDTO dto) {
         CheckoutPreparation preparation = prepare(userId, dto);
         CheckoutResultDTO result = orderService.checkout(
             userId, preparation.orderItems, preparation.cleanupItems, dto.getReceiver());
-        if (result == null || result.getMainOrderId() == null) {
+        if (result == null || result.getOrderId() == null) {
             throw new BizException(CommonCode.SYS_ERROR, "订单创建失败");
         }
         if (result.getCartCleanupTaskId() != null) {
@@ -63,7 +63,7 @@ public class OrderCheckoutServiceImpl implements OrderCheckoutService {
                     result.getCartCleanupTaskId(), exception);
             }
         }
-        return result.getMainOrderId();
+        return result.getOrderId();
     }
 
     private CheckoutPreparation prepare(Long userId, OrderCheckoutDTO dto) {

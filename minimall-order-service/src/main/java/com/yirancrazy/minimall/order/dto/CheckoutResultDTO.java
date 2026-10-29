@@ -16,7 +16,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class CheckoutResultDTO {
 
-    private Long mainOrderId;
+    private Long orderId;
 
     private String orderGroupNo;
 

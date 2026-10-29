@@ -1308,13 +1308,14 @@ public class OrderServiceImplTest {
         assertNotNull(orderId);
         verify(orderRemoteGateway).batchSkuSnapshot(any());
         verify(orderRemoteGateway).reserveBatch(any());
+        verify(manager).save(any(OrderPO.class));
         verify(orderItemManager, times(2)).save(any(OrderItemPO.class));
         verify(orderRemoteGateway).createPayment(any());
     }
 
 
     /**
-     * 结算批量预占必须携带子订单号。
+     * 购物车结算预占必须携带订单号。
      */
     @Test
     void checkout_reserves_stock_with_final_order_no() {
@@ -1329,38 +1330,6 @@ public class OrderServiceImplTest {
         StockReserveDTO reserveItem = reserveCaptor.getValue().getItems().get(0);
         assertNotNull(reserveItem.getOrderNo());
         assertEquals(orderCaptor.getValue().getOrderNo(), reserveItem.getOrderNo());
-    }
-
-
-    /**
-     * 多商家结算应按子订单号分别预占库存。
-     */
-    @Test
-    void checkout_multi_merchant_reserves_with_each_child_order_no() {
-        when(orderRemoteGateway.batchSkuSnapshot(any())).thenReturn(Result.success(Map.of(
-            100L, new SkuSnapshotDTO(100L, 1L, "sku-100", new BigDecimal("9.90"), 100, 10L),
-            200L, new SkuSnapshotDTO(200L, 1L, "sku-200", new BigDecimal("5.00"), 100, 20L))));
-        when(orderRemoteGateway.nextId(anyString())).thenReturn(
-            Result.success(10001L), Result.success(10002L), Result.success(10003L));
-
-        service.checkout(1L, List.of(
-            new OrderCheckoutItemDTO(100L, 2),
-            new OrderCheckoutItemDTO(200L, 1)));
-
-        ArgumentCaptor<StockBatchReserveDTO> reserveCaptor =
-            ArgumentCaptor.forClass(StockBatchReserveDTO.class);
-        verify(orderRemoteGateway).reserveBatch(reserveCaptor.capture());
-        ArgumentCaptor<OrderPO> orderCaptor = ArgumentCaptor.forClass(OrderPO.class);
-        verify(manager, times(2)).save(orderCaptor.capture());
-
-        java.util.Map<Long, String> orderNoByMerchant = new java.util.HashMap<>(4);
-        for (OrderPO order : orderCaptor.getAllValues()) {
-            orderNoByMerchant.put(order.getMerchantId(), order.getOrderNo());
-        }
-        for (StockReserveDTO reserveItem : reserveCaptor.getValue().getItems()) {
-            Long merchantId = reserveItem.getSkuId().equals(100L) ? 10L : 20L;
-            assertEquals(orderNoByMerchant.get(merchantId), reserveItem.getOrderNo());
-        }
     }
 
 
@@ -1407,24 +1376,29 @@ public class OrderServiceImplTest {
 
 
     /**
-     * 校验业务条件。
+     * 跨商家结算必须在产生任何下游副作用前失败。
      */
     @Test
-    public void checkout_cross_merchant_splits_orders() {
+    public void checkout_cross_merchant_throwsBeforeSideEffects() {
         OrderCheckoutItemDTO itemA = new OrderCheckoutItemDTO(100L, 1);
         OrderCheckoutItemDTO itemB = new OrderCheckoutItemDTO(200L, 1);
         SkuSnapshotDTO snapA = new SkuSnapshotDTO(100L, 1L, "sku-A", new BigDecimal("10.00"), 100, 10L);
         SkuSnapshotDTO snapB = new SkuSnapshotDTO(200L, 2L, "sku-B", new BigDecimal("20.00"), 100, 20L);
         when(orderRemoteGateway.batchSkuSnapshot(any())).thenReturn(Result.success(Map.of(
             100L, snapA, 200L, snapB)));
+        List<CartCheckoutItemDTO> cleanupItems =
+            List.of(new CartCheckoutItemDTO(9001L, 100L, 1));
 
-        Long mainOrderId = service.checkout(1L, List.of(itemA, itemB));
+        BizException exception = assertThrows(BizException.class,
+            () -> service.checkout(1L, List.of(itemA, itemB), cleanupItems, null));
 
-        assertNotNull(mainOrderId);
-        verify(orderRemoteGateway).reserveBatch(any());
-        verify(orderItemManager, times(2)).save(any(OrderItemPO.class));
-        verify(orderRemoteGateway, times(2)).createPayment(any());
-        verify(manager, times(2)).save(any(OrderPO.class));
+        assertEquals(OrderCodeEnum.ORDER_MULTI_MERCHANT_NOT_ALLOWED.getCode(), exception.getCode());
+        verify(orderRemoteGateway, never()).nextId(anyString());
+        verify(orderRemoteGateway, never()).reserveBatch(any());
+        verify(manager, never()).save(any(OrderPO.class));
+        verify(orderItemManager, never()).save(any(OrderItemPO.class));
+        verify(orderRemoteGateway, never()).createPayment(any());
+        verify(cartCleanupTaskManager, never()).save(any(CartCleanupTaskPO.class));
     }
 
 
@@ -1439,6 +1413,8 @@ public class OrderServiceImplTest {
         List<OrderCheckoutItemDTO> items = List.of(new OrderCheckoutItemDTO(100L, 1));
 
         assertThrows(BizException.class, () -> service.checkout(1L, items));
+        verify(orderRemoteGateway, never()).reserveBatch(any());
+        verify(manager, never()).save(any(OrderPO.class));
     }
 
 

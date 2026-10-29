@@ -268,7 +268,7 @@ public class OrderServiceImpl implements OrderService {
      */
     @Override
     public Long checkout(Long userId, List<OrderCheckoutItemDTO> items, ReceiverDTO receiver) {
-        return checkout(userId, items, List.of(), receiver).getMainOrderId();
+        return checkout(userId, items, List.of(), receiver).getOrderId();
     }
 
 
@@ -288,21 +288,17 @@ public class OrderServiceImpl implements OrderService {
         Map<Long, Integer> quantityBySku = mergeCheckoutItems(items);
         List<Long> skuIds = new ArrayList<>(quantityBySku.keySet());
         Map<Long, SkuSnapshotDTO> snapshots = loadCheckoutSnapshots(skuIds);
-        Map<Long, String> orderNoBySku = prepareCheckoutOrderNos(quantityBySku, snapshots);
+        Long merchantId = resolveCheckoutMerchantId(quantityBySku, snapshots);
+        String orderNo = generateOrderNo();
+        Map<Long, String> orderNoBySku = mapCheckoutOrderNo(quantityBySku, orderNo);
         reserveCheckoutStock(quantityBySku, orderNoBySku);
 
         String orderGroupNo = generateOrderGroupNo();
-        Map<Long, List<OrderItemPO>> itemsByMerchant = new LinkedHashMap<>();
+        List<OrderItemPO> orderItems = new ArrayList<>(quantityBySku.size());
         for (Map.Entry<Long, Integer> entry : quantityBySku.entrySet()) {
             Long skuId = entry.getKey();
             Integer quantity = entry.getValue();
             SkuSnapshotDTO snapshot = snapshots.get(skuId);
-            if (snapshot == null || snapshot.getPrice() == null) {
-                throw new BizException(OrderCodeEnum.ORDER_SKU_SNAPSHOT_MISSING);
-            }
-            if (snapshot.getMerchantId() == null) {
-                throw new BizException(OrderCodeEnum.ORDER_SKU_SNAPSHOT_MISSING);
-            }
 
             BigDecimal lineAmount = normalizeAmount(snapshot.getPrice()
                 .multiply(BigDecimal.valueOf(quantity)));
@@ -322,56 +318,43 @@ public class OrderServiceImpl implements OrderService {
             itemPO.setSkuSnapshotJson(toSnapshotJson(snapshot));
             itemPO.setSpuSnapshotJson(toSnapshotJson(java.util.Map.of("spuId", snapshot.getSpuId())));
 
-            Long merchantId = snapshot.getMerchantId();
-            itemsByMerchant.computeIfAbsent(merchantId, k -> new ArrayList<>()).add(itemPO);
+            orderItems.add(itemPO);
         }
 
-        Long mainOrderId = null;
-        for (java.util.Map.Entry<Long, List<OrderItemPO>> entry : itemsByMerchant.entrySet()) {
-            Long merchantId = entry.getKey();
-            List<OrderItemPO> merchantItems = entry.getValue();
-            BigDecimal groupAmount = calcAmount(merchantItems);
+        BigDecimal orderAmount = calcAmount(orderItems);
+        OrderPO po = new OrderPO();
+        po.setOrderNo(orderNo);
+        po.setOrderType(ORDER_TYPE_NORMAL);
+        po.setUserId(userId);
+        po.setMerchantId(merchantId);
+        po.setAmount(orderAmount);
+        po.setTotalAmount(orderAmount);
+        po.setPayAmount(orderAmount);
+        po.setFreightAmount(BigDecimal.ZERO);
+        po.setDiscountAmount(BigDecimal.ZERO);
+        po.setPayExpireAt(LocalDateTime.now().plusMinutes(PAY_EXPIRE_MINUTES));
+        po.setStatus(OrderStatusEnum.PENDING.intCode());
+        po.setOrderGroupNo(orderGroupNo);
+        po.setReceiverSnapshotJson(toReceiverSnapshotJson(receiver));
+        orderManager.save(po);
 
-            OrderPO po = new OrderPO();
-            po.setOrderNo(orderNoBySku.get(merchantItems.get(0).getSkuId()));
-            po.setOrderType(ORDER_TYPE_NORMAL);
-            po.setUserId(userId);
-            po.setMerchantId(merchantId);
-            po.setAmount(groupAmount);
-            po.setTotalAmount(groupAmount);
-            po.setPayAmount(groupAmount);
-            po.setFreightAmount(BigDecimal.ZERO);
-            po.setDiscountAmount(BigDecimal.ZERO);
-            po.setPayExpireAt(LocalDateTime.now().plusMinutes(PAY_EXPIRE_MINUTES));
-            po.setStatus(OrderStatusEnum.PENDING.intCode());
-            po.setOrderGroupNo(orderGroupNo);
-            po.setReceiverSnapshotJson(toReceiverSnapshotJson(receiver));
-            orderManager.save(po);
-
-            for (OrderItemPO itemPO : merchantItems) {
-                itemPO.setOrderId(po.getId());
-                orderItemManager.save(itemPO);
-            }
-
-            Long payId = orderRemoteGateway.createPayment(
-                new PayCreateDTO(String.valueOf(po.getId()), userId, merchantId, groupAmount, null)).getData();
-            if (payId == null || payId < 0) {
-                throw new BizException(OrderCodeEnum.ORDER_PAY_CREATE_FAIL);
-            }
-            po.setPayId(payId);
-            orderManager.updateById(po);
-
-            if (mainOrderId == null) {
-                mainOrderId = po.getId();
-            }
-            log.info("订单结算拆单，orderId={}，userId={}，merchantId={}，groupNo={}，items={}，amount={}",
-                po.getId(), userId, merchantId, orderGroupNo, merchantItems.size(), groupAmount);
+        for (OrderItemPO itemPO : orderItems) {
+            itemPO.setOrderId(po.getId());
+            orderItemManager.save(itemPO);
         }
+
+        Long payId = orderRemoteGateway.createPayment(
+            new PayCreateDTO(String.valueOf(po.getId()), userId, merchantId, orderAmount, null)).getData();
+        if (payId == null || payId < 0) {
+            throw new BizException(OrderCodeEnum.ORDER_PAY_CREATE_FAIL);
+        }
+        po.setPayId(payId);
+        orderManager.updateById(po);
 
         Long cleanupTaskId = createCartCleanupTask(userId, orderGroupNo, cleanupItems);
-        log.info("订单结算完成，userId={}，groupNo={}，subOrders={}",
-            userId, orderGroupNo, itemsByMerchant.size());
-        return new CheckoutResultDTO(mainOrderId, orderGroupNo, cleanupTaskId);
+        log.info("订单结算完成，orderId={}，userId={}，merchantId={}，groupNo={}，items={}，amount={}",
+            po.getId(), userId, merchantId, orderGroupNo, orderItems.size(), orderAmount);
+        return new CheckoutResultDTO(po.getId(), orderGroupNo, cleanupTaskId);
     }
 
 
@@ -463,23 +446,40 @@ public class OrderServiceImpl implements OrderService {
 
 
     /**
-     * 按商家生成结算子订单号，并映射到每个 SKU。
-     * @param quantityBySku 数量根据SKU
-     * @param snapshots 商品快照
-     * @return 订单号根据SKU
-     * @throws BizException 商品快照不完整时抛出
+     * Resolve and validate the single merchant for one checkout.
+     * @param quantityBySku quantity by SKU
+     * @param snapshots SKU snapshots
+     * @return checkout merchant ID
+     * @throws BizException when a snapshot is missing or merchants differ
      */
-    private Map<Long, String> prepareCheckoutOrderNos(Map<Long, Integer> quantityBySku,
-                                                      Map<Long, SkuSnapshotDTO> snapshots) {
-        Map<Long, String> orderNoByMerchant = new LinkedHashMap<>(quantityBySku.size() * 2);
-        Map<Long, String> orderNoBySku = new LinkedHashMap<>(quantityBySku.size() * 2);
+    private Long resolveCheckoutMerchantId(Map<Long, Integer> quantityBySku,
+                                           Map<Long, SkuSnapshotDTO> snapshots) {
+        Long checkoutMerchantId = null;
         for (Long skuId : quantityBySku.keySet()) {
             SkuSnapshotDTO snapshot = snapshots.get(skuId);
             if (snapshot == null || snapshot.getPrice() == null || snapshot.getMerchantId() == null) {
                 throw new BizException(OrderCodeEnum.ORDER_SKU_SNAPSHOT_MISSING);
             }
-            String orderNo = orderNoByMerchant.computeIfAbsent(
-                snapshot.getMerchantId(), merchantId -> generateOrderNo());
+            if (checkoutMerchantId == null) {
+                checkoutMerchantId = snapshot.getMerchantId();
+            }
+            else if (!checkoutMerchantId.equals(snapshot.getMerchantId())) {
+                throw new BizException(OrderCodeEnum.ORDER_MULTI_MERCHANT_NOT_ALLOWED);
+            }
+        }
+        return checkoutMerchantId;
+    }
+
+
+    /**
+     * Map the single checkout order number to every SKU.
+     * @param quantityBySku quantity by SKU
+     * @param orderNo checkout order number
+     * @return order number by SKU
+     */
+    private Map<Long, String> mapCheckoutOrderNo(Map<Long, Integer> quantityBySku, String orderNo) {
+        Map<Long, String> orderNoBySku = new LinkedHashMap<>(quantityBySku.size() * 2);
+        for (Long skuId : quantityBySku.keySet()) {
             orderNoBySku.put(skuId, orderNo);
         }
         return orderNoBySku;

@@ -201,12 +201,14 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
             return chain.filter(exchange);
         }
 
+        // 获取请求中携带的 X-Idempotency-Key
         String idempotencyKey = exchange.getRequest().getHeaders().getFirst("X-Idempotency-Key");
         if (idempotencyKey == null || idempotencyKey.isBlank()) {
             log.warn("缺少 Idempotency-Key，path={}，method={}", path, method);
             return reject(exchange, HttpStatus.BAD_REQUEST, "缺少 Idempotency-Key", "14010");
         }
 
+        // 对于敏感写操作，进行抗重放攻击校验
         if (isSensitiveWrite(path)) {
             return checkAntiReplay(exchange, chain);
         }
@@ -216,7 +218,7 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
 
 
     /**
-     * 校验SensitiveWrite。
+     *
      * @param path path
      * @return 是否满足条件
      */

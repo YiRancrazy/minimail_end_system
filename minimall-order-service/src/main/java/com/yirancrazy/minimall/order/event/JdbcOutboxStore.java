@@ -34,7 +34,7 @@ public class JdbcOutboxStore implements OutboxStore {
      */
     public void recordCommit(String messageKey) {
         OutboxPO po = new OutboxPO();
-        po.setTransactionId(messageKey);
+        po.setEventId(messageKey);
         try {
             outboxManager.save(po);
         }
@@ -52,7 +52,7 @@ public class JdbcOutboxStore implements OutboxStore {
     @Override
     public boolean isCommitted(String messageKey) {
         long count = outboxManager.count(Wrappers.lambdaQuery(OutboxPO.class)
-            .eq(OutboxPO::getTransactionId, messageKey));
+            .eq(OutboxPO::getEventId, messageKey));
         return count > 0;
     }
 }

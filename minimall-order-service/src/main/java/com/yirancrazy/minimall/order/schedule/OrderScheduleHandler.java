@@ -3,6 +3,7 @@ package com.yirancrazy.minimall.order.schedule;
 import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.RedisScript;
@@ -10,6 +11,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.order.service.CartCleanupService;
+import com.yirancrazy.minimall.order.service.OrderOutboxPublisher;
 import com.yirancrazy.minimall.order.service.OrderService;
 
 
@@ -36,20 +38,28 @@ public class OrderScheduleHandler {
 
     private final OrderService orderService;
     private final CartCleanupService cartCleanupService;
+    private final OrderOutboxPublisher orderOutboxPublisher;
     private final StringRedisTemplate redisTemplate;
+    private final int outboxBatchSize;
 
     /**
      * 构造 OrderScheduleHandler 实例。
      * @param orderService orderService 参数
      * @param cartCleanupService cartCleanupService 参数
+     * @param orderOutboxPublisher 订单发件箱发布器
      * @param redisTemplate redisTemplate 参数
+     * @param outboxBatchSize 发件箱单批数量
      */
     public OrderScheduleHandler(OrderService orderService,
                                 CartCleanupService cartCleanupService,
-                                StringRedisTemplate redisTemplate) {
+                                OrderOutboxPublisher orderOutboxPublisher,
+                                StringRedisTemplate redisTemplate,
+                                @Value("${minimall.outbox.batch-size:100}") int outboxBatchSize) {
         this.orderService = orderService;
         this.cartCleanupService = cartCleanupService;
+        this.orderOutboxPublisher = orderOutboxPublisher;
         this.redisTemplate = redisTemplate;
+        this.outboxBatchSize = outboxBatchSize;
     }
 
 
@@ -138,6 +148,29 @@ public class OrderScheduleHandler {
         try {
             int count = cartCleanupService.scanPending();
             log.debug("scanCartCleanupPending 执行完成，processed={}", count);
+        }
+        finally {
+            releaseLock(lockKey, lockToken);
+        }
+    }
+
+
+    /**
+     * 发布订单发件箱事件。
+     */
+    @Scheduled(
+        fixedDelayString = "${minimall.schedule.order.scan-order-outbox-ms}",
+        initialDelayString = "${minimall.schedule.order.scan-init-ms}")
+    public void relayOrderOutbox() {
+        String lockKey = "order:schedule:relayOrderOutbox";
+        String lockToken = tryLock(lockKey);
+        if (lockToken == null) {
+            log.debug("relayOrderOutbox 已跳过，锁被其他实例持有");
+            return;
+        }
+        try {
+            int count = orderOutboxPublisher.publishPending(outboxBatchSize);
+            log.debug("relayOrderOutbox 执行完成，sent={}", count);
         }
         finally {
             releaseLock(lockKey, lockToken);

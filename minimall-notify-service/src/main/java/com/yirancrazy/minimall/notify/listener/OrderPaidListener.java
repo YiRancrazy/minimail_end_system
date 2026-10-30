@@ -52,7 +52,8 @@ public class OrderPaidListener {
         try {
             String title = "订单支付成功";
             String content = "订单 " + event.getOrderId() + " 已支付，金额 " + event.getAmount();
-            notifyService.push(event.getUserId(), title, content);
+            String bizId = "ORDER_PAID:" + event.getOrderId();
+            notifyService.push(event.getUserId(), title, content, bizId);
             log.info("已通知用户 {} 订单 {}", event.getUserId(), event.getOrderId());
         }
         catch (Exception e) {

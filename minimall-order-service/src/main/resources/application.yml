@@ -66,6 +66,13 @@ minimall:
       enabled: ${MINIMALL_EVENTBUS_ROCKETMQ_ENABLED:true}
       namesrv-addr: ${ROCKETMQ_NAMESRV_ADDR:127.0.0.1:9876}
       topic: minimall-events
+  outbox:
+    batch-size: 100
+    max-batches: 10
+    lease-seconds: 30
+    max-retry-count: 10
+    retry-base-seconds: 5
+    retry-max-seconds: 300
   schedule:
     enabled: ${MINIMALL_SCHEDULE_ENABLED:true}
     scan-expired-ms: 60000
@@ -76,6 +83,7 @@ minimall:
       scan-auto-confirm-ms: 60000 # 未通知退款扫描间隔
       scan-stock-release-pending-ms: 60000 # 待处理退款扫描间隔
       scan-cart-cleanup-ms: 60000 # 购物车清理任务扫描间隔
+      scan-order-outbox-ms: 5000 # 订单发件箱发布间隔
       scan-init-ms: 1000 # 初始化扫描间隔
   xxl-job:
     enabled: false

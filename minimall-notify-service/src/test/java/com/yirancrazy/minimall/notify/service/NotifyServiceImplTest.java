@@ -8,6 +8,7 @@ import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.dao.DuplicateKeyException;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -72,6 +73,7 @@ public class NotifyServiceImplTest {
     /**
      * 执行 push_persists_unread_message 方法。
      */
+    @Test
     public void push_persists_unread_message() {
         boolean ok = service.push(7L, "订单支付成功", "订单 99 已支付");
         assertTrue(ok);
@@ -83,10 +85,26 @@ public class NotifyServiceImplTest {
     /**
      * 执行 push_returns_false_when_save_fails 方法。
      */
+    @Test
     public void push_returns_false_when_save_fails() {
         when(notifyManager.save(any(NotifyMessagePO.class))).thenReturn(false);
         boolean ok = service.push(7L, "title", "content");
         assertFalse(ok);
+        verify(notifyPushGateway, never()).send(any(), any());
+    }
+
+
+    /**
+     * 验证重复业务键视为已成功消费。
+     */
+    @Test
+    void push_duplicateBizId_isIdempotent() {
+        when(notifyManager.save(any(NotifyMessagePO.class)))
+            .thenThrow(new DuplicateKeyException("uk_notify_biz"));
+
+        boolean ok = service.push(7L, "订单支付成功", "订单 99 已支付", "ORDER_PAID:99");
+
+        assertTrue(ok);
         verify(notifyPushGateway, never()).send(any(), any());
     }
 

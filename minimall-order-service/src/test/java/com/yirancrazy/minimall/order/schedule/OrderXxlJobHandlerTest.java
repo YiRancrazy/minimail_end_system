@@ -12,6 +12,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import com.yirancrazy.minimall.order.service.CartCleanupService;
+import com.yirancrazy.minimall.order.service.OrderOutboxPublisher;
 import com.yirancrazy.minimall.order.service.OrderService;
 
 
@@ -24,6 +25,7 @@ import com.yirancrazy.minimall.order.service.OrderService;
 class OrderXxlJobHandlerTest {
 
     private CartCleanupService cartCleanupService;
+    private OrderOutboxPublisher orderOutboxPublisher;
     private StringRedisTemplate redisTemplate;
     private OrderXxlJobHandler handler;
 
@@ -32,12 +34,14 @@ class OrderXxlJobHandlerTest {
     void setUp() {
         OrderService orderService = mock(OrderService.class);
         cartCleanupService = mock(CartCleanupService.class);
+        orderOutboxPublisher = mock(OrderOutboxPublisher.class);
         redisTemplate = mock(StringRedisTemplate.class);
         ValueOperations<String, String> valueOperations = mock(ValueOperations.class);
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
         when(valueOperations.setIfAbsent(anyString(), anyString(), any(Duration.class)))
             .thenReturn(true);
-        handler = new OrderXxlJobHandler(orderService, cartCleanupService, redisTemplate);
+        handler = new OrderXxlJobHandler(
+            orderService, cartCleanupService, orderOutboxPublisher, redisTemplate, 100);
     }
 
     @Test
@@ -58,5 +62,15 @@ class OrderXxlJobHandlerTest {
         handler.scanCartCleanupPending();
 
         verify(cartCleanupService, never()).scanPending();
+    }
+
+    @Test
+    void relayOrderOutbox_delegatesToPublisher() {
+        when(orderOutboxPublisher.publishPending(100)).thenReturn(2);
+
+        handler.relayOrderOutbox();
+
+        verify(orderOutboxPublisher).publishPending(100);
+        verify(redisTemplate).delete("order:schedule:relayOrderOutbox");
     }
 }

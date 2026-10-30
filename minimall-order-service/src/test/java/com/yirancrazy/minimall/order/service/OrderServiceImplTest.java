@@ -34,15 +34,13 @@ import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.yirancrazy.minimall.api.dto.cart.CartCheckoutItemDTO;
 import com.yirancrazy.minimall.api.dto.goods.SkuSnapshotDTO;
 import com.yirancrazy.minimall.api.dto.order.OrderCommentEligibilityDTO;
+import com.yirancrazy.minimall.api.dto.order.OrderPaidDTO;
 import com.yirancrazy.minimall.api.dto.order.OrderPaySnapshotDTO;
 import com.yirancrazy.minimall.api.dto.order.RefundCallbackDTO;
 import com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO;
 import com.yirancrazy.minimall.api.dto.stock.StockBatchReserveDTO;
 import com.yirancrazy.minimall.api.dto.stock.StockReserveDTO;
-import com.yirancrazy.minimall.common.event.EventBus;
-import com.yirancrazy.minimall.common.event.OutboxStore;
 import com.yirancrazy.minimall.common.exception.BizException;
-import com.yirancrazy.minimall.common.exception.mq.RocketMqTransactionRollbackException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.common.util.MinioUtil;
@@ -87,7 +85,7 @@ public class OrderServiceImplTest {
     private OrderStatusLogManager statusLogManager;
     private OrderRemoteGateway orderRemoteGateway;
     private CartCleanupTaskManager cartCleanupTaskManager;
-    private EventBus eventBus;
+    private OrderOutboxService orderOutboxService;
     private OrderStatusMachine statusMachine;
     private MinioUtil minioUtil;
     private OrderServiceImpl service;
@@ -100,8 +98,7 @@ public class OrderServiceImplTest {
         statusLogManager = mock(OrderStatusLogManager.class);
         orderRemoteGateway = mock(OrderRemoteGateway.class);
         cartCleanupTaskManager = mock(CartCleanupTaskManager.class);
-        eventBus = mock(EventBus.class);
-        OutboxStore outboxStore = mock(OutboxStore.class);
+        orderOutboxService = mock(OrderOutboxService.class);
         TransactionTemplate transactionTemplate = mock(TransactionTemplate.class);
         statusMachine = new OrderStatusMachine();
         minioUtil = mock(MinioUtil.class);
@@ -139,14 +136,9 @@ public class OrderServiceImplTest {
             action.accept(mock(TransactionStatus.class));
             return null;
         }).when(transactionTemplate).executeWithoutResult(any());
-        lenient().doAnswer(inv -> {
-            java.util.function.Consumer<String> tx = inv.getArgument(1);
-            tx.accept("tx-1");
-            return null;
-        }).when(eventBus).publishInTx(any(), any(java.util.function.Consumer.class));
         service = new OrderServiceImpl(manager, orderItemManager, logisticsManager, statusLogManager,
             orderRemoteGateway,
-            eventBus, outboxStore, transactionTemplate, statusMachine,
+            orderOutboxService, transactionTemplate, statusMachine,
             new com.fasterxml.jackson.databind.ObjectMapper(), minioUtil,
             cartCleanupTaskManager);
     }
@@ -264,22 +256,22 @@ public class OrderServiceImplTest {
         service.pay(99L);
         assertEquals(OrderStatusEnum.PAID.intCode(), existing.getStatus());
         verify(manager).updateById(existing);
+        verify(orderOutboxService).recordPaidEvent(any(OrderPaidDTO.class));
     }
 
     /**
-     * 验证事务消息回滚时支付推进失败且订单保持待支付。
+     * 验证发件箱写入失败时异常向上传播。
      */
     @Test
-    public void pay_publishRollback_throwsAndKeepsPending() {
+    public void pay_outboxFailure_propagates() {
         OrderPO existing = buildOrder(99L, 1L, OrderStatusEnum.PENDING.intCode());
         when(manager.getById(99L)).thenReturn(existing);
-        doThrow(new RocketMqTransactionRollbackException("OrderPaidDTO", new Object(), null))
-            .when(eventBus).publishInTx(any(), any(java.util.function.Consumer.class));
+        doThrow(new IllegalStateException("outbox failed"))
+            .when(orderOutboxService).recordPaidEvent(any(OrderPaidDTO.class));
 
-        assertThrows(RocketMqTransactionRollbackException.class, () -> service.pay(99L));
+        assertThrows(IllegalStateException.class, () -> service.pay(99L));
 
-        assertEquals(OrderStatusEnum.PENDING.intCode(), existing.getStatus());
-        verify(manager, never()).updateById(existing);
+        verify(orderOutboxService).recordPaidEvent(any(OrderPaidDTO.class));
     }
 
 
@@ -305,6 +297,7 @@ public class OrderServiceImplTest {
 
         assertEquals(OrderStatusEnum.PAID.intCode(), existing.getStatus());
         verify(manager, never()).updateById(existing);
+        verify(orderOutboxService, never()).recordPaidEvent(any());
     }
 
 
@@ -320,7 +313,7 @@ public class OrderServiceImplTest {
 
         assertEquals(OrderCodeEnum.ORDER_STATUS_TRANSITION_INVALID.getCode(), exception.getCode());
         assertEquals(OrderStatusEnum.REFUNDING.intCode(), existing.getStatus());
-        verify(eventBus, never()).publishInTx(any(), any());
+        verify(orderOutboxService, never()).recordPaidEvent(any());
     }
 
 
@@ -336,7 +329,7 @@ public class OrderServiceImplTest {
 
         assertEquals(OrderCodeEnum.ORDER_STATUS_TRANSITION_INVALID.getCode(), exception.getCode());
         assertEquals(OrderStatusEnum.REFUNDED.intCode(), existing.getStatus());
-        verify(eventBus, never()).publishInTx(any(), any());
+        verify(orderOutboxService, never()).recordPaidEvent(any());
     }
 
 

@@ -377,15 +377,28 @@ CREATE TABLE IF NOT EXISTS t_order_payment_snapshot (
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='订单支付快照表（用于一致性校验）';
 
 CREATE TABLE IF NOT EXISTS t_order_outbox (
-                                              id              BIGINT          NOT NULL COMMENT '主键ID',
-                                              transaction_id  VARCHAR(64)     NOT NULL COMMENT '事务ID',
+    id              BIGINT          NOT NULL COMMENT '主键ID',
+    event_id        VARCHAR(128)    NOT NULL COMMENT '唯一业务事件键，例如 ORDER_PAID:<orderId>',
+    event_type      VARCHAR(64)     NULL COMMENT '事件类型，例如 OrderPaidDTO',
+    aggregate_type  VARCHAR(32)     NULL COMMENT '聚合类型，例如 ORDER',
+    aggregate_id    BIGINT          NULL COMMENT '聚合标识，例如 orderId',
+    topic           VARCHAR(128)    NULL COMMENT 'RocketMQ 主题',
+    tag             VARCHAR(128)    NULL COMMENT 'RocketMQ 标签',
+    payload         LONGTEXT        NULL COMMENT '事件 JSON 内容',
+    send_status     TINYINT         NOT NULL DEFAULT 0
+        COMMENT '发送状态：0=待发送，1=已发送，2=死信',
+    retry_count     INT             NOT NULL DEFAULT 0 COMMENT '发送重试次数',
+    next_retry_time DATETIME(3)     NULL COMMENT '下次发送时间',
+    last_error      VARCHAR(512)    NULL COMMENT '最近一次发送失败原因',
+    sent_time       DATETIME(3)     NULL COMMENT '发送成功时间',
     version         INT             NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
-    is_deleted      TINYINT         DEFAULT 0 COMMENT '是否删除：NULL=已删除 0=未删除',
+    is_deleted      TINYINT         DEFAULT 0 COMMENT '删除标记',
     create_time     DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    update_time     DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+    update_time     DATETIME        DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (id),
-    UNIQUE KEY uk_transaction_id (transaction_id, is_deleted)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='订单出站消息表（事务性发件箱）';
+    UNIQUE KEY uk_order_outbox_event_id (event_id, is_deleted),
+    INDEX idx_order_outbox_dispatch (send_status, next_retry_time, id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='订单事务性发件箱';
 
 CREATE TABLE IF NOT EXISTS t_order_cart_cleanup_task (
     id             BIGINT       NOT NULL COMMENT '主键ID',

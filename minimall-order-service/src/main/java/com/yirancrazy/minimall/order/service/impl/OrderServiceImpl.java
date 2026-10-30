@@ -33,8 +33,6 @@ import com.yirancrazy.minimall.api.dto.pay.PayCreateDTO;
 import com.yirancrazy.minimall.api.dto.pay.RefundCreateDTO;
 import com.yirancrazy.minimall.api.dto.stock.StockBatchReserveDTO;
 import com.yirancrazy.minimall.api.dto.stock.StockReserveDTO;
-import com.yirancrazy.minimall.common.event.EventBus;
-import com.yirancrazy.minimall.common.event.OutboxStore;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CommonCode;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
@@ -66,6 +64,7 @@ import com.yirancrazy.minimall.order.manager.OrderItemManager;
 import com.yirancrazy.minimall.order.manager.OrderLogisticsManager;
 import com.yirancrazy.minimall.order.manager.OrderManager;
 import com.yirancrazy.minimall.order.manager.OrderStatusLogManager;
+import com.yirancrazy.minimall.order.service.OrderOutboxService;
 import com.yirancrazy.minimall.order.service.OrderService;
 import com.yirancrazy.minimall.order.vo.OrderExportVO;
 import com.yirancrazy.minimall.order.vo.OrderItemVO;
@@ -109,8 +108,7 @@ public class OrderServiceImpl implements OrderService {
     private final OrderLogisticsManager orderLogisticsManager;
     private final OrderStatusLogManager orderStatusLogManager;
     private final OrderRemoteGateway orderRemoteGateway;
-    private final EventBus eventBus;
-    private final OutboxStore outboxStore;
+    private final OrderOutboxService orderOutboxService;
     private final TransactionTemplate transactionTemplate;
     private final OrderStatusMachine statusMachine;
     private final ObjectMapper objectMapper;
@@ -124,8 +122,7 @@ public class OrderServiceImpl implements OrderService {
      * @param orderLogisticsManager orderLogisticsManager 参数
      * @param orderStatusLogManager orderStatusLogManager 参数
      * @param orderRemoteGateway orderRemoteGateway 参数
-     * @param eventBus eventBus 参数
-     * @param outboxStore outboxStore 参数
+     * @param orderOutboxService 订单发件箱服务
      * @param transactionTemplate transactionTemplate 参数
      * @param statusMachine statusMachine 参数
      * @param objectMapper objectMapper 参数
@@ -137,8 +134,7 @@ public class OrderServiceImpl implements OrderService {
                             OrderLogisticsManager orderLogisticsManager,
                             OrderStatusLogManager orderStatusLogManager,
                             OrderRemoteGateway orderRemoteGateway,
-                            EventBus eventBus,
-                            OutboxStore outboxStore,
+                            OrderOutboxService orderOutboxService,
                             TransactionTemplate transactionTemplate,
                             OrderStatusMachine statusMachine,
                             ObjectMapper objectMapper,
@@ -149,8 +145,7 @@ public class OrderServiceImpl implements OrderService {
         this.orderLogisticsManager = orderLogisticsManager;
         this.orderStatusLogManager = orderStatusLogManager;
         this.orderRemoteGateway = orderRemoteGateway;
-        this.eventBus = eventBus;
-        this.outboxStore = outboxStore;
+        this.orderOutboxService = orderOutboxService;
         this.transactionTemplate = transactionTemplate;
         this.statusMachine = statusMachine;
         this.objectMapper = objectMapper;
@@ -516,13 +511,10 @@ public class OrderServiceImpl implements OrderService {
 
         OrderPaidDTO event = new OrderPaidDTO(
             orderId, po.getUserId(), po.getAmount(), LocalDateTime.now().toString());
-        eventBus.publishInTx(event, txId -> transactionTemplate.executeWithoutResult(status -> {
+        transactionTemplate.executeWithoutResult(status -> {
             transitStatus(orderId, OrderStatusEnum.PAID, "USER_PAY", null);
-
-            if (txId != null) {
-                outboxStore.recordCommit(txId);
-            }
-        }));
+            orderOutboxService.recordPaidEvent(event);
+        });
         log.info("订单已支付，orderId={}", orderId);
     }
 

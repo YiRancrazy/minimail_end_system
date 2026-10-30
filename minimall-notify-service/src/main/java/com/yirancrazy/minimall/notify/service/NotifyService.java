@@ -29,7 +29,20 @@ public interface NotifyService {
      * @param content content 参数
      * @return 是否处理成功
      */
-    boolean push(Long userId, String title, String content);
+    default boolean push(Long userId, String title, String content) {
+        return push(userId, title, content, null);
+    }
+
+
+    /**
+     * 使用业务唯一键写入通知。
+     * @param userId userId 参数
+     * @param title title 参数
+     * @param content content 参数
+     * @param bizId 业务唯一键
+     * @return 是否处理成功或已存在
+     */
+    boolean push(Long userId, String title, String content, String bizId);
 
 
 

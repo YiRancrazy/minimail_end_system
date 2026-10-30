@@ -52,7 +52,7 @@ class OrderPaidMqConsumerTest {
         consumer.onPaid(event);
 
         String content = "订单 99 已支付，金额 100.00";
-        verify(notifyService).push(7L, "订单支付成功", content);
+        verify(notifyService).push(7L, "订单支付成功", content, "ORDER_PAID:99");
     }
 
     @Test
@@ -88,7 +88,7 @@ class OrderPaidMqConsumerTest {
 
     @Test
     void onPaid_givenPushFailure_thenRemovesIdempotencyKeyAndRethrows() {
-        when(notifyService.push(any(Long.class), anyString(), anyString()))
+        when(notifyService.push(any(Long.class), anyString(), anyString(), anyString()))
             .thenThrow(new RuntimeException("db unavailable"));
         OrderPaidDTO event = new OrderPaidDTO(
             99L, 7L, new BigDecimal("100.00"), "2026-07-29T10:00:00");

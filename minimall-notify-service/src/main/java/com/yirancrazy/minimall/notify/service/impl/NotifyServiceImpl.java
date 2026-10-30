@@ -2,6 +2,7 @@ package com.yirancrazy.minimall.notify.service.impl;
 
 import java.util.ArrayList;
 import java.util.List;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -56,18 +57,27 @@ public class NotifyServiceImpl implements NotifyService {
      * @param userId userId 参数
      * @param title title 参数
      * @param content content 参数
-     * @return 是否处理成功
+     * @param bizId 业务唯一键
+     * @return 是否处理成功或已存在
      */
     @Override
-    public boolean push(Long userId, String title, String content) {
+    public boolean push(Long userId, String title, String content, String bizId) {
         NotifyMessagePO m = new NotifyMessagePO();
         m.setUserId(userId);
         m.setRecipientType(RecipientTypeEnum.USER.intCode());
         m.setMessageType(NotifyMessageTypeEnum.SYSTEM.intCode());
+        m.setBizId(bizId);
         m.setTitle(title);
         m.setContent(content);
         m.setReadFlag(0);
-        boolean saved = notifyManager.save(m);
+        boolean saved;
+        try {
+            saved = notifyManager.save(m);
+        }
+        catch (DuplicateKeyException e) {
+            log.info("通知已存在，bizId={}", bizId);
+            return true;
+        }
         if (saved) {
             notifyPushGateway.send(userId, title);
         }

@@ -1,12 +1,14 @@
 package com.yirancrazy.minimall.order.schedule;
 
 import java.time.Duration;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 import com.xxl.job.core.handler.annotation.XxlJob;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.order.service.CartCleanupService;
+import com.yirancrazy.minimall.order.service.OrderOutboxPublisher;
 import com.yirancrazy.minimall.order.service.OrderService;
 
 
@@ -26,20 +28,28 @@ public class OrderXxlJobHandler {
 
     private final OrderService orderService;
     private final CartCleanupService cartCleanupService;
+    private final OrderOutboxPublisher orderOutboxPublisher;
     private final StringRedisTemplate redisTemplate;
+    private final int outboxBatchSize;
 
     /**
      * 构造 OrderXxlJobHandler 实例。
      * @param orderService orderService 参数
      * @param cartCleanupService cartCleanupService 参数
+     * @param orderOutboxPublisher 订单发件箱发布器
      * @param redisTemplate redisTemplate 参数
+     * @param outboxBatchSize 发件箱单批数量
      */
     public OrderXxlJobHandler(OrderService orderService,
                               CartCleanupService cartCleanupService,
-                              StringRedisTemplate redisTemplate) {
+                              OrderOutboxPublisher orderOutboxPublisher,
+                              StringRedisTemplate redisTemplate,
+                              @Value("${minimall.outbox.batch-size:100}") int outboxBatchSize) {
         this.orderService = orderService;
         this.cartCleanupService = cartCleanupService;
+        this.orderOutboxPublisher = orderOutboxPublisher;
         this.redisTemplate = redisTemplate;
+        this.outboxBatchSize = outboxBatchSize;
     }
 
 
@@ -112,6 +122,26 @@ public class OrderXxlJobHandler {
         try {
             int count = cartCleanupService.scanPending();
             log.info("xxl-job scanCartCleanupPending 执行完成，processed={}", count);
+        }
+        finally {
+            redisTemplate.delete(lockKey);
+        }
+    }
+
+
+    /**
+     * 发布订单发件箱事件。
+     */
+    @XxlJob("orderOutboxRelay")
+    public void relayOrderOutbox() {
+        String lockKey = "order:schedule:relayOrderOutbox";
+        if (!tryLock(lockKey)) {
+            log.info("xxl-job relayOrderOutbox 已跳过，锁被其他实例持有");
+            return;
+        }
+        try {
+            int count = orderOutboxPublisher.publishPending(outboxBatchSize);
+            log.info("xxl-job relayOrderOutbox 执行完成，sent={}", count);
         }
         finally {
             redisTemplate.delete(lockKey);

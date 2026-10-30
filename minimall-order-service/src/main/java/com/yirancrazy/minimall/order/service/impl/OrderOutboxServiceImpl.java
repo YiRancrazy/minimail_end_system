@@ -10,6 +10,8 @@ import org.springframework.transaction.annotation.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.api.dto.order.OrderPaidDTO;
 import com.yirancrazy.minimall.common.event.MqEventJsonCodec;
+import com.yirancrazy.minimall.common.exception.BizException;
+import com.yirancrazy.minimall.order.constant.OrderCodeEnum;
 import com.yirancrazy.minimall.order.constant.OutboxSendStatusEnum;
 import com.yirancrazy.minimall.order.entity.OutboxPO;
 import com.yirancrazy.minimall.order.manager.OutboxManager;
@@ -67,7 +69,9 @@ public class OrderOutboxServiceImpl implements OrderOutboxService {
         outbox.setRetryCount(0);
         outbox.setNextRetryTime(now);
         try {
-            outboxManager.save(outbox);
+            if (!outboxManager.save(outbox)) {
+                throw new BizException(OrderCodeEnum.ORDER_OUTBOX_SAVE_FAILED);
+            }
         }
         catch (DuplicateKeyException e) {
             // 同一业务事件已持久化时保持幂等，后续发布器会继续处理已有记录。

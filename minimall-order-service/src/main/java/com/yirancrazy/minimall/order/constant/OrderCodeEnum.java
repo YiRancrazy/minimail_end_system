@@ -32,7 +32,8 @@ public enum OrderCodeEnum implements BaseEnum {
     ORDER_ITEMS_LIMIT_EXCEEDED("50010", "ORDER_ITEMS_LIMIT_EXCEEDED", "单次结算最多100个SKU"),
     ORDER_CHECKOUT_ITEM_INVALID("50011", "ORDER_CHECKOUT_ITEM_INVALID", "结算明细非法"),
     ORDER_MULTI_MERCHANT_NOT_ALLOWED(
-        "50012", "ORDER_MULTI_MERCHANT_NOT_ALLOWED", "仅支持同一商家下单");
+        "50012", "ORDER_MULTI_MERCHANT_NOT_ALLOWED", "仅支持同一商家下单"),
+    ORDER_OUTBOX_SAVE_FAILED("50013", "ORDER_OUTBOX_SAVE_FAILED", "订单发件箱保存失败");
 
     private final String code;
     private final String alias;

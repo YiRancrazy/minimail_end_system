@@ -1101,14 +1101,19 @@ public class OrderServiceImpl implements OrderService {
      * @throws BizException 业务校验失败时抛出
      */
     private void transition(OrderPO po, OrderStatusEnum target, String triggerSource, String closeReason, String note) {
-        Integer fromStatus = po.getStatus();
-        statusMachine.transit(po, target);
-        applyTargetTimestamps(po, target, closeReason);
-        if (!orderManager.updateById(po)) {
-            // 并发下后写者更新 0 行：目标状态已被先行事务推进，拒绝继续执行副作用
-            throw new BizException(OrderCodeEnum.ORDER_STATUS_TRANSITION_INVALID);
-        }
-        saveStatusLog(po, fromStatus, target, triggerSource, note);
+        // 使用编程式事务，确保状态转换的原子性
+        transactionTemplate.executeWithoutResult(status -> {
+            Integer fromStatus = po.getStatus();
+            Integer fromVersion = po.getVersion();
+            statusMachine.transit(po, target);
+            applyTargetTimestamps(po, target, closeReason);
+            if (!orderManager.updateById(po)) {
+                // 并发下后写者更新 0 行：目标状态已被先行事务推进，拒绝继续执行副作用
+                throw new BizException(OrderCodeEnum.ORDER_STATUS_TRANSITION_INVALID);
+            }
+            saveStatusLog(po, fromStatus, target,
+                fromVersion == null ? null : fromVersion + 1, triggerSource, note);
+        });
     }
 
 
@@ -1151,15 +1156,17 @@ public class OrderServiceImpl implements OrderService {
      * @param po 持久化对象
      * @param fromStatus 从状态
      * @param toStatus 转换状态
+     * @param orderVersion 转换后的订单版本，作为幂等去重键
      * @param triggerSource triggerSource
      * @param note note
      */
     private void saveStatusLog(OrderPO po, Integer fromStatus, OrderStatusEnum toStatus,
-                               String triggerSource, String note) {
+                               Integer orderVersion, String triggerSource, String note) {
         OrderStatusLogPO log = new OrderStatusLogPO();
         log.setOrderId(po.getId());
         log.setFromStatus(fromStatus);
         log.setToStatus(toStatus.intCode());
+        log.setOrderVersion(orderVersion);
         log.setTriggerSource(triggerSource);
         log.setNote(note);
         orderStatusLogManager.save(log);

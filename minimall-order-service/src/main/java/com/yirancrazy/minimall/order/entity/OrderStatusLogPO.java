@@ -19,6 +19,7 @@ public class OrderStatusLogPO extends BasePO {
     private Long orderId;
     private Integer fromStatus;
     private Integer toStatus;
+    private Integer orderVersion;
     private String triggerSource;
     private Long operatorId;
     private String note;

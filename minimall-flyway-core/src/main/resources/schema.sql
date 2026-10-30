@@ -349,6 +349,7 @@ CREATE TABLE IF NOT EXISTS t_order_status_log (
                                                   order_id        BIGINT UNSIGNED NOT NULL COMMENT '关联订单ID',
                                                   from_status     TINYINT         DEFAULT NULL COMMENT '前一状态码',
                                                   to_status       TINYINT         NOT NULL COMMENT '新状态码',
+                                                  order_version   INT             DEFAULT NULL COMMENT '订单乐观锁版本（本次转换后），用于状态日志幂等去重',
                                                   trigger_source  VARCHAR(32)     NOT NULL COMMENT '触发来源：USER_PAY, MERCHANT_SHIP, SYSTEM_TIMEOUT 等',
     operator_id     BIGINT UNSIGNED DEFAULT NULL COMMENT '操作人用户ID，系统操作为NULL',
     note            VARCHAR(255)    DEFAULT NULL COMMENT '附加备注',
@@ -357,7 +358,8 @@ CREATE TABLE IF NOT EXISTS t_order_status_log (
     create_time     DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
     update_time     DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '更新时间',
     PRIMARY KEY (id),
-    INDEX idx_order_status_log_order (order_id, create_time)
+    INDEX idx_order_status_log_order (order_id, create_time),
+    UNIQUE KEY uk_order_status_log_order_version (order_id, order_version, is_deleted)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='订单状态转换日志表';
 
 CREATE TABLE IF NOT EXISTS t_order_payment_snapshot (

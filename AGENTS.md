@@ -82,7 +82,8 @@ git 提交前检查新增Java代码是否符合编码规范。请参考 [.dev/do
 - `type` 必须使用英文：`feat`、`fix`、`docs`、`style`、`refactor`、`perf`、`test`、`build`、`ci`、`chore`、`revert`。
 - `scope` 建议填写，使用英文小写 kebab-case；优先使用实际模块或技术域，如 `order`、`pay`、`common`、`ai-guidelines`、`eol`。
 - `subject` 使用中文动词开头，≤72 字符，不加句号；类名、命令等专有名词可保留英文。
-- 简单变更可省略 body；复杂变更必须说明动机、实现要点和影响范围。
+- `body` 必须填写；subject 后空一行，正文从 `1.` 开始连续编号，每行只写一个具体修改点，不使用普通 bullet 或整段散文。
+- 所有提交都必须包含编号正文，简单变更也不得省略。
 - footer 仅用于 `Closes #12`、`Refs: TAPD-1001` 或 `BREAKING CHANGE:`。
 - 一次提交只做一个原子变更；跨 scope 且无法拆分时使用逗号，如 `feat(order,pay): 新增支付后订单推进`。
 - 未经用户明确要求，不创建提交、不推送、不提 PR。
@@ -92,8 +93,10 @@ git 提交前检查新增Java代码是否符合编码规范。请参考 [.dev/do
 ```text
 docs(ai-guidelines): 更新提交规范
 
-- 统一 type 使用英文 Conventional Commits 类型
-- 统一 scope 使用英文小写 kebab-case
+1. 统一 type 使用英文 Conventional Commits 类型
+2. 统一 scope 使用英文小写 kebab-case
+3. 规定正文使用从 1 开始的连续编号列表
+4. 明确编号正文在简单和复杂提交中均不可省略
 ```
 
 **禁用内容**：迭代标记、`.dev/docs/...` 路径或文件名、外部章节标记、敏感信息；详见规范源。

@@ -36,9 +36,11 @@ public class OrderPaidListener {
 
 
     /**
-     * 执行 onOrderPaid 方法。
-     * @param event event 参数
+     * 订阅进程内事件总线。与 MQ 通道共享 SETNX 幂等键 notify:order:paid:{orderId}，
+     * 双通道同时到达时仅第一个通道落库。
+     * @param event 订单支付事件
      */
+    @EventListener
     public void onOrderPaid(OrderPaidDTO event) {
         if (event == null || event.getOrderId() == null) {
             return;

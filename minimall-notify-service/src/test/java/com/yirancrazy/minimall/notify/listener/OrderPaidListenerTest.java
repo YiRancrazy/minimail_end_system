@@ -69,6 +69,7 @@ public class OrderPaidListenerTest {
     /**
      * 执行 on_order_paid_saves_message_and_pushes_sse 方法。
      */
+    @Test
     public void on_order_paid_saves_message_and_pushes_sse() {
         OrderPaidDTO ev = new OrderPaidDTO(99L, 7L, new BigDecimal("100.00"), "2026-07-29T10:00:00");
         listener.onOrderPaid(ev);
@@ -86,6 +87,7 @@ public class OrderPaidListenerTest {
     /**
      * 执行 on_order_paid_duplicate_skips_notification 方法。
      */
+    @Test
     public void on_order_paid_duplicate_skips_notification() {
         when(valueOps.setIfAbsent(anyString(), anyString(), any(Duration.class)))
             .thenReturn(Boolean.FALSE);
@@ -101,6 +103,7 @@ public class OrderPaidListenerTest {
     /**
      * 执行 on_order_paid_push_failure_removes_key_and_rethrows 方法。
      */
+    @Test
     public void on_order_paid_push_failure_removes_key_and_rethrows() {
         doAnswer(inv -> {
             throw new RuntimeException("db unavailable");

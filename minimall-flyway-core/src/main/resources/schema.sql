@@ -397,7 +397,9 @@ CREATE TABLE IF NOT EXISTS t_order_outbox (
     update_time     DATETIME        DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (id),
     UNIQUE KEY uk_order_outbox_event_id (event_id, is_deleted),
-    INDEX idx_order_outbox_dispatch (send_status, next_retry_time, id)
+    INDEX idx_order_outbox_dispatch (send_status, next_retry_time, id),
+    CONSTRAINT chk_order_outbox_route
+        CHECK (payload IS NULL OR (topic IS NOT NULL AND tag IS NOT NULL))
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='订单事务性发件箱';
 
 CREATE TABLE IF NOT EXISTS t_order_cart_cleanup_task (

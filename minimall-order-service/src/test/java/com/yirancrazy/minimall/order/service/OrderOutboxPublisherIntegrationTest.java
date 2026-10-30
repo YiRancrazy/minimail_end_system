@@ -5,6 +5,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -13,7 +14,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verify;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.yirancrazy.minimall.api.dto.order.OrderPaidDTO;
 import com.yirancrazy.minimall.api.feign.CartCleanupFeignClient;
@@ -93,6 +96,24 @@ class OrderOutboxPublisherIntegrationTest {
     }
 
     /**
+     * 验证数据库记录中的路由被传递给事件总线。
+     */
+    @Test
+    void publishPending_passesStoredRouteToEventBus() {
+        OutboxPO record = pendingOutbox("ORDER_PAID:92003", 92003L);
+        record.setTopic("historical-order-events");
+        record.setTag("paid-v1");
+        outboxManager.save(record);
+
+        outboxPublisher.publishPending(100);
+
+        ArgumentCaptor<OrderPaidDTO> eventCaptor = ArgumentCaptor.forClass(OrderPaidDTO.class);
+        verify(eventBus).publish(
+            eq("historical-order-events"), eq("paid-v1"), eventCaptor.capture());
+        assertEquals(92003L, eventCaptor.getValue().getOrderId());
+    }
+
+    /**
      * 验证 MQ 失败后记录保持待发送并增加重试次数。
      */
     @Test
@@ -100,7 +121,7 @@ class OrderOutboxPublisherIntegrationTest {
         OutboxPO record = pendingOutbox("ORDER_PAID:92002", 92002L);
         outboxManager.save(record);
         doThrow(new IllegalStateException("broker down"))
-            .when(eventBus).publish(any(OrderPaidDTO.class));
+            .when(eventBus).publish(any(), any(), any(OrderPaidDTO.class));
 
         outboxPublisher.publishPending(100);
 

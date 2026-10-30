@@ -59,8 +59,45 @@ class OrderOutboxPublisherImplTest {
         int sent = publisher.publishPending(100);
 
         assertEquals(1, sent);
-        verify(eventBus).publish(any(OrderPaidDTO.class));
+        verify(eventBus).publish(eq("minimall-events"), eq("OrderPaidDTO"), any(OrderPaidDTO.class));
         verify(outboxManager).markSent(eq(po.getId()), any());
+    }
+
+    /**
+     * 验证发布器使用数据库记录中的 topic 和 tag。
+     */
+    @Test
+    void publishPending_usesTopicAndTagFromOutboxRecord() {
+        OutboxPO po = pendingOrderPaid(6L, 6L, 0);
+        po.setTopic("historical-order-events");
+        po.setTag("paid-v1");
+        when(outboxManager.listDispatchCandidates(any(), eq(100)))
+            .thenReturn(List.of(po), List.of());
+        when(outboxManager.claimForDispatch(eq(po.getId()), any(), any())).thenReturn(true);
+
+        publisher.publishPending(100);
+
+        verify(eventBus).publish(
+            eq("historical-order-events"), eq("paid-v1"), any(OrderPaidDTO.class));
+        verify(outboxManager).markSent(eq(po.getId()), any());
+    }
+
+    /**
+     * 验证可发布事件缺少路由时进入死信且不发送消息。
+     */
+    @Test
+    void publishPending_marksDeadWhenRouteMissing() {
+        OutboxPO po = pendingOrderPaid(7L, 7L, 0);
+        po.setTopic(" ");
+        po.setTag(null);
+        when(outboxManager.listDispatchCandidates(any(), eq(100)))
+            .thenReturn(List.of(po), List.of());
+        when(outboxManager.claimForDispatch(eq(po.getId()), any(), any())).thenReturn(true);
+
+        publisher.publishPending(100);
+
+        verify(eventBus, never()).publish(any(), any(), any());
+        verify(outboxManager).markDead(eq(po.getId()), eq(0), contains("missing outbox route"));
     }
 
     /**
@@ -73,7 +110,7 @@ class OrderOutboxPublisherImplTest {
             .thenReturn(List.of(po), List.of());
         when(outboxManager.claimForDispatch(eq(po.getId()), any(), any())).thenReturn(true);
         doThrow(new IllegalStateException("broker down"))
-            .when(eventBus).publish(any(OrderPaidDTO.class));
+            .when(eventBus).publish(any(), any(), any(OrderPaidDTO.class));
 
         int sent = publisher.publishPending(100);
 
@@ -92,7 +129,7 @@ class OrderOutboxPublisherImplTest {
             .thenReturn(List.of(po), List.of());
         when(outboxManager.claimForDispatch(eq(po.getId()), any(), any())).thenReturn(true);
         doThrow(new IllegalStateException("broker down"))
-            .when(eventBus).publish(any(OrderPaidDTO.class));
+            .when(eventBus).publish(any(), any(), any(OrderPaidDTO.class));
 
         publisher.publishPending(100);
 
@@ -114,7 +151,7 @@ class OrderOutboxPublisherImplTest {
         publisher.publishPending(100);
 
         verify(outboxManager).markDead(eq(po.getId()), eq(0), any());
-        verify(eventBus, never()).publish(any());
+        verify(eventBus, never()).publish(any(), any(), any());
     }
 
     /**
@@ -131,7 +168,7 @@ class OrderOutboxPublisherImplTest {
         publisher.publishPending(100);
 
         verify(outboxManager).markDead(eq(po.getId()), eq(0), contains("不支持的事件类型"));
-        verify(eventBus, never()).publish(any());
+        verify(eventBus, never()).publish(any(), any(), any());
     }
 
     /**

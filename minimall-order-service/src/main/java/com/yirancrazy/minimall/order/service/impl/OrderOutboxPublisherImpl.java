@@ -133,10 +133,19 @@ public class OrderOutboxPublisherImpl implements OrderOutboxPublisher {
                 record.getEventId(), record.getEventType(), e);
             return PublishResult.DEAD;
         }
+        if (record.getTopic() == null || record.getTopic().isBlank()
+            || record.getTag() == null || record.getTag().isBlank()) {
+            String error = "missing outbox route: topic/tag";
+            outboxManager.markDead(record.getId(), retryCount(record), error);
+            log.error("订单发件箱事件路由缺失，eventId={}，topic={}，tag={}",
+                record.getEventId(), record.getTopic(), record.getTag());
+            return PublishResult.DEAD;
+        }
         try {
-            eventBus.publish(event);
+            eventBus.publish(record.getTopic(), record.getTag(), event);
             outboxManager.markSent(record.getId(), LocalDateTime.now());
-            log.debug("订单发件箱事件发送成功，eventId={}", record.getEventId());
+            log.debug("订单发件箱事件发送成功，eventId={}，topic={}，tag={}",
+                record.getEventId(), record.getTopic(), record.getTag());
             return PublishResult.SENT;
         }
         catch (Exception e) {

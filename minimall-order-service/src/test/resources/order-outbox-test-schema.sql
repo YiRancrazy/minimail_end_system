@@ -74,5 +74,7 @@ CREATE TABLE t_order_outbox (
     create_time     TIMESTAMP       DEFAULT CURRENT_TIMESTAMP,
     update_time     TIMESTAMP       DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
-    UNIQUE (event_id)
+    UNIQUE (event_id),
+    CONSTRAINT chk_order_outbox_route
+        CHECK (payload IS NULL OR (topic IS NOT NULL AND tag IS NOT NULL))
 );

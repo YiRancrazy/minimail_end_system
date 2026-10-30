@@ -62,6 +62,7 @@ public class LocalEventBusTest {
          *
          * @param e 收到的事件
          */
+        @EventListener
         public void onSample(SampleEvent e) {
             received.add(e.getPayload());
             calls.incrementAndGet();
@@ -72,6 +73,7 @@ public class LocalEventBusTest {
     /**
      * 发布事件时应调用 Spring 事件监听器。
      */
+    @Test
     public void publish_invokes_event_listener() {
         AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
         ctx.register(LocalEventBus.class, Recorder.class);
@@ -85,6 +87,26 @@ public class LocalEventBusTest {
 
         assertEquals(2, rec.calls.get());
         assertEquals(List.of("hello", "world"), rec.received);
+        ctx.close();
+    }
+
+
+    /**
+     * 携带显式路由发布时仍应正常触发本地监听器。
+     */
+    @Test
+    public void publishWithRoute_publishesEventOnce() {
+        AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
+        ctx.register(LocalEventBus.class, Recorder.class);
+        ctx.refresh();
+
+        LocalEventBus bus = ctx.getBean(LocalEventBus.class);
+        Recorder rec = ctx.getBean(Recorder.class);
+
+        bus.publish("outbox-topic", "outbox-tag", new SampleEvent("hello"));
+
+        assertEquals(1, rec.calls.get());
+        assertEquals(List.of("hello"), rec.received);
         ctx.close();
     }
 }

@@ -44,4 +44,24 @@ public class LocalEventBus implements ApplicationEventPublisherAware, EventBus {
         }
         publisher.publishEvent(event);
     }
+
+
+    /**
+     * 使用显式路由发布本地事件。
+     * 本地事件总线不连接 MQ，因此路由仅做参数校验，不参与事件分发。
+     *
+     * @param topic MQ 主题
+     * @param tag MQ 标签
+     * @param event 待发布的事件对象
+     */
+    @Override
+    public void publish(String topic, String tag, Object event) {
+        if (topic == null || topic.isBlank()) {
+            throw new IllegalArgumentException("topic 不能为空");
+        }
+        if (tag == null || tag.isBlank()) {
+            throw new IllegalArgumentException("tag 不能为空");
+        }
+        publish(event);
+    }
 }

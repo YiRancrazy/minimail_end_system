@@ -70,6 +70,20 @@ class RocketMqEventBusTest {
     }
 
     @Test
+    void publishWithRoute_usesProvidedTopicAndTag() throws Exception {
+        TransactionMQProducer mockProducer = Mockito.mock(TransactionMQProducer.class);
+        RocketMqEventBus bus = new RocketMqEventBus("127.0.0.1:9876", "minimall-events");
+        setProducer(bus, mockProducer);
+
+        bus.publish("outbox-topic", "outbox-tag", new DummyEvent("x"));
+
+        ArgumentCaptor<Message> captor = ArgumentCaptor.forClass(Message.class);
+        Mockito.verify(mockProducer).send(captor.capture());
+        assertEquals("outbox-topic", captor.getValue().getTopic());
+        assertEquals("outbox-tag", captor.getValue().getTags());
+    }
+
+    @Test
     void publishInTx_passesTransactionIdToLocalTx() throws Exception {
         TransactionMQProducer mockProducer = Mockito.mock(TransactionMQProducer.class);
         TransactionSendResult result = new TransactionSendResult();

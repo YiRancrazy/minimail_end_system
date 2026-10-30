@@ -147,18 +147,39 @@ public class RocketMqEventBus implements EventBus {
      * @throws IllegalStateException 生产者未启动或消息发送失败时抛出
      */
     public void publish(Object event) {
+        publish(topic, MqEventJsonCodec.tagFor(event.getClass()), event);
+    }
+
+
+    /**
+     * 使用显式路由发送事件消息。
+     *
+     * @param topic RocketMQ 主题
+     * @param tag RocketMQ 标签
+     * @param event 待发布的事件对象
+     * @throws IllegalStateException 生产者未启动或消息发送失败时抛出
+     */
+    @Override
+    public void publish(String topic, String tag, Object event) {
         if (producer == null) {
             throw new IllegalStateException("RocketMQ 生产者未启动");
         }
+        if (topic == null || topic.isBlank()) {
+            throw new IllegalArgumentException("topic 不能为空");
+        }
+        if (tag == null || tag.isBlank()) {
+            throw new IllegalArgumentException("tag 不能为空");
+        }
         try {
-            Message msg = new Message(topic, MqEventJsonCodec.tagFor(event.getClass()),
-                MqEventJsonCodec.encode(event));
+            Message msg = new Message(topic, tag, MqEventJsonCodec.encode(event));
             attachTraceId(msg);
             producer.send(msg);
-            log.debug("rocketmq 发送成功，event={}", event.getClass().getSimpleName());
+            log.debug("rocketmq 发送成功，event={}，topic={}，tag={}",
+                event.getClass().getSimpleName(), topic, tag);
         }
         catch (Exception e) {
-            log.error("rocketmq 发送失败，event={}", event.getClass().getSimpleName(), e);
+            log.error("rocketmq 发送失败，event={}，topic={}，tag={}",
+                event.getClass().getSimpleName(), topic, tag, e);
             throw new IllegalStateException("RocketMQ 消息发送失败", e);
         }
     }

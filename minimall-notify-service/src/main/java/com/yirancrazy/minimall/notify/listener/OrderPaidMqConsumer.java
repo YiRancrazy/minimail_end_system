@@ -10,12 +10,14 @@ import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import com.yirancrazy.minimall.api.dto.order.OrderPaidDTO;
 import com.yirancrazy.minimall.common.event.RocketMqEventConsumer;
+import com.yirancrazy.minimall.common.exception.BizException;
+import com.yirancrazy.minimall.notify.constant.NotifyCodeEnum;
 import com.yirancrazy.minimall.notify.service.NotifyService;
 
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: OrderPaidMqConsumer 类型，承载相关业务能力。
+ * @Description: 订单支付监听器
  * @Version: 1.0
  * @DateTime: 2026/10/16
  **/
@@ -77,30 +79,45 @@ public class OrderPaidMqConsumer {
 
 
     /**
-     * 处理Paid。
-     * @param event 事件
+     * 判断订单支付事件是否被消费过，如果未消费则进行消费，否则忽略。
+     * @param event 订单支付事件
      */
     void onPaid(OrderPaidDTO event) {
         if (event == null || event.getOrderId() == null) {
             return;
         }
         String key = "notify:order:paid:" + event.getOrderId();
-        Boolean first = redis.opsForValue().setIfAbsent(key, "1", IDEMPOTENT_TTL);
-        if (Boolean.FALSE.equals(first)) {
-            log.info("重复订单支付事件已跳过，orderId={}", event.getOrderId());
-            return;
-        }
+        // 防止 Redis 读取失败，导致业务逻辑错误
+        String redisKey = null;
         try {
-            String title = "订单支付成功";
-            String content = "订单 " + event.getOrderId() + " 已支付，金额 " + event.getAmount();
-            String bizId = "ORDER_PAID:" + event.getOrderId();
-            notifyService.push(event.getUserId(), title, content, bizId);
-            log.info("已通过 mq 通知用户 {} 订单 {} 支付成功", event.getUserId(), event.getOrderId());
+            redisKey = redis.opsForValue().get(key);
         }
         catch (Exception e) {
-            // DB 落库失败时删除幂等键：否则 RocketMQ 重投会被 SETNX 挡掉，支付成功通知永久丢失
-            redis.delete(key);
-            throw e;
+            log.warn("Redis 读取失败, 降级到数据库唯一键兜底, key={}", key, e);
+        }
+
+        // 如果 redisKey 不为空，说明之前已经处理过这个订单支付事件
+        if (redisKey != null) {
+            return;
+        }
+
+        String title = "订单支付成功";
+        String content = "订单 " + event.getOrderId() + " 已支付，金额 " + event.getAmount();
+        String bizId = "ORDER_PAID:" + event.getOrderId();
+        boolean pushResult = notifyService.push(event.getUserId(), title, content, bizId);
+
+        // 如果 pushResult 为 true，说明通知成功，可以设置幂等键
+        if (pushResult) {
+            try {
+                redis.opsForValue().setIfAbsent(key, "1", IDEMPOTENT_TTL);
+            }
+            catch (Exception e) {
+                log.warn("Redis 写入失败, 已忽略, key={}", key, e);
+            }
+            log.info("已通过 mq 通知用户 {} 订单 {} 支付成功", event.getUserId(), event.getOrderId());
+        }
+        else {
+            throw new BizException(NotifyCodeEnum.NOTIFY_SAVE_FAILED);
         }
     }
 }

@@ -1,30 +1,29 @@
 package com.yirancrazy.minimall.goods.dto;
 
-import java.math.BigDecimal;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import java.math.BigDecimal;
 import lombok.Data;
-
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: SkuUpdateDTO 数据传输对象。
+ * @Description: 承载商家修改 SKU 名称、价格和库存的增量字段。
  * @Version: 1.0
  * @DateTime: 2026/10/16
- **/
+ */
 @Data
-public class SkuUpdateDTO {
+public class SkuUpdateDto {
 
-    @NotBlank(message = "skuName cannot be blank")
-    @Size(min = 1, max = 200, message = "skuName length must be between 1 and 200")
-    private String skuName;
+  @NotBlank(message = "skuName cannot be blank")
+  @Size(min = 1, max = 200, message = "skuName length must be between 1 and 200")
+  private String skuName;
 
-    @Min(value = 0, message = "price must be non-negative")
-    @Digits(integer = 10, fraction = 2, message = "price must have at most 2 decimal places")
-    private BigDecimal price;
+  @Min(value = 0, message = "price must be non-negative")
+  @Digits(integer = 10, fraction = 2, message = "price must have at most 2 decimal places")
+  private BigDecimal price;
 
-    @Min(value = 0, message = "stock must be non-negative")
-    private Integer stock;
+  @Min(value = 0, message = "stock must be non-negative")
+  private Integer stock;
 }

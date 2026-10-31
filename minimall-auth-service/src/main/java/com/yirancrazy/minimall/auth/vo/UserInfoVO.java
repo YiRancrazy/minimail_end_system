@@ -3,20 +3,18 @@ package com.yirancrazy.minimall.auth.vo;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
-
-@Data
-
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: UserInfoVO 视图对象。
+ * @Description: 当前登录者的安全视图；区分认证账号 ID 与业务用户 ID，并携带 JWT 中的账号、角色信息。
  * @Version: 1.0
  * @DateTime: 2026/10/16
- **/
+ */
+@Data
 @AllArgsConstructor
-public class UserInfoVO {
-    private Long authUserId;
-    private Long userId;
-    private String account;
-    private String role;
-    private Long roleId;
+public class UserInfoVo {
+  private Long authUserId;
+  private Long userId;
+  private String account;
+  private String role;
+  private Long roleId;
 }

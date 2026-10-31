@@ -6,24 +6,22 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: StockInitDTO 数据传输对象。
+ * @Description: 为指定 SKU 和商家建立初始库存.
  * @Version: 1.0
  * @DateTime: 2026/10/16
- **/
+ */
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class StockInitDTO {
-    @NotNull(message = "SKU ID不能为空")
-    private Long skuId;
+public class StockInitDto {
+  @NotNull(message = "SKU ID不能为空")
+  private Long skuId;
 
-    @NotNull(message = "商家ID不能为空")
-    private Long merchantId;
+  @NotNull(message = "商家ID不能为空")
+  private Long merchantId;
 
-
-    @Min(value = 0, message = "初始库存不能为负数")
-    private Integer initialQuantity;
+  @Min(value = 0, message = "初始库存不能为负数")
+  private Integer initialQuantity;
 }

@@ -5,39 +5,38 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
-
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: QualificationSubmitDTO 数据传输对象。
+ * @Description: 商家资质提交请求；承载主体、证照、法人、联系方式、身份证和银行卡字段，并通过 Jakarta Validation 约束必填项与基础格式。
  * @Version: 1.0
  * @DateTime: 2026/10/16
- **/
+ */
 @Data
-public class QualificationSubmitDTO {
+public class QualificationSubmitDto {
 
-    @NotBlank(message = "merchantName must not be blank")
-    @Size(max = 64, message = "merchantName must be <= 64 chars")
-    private String merchantName;
+  @NotBlank(message = "merchantName must not be blank")
+  @Size(max = 64, message = "merchantName must be <= 64 chars")
+  private String merchantName;
 
-    @NotBlank(message = "licenseNo must not be blank")
-    @Size(max = 64, message = "licenseNo must be <= 64 chars")
-    private String licenseNo;
+  @NotBlank(message = "licenseNo must not be blank")
+  @Size(max = 64, message = "licenseNo must be <= 64 chars")
+  private String licenseNo;
 
-    @Size(max = 512, message = "licenseImageUrl must be <= 512 chars")
-    private String licenseImageUrl;
+  @Size(max = 512, message = "licenseImageUrl must be <= 512 chars")
+  private String licenseImageUrl;
 
-    @Size(max = 64, message = "legalPerson must be <= 64 chars")
-    private String legalPerson;
+  @Size(max = 64, message = "legalPerson must be <= 64 chars")
+  private String legalPerson;
 
-    @Pattern(regexp = "^$|^1\\d{10}$", message = "legalPhone must be a valid mobile number")
-    private String legalPhone;
+  @Pattern(regexp = "^$|^1\\d{10}$", message = "legalPhone must be a valid mobile number")
+  private String legalPhone;
 
-    @Pattern(regexp = "^$|^\\d{15,18}$", message = "idCardNo must be 15-18 digits")
-    private String idCardNo;
+  @Pattern(regexp = "^$|^\\d{15,18}$", message = "idCardNo must be 15-18 digits")
+  private String idCardNo;
 
-    @Size(max = 64, message = "businessLicenseNo must be <= 64 chars")
-    private String businessLicenseNo;
+  @Size(max = 64, message = "businessLicenseNo must be <= 64 chars")
+  private String businessLicenseNo;
 
-    @Pattern(regexp = "^$|^\\d{8,30}$", message = "bankAccount must be 8-30 digits")
-    private String bankAccount;
+  @Pattern(regexp = "^$|^\\d{8,30}$", message = "bankAccount must be 8-30 digits")
+  private String bankAccount;
 }

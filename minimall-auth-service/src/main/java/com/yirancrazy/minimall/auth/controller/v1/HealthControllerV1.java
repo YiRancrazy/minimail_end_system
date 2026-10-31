@@ -1,26 +1,23 @@
 package com.yirancrazy.minimall.auth.controller.v1;
 
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
 import com.yirancrazy.minimall.common.result.Result;
-
+import org.springframework.web.bind.annotation.GetMapping;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: HealthControllerV1 控制器，提供相关接口。
+ * @Description: 认证服务的轻量健康检查接口；不依赖数据库、Redis 或远程服务，用于确认进程可响应请求。
  * @Version: 1.0
  * @DateTime: 2026/10/16
- **/
+ */
 public class HealthControllerV1 {
 
-
-    /**
-     * 执行 health 方法。
-     * @return 统一响应结果
-     */
-    @GetMapping("/health")
-    public Result<String> health() {
-        return Result.success("auth-ok");
-    }
+  /**
+   * 返回认证服务固定的存活标识。
+   *
+   * @return 成功响应，数据为 {@code auth-ok}
+   */
+  @GetMapping("/health")
+  public Result<String> health() {
+    return Result.success("auth-ok");
+  }
 }

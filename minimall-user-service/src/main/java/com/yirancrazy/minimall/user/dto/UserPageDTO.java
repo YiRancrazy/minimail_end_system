@@ -1,19 +1,18 @@
 package com.yirancrazy.minimall.user.dto;
 
+import com.yirancrazy.minimall.common.dto.CursorPageDto;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import com.yirancrazy.minimall.common.dto.CursorPageDTO;
-
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: UserPageDTO 数据传输对象。
+ * @Description: 用户列表的游标分页参数，支持按昵称关键字模糊筛选.
  * @Version: 1.0
  * @DateTime: 2026/10/16
- **/
+ */
 @Data
 @EqualsAndHashCode(callSuper = true)
-public class UserPageDTO extends CursorPageDTO {
+public class UserPageDto extends CursorPageDto {
 
-    private String keyword;
+  private String keyword;
 }

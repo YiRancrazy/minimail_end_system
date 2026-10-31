@@ -50,7 +50,7 @@
 ./mvnw test
 ./mvnw -pl minimall-order-service test
 ./mvnw -pl minimall-order-service test -Dtest=OrderServiceImplTest
-./mvnw -pl minimall-order-service test -Dtest=OrderServiceImplTest#create
+./mvnw -pl minimall-order-service test -Dtest=OrderServiceImplTest#testCreateSetsPendingStatus
 
 # 启动服务；prod 仅在明确需要时使用
 ./mvnw -pl minimall-order-service spring-boot:run
@@ -67,7 +67,7 @@
 ---
 
 ## 3. 提交信息规范
-git 提交前检查新增Java代码是否符合编码规范。请参考 [.dev/docs/3. 开发阶段/01-Java编码规范.md](.dev/docs/3.%20开发阶段/01-Java编码规范.md)。
+git 提交前检查新增 Java 代码是否符合 Google Checks 与编码规范。请参考 [.dev/docs/3. 开发阶段/01-Java编码规范.md](.dev/docs/3.%20开发阶段/01-Java编码规范.md) 和 [`config/checkstyle/checkstyle.xml`](config/checkstyle/checkstyle.xml)。
 - 运行 `./mvnw checkstyle:check`，确保 0 violations
 提交规则以 [.dev/docs/3. 开发阶段/06-Git 提交规范.md](.dev/docs/3.%20开发阶段/06-Git%20提交规范.md) 为唯一来源；本节只保留高频摘要。
 
@@ -119,7 +119,7 @@ docs(ai-guidelines): 更新提交规范
 │   ├── XxxManager.java                   # extends IService<T>
 │   └── impl/XxxManagerImpl.java          # extends ServiceImpl<M,T> + @Manager
 ├── mapper/XxxMapper.java                 # extends BaseMapper<T>
-├── entity/XxxPO.java                     # extends BasePO
+├── entity/XxxPo.java                     # extends BasePO
 ├── constant/                             # enum / code enum，按需
 ├── dto/ vo/                              # 服务边界对象，按需
 └── listener/ consumer/ sse/ util/        # 按需
@@ -128,7 +128,7 @@ docs(ai-guidelines): 更新提交规范
 - **Controller**：外部类名 `XxxControllerV1`，内部类名 `InternalXxxControllerV1`；统一返回 `Result<T>`。
 - **Service**：接口与实现分离；禁止继承 `IService` / `ServiceImpl`，禁止直接调用 Mapper 或编排多个 Mapper。
 - **Manager**：接口继承 `IService<T>`，实现继承 `ServiceImpl<M,T>`；实现类只加 `@Manager`，不得叠加 `@Service`。
-- **POJO**：`XxxPO` 仅用于持久化，`XxxDTO` 用于入参，`XxxVO` 用于出参；跨服务 DTO 放在 `minimall-api/dto/`。
+- **POJO**：`XxxPo` 仅用于持久化，`XxxDto` 用于入参，`XxxVo` 用于出参；跨服务 DTO 放在 `minimall-api/dto/`。
 - **禁止新增 `bo/`**：仓库当前没有 BO 层；即使按需文档仍出现旧目录，也以本条为准。
 - **禁止在服务模块自建 `feign/`**：FeignClient 与 FallbackFactory 统一放在 `minimall-api/feign/`。
 - **实体**：必须继承 `BasePO`，复用 `id/createTime/updateTime/isDeleted`；数据库列由驼峰转下划线映射。
@@ -136,17 +136,25 @@ docs(ai-guidelines): 更新提交规范
 
 ### 4.1 Java 编码硬约束
 
+**优先级**：
+- Java 编码风格发生冲突时，以 [`config/checkstyle/checkstyle.xml`](config/checkstyle/checkstyle.xml)（Google Checks）为可执行基线。
+- Google Checks 未覆盖的风格规则，退化到《阿里巴巴 Java 开发手册（黄山版）》。
+- 分层架构、安全、异常语义、业务领域约束优先于通用编码风格，不因 Google 风格回退。
+
 **命名**：
 - 包名全小写点分隔：`com.yirancrazy.minimall.user`
 - 类名大驼峰名词：`UserService`、`OrderControllerV1`
 - 方法名小驼峰动词+名词：`getUserById`
 - 常量全大写下划线：`MAX_RETRY_COUNT`
 - 异常类以 `Exception` 结尾，必须含错误码+消息
+- 缩写按单词处理：`UserDto`、`SmsService`、`JwtUtil`；新增类型禁止 `UserDTO`、`UserPO`、`UserVO`，存量 `BasePO` 等类型逐步迁移
 
 **格式**：
-- 缩进 4 空格，禁 Tab；行宽 ≤ 120 字符
-- K&R 括号风格；禁通配符 `.*` import
-- 类成员序：常量 → 静态变量 → 实例变量 → 构造 → 静态方法 → 实例方法 → 内部类
+- 基础缩进 2 空格，续行缩进 4 空格；禁 Tab
+- 行宽 ≤ 100 字符；package、import、URL 等按 Checkstyle 配置豁免
+- 左花括号不换行；`case` / `default` 的左花括号换行；`else`、`catch`、`finally` 紧跟前一个右花括号
+- 静态 import 独立成组置于普通 import 之前，组内按字母排序；禁通配符 `.*` import
+- 重载方法必须相邻；构造器集中声明；变量声明尽量靠近首次使用
 
 **集合与泛型**：
 - 禁裸 `List list = new ArrayList()`，必须泛型
@@ -167,29 +175,30 @@ docs(ai-guidelines): 更新提交规范
 - 禁 `@SneakyThrows`（掩盖异常）
 
 **注释**：
-- **类注释**：必须包含 `@Author`、`@Description`、`@Version`、`@DateTime`；示例：
+- **类注释**：采用 Google Javadoc 排版，并包含 `@Author`、`@Description`、`@Version`、`@DateTime`；直接以 `@Author` 开始，不写摘要首行或摘要后的空行；示例：
 
    ```java
    /**
-    * @Author: 张三
-    * @Description: 用户服务，提供用户注册、登录、信息查询等能力。
+    * @Author: Zhang San
+    * @Description: Provides user registration, login, and profile query capabilities.
     * @Version: 1.0
     * @DateTime: 2026/7/28 16:21
-    **/
+    */
    public class UserService {
    }
    ```
 
-- **方法注释**：公开方法必须 Javadoc，含 `@param`、`@return`、`@throws`；示例：
+- **方法注释**：公开及受保护方法必须有 Javadoc，`@Override`、`@Test` 按 Google Checks 豁免；`@param`、`@return` 按需填写，声明异常使用 `@throws` 记录；示例：
 
    ```java
    /**
-    * 根据用户ID查询用户信息。
-    * @param userId 用户ID，必须 > 0
-    * @return 用户VO；若不存在返回 null
-    * @throws BizException 当 userId 非法时
+    * Returns a user by ID.
+    *
+    * @param userId user ID, which must be greater than zero
+    * @return user view, or null when the user does not exist
+    * @throws BizException when the user ID is invalid
     */
-   public UserVO getById(Long userId) {
+   public UserVo getById(Long userId) {
    }
    ```
 
@@ -205,7 +214,7 @@ docs(ai-guidelines): 更新提交规范
 - 业务失败必须 `throw new BizException(XxxCodeEnum.SPECIFIC_ERROR)`，不得以 `false`、`-1`、`null` 吞掉语义。
 - Controller 禁止 `try-catch`；由 `GlobalExceptionHandler` 处理业务异常、参数异常与未知异常。
 - 未知异常统一返回 `CommonCode.SYS_ERROR`（“系统繁忙”），不得暴露堆栈或内部异常文本。
-- 请求体使用 `@Valid @RequestBody XxxDTO`，DTO 字段添加具体的 Jakarta Validation 约束。
+- 请求体使用 `@Valid @RequestBody XxxDto`，DTO 字段添加具体的 Jakarta Validation 约束。
 - 禁止用 `@RequestParam Map` 或多个 `@RequestParam` 拼装业务对象。
 - `userId/userName/role` 来自 JWT claim / SecurityContext / 可信 Feign Header，禁止接受前端传入的身份字段。
 - 幂等写接口使用仓库已有 `@Idempotent` 机制，并定义稳定的幂等键。
@@ -253,7 +262,7 @@ docs(ai-guidelines): 更新提交规范
 1. `TODO(spec): describe ...` 等空 Javadoc。
 2. `@Service` 与 `@Manager` 叠加。
 3. `po.setStatus("PENDING")` 或 `enum.name()` 持久化新状态。
-4. Controller 直接返回 `XxxPO`。
+4. Controller 直接返回 `XxxPo`。
 5. Service 以 `return false/null/-1` 表达业务失败。
 6. 裸 class 形式的 Service；接口与 `service/impl/` 必须分离。
 
@@ -294,7 +303,7 @@ docs(ai-guidelines): 更新提交规范
 | 测试策略或覆盖率 | [.dev/docs/4. 测试阶段/01-测试策略文档.md](.dev/docs/4.%20测试阶段/01-测试策略文档.md) |
 | 测试用例 | [.dev/docs/4. 测试阶段/02-测试用例文档.md](.dev/docs/4.%20测试阶段/02-测试用例文档.md) |
 | 自动化测试脚本 | [.dev/docs/4. 测试阶段/04-自动化测试规范.md](.dev/docs/4.%20测试阶段/04-自动化测试规范.md) |
-| CI/CD、部署、镜像 | [.dev/docs/5. 部署阶段/01-构建与部署文档（CI-CD）.md](.dev/docs/5.%20部署阶段/01-构建与部署文档%28CI-CD%29.md) |
+| CI/CD、部署、镜像 | [.dev/docs/5. 部署阶段/01-构建与部署文档（CI-CD）.md](.dev/docs/5.%20部署阶段/01-构建与部署文档（CI-CD）.md) |
 | Profile 与环境配置 | [.dev/docs/5. 部署阶段/04-环境配置说明.md](.dev/docs/5.%20部署阶段/04-环境配置说明.md) |
 | 日志、监控、链路追踪 | [.dev/docs/5. 部署阶段/05-日志与监控约定.md](.dev/docs/5.%20部署阶段/05-日志与监控约定.md) |
 | 线上故障 | [.dev/docs/5. 部署阶段/08-故障排查手册.md](.dev/docs/5.%20部署阶段/08-故障排查手册.md) |

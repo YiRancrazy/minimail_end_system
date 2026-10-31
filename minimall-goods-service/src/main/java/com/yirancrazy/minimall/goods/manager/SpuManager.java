@@ -1,14 +1,12 @@
 package com.yirancrazy.minimall.goods.manager;
 
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.yirancrazy.minimall.goods.entity.SpuPO;
-
+import com.yirancrazy.minimall.goods.entity.SpuPo;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: SpuManager 管理器接口，封装数据访问能力。
+ * @Description: 定义 t_goods_spu 的 MyBatis-Plus 通用读写能力，由 SpuManagerImpl 实现。
  * @Version: 1.0
  * @DateTime: 2026/10/16
- **/
-public interface SpuManager extends IService<SpuPO> {
-}
+ */
+public interface SpuManager extends IService<SpuPo> {}

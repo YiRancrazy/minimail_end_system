@@ -4,18 +4,17 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: UserSnapshotDTO 数据传输对象。
+ * @Description: 其他服务读取的用户身份快照，包含用户 ID、昵称和角色.
  * @Version: 1.0
  * @DateTime: 2026/10/16
- **/
+ */
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class UserSnapshotDTO {
-    private Long userId;
-    private String nickname;
-    private String role;
+public class UserSnapshotDto {
+  private Long userId;
+  private String nickname;
+  private String role;
 }

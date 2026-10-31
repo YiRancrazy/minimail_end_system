@@ -1,34 +1,28 @@
 package com.yirancrazy.minimall.notify.entity;
 
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.yirancrazy.minimall.common.base.BasePo;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import com.yirancrazy.minimall.common.base.BasePO;
-
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: PreferencePO 持久化对象，对应数据库表。
+ * @Description: 映射 t_notify_preference 用户通知偏好，保存单个通知类别在站点、短信和邮件渠道上的开关.
  * @Version: 1.0
  * @DateTime: 2026/10/16
- **/
+ */
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName("t_notify_preference")
-public class PreferencePO extends BasePO {
+public class PreferencePo extends BasePo {
 
+  private Long userId;
 
-    private Long userId;
+  private String categoryCode;
 
+  private Integer siteEnabled;
 
-    private String categoryCode;
+  private Integer smsEnabled;
 
-
-    private Integer siteEnabled;
-
-
-    private Integer smsEnabled;
-
-
-    private Integer emailEnabled;
+  private Integer emailEnabled;
 }

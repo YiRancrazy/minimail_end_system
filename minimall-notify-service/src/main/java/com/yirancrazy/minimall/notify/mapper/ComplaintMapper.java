@@ -1,16 +1,14 @@
 package com.yirancrazy.minimall.notify.mapper;
 
-import org.apache.ibatis.annotations.Mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.yirancrazy.minimall.notify.entity.ComplaintPO;
-
+import com.yirancrazy.minimall.notify.entity.ComplaintPo;
+import org.apache.ibatis.annotations.Mapper;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: ComplaintMapper 数据访问接口，映射数据库操作。
+ * @Description: 提供 t_notify_complaint 投诉记录的基础 MyBatis-Plus 持久化能力，不定义额外 SQL.
  * @Version: 1.0
  * @DateTime: 2026/10/16
- **/
+ */
 @Mapper
-public interface ComplaintMapper extends BaseMapper<ComplaintPO> {
-}
+public interface ComplaintMapper extends BaseMapper<ComplaintPo> {}

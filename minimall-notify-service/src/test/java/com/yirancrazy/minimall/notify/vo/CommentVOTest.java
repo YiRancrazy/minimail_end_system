@@ -1,61 +1,66 @@
 package com.yirancrazy.minimall.notify.vo;
 
-import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import com.yirancrazy.minimall.common.util.MinioUtil;
-import com.yirancrazy.minimall.notify.entity.CommentPO;
 
+import com.yirancrazy.minimall.common.util.MinioUtil;
+import com.yirancrazy.minimall.notify.entity.CommentPo;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: CommentVOTest 单元测试。
+ * @Description: 验证评价视图转换对图片对象键、空图片和缺失 MinioUtil 三种场景的处理结果.
  * @Version: 1.0
  * @DateTime: 2026/10/16
- **/
-public class CommentVOTest {
+ */
+public class CommentVoTest {
 
+  /**
+   * 测试目标：验证评价视图会把逗号分隔的图片对象键转换为公开地址。
+   *
+   * 前置：images 为 a.jpg,b.jpg，MinioUtil 为两个对象键返回固定 URL。
+   * 预期：视图 images 为两个公开 URL 的逗号拼接结果。
+   */
+  public void fromWithMinioUtilResolvesImages() {
+    CommentPo po = new CommentPo();
+    po.setImages("a.jpg,b.jpg");
+    MinioUtil minioUtil = mock(MinioUtil.class);
+    when(minioUtil.resolvePublicUrl("a.jpg")).thenReturn("http://minio/a.jpg?token");
+    when(minioUtil.resolvePublicUrl("b.jpg")).thenReturn("http://minio/b.jpg?token");
 
-    /**
-     * 执行 from_withMinioUtil_resolvesImages 方法。
-     */
-    public void from_withMinioUtil_resolvesImages() {
-        CommentPO po = new CommentPO();
-        po.setImages("a.jpg,b.jpg");
-        MinioUtil minioUtil = mock(MinioUtil.class);
-        when(minioUtil.resolvePublicUrl("a.jpg")).thenReturn("http://minio/a.jpg?token");
-        when(minioUtil.resolvePublicUrl("b.jpg")).thenReturn("http://minio/b.jpg?token");
+    CommentVo vo = CommentVo.from(po, minioUtil);
 
-        CommentVO vo = CommentVO.from(po, minioUtil);
+    assertEquals("http://minio/a.jpg?token,http://minio/b.jpg?token", vo.getImages());
+  }
 
-        assertEquals("http://minio/a.jpg?token,http://minio/b.jpg?token", vo.getImages());
-    }
+  /**
+   * 测试目标：验证原评价图片为空时视图仍保持 null。
+   *
+   * 前置：CommentPo.images 为 null，传入 MinioUtil Mock。
+   * 预期：CommentVo.images 为 null。
+   */
+  public void fromResolvesNullImagesToNull() {
+    CommentPo po = new CommentPo();
+    po.setImages(null);
 
+    CommentVo vo = CommentVo.from(po, mock(MinioUtil.class));
 
-    /**
-     * 执行 from_resolvesNullImagesToNull 方法。
-     */
-    public void from_resolvesNullImagesToNull() {
-        CommentPO po = new CommentPO();
-        po.setImages(null);
+    assertNull(vo.getImages());
+  }
 
-        CommentVO vo = CommentVO.from(po, mock(MinioUtil.class));
+  /**
+   * 测试目标：验证没有 MinioUtil 时评价视图保留原始图片对象键。
+   *
+   * 前置：images 为 a.jpg,b.jpg，调用不传 MinioUtil 的重载。
+   * 预期：视图 images 与原始值一致。
+   */
+  public void fromWithoutMinioUtilKeepsRawImages() {
+    CommentPo po = new CommentPo();
+    po.setImages("a.jpg,b.jpg");
 
-        assertNull(vo.getImages());
-    }
+    CommentVo vo = CommentVo.from(po);
 
-
-    /**
-     * 执行 from_withoutMinioUtil_keepsRawImages 方法。
-     */
-    public void from_withoutMinioUtil_keepsRawImages() {
-        CommentPO po = new CommentPO();
-        po.setImages("a.jpg,b.jpg");
-
-        CommentVO vo = CommentVO.from(po);
-
-        assertEquals("a.jpg,b.jpg", vo.getImages());
-    }
+    assertEquals("a.jpg,b.jpg", vo.getImages());
+  }
 }

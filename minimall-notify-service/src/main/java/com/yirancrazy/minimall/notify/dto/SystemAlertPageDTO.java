@@ -1,17 +1,15 @@
 package com.yirancrazy.minimall.notify.dto;
 
+import com.yirancrazy.minimall.common.dto.CursorPageDto;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import com.yirancrazy.minimall.common.dto.CursorPageDTO;
-
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: SystemAlertPageDTO 数据传输对象。
+ * @Description: 承载平台系统告警列表的游标分页条件，不包含额外业务筛选字段.
  * @Version: 1.0
  * @DateTime: 2026/10/16
- **/
+ */
 @Data
 @EqualsAndHashCode(callSuper = true)
-public class SystemAlertPageDTO extends CursorPageDTO {
-}
+public class SystemAlertPageDto extends CursorPageDto {}

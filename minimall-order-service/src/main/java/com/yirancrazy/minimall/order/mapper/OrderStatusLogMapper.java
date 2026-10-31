@@ -1,14 +1,14 @@
 package com.yirancrazy.minimall.order.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.yirancrazy.minimall.order.entity.OrderStatusLogPO;
-
+import com.yirancrazy.minimall.order.entity.OrderStatusLogPo;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: OrderStatusLogMapper 数据访问接口，映射数据库操作。
+ * @Description: 提供 OrderStatusLogPo 的 MyBatis-Plus 基础数据访问能力。
+ *   业务边界：只声明数据库查询和条件更新接口，不承载业务规则或跨服务调用。
+ *   使用场景：由对应 Manager 注入并调用。
  * @Version: 1.0
  * @DateTime: 2026/10/16
- **/
-public interface OrderStatusLogMapper extends BaseMapper<OrderStatusLogPO> {
-}
+ */
+public interface OrderStatusLogMapper extends BaseMapper<OrderStatusLogPo> {}

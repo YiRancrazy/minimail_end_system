@@ -5,37 +5,36 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
-
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: AddressCreateDTO 数据传输对象。
+ * @Description: 新增收货地址的请求模型，约束收件人、手机号及四级地址字段的必填、格式和长度.
  * @Version: 1.0
  * @DateTime: 2026/10/16
- **/
+ */
 @Data
-public class AddressCreateDTO {
+public class AddressCreateDto {
 
-    @NotBlank(message = "receiver cannot be blank")
-    @Size(max = 64, message = "receiver length must be <= 64")
-    private String receiver;
+  @NotBlank(message = "receiver cannot be blank")
+  @Size(max = 64, message = "receiver length must be <= 64")
+  private String receiver;
 
-    @NotBlank(message = "phone cannot be blank")
-    @Pattern(regexp = "^1[3-9]\\d{9}$", message = "phone format is invalid")
-    private String phone;
+  @NotBlank(message = "phone cannot be blank")
+  @Pattern(regexp = "^1[3-9]\\d{9}$", message = "phone format is invalid")
+  private String phone;
 
-    @NotBlank(message = "province cannot be blank")
-    @Size(max = 32, message = "province length must be <= 32")
-    private String province;
+  @NotBlank(message = "province cannot be blank")
+  @Size(max = 32, message = "province length must be <= 32")
+  private String province;
 
-    @NotBlank(message = "city cannot be blank")
-    @Size(max = 32, message = "city length must be <= 32")
-    private String city;
+  @NotBlank(message = "city cannot be blank")
+  @Size(max = 32, message = "city length must be <= 32")
+  private String city;
 
-    @NotBlank(message = "district cannot be blank")
-    @Size(max = 32, message = "district length must be <= 32")
-    private String district;
+  @NotBlank(message = "district cannot be blank")
+  @Size(max = 32, message = "district length must be <= 32")
+  private String district;
 
-    @NotBlank(message = "detail cannot be blank")
-    @Size(max = 256, message = "detail length must be <= 256")
-    private String detail;
+  @NotBlank(message = "detail cannot be blank")
+  @Size(max = 256, message = "detail length must be <= 256")
+  private String detail;
 }

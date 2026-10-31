@@ -5,18 +5,15 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-
-
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: RefreshTokenDTO 数据传输对象。
+ * @Description: 使用刷新令牌换取新访问令牌的请求.
  * @Version: 1.0
  * @DateTime: 2026/10/16
- **/
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class RefreshTokenDTO {
-    @NotBlank
-    private String refreshToken;
+public class RefreshTokenDto {
+  @NotBlank private String refreshToken;
 }

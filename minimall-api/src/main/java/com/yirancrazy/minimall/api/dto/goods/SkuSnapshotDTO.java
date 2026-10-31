@@ -5,21 +5,20 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: SkuSnapshotDTO 数据传输对象。
+ * @Description: 跨服务传递的 SKU 下单快照，提供名称、价格、库存和商家归属.
  * @Version: 1.0
  * @DateTime: 2026/10/16
- **/
+ */
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class SkuSnapshotDTO {
-    private Long skuId;
-    private Long spuId;
-    private String skuName;
-    private BigDecimal price;
-    private Integer stock;
-    private Long merchantId;
+public class SkuSnapshotDto {
+  private Long skuId;
+  private Long spuId;
+  private String skuName;
+  private BigDecimal price;
+  private Integer stock;
+  private Long merchantId;
 }

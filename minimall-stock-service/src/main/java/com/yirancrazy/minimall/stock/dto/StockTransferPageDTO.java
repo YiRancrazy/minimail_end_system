@@ -1,20 +1,19 @@
 package com.yirancrazy.minimall.stock.dto;
 
+import com.yirancrazy.minimall.common.dto.CursorPageDto;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import com.yirancrazy.minimall.common.dto.CursorPageDTO;
-
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: StockTransferPageDTO 数据传输对象。
+ * @Description: 定义库存调拨记录的游标分页及源、目标 SKU 筛选条件。
  * @Version: 1.0
  * @DateTime: 2026/10/16
- **/
+ */
 @Data
 @EqualsAndHashCode(callSuper = true)
-public class StockTransferPageDTO extends CursorPageDTO {
+public class StockTransferPageDto extends CursorPageDto {
 
-    private Long fromSkuId;
-    private Long toSkuId;
+  private Long fromSkuId;
+  private Long toSkuId;
 }

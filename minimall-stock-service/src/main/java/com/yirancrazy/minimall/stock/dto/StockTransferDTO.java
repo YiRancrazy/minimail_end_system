@@ -4,29 +4,26 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
-
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: StockTransferDTO 数据传输对象。
+ * @Description: 承载平台在源 SKU 和目标 SKU 之间调拨可用库存的请求数据。
  * @Version: 1.0
  * @DateTime: 2026/10/16
- **/
+ */
 @Data
-public class StockTransferDTO {
+public class StockTransferDto {
 
-    @NotNull(message = "fromSkuId cannot be null")
-    private Long fromSkuId;
+  @NotNull(message = "fromSkuId cannot be null")
+  private Long fromSkuId;
 
-    @NotNull(message = "toSkuId cannot be null")
-    private Long toSkuId;
+  @NotNull(message = "toSkuId cannot be null")
+  private Long toSkuId;
 
-    @NotNull(message = "quantity cannot be null")
-    @Min(value = 1, message = "quantity must be >= 1")
-    private Long quantity;
+  @NotNull(message = "quantity cannot be null")
+  @Min(value = 1, message = "quantity must be >= 1")
+  private Long quantity;
 
+  private String reason;
 
-    private String reason;
-
-
-    private Long operatorId;
+  private Long operatorId;
 }

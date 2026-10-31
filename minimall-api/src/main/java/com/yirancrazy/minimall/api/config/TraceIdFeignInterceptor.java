@@ -1,29 +1,28 @@
 package com.yirancrazy.minimall.api.config;
 
-import org.slf4j.MDC;
-import feign.RequestInterceptor;
-import feign.RequestTemplate;
 import com.yirancrazy.minimall.common.filter.TraceIdFilter;
 import com.yirancrazy.minimall.common.result.Result;
-
+import feign.RequestInterceptor;
+import feign.RequestTemplate;
+import org.slf4j.MDC;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: TraceIdFeignInterceptor 类型，承载相关业务能力。
+ * @Description: 将当前 MDC 链路标识写入 Feign 请求头，贯通跨服务调用链.
  * @Version: 1.0
  * @DateTime: 2026/10/16
- **/
+ */
 public class TraceIdFeignInterceptor implements RequestInterceptor {
 
-
-    /**
-     * 执行 apply 方法。
-     * @param template template 参数
-     */
-    public void apply(RequestTemplate template) {
-        String traceId = MDC.get(Result.TRACE_ID_KEY);
-        if (traceId != null && !traceId.isBlank()) {
-            template.header(TraceIdFilter.HEADER, traceId);
-        }
+  /**
+   * 将当前非空 MDC TraceId 写入 Feign 请求头.
+   *
+   * @param template 待补充请求头的 Feign 请求模板
+   */
+  public void apply(RequestTemplate template) {
+    String traceId = MDC.get(Result.TRACE_ID_KEY);
+    if (traceId != null && !traceId.isBlank()) {
+      template.header(TraceIdFilter.HEADER, traceId);
     }
+  }
 }

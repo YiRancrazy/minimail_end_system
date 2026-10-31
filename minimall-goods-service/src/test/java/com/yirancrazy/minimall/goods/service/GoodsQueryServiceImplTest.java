@@ -1,10 +1,5 @@
 package com.yirancrazy.minimall.goods.service;
 
-import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.List;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -14,276 +9,252 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.yirancrazy.minimall.common.exception.BizException;
-import com.yirancrazy.minimall.common.result.CursorPageVO;
+import com.yirancrazy.minimall.common.result.CursorPageVo;
 import com.yirancrazy.minimall.common.util.MinioUtil;
 import com.yirancrazy.minimall.goods.constant.SpuStatusEnum;
-import com.yirancrazy.minimall.goods.dto.GoodsPageDTO;
-import com.yirancrazy.minimall.goods.entity.SkuPO;
-import com.yirancrazy.minimall.goods.entity.SpuPO;
+import com.yirancrazy.minimall.goods.dto.GoodsPageDto;
+import com.yirancrazy.minimall.goods.entity.SkuPo;
+import com.yirancrazy.minimall.goods.entity.SpuPo;
 import com.yirancrazy.minimall.goods.manager.SkuManager;
 import com.yirancrazy.minimall.goods.manager.SpuManager;
 import com.yirancrazy.minimall.goods.search.SpuSearchService;
 import com.yirancrazy.minimall.goods.service.impl.GoodsQueryServiceImpl;
-import com.yirancrazy.minimall.goods.vo.SpuDetailVO;
-import com.yirancrazy.minimall.goods.vo.SpuListVO;
-
+import com.yirancrazy.minimall.goods.vo.SpuDetailVo;
+import com.yirancrazy.minimall.goods.vo.SpuListVo;
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
 
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: GoodsQueryServiceImplTest 单元测试。
+ * @Description: 验证在售商品分页、最低价聚合、详情与 SKU 查询的状态边界。
  * @Version: 1.0
  * @DateTime: 2026/10/16
- **/
+ */
 public class GoodsQueryServiceImplTest {
 
-    private SpuManager spuManager;
-    private SkuManager skuManager;
-    private SpuSearchService spuSearchService;
-    private MinioUtil minioUtil;
-    private GoodsQueryServiceImpl service;
+  private SpuManager spuManager;
+  private SkuManager skuManager;
+  private SpuSearchService spuSearchService;
+  private MinioUtil minioUtil;
+  private GoodsQueryServiceImpl service;
 
-    @BeforeEach
-    void setUp() {
-        spuManager = mock(SpuManager.class);
-        skuManager = mock(SkuManager.class);
-        spuSearchService = mock(SpuSearchService.class);
-        minioUtil = mock(MinioUtil.class);
-        service = new GoodsQueryServiceImpl(spuManager, skuManager, spuSearchService, minioUtil);
-    }
+  @BeforeEach
+  void setUp() {
+    spuManager = mock(SpuManager.class);
+    skuManager = mock(SkuManager.class);
+    spuSearchService = mock(SpuSearchService.class);
+    minioUtil = mock(MinioUtil.class);
+    service = new GoodsQueryServiceImpl(spuManager, skuManager, spuSearchService, minioUtil);
+  }
 
+  /** 验证在售商品分页返回 SPU 摘要；无 SKU 价格时最低价为 null。 */
+  public void pageOnSaleReturnsResults() {
+    SpuPo po = new SpuPo();
+    po.setId(200L);
+    po.setSpuNo("SPU200");
+    po.setTitle("手机");
+    po.setMerchantId(10L);
+    List<SpuPo> mockRecords = new ArrayList<>();
+    mockRecords.add(po);
+    when(spuManager.list(any(Wrapper.class))).thenReturn(mockRecords);
+    when(skuManager.list(any(Wrapper.class))).thenReturn(List.of());
 
-    /**
-     * 分页查询数据。
-     */
-    public void pageOnSale_returns_results() {
-        SpuPO po = new SpuPO();
-        po.setId(200L);
-        po.setSpuNo("SPU200");
-        po.setTitle("手机");
-        po.setMerchantId(10L);
-        List<SpuPO> mockRecords = new ArrayList<>();
-        mockRecords.add(po);
-        when(spuManager.list(any(Wrapper.class))).thenReturn(mockRecords);
-        when(skuManager.list(any(Wrapper.class))).thenReturn(List.of());
+    GoodsPageDto dto = new GoodsPageDto();
 
-        GoodsPageDTO dto = new GoodsPageDTO();
+    CursorPageVo<SpuListVo> result = service.pageOnSale(dto);
 
-        CursorPageVO<SpuListVO> result = service.pageOnSale(dto);
+    assertEquals(1, result.getRecords().size());
+    SpuListVo vo = result.getRecords().get(0);
+    assertEquals(200L, vo.getSpuId());
+    assertEquals("手机", vo.getTitle());
+    assertEquals(10L, vo.getMerchantId());
+    assertNull(vo.getMinPrice());
+  }
 
-        assertEquals(1, result.getRecords().size());
-        SpuListVO vo = result.getRecords().get(0);
-        assertEquals(200L, vo.getSpuId());
-        assertEquals("手机", vo.getTitle());
-        assertEquals(10L, vo.getMerchantId());
-        assertNull(vo.getMinPrice());
-    }
+  /** 验证商品列表中的主图对象键被解析为 MinIO 访问 URL。 */
+  public void pageOnSaleResolvesObjectKeyToPresignedUrl() {
+    SpuPo po = new SpuPo();
+    po.setId(300L);
+    po.setSpuNo("SPU300");
+    po.setTitle("耳机");
+    po.setMainImageUrl("a1b2c3.png");
+    po.setMerchantId(10L);
+    when(spuManager.list(any(Wrapper.class))).thenReturn(List.of(po));
+    when(skuManager.list(any(Wrapper.class))).thenReturn(List.of());
+    when(minioUtil.resolvePublicUrl("a1b2c3.png"))
+        .thenReturn("http://minio/mall-files/a1b2c3.png?token");
 
+    var result = service.pageOnSale(new GoodsPageDto());
 
-    /**
-     * 分页查询数据。
-     */
-    public void pageOnSale_resolves_object_key_to_presigned_url() {
-        SpuPO po = new SpuPO();
-        po.setId(300L);
-        po.setSpuNo("SPU300");
-        po.setTitle("耳机");
-        po.setMainImageUrl("a1b2c3.png");
-        po.setMerchantId(10L);
-        when(spuManager.list(any(Wrapper.class))).thenReturn(List.of(po));
-        when(skuManager.list(any(Wrapper.class))).thenReturn(List.of());
-        when(minioUtil.resolvePublicUrl("a1b2c3.png")).thenReturn("http://minio/mall-files/a1b2c3.png?token");
+    assertEquals(
+        "http://minio/mall-files/a1b2c3.png?token", result.getRecords().get(0).getMainImageUrl());
+  }
 
-        var result = service.pageOnSale(new GoodsPageDTO());
+  /** 验证关键字和类目过滤无匹配时返回空游标页。 */
+  public void pageOnSaleWithKeywordAndCategoryReturnsEmpty() {
+    when(spuManager.list(any(Wrapper.class))).thenReturn(List.of());
+    when(skuManager.list(any(Wrapper.class))).thenReturn(List.of());
 
-        assertEquals("http://minio/mall-files/a1b2c3.png?token", result.getRecords().get(0).getMainImageUrl());
-    }
+    GoodsPageDto dto = new GoodsPageDto();
+    dto.setKeyword("耳机");
+    dto.setCategoryId(5L);
 
+    var result = service.pageOnSale(dto);
 
-    /**
-     * 分页查询数据。
-     */
-    public void pageOnSale_with_keyword_and_category_returns_empty() {
-        when(spuManager.list(any(Wrapper.class))).thenReturn(List.of());
-        when(skuManager.list(any(Wrapper.class))).thenReturn(List.of());
+    assertTrue(result.getRecords().isEmpty());
+  }
 
-        GoodsPageDTO dto = new GoodsPageDTO();
-        dto.setKeyword("耳机");
-        dto.setCategoryId(5L);
+  /** 验证分页结果按 SPU 聚合 SKU 最低价。 */
+  public void pageOnSaleAggregatesMinPrice() {
+    SpuPo po1 = new SpuPo();
+    po1.setId(1L);
+    po1.setSpuNo("SPU1");
+    po1.setTitle("商品一");
+    po1.setMerchantId(10L);
+    SpuPo po2 = new SpuPo();
+    po2.setId(2L);
+    po2.setSpuNo("SPU2");
+    po2.setTitle("商品二");
+    po2.setMerchantId(10L);
+    when(spuManager.list(any(Wrapper.class))).thenReturn(List.of(po1, po2));
 
-        var result = service.pageOnSale(dto);
+    SkuPo s1 = new SkuPo();
+    s1.setSpuId(1L);
+    s1.setPrice(new BigDecimal("199.00"));
+    SkuPo s2 = new SkuPo();
+    s2.setSpuId(1L);
+    s2.setPrice(new BigDecimal("99.00"));
+    SkuPo s3 = new SkuPo();
+    s3.setSpuId(2L);
+    s3.setPrice(new BigDecimal("59.00"));
+    when(skuManager.list(any(Wrapper.class))).thenReturn(List.of(s1, s2, s3));
 
-        assertTrue(result.getRecords().isEmpty());
-    }
+    GoodsPageDto dto = new GoodsPageDto();
 
+    var result = service.pageOnSale(dto);
 
-    /**
-     * 分页查询数据。
-     */
-    public void pageOnSale_aggregates_min_price() {
-        SpuPO po1 = new SpuPO();
-        po1.setId(1L);
-        po1.setSpuNo("SPU1");
-        po1.setTitle("商品一");
-        po1.setMerchantId(10L);
-        SpuPO po2 = new SpuPO();
-        po2.setId(2L);
-        po2.setSpuNo("SPU2");
-        po2.setTitle("商品二");
-        po2.setMerchantId(10L);
-        when(spuManager.list(any(Wrapper.class))).thenReturn(List.of(po1, po2));
+    assertEquals(2, result.getRecords().size());
+    assertEquals(new BigDecimal("99.00"), result.getRecords().get(0).getMinPrice());
+    assertEquals(new BigDecimal("59.00"), result.getRecords().get(1).getMinPrice());
+  }
 
-        SkuPO s1 = new SkuPO();
-        s1.setSpuId(1L);
-        s1.setPrice(new BigDecimal("199.00"));
-        SkuPO s2 = new SkuPO();
-        s2.setSpuId(1L);
-        s2.setPrice(new BigDecimal("99.00"));
-        SkuPO s3 = new SkuPO();
-        s3.setSpuId(2L);
-        s3.setPrice(new BigDecimal("59.00"));
-        when(skuManager.list(any(Wrapper.class))).thenReturn(List.of(s1, s2, s3));
+  /** 验证最低价聚合忽略 null 价格并保留无有效价格的 SPU。 */
+  public void pageOnSaleSkipsNullPriceWhenAggregating() {
+    SpuPo po1 = new SpuPo();
+    po1.setId(1L);
+    po1.setSpuNo("SPU1");
+    po1.setTitle("商品一");
+    po1.setMerchantId(10L);
+    SpuPo po2 = new SpuPo();
+    po2.setId(2L);
+    po2.setSpuNo("SPU2");
+    po2.setTitle("商品二");
+    po2.setMerchantId(10L);
+    when(spuManager.list(any(Wrapper.class))).thenReturn(List.of(po1, po2));
 
-        GoodsPageDTO dto = new GoodsPageDTO();
+    SkuPo s1 = new SkuPo();
+    s1.setSpuId(1L);
+    s1.setPrice(new BigDecimal("199.00"));
+    SkuPo s2 = new SkuPo();
+    s2.setSpuId(1L);
+    s2.setPrice(null);
+    SkuPo s3 = new SkuPo();
+    s3.setSpuId(2L);
+    s3.setPrice(null);
+    when(skuManager.list(any(Wrapper.class))).thenReturn(List.of(s1, s2, s3));
 
-        var result = service.pageOnSale(dto);
+    GoodsPageDto dto = new GoodsPageDto();
 
-        assertEquals(2, result.getRecords().size());
-        assertEquals(new BigDecimal("99.00"), result.getRecords().get(0).getMinPrice());
-        assertEquals(new BigDecimal("59.00"), result.getRecords().get(1).getMinPrice());
-    }
+    var result = service.pageOnSale(dto);
 
+    assertEquals(2, result.getRecords().size());
+    assertEquals(new BigDecimal("199.00"), result.getRecords().get(0).getMinPrice());
+    assertNull(result.getRecords().get(1).getMinPrice());
+  }
 
-    /**
-     * 分页查询数据。
-     */
-    public void pageOnSale_skips_null_price_when_aggregating() {
-        SpuPO po1 = new SpuPO();
-        po1.setId(1L);
-        po1.setSpuNo("SPU1");
-        po1.setTitle("商品一");
-        po1.setMerchantId(10L);
-        SpuPO po2 = new SpuPO();
-        po2.setId(2L);
-        po2.setSpuNo("SPU2");
-        po2.setTitle("商品二");
-        po2.setMerchantId(10L);
-        when(spuManager.list(any(Wrapper.class))).thenReturn(List.of(po1, po2));
+  /** 验证在售 SPU 详情返回主数据、在售标记和嵌套 SKU。 */
+  public void getDetailSuccessWithSkus() {
+    SpuPo po = new SpuPo();
+    po.setId(200L);
+    po.setSpuNo("SPU200");
+    po.setTitle("手机");
+    po.setSubtitle("旗舰机");
+    po.setMainImageUrl("http://img");
+    po.setMerchantId(10L);
+    po.setCategoryId(1L);
+    po.setStatus(SpuStatusEnum.ON_SALE.statusValue());
+    when(spuManager.getById(200L)).thenReturn(po);
 
-        SkuPO s1 = new SkuPO();
-        s1.setSpuId(1L);
-        s1.setPrice(new BigDecimal("199.00"));
-        SkuPO s2 = new SkuPO();
-        s2.setSpuId(1L);
-        s2.setPrice(null);
-        SkuPO s3 = new SkuPO();
-        s3.setSpuId(2L);
-        s3.setPrice(null);
-        when(skuManager.list(any(Wrapper.class))).thenReturn(List.of(s1, s2, s3));
+    SkuPo sku = new SkuPo();
+    sku.setId(300L);
+    sku.setSpuId(200L);
+    sku.setSkuName("黑色 128G");
+    sku.setPrice(new BigDecimal("1999.00"));
+    sku.setStock(50);
+    lenient().when(skuManager.list(any(Wrapper.class))).thenReturn(List.of(sku));
 
-        GoodsPageDTO dto = new GoodsPageDTO();
+    SpuDetailVo detail = service.getDetail(200L);
 
-        var result = service.pageOnSale(dto);
+    assertEquals(200L, detail.getSpuId());
+    assertEquals("手机", detail.getTitle());
+    assertTrue(detail.getIsOnSale());
+    assertEquals(1, detail.getSkus().size());
+    assertEquals(300L, detail.getSkus().get(0).getId());
+    assertEquals(new BigDecimal("1999.00"), detail.getSkus().get(0).getPrice());
+  }
 
-        assertEquals(2, result.getRecords().size());
-        assertEquals(new BigDecimal("199.00"), result.getRecords().get(0).getMinPrice());
-        assertNull(result.getRecords().get(1).getMinPrice());
-    }
+  /** 验证 SPU 不存在时详情查询抛出 SPU_NOT_FOUND 业务异常。 */
+  public void getDetailThrowsWhenSpuNotFound() {
+    when(spuManager.getById(999L)).thenReturn(null);
+    assertThrows(BizException.class, () -> service.getDetail(999L));
+  }
 
+  /** 验证 SPU 非在售时详情查询按不存在处理。 */
+  public void getDetailThrowsWhenNotOnSale() {
+    SpuPo po = new SpuPo();
+    po.setId(201L);
+    po.setStatus(SpuStatusEnum.OFF_SHELF.statusValue());
+    when(spuManager.getById(201L)).thenReturn(po);
+    assertThrows(BizException.class, () -> service.getDetail(201L));
+  }
 
-    /**
-     * 获取相关数据。
-     */
-    public void getDetail_success_with_skus() {
-        SpuPO po = new SpuPO();
-        po.setId(200L);
-        po.setSpuNo("SPU200");
-        po.setTitle("手机");
-        po.setSubtitle("旗舰机");
-        po.setMainImageUrl("http://img");
-        po.setMerchantId(10L);
-        po.setCategoryId(1L);
-        po.setStatus(SpuStatusEnum.ON_SALE.statusValue());
-        when(spuManager.getById(200L)).thenReturn(po);
+  /** 验证在售 SPU 的 SKU 列表按持久化记录转换为视图对象。 */
+  public void listSkusSuccess() {
+    SpuPo po = new SpuPo();
+    po.setId(200L);
+    po.setStatus(SpuStatusEnum.ON_SALE.statusValue());
+    when(spuManager.getById(200L)).thenReturn(po);
 
-        SkuPO sku = new SkuPO();
-        sku.setId(300L);
-        sku.setSpuId(200L);
-        sku.setSkuName("黑色 128G");
-        sku.setPrice(new BigDecimal("1999.00"));
-        sku.setStock(50);
-        lenient().when(skuManager.list(any(Wrapper.class))).thenReturn(List.of(sku));
+    SkuPo s1 = new SkuPo();
+    s1.setId(301L);
+    s1.setSpuId(200L);
+    s1.setSkuName("黑色");
+    s1.setPrice(new BigDecimal("99.00"));
+    s1.setStock(10);
+    SkuPo s2 = new SkuPo();
+    s2.setId(302L);
+    s2.setSpuId(200L);
+    s2.setSkuName("白色");
+    s2.setPrice(new BigDecimal("109.00"));
+    s2.setStock(20);
+    when(skuManager.list(any(Wrapper.class))).thenReturn(List.of(s1, s2));
 
-        SpuDetailVO detail = service.getDetail(200L);
+    var skus = service.listSkus(200L);
 
-        assertEquals(200L, detail.getSpuId());
-        assertEquals("手机", detail.getTitle());
-        assertTrue(detail.getIsOnSale());
-        assertEquals(1, detail.getSkus().size());
-        assertEquals(300L, detail.getSkus().get(0).getId());
-        assertEquals(new BigDecimal("1999.00"), detail.getSkus().get(0).getPrice());
-    }
+    assertNotNull(skus);
+    assertEquals(2, skus.size());
+    assertEquals(301L, skus.get(0).getId());
+    assertEquals("白色", skus.get(1).getSkuName());
+  }
 
-
-    /**
-     * 获取相关数据。
-     */
-    public void getDetail_throws_when_spu_not_found() {
-        when(spuManager.getById(999L)).thenReturn(null);
-        assertThrows(BizException.class, () -> service.getDetail(999L));
-    }
-
-
-    /**
-     * 获取相关数据。
-     */
-    public void getDetail_throws_when_not_on_sale() {
-        SpuPO po = new SpuPO();
-        po.setId(201L);
-        po.setStatus(SpuStatusEnum.OFF_SHELF.statusValue());
-        when(spuManager.getById(201L)).thenReturn(po);
-        assertThrows(BizException.class, () -> service.getDetail(201L));
-    }
-
-
-    /**
-     * 查询列表数据。
-     */
-    public void listSkus_success() {
-        SpuPO po = new SpuPO();
-        po.setId(200L);
-        po.setStatus(SpuStatusEnum.ON_SALE.statusValue());
-        when(spuManager.getById(200L)).thenReturn(po);
-
-        SkuPO s1 = new SkuPO();
-        s1.setId(301L);
-        s1.setSpuId(200L);
-        s1.setSkuName("黑色");
-        s1.setPrice(new BigDecimal("99.00"));
-        s1.setStock(10);
-        SkuPO s2 = new SkuPO();
-        s2.setId(302L);
-        s2.setSpuId(200L);
-        s2.setSkuName("白色");
-        s2.setPrice(new BigDecimal("109.00"));
-        s2.setStock(20);
-        when(skuManager.list(any(Wrapper.class))).thenReturn(List.of(s1, s2));
-
-        var skus = service.listSkus(200L);
-
-        assertNotNull(skus);
-        assertEquals(2, skus.size());
-        assertEquals(301L, skus.get(0).getId());
-        assertEquals("白色", skus.get(1).getSkuName());
-    }
-
-
-    /**
-     * 查询列表数据。
-     */
-    public void listSkus_throws_when_spu_not_found() {
-        when(spuManager.getById(999L)).thenReturn(null);
-        assertThrows(BizException.class, () -> service.listSkus(999L));
-    }
+  /** 验证 SPU 不存在时 SKU 列表查询抛出业务异常。 */
+  public void listSkusThrowsWhenSpuNotFound() {
+    when(spuManager.getById(999L)).thenReturn(null);
+    assertThrows(BizException.class, () -> service.listSkus(999L));
+  }
 }

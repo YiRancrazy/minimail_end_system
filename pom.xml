@@ -166,11 +166,18 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-checkstyle-plugin</artifactId>
-          <version>3.3.1</version>
+          <version>3.6.0</version>
           <configuration>
             <configLocation>config/checkstyle/checkstyle.xml</configLocation>
             <includeTestSourceDirectory>true</includeTestSourceDirectory>
           </configuration>
+          <dependencies>
+            <dependency>
+              <groupId>com.puppycrawl.tools</groupId>
+              <artifactId>checkstyle</artifactId>
+              <version>12.3.1</version>
+            </dependency>
+          </dependencies>
         </plugin>
         <plugin>
           <groupId>com.github.spotbugs</groupId>

@@ -4,19 +4,19 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import lombok.Data;
 
-
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: CartUpdateDTO 数据传输对象。
+ * @Description: 描述购物车条目的部分更新。数量可选但限制为 1 至 999，isSelected 也可选；
+ *     服务层会有意保留未传入字段的原有值。
  * @Version: 1.0
  * @DateTime: 2026/10/16
- **/
+ */
 @Data
-public class CartUpdateDTO {
+public class CartUpdateDto {
 
-    @Min(value = 1, message = "数量至少为1")
-    @Max(value = 999, message = "数量不能超过999")
-    private Integer quantity;
+  @Min(value = 1, message = "数量至少为1")
+  @Max(value = 999, message = "数量不能超过999")
+  private Integer quantity;
 
-    private Boolean isSelected;
+  private Boolean isSelected;
 }

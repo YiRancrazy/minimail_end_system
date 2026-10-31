@@ -4,32 +4,27 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import lombok.Data;
 
-
 /**
  * @Author: yirancrazy@gmail.com
- * @Description: SpuSearchDTO 数据传输对象。
+ * @Description: 承载 Elasticsearch 商品搜索的关键字、类目、价格区间和分页条件。
  * @Version: 1.0
  * @DateTime: 2026/10/16
- **/
+ */
 @Data
-public class SpuSearchDTO {
+public class SpuSearchDto {
 
+  private String keyword;
 
-    private String keyword;
+  private Long categoryId;
 
+  private Long minPrice;
 
-    private Long categoryId;
+  private Long maxPrice;
 
+  @Min(value = 1, message = "pageNo must be >= 1")
+  private Integer pageNo = 1;
 
-    private Long minPrice;
-
-
-    private Long maxPrice;
-
-    @Min(value = 1, message = "pageNo must be >= 1")
-    private Integer pageNo = 1;
-
-    @Min(value = 1, message = "pageSize must be >= 1")
-    @Max(value = 100, message = "pageSize must be <= 100")
-    private Integer pageSize = 20;
+  @Min(value = 1, message = "pageSize must be >= 1")
+  @Max(value = 100, message = "pageSize must be <= 100")
+  private Integer pageSize = 20;
 }

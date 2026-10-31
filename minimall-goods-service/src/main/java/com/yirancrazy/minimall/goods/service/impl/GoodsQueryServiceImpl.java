@@ -90,11 +90,11 @@ public class GoodsQueryServiceImpl implements GoodsQueryService {
         Long lastId = CursorUtils.decode(dto.getCursor());  // 上一页最后一条记录的id
         int limit = dto.getLimit();  // 每页数量
         List<SpuPO> records = spuManager.list(Wrappers.lambdaQuery(SpuPO.class)
-            .lt(lastId != null, SpuPO::getId, lastId)  // 上一页最后一条记录的id
-            .eq(SpuPO::getStatus, SpuStatusEnum.ON_SALE.statusValue())  // 在售状态
-            .eq(dto.getCategoryId() != null, SpuPO::getCategoryId, dto.getCategoryId())  // 类目过滤
-            .like(dto.getKeyword() != null && !dto.getKeyword().isBlank(),  // 标题模糊匹配
-                SpuPO::getTitle, dto.getKeyword())  // 标题
+            .lt(lastId != null, SpuPO::getId, lastId)
+            .eq(SpuPO::getStatus, SpuStatusEnum.ON_SALE.statusValue())
+            .eq(dto.getCategoryId() != null, SpuPO::getCategoryId, dto.getCategoryId())
+            .like(dto.getKeyword() != null && !dto.getKeyword().isBlank(),
+                SpuPO::getTitle, dto.getKeyword())
             .orderByDesc(SpuPO::getId)
             .last("LIMIT " + (limit + 1)));
         Map<Long, BigDecimal> minPriceMap = batchMinPrice(records.stream()

@@ -47,6 +47,7 @@ import com.yirancrazy.minimall.auth.manager.AuthTokenBlacklistManager;
 import com.yirancrazy.minimall.auth.manager.AuthUserManager;
 import com.yirancrazy.minimall.auth.util.JwtUtil;
 import com.yirancrazy.minimall.auth.vo.UserInfoVO;
+import com.yirancrazy.minimall.common.constant.jwt.JwtType;
 import com.yirancrazy.minimall.common.exception.BizException;
 
 
@@ -76,7 +77,7 @@ class AuthServiceImplTest {
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
         authService = new AuthServiceImpl(
             authUserManager, authRoleManager, tokenBlacklistManager,
-            authRemoteGateway, jwtUtil, redisTemplate, 900L, 604800L);
+            authRemoteGateway, jwtUtil, redisTemplate, 900_000L, 604_800_000L);
     }
 
     private AuthRolePO stubUserRole() {
@@ -98,11 +99,7 @@ class AuthServiceImplTest {
             po.setId(42L);
             return true;
         });
-        when(jwtUtil.sign(anyLong(), anyLong(), anyString(), anyString(), anyLong(), anyString()))
-            .thenReturn("access-token");
-        when(jwtUtil.sign(anyLong(), anyLong(), anyString(), anyString(), anyLong(),
-            anyString(), anyLong()))
-            .thenReturn("refresh-token");
+        stubIssuedTokens("access-token", "refresh-token");
 
         TokenVO vo = authService.register(new RegisterDTO("testuser", "pass123"));
         assertNotNull(vo.getAccessToken());
@@ -151,17 +148,14 @@ class AuthServiceImplTest {
         po.setPasswordHash(hash);
         when(authUserManager.getOne(any())).thenReturn(po);
         when(authUserManager.updateById(any(AuthUserPO.class))).thenReturn(true);
-        when(jwtUtil.sign(anyLong(), anyLong(), anyString(), anyString(), anyLong(), anyString()))
-            .thenReturn("access-token");
-        when(jwtUtil.sign(anyLong(), anyLong(), anyString(), anyString(), anyLong(),
-            anyString(), anyLong()))
-            .thenReturn("refresh-token");
+        stubIssuedTokens("access-token", "refresh-token");
 
         TokenVO vo = authService.login(new LoginDTO("alice", "pass123"));
 
         assertNotNull(vo.getAccessToken());
         assertNotNull(vo.getRefreshToken());
-        verify(jwtUtil).sign(eq(1L), eq(9001L), eq("alice"), eq("USER"), eq(1L), anyString());
+        verify(jwtUtil).sign(eq(1L), eq(9001L), eq("alice"), eq("USER"), eq(1L),
+            anyString(), eq(JwtType.ACCESS), eq(900_000L));
     }
 
     @Test
@@ -217,15 +211,12 @@ class AuthServiceImplTest {
         Claims claims = mock(Claims.class);
         when(claims.getSubject()).thenReturn("1");
         when(claims.get("jti", String.class)).thenReturn("abc");
+        when(claims.get("type", String.class)).thenReturn(JwtType.REFRESH);
         when(jwtUtil.parse("refresh-jwt")).thenReturn(claims);
         // 索引键 refresh:1:abc 命中且原子比较删除成功，才允许轮换
         when(redisTemplate.execute(any(RedisScript.class), anyList(), any())).thenReturn(1L);
         when(tokenBlacklistManager.save(any())).thenReturn(true);
-        when(jwtUtil.sign(anyLong(), anyLong(), anyString(), anyString(), anyLong(), anyString()))
-            .thenReturn("new-access");
-        when(jwtUtil.sign(anyLong(), anyLong(), anyString(), anyString(), anyLong(),
-            anyString(), anyLong()))
-            .thenReturn("new-refresh");
+        stubIssuedTokens("new-access", "new-refresh");
         AuthUserPO po = new AuthUserPO();
         po.setId(1L);
         po.setAccount("alice");
@@ -246,13 +237,29 @@ class AuthServiceImplTest {
         Claims claims = mock(Claims.class);
         when(claims.getSubject()).thenReturn("1");
         when(claims.get("jti", String.class)).thenReturn("abc");
+        when(claims.get("type", String.class)).thenReturn(JwtType.REFRESH);
         when(jwtUtil.parse("refresh-jwt")).thenReturn(claims);
         // 比较并删除返回 0：键不存在或值不匹配（旧 token 重放），视为无效
         when(redisTemplate.execute(any(RedisScript.class), anyList(), any())).thenReturn(0L);
 
         assertThrows(BizException.class, () -> authService.refreshToken("refresh-jwt"));
         verify(jwtUtil, never()).sign(anyLong(), anyLong(), anyString(), anyString(),
-            anyLong(), anyString());
+            anyLong(), anyString(), anyString(), anyLong());
+    }
+
+    @Test
+    void refreshToken_accessType_throws() {
+        Claims claims = mock(Claims.class);
+        when(claims.getSubject()).thenReturn("1");
+        when(claims.get("jti", String.class)).thenReturn("abc");
+        when(claims.get("type", String.class)).thenReturn(JwtType.ACCESS);
+        when(jwtUtil.parse("access-jwt")).thenReturn(claims);
+
+        BizException ex = assertThrows(BizException.class,
+            () -> authService.refreshToken("access-jwt"));
+
+        assertEquals(AuthCodeEnum.REFRESH_TOKEN_INVALID.getCode(), ex.getCode());
+        verify(redisTemplate, never()).execute(any(RedisScript.class), anyList(), any());
     }
 
     @Test
@@ -473,11 +480,7 @@ class AuthServiceImplTest {
         when(authUserManager.getOne(any())).thenReturn(po);
         when(authUserManager.updateById(any(AuthUserPO.class))).thenReturn(true);
         when(valueOperations.get("login:fail:alice")).thenReturn("3");
-        when(jwtUtil.sign(anyLong(), anyLong(), anyString(), anyString(), anyLong(), anyString()))
-            .thenReturn("access-token");
-        when(jwtUtil.sign(anyLong(), anyLong(), anyString(), anyString(), anyLong(),
-            anyString(), anyLong()))
-            .thenReturn("refresh-token");
+        stubIssuedTokens("access-token", "refresh-token");
 
         authService.login(new LoginDTO("alice", "pass123"));
 
@@ -491,5 +494,12 @@ class AuthServiceImplTest {
             validator.validate(new RegisterDTO("testuser", "12345"));
         assertEquals(1, violations.size());
         assertEquals("password", violations.iterator().next().getPropertyPath().toString());
+    }
+
+    private void stubIssuedTokens(String accessToken, String refreshToken) {
+        when(jwtUtil.sign(anyLong(), anyLong(), anyString(), anyString(), anyLong(),
+            anyString(), eq(JwtType.ACCESS), anyLong())).thenReturn(accessToken);
+        when(jwtUtil.sign(anyLong(), anyLong(), anyString(), anyString(), anyLong(),
+            anyString(), eq(JwtType.REFRESH), anyLong())).thenReturn(refreshToken);
     }
 }

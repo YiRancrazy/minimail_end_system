@@ -40,8 +40,8 @@ spring:
 minimall:
   jwt:
     secret: ${MINIMALL_JWT_SECRET}
-    ttl-seconds: 900
-    refresh-ttl-seconds: 604800
+    ttl-ms: 900000
+    refresh-ttl-ms: 604800000
   knife4j:
     enable: true
   mvc:

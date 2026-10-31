@@ -143,8 +143,13 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
 
         String jti = claims.get("jti", String.class);
         String role = claims.get("role", String.class);
+        String type = claims.get("type", String.class);
         if (role == null) {
             role = "USER";
+        }
+
+        if (!"access".equals(type)){
+            return reject(exchange, HttpStatus.UNAUTHORIZED, "token 类型错误", "14003");
         }
 
         if (!isAuthorized(path, role)) {

@@ -31,6 +31,7 @@ import com.yirancrazy.minimall.auth.manager.AuthUserManager;
 import com.yirancrazy.minimall.auth.service.AuthService;
 import com.yirancrazy.minimall.auth.util.JwtUtil;
 import com.yirancrazy.minimall.auth.vo.UserInfoVO;
+import com.yirancrazy.minimall.common.constant.jwt.JwtType;
 import com.yirancrazy.minimall.common.exception.BizException;
 
 
@@ -48,7 +49,6 @@ public class AuthServiceImpl implements AuthService {
     private static final int BCRYPT_COST = 12;
     private static final int ACCOUNT_TYPE_USER = 1;
     private static final long DEFAULT_ROLE_ID_USER = 1L;
-
     private static final String REFRESH_KEY_PREFIX = "refresh:";
     private static final String BLACKLIST_KEY_PREFIX = "blacklist:jti:";
     private static final String RESET_CODE_KEY_PREFIX = "pwd:reset:code:";
@@ -93,16 +93,16 @@ public class AuthServiceImpl implements AuthService {
                            AuthRemoteGateway authRemoteGateway,
                            JwtUtil jwtUtil,
                            StringRedisTemplate redisTemplate,
-                           @Value("${minimall.jwt.ttl-seconds:900}") long ttlSeconds,
-                           @Value("${minimall.jwt.refresh-ttl-seconds:604800}") long refreshTtlSeconds) {
+                           @Value("${minimall.jwt.ttl-ms:900000}") long ttlSeconds,
+                           @Value("${minimall.jwt.refresh-ttl-ms:604800000}") long refreshTtlSeconds) {
         this.authUserManager = authUserManager;
         this.authRoleManager = authRoleManager;
         this.tokenBlacklistManager = tokenBlacklistManager;
         this.authRemoteGateway = authRemoteGateway;
         this.jwtUtil = jwtUtil;
         this.redisTemplate = redisTemplate;
-        this.ttlSeconds = ttlSeconds;
-        this.refreshTtlSeconds = refreshTtlSeconds;
+        this.ttlSeconds = ttlSeconds / 1000;
+        this.refreshTtlSeconds = refreshTtlSeconds / 1000;
     }
 
 
@@ -195,6 +195,12 @@ public class AuthServiceImpl implements AuthService {
         }
         Long userId = Long.parseLong(c.getSubject());
         String jti = c.get("jti", String.class);
+        String type = c.get("type", String.class);
+
+        if(type==null || !type.equals(JwtType.REFRESH)){
+            throw new BizException(AuthCodeEnum.REFRESH_TOKEN_INVALID);
+        }
+
         String key = REFRESH_KEY_PREFIX + userId + ":" + jti;
         Long deleted = redisTemplate.execute(COMPARE_AND_DELETE_REFRESH, List.of(key), refreshToken);
         if (deleted == null || deleted == 0L) {
@@ -363,7 +369,6 @@ public class AuthServiceImpl implements AuthService {
     }
 
     /**
-     * 吊销Token。
      * @param jti JWT ID
      * @param userId 用户 ID
      * @param reason 原因
@@ -406,10 +411,11 @@ public class AuthServiceImpl implements AuthService {
     private TokenVO issueTokens(Long authUserId, Long userId, String account,
                                 String roleCode, Long roleId) {
         String jti = UUID.randomUUID().toString().replace("-", "");
-        String accessToken = jwtUtil.sign(authUserId, userId, account, roleCode, roleId, jti);
+        String accessToken = jwtUtil.sign(authUserId, userId, account, roleCode,
+            roleId, jti, JwtType.ACCESS, ttlSeconds * 1000);
         // 刷新令牌签发为JWT（含 userId/jti），refreshToken 可解析后直查 Redis 索引键
-        String refreshToken = jwtUtil.sign(authUserId, userId, account, roleCode, roleId,
-            jti, refreshTtlSeconds * 1000L);
+        String refreshToken = jwtUtil.sign(authUserId, userId, account, roleCode,
+            roleId, jti, JwtType.REFRESH, refreshTtlSeconds);
         redisTemplate.opsForValue().set(
             REFRESH_KEY_PREFIX + authUserId + ":" + jti,
             refreshToken, refreshTtlSeconds, TimeUnit.SECONDS);

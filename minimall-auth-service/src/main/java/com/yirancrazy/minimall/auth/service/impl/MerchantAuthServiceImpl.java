@@ -25,6 +25,7 @@ import com.yirancrazy.minimall.auth.manager.AuthUserManager;
 import com.yirancrazy.minimall.auth.service.MerchantAuthService;
 import com.yirancrazy.minimall.auth.util.JwtUtil;
 import com.yirancrazy.minimall.auth.vo.UserInfoVO;
+import com.yirancrazy.minimall.common.constant.jwt.JwtType;
 import com.yirancrazy.minimall.common.exception.BizException;
 
 
@@ -68,15 +69,15 @@ public class MerchantAuthServiceImpl implements MerchantAuthService {
                                    AuthTokenBlacklistManager tokenBlacklistManager,
                                    JwtUtil jwtUtil,
                                    StringRedisTemplate redisTemplate,
-                                   @Value("${minimall.jwt.ttl-seconds:900}") long ttlSeconds,
-                                   @Value("${minimall.jwt.refresh-ttl-seconds:604800}") long refreshTtlSeconds) {
+                                   @Value("${minimall.jwt.ttl-ms:900000}") long ttlSeconds,
+                                   @Value("${minimall.jwt.refresh-ttl-ms:604800000}") long refreshTtlSeconds) {
         this.authUserManager = authUserManager;
         this.authRoleManager = authRoleManager;
         this.tokenBlacklistManager = tokenBlacklistManager;
         this.jwtUtil = jwtUtil;
         this.redisTemplate = redisTemplate;
-        this.ttlSeconds = ttlSeconds;
-        this.refreshTtlSeconds = refreshTtlSeconds;
+        this.ttlSeconds = ttlSeconds / 1000;
+        this.refreshTtlSeconds = refreshTtlSeconds / 1000;
     }
 
 
@@ -257,7 +258,8 @@ public class MerchantAuthServiceImpl implements MerchantAuthService {
     private TokenVO issueTokens(Long accountId, String account, Long roleId) {
         String roleCode = resolveRoleCode(roleId);
         String jti = UUID.randomUUID().toString().replace("-", "");
-        String accessToken = jwtUtil.sign(accountId, accountId, account, roleCode, roleId, jti);
+        String accessToken = jwtUtil.sign(accountId, accountId, account, roleCode,
+            roleId, jti, JwtType.ACCESS, ttlSeconds * 1000);
         String refreshToken = jwtUtil.generateRefreshToken();
         redisTemplate.opsForValue().set(
             REFRESH_KEY_PREFIX + accountId + ":" + jti,

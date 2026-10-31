@@ -45,6 +45,7 @@ import com.yirancrazy.minimall.auth.manager.AuthUserManager;
 import com.yirancrazy.minimall.auth.util.JwtUtil;
 import com.yirancrazy.minimall.auth.vo.AdminVO;
 import com.yirancrazy.minimall.auth.vo.UserInfoVO;
+import com.yirancrazy.minimall.common.constant.jwt.JwtType;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVO;
 
@@ -81,7 +82,7 @@ class PlatformAuthServiceImplTest {
         lenient().when(authUserManager.updateById(any(AuthUserPO.class))).thenReturn(true);
         service = new PlatformAuthServiceImpl(
             authUserManager, authRoleManager, tokenBlacklistManager,
-            jwtUtil, redisTemplate, 900L, 604800L);
+            jwtUtil, redisTemplate, 900_000L, 604_800_000L);
     }
 
     private AuthRolePO stubPlatformRole() {
@@ -107,7 +108,8 @@ class PlatformAuthServiceImplTest {
         po.setSalt(salt);
         po.setPasswordHash(hash);
         when(authUserManager.getOne(any())).thenReturn(po);
-        when(jwtUtil.sign(anyLong(), anyLong(), anyString(), anyString(), anyLong(), anyString()))
+        when(jwtUtil.sign(anyLong(), anyLong(), anyString(), anyString(), anyLong(),
+            anyString(), eq(JwtType.ACCESS), eq(900_000L)))
             .thenReturn("access-token");
         when(jwtUtil.generateRefreshToken()).thenReturn("refresh-token");
 
@@ -116,7 +118,7 @@ class PlatformAuthServiceImplTest {
         assertNotNull(vo.getAccessToken());
         assertNotNull(vo.getRefreshToken());
         verify(jwtUtil).sign(eq(300L), eq(300L), eq("admin"), eq("PLATFORM"),
-            eq(3L), anyString());
+            eq(3L), anyString(), eq(JwtType.ACCESS), eq(900_000L));
     }
 
     @Test

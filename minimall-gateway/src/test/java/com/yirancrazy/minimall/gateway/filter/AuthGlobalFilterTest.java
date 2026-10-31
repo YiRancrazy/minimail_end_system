@@ -41,6 +41,10 @@ class AuthGlobalFilterTest {
 
     private static final String INTERNAL_TOKEN = "test-internal-token";
 
+    private static final String ACCESS_TOKEN_TYPE = "access";
+
+    private static final String REFRESH_TOKEN_TYPE = "refresh";
+
     @Mock
     private ReactiveStringRedisTemplate redisTemplate;
 
@@ -111,6 +115,7 @@ class AuthGlobalFilterTest {
             .claim("role", "USER")
             .claim("userId", "9001")
             .claim("jti", "test-jti")
+            .claim("type", ACCESS_TOKEN_TYPE)
             .issuedAt(new Date())
             .expiration(new Date(System.currentTimeMillis() + 3600_000))
             .signWith(key)
@@ -136,6 +141,7 @@ class AuthGlobalFilterTest {
             .claim("username", "shopowner")
             .claim("role", "MERCHANT")
             .claim("jti", "merch-jti")
+            .claim("type", ACCESS_TOKEN_TYPE)
             .issuedAt(new Date())
             .expiration(new Date(System.currentTimeMillis() + 3600_000))
             .signWith(key)
@@ -174,6 +180,18 @@ class AuthGlobalFilterTest {
         StepVerifier.create(filter.filter(ex, e -> Mono.empty())).verifyComplete();
 
         assertEquals(HttpStatus.FORBIDDEN, ex.getResponse().getStatusCode());
+    }
+
+    @Test
+    void refresh_token_cannot_access_protected_endpoint() {
+        ServerWebExchange ex = MockServerWebExchange.from(
+            MockServerHttpRequest.get("/api/v1/user/users/42")
+                .header("Authorization", "Bearer "
+                    + buildToken("42", "USER", "refresh-jti", REFRESH_TOKEN_TYPE)));
+
+        StepVerifier.create(filter.filter(ex, e -> Mono.empty())).verifyComplete();
+
+        assertEquals(HttpStatus.UNAUTHORIZED, ex.getResponse().getStatusCode());
     }
 
     @Test
@@ -308,11 +326,16 @@ class AuthGlobalFilterTest {
     }
 
     private String buildToken(String subject, String role, String jti) {
+        return buildToken(subject, role, jti, ACCESS_TOKEN_TYPE);
+    }
+
+    private String buildToken(String subject, String role, String jti, String tokenType) {
         SecretKey key = Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8));
         return Jwts.builder()
             .subject(subject)
             .claim("role", role)
             .claim("jti", jti)
+            .claim("type", tokenType)
             .issuedAt(new Date())
             .expiration(new Date(System.currentTimeMillis() + 3600_000))
             .signWith(key)
@@ -325,6 +348,7 @@ class AuthGlobalFilterTest {
             .subject(subject)
             .claim("role", role)
             .claim("jti", "test-" + role)
+            .claim("type", ACCESS_TOKEN_TYPE)
             .issuedAt(new Date())
             .expiration(new Date(System.currentTimeMillis() + 3600_000))
             .signWith(key)

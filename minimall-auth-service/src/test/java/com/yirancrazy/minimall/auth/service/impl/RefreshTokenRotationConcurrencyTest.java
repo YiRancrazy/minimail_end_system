@@ -25,6 +25,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import io.jsonwebtoken.Claims;
@@ -37,6 +38,7 @@ import com.yirancrazy.minimall.auth.manager.AuthRoleManager;
 import com.yirancrazy.minimall.auth.manager.AuthTokenBlacklistManager;
 import com.yirancrazy.minimall.auth.manager.AuthUserManager;
 import com.yirancrazy.minimall.auth.util.JwtUtil;
+import com.yirancrazy.minimall.common.constant.jwt.JwtType;
 import com.yirancrazy.minimall.common.exception.BizException;
 
 
@@ -69,11 +71,13 @@ class RefreshTokenRotationConcurrencyTest {
         Claims claims = mock(Claims.class);
         when(claims.getSubject()).thenReturn("1");
         when(claims.get("jti", String.class)).thenReturn("race-jti");
+        when(claims.get("type", String.class)).thenReturn(JwtType.REFRESH);
         when(jwtUtil.parse("refresh-jwt")).thenReturn(claims);
-        when(jwtUtil.sign(anyLong(), anyLong(), anyString(), anyString(), anyLong(), anyString()))
+        when(jwtUtil.sign(anyLong(), anyLong(), anyString(), anyString(), anyLong(),
+            anyString(), eq(JwtType.ACCESS), eq(900_000L)))
             .thenReturn("access-token");
         when(jwtUtil.sign(anyLong(), anyLong(), anyString(), anyString(), anyLong(),
-            anyString(), anyLong()))
+            anyString(), eq(JwtType.REFRESH), eq(604_800_000L)))
             .thenReturn("refresh-token");
 
         AuthRolePO role = new AuthRolePO();
@@ -93,7 +97,7 @@ class RefreshTokenRotationConcurrencyTest {
             .thenAnswer(invocation -> remainingWinners.getAndDecrement() > 0 ? 1L : 0L);
 
         authService = new AuthServiceImpl(authUserManager, authRoleManager, tokenBlacklistManager,
-            authRemoteGateway, jwtUtil, redisTemplate, 900L, 604800L);
+            authRemoteGateway, jwtUtil, redisTemplate, 900_000L, 604_800_000L);
     }
 
     @Test

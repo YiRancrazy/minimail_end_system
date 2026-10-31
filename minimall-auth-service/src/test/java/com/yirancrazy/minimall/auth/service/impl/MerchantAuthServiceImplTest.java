@@ -36,6 +36,7 @@ import com.yirancrazy.minimall.auth.manager.AuthTokenBlacklistManager;
 import com.yirancrazy.minimall.auth.manager.AuthUserManager;
 import com.yirancrazy.minimall.auth.util.JwtUtil;
 import com.yirancrazy.minimall.auth.vo.UserInfoVO;
+import com.yirancrazy.minimall.common.constant.jwt.JwtType;
 import com.yirancrazy.minimall.common.exception.BizException;
 
 
@@ -63,7 +64,7 @@ class MerchantAuthServiceImplTest {
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
         service = new MerchantAuthServiceImpl(
             authUserManager, authRoleManager, tokenBlacklistManager,
-            jwtUtil, redisTemplate, 900L, 604800L);
+            jwtUtil, redisTemplate, 900_000L, 604_800_000L);
     }
 
     private AuthRolePO stubMerchantRole() {
@@ -90,7 +91,8 @@ class MerchantAuthServiceImplTest {
         po.setPasswordHash(hash);
         when(authUserManager.getOne(any())).thenReturn(po);
         when(authUserManager.updateById(any(AuthUserPO.class))).thenReturn(true);
-        when(jwtUtil.sign(anyLong(), anyLong(), anyString(), anyString(), anyLong(), anyString()))
+        when(jwtUtil.sign(anyLong(), anyLong(), anyString(), anyString(), anyLong(),
+            anyString(), eq(JwtType.ACCESS), eq(900_000L)))
             .thenReturn("access-token");
         when(jwtUtil.generateRefreshToken()).thenReturn("refresh-token");
 
@@ -99,7 +101,7 @@ class MerchantAuthServiceImplTest {
         assertNotNull(vo.getAccessToken());
         assertNotNull(vo.getRefreshToken());
         verify(jwtUtil).sign(eq(100L), eq(100L), eq("shopowner"), eq("MERCHANT"),
-            eq(2L), anyString());
+            eq(2L), anyString(), eq(JwtType.ACCESS), eq(900_000L));
     }
 
     @Test
@@ -197,7 +199,8 @@ class MerchantAuthServiceImplTest {
             po.setId(200L);
             return true;
         });
-        when(jwtUtil.sign(anyLong(), anyLong(), anyString(), anyString(), anyLong(), anyString()))
+        when(jwtUtil.sign(anyLong(), anyLong(), anyString(), anyString(), anyLong(),
+            anyString(), eq(JwtType.ACCESS), eq(900_000L)))
             .thenReturn("access-token");
         when(jwtUtil.generateRefreshToken()).thenReturn("refresh-token");
 

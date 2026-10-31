@@ -21,34 +21,14 @@ import io.jsonwebtoken.security.Keys;
 public class JwtUtil {
 
     private final SecretKey key;
-    private final long ttlMillis;
 
     /**
      * 构造 JwtUtil 实例。
      * @param secret secret 参数
-     * @param ttlSeconds ttlSeconds 参数
      */
-    public JwtUtil(@Value("${minimall.jwt.secret}") String secret,
-                   @Value("${minimall.jwt.ttl-seconds:900}") long ttlSeconds) {
+    public JwtUtil(@Value("${minimall.jwt.secret}") String secret) {
         this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
-        this.ttlMillis = ttlSeconds * 1000L;
     }
-
-
-    /**
-     * 执行 sign 方法。
-     * @param userId userId 参数
-     * @param account account 参数
-     * @param role role 参数
-     * @param roleId roleId 参数
-     * @param jti jti 参数
-     * @return 处理结果
-     */
-    public String sign(Long authUserId, Long userId, String account, String role,
-                       Long roleId, String jti) {
-        return sign(authUserId, userId, account, role, roleId, jti, ttlMillis);
-    }
-
 
     /**
      * 执行 sign 方法。
@@ -61,7 +41,7 @@ public class JwtUtil {
      * @return 处理结果
      */
     public String sign(Long authUserId, Long userId, String account, String role,
-                       Long roleId, String jti, long ttlMillis) {
+                       Long roleId, String jti,String tokenType, long ttlMillis) {
         long now = System.currentTimeMillis();
         var builder = Jwts.builder()
             .subject(String.valueOf(authUserId))
@@ -69,6 +49,7 @@ public class JwtUtil {
             .claim("role", role)
             .claim("roleId", roleId)
             .claim("jti", jti)
+            .claim("type", tokenType)
             .issuedAt(new Date(now))
             .expiration(new Date(now + ttlMillis))
             .signWith(key);

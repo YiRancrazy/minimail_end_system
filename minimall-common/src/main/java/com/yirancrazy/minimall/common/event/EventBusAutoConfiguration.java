@@ -1,51 +1,24 @@
 package com.yirancrazy.minimall.common.event;
 
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
+import org.springframework.core.env.Environment;
 
 
 /**
  * @Author: yirancrazy@gmail.com
  * @Description: 事件总线自动配置，按条件注册本地或 RocketMQ 事件总线实现。
- *               默认注册本地实现；开启 minimall.eventbus.rocketmq.enabled 后额外注册
- *               RocketMQ 实现并作为首选注入。
+ *               开启 minimall.eventbus.rocketmq.enabled 后注册 RocketMQ 实现。
  * @Version: 1.0
  * @DateTime: 2026/10/16
  **/
 @Configuration
 public class EventBusAutoConfiguration {
-
-    /**
-     * 注册本地事件总线。
-     * 仅在容器中不存在 LocalEventBus 类型的 Bean 时生效。
-     *
-     * @return 本地事件总线实例
-     */
-    @Bean
-    @ConditionalOnMissingBean(LocalEventBus.class)
-    public LocalEventBus localEventBus() {
-        return new LocalEventBus();
-    }
-
-
-    /**
-     * 注册默认事件总线。
-     * 仅在容器中不存在 EventBus 类型的 Bean 时生效。
-     *
-     * @param local 本地事件总线实例
-     * @return 作为默认实现的事件总线实例
-     */
-    @Bean
-    @ConditionalOnMissingBean(EventBus.class)
-    public EventBus defaultEventBus(LocalEventBus local) {
-        return local;
-    }
-
 
     /**
      * 注册 RocketMQ 事件总线。
@@ -70,5 +43,25 @@ public class EventBusAutoConfiguration {
             bus.setOutboxStore(store);
         }
         return bus;
+    }
+
+
+    /**
+     * Reject configurations that require RocketMQ while leaving it disabled.
+     *
+     * @param environment application environment
+     * @return startup validator
+     */
+    @Bean
+    @ConditionalOnProperty(name = "minimall.eventbus.require-rocketmq", havingValue = "true")
+    public SmartInitializingSingleton rocketMqRequirementValidator(Environment environment) {
+        return () -> {
+            if (!environment.getProperty(
+                    "minimall.eventbus.rocketmq.enabled", Boolean.class, false)) {
+                throw new IllegalStateException(
+                    "minimall.eventbus.rocketmq.enabled must be true when "
+                        + "minimall.eventbus.require-rocketmq=true");
+            }
+        };
     }
 }

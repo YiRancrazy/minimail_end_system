@@ -48,6 +48,7 @@ minimall:
     secret-key: ${MINIO_SECRET_KEY:minioadmin}
     bucket: ${MINIO_BUCKET:mall-files}
   eventbus:
+    require-rocketmq: true
     rocketmq:
       enabled: ${MINIMALL_EVENTBUS_ROCKETMQ_ENABLED:true}
       namesrv-addr: ${ROCKETMQ_NAMESRV_ADDR:127.0.0.1:9876}

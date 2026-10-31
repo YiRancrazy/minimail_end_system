@@ -23,6 +23,7 @@ minimall:
   security:
     aes-key: pwKs8yE75abt15VzzFRV6ynHoD4I/idpBDQ8sN92fLA=
   eventbus:
+    require-rocketmq: false
     rocketmq:
       enabled: false
   schedule:

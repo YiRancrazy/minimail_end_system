@@ -19,6 +19,7 @@ import com.yirancrazy.minimall.api.feign.GoodsFeignClient;
 import com.yirancrazy.minimall.api.feign.IdFeignClient;
 import com.yirancrazy.minimall.api.feign.PayFeignClient;
 import com.yirancrazy.minimall.api.feign.StockFeignClient;
+import com.yirancrazy.minimall.common.event.EventBus;
 import com.yirancrazy.minimall.order.constant.OutboxSendStatusEnum;
 import com.yirancrazy.minimall.order.entity.OutboxPO;
 import com.yirancrazy.minimall.order.manager.OutboxManager;
@@ -53,6 +54,9 @@ class OutboxManagerStateIntegrationTest {
 
     @MockBean
     private IdFeignClient idFeignClient;
+
+    @MockBean
+    private EventBus eventBus;
 
     @Autowired
     private OutboxManager outboxManager;

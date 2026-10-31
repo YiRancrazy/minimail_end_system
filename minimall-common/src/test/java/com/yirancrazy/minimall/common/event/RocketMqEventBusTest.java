@@ -62,7 +62,7 @@ class RocketMqEventBusTest {
         setProducer(bus, mockProducer);
         MDC.put(Result.TRACE_ID_KEY, "tid-abc");
 
-        bus.publish(new DummyEvent("x"));
+        bus.publish("minimall-events", "DummyEvent", new DummyEvent("x"));
 
         ArgumentCaptor<Message> captor = ArgumentCaptor.forClass(Message.class);
         Mockito.verify(mockProducer).send(captor.capture());
@@ -110,7 +110,8 @@ class RocketMqEventBusTest {
     void publish_withoutProducer_throws() {
         RocketMqEventBus bus = new RocketMqEventBus("127.0.0.1:9876", "minimall-events");
 
-        assertThrows(IllegalStateException.class, () -> bus.publish(new DummyEvent("x")));
+        assertThrows(IllegalStateException.class,
+            () -> bus.publish("minimall-events", "DummyEvent", new DummyEvent("x")));
     }
 
     @Test

@@ -141,17 +141,6 @@ public class RocketMqEventBus implements EventBus {
 
 
     /**
-     * 立即发送事件消息，不绑定本地事务。
-     *
-     * @param event 待发布的事件对象
-     * @throws IllegalStateException 生产者未启动或消息发送失败时抛出
-     */
-    public void publish(Object event) {
-        publish(topic, MqEventJsonCodec.tagFor(event.getClass()), event);
-    }
-
-
-    /**
      * 使用显式路由发送事件消息。
      *
      * @param topic RocketMQ 主题

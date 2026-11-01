@@ -53,6 +53,13 @@ public interface PayGateway {
    */
   String queryPayment(String paymentNo);
 
+    /**
+     * 关闭支付订单.
+     * @param paymentNo 支付单号
+     * @return 订单关闭结果
+     */
+  String closePayment(String paymentNo);
+
   /**
    * 发起支付退款.
    *

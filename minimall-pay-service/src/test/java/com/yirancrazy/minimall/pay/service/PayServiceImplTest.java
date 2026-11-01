@@ -122,6 +122,11 @@ public class PayServiceImplTest {
     lenient().when(payRemoteGateway.pay(anyLong())).thenReturn(Result.success(null));
     lenient().when(payRemoteGateway.payByOrderNo(anyString())).thenReturn(Result.success(null));
     lenient()
+        .when(
+            manager.markSuccessIfPending(
+                anyString(), anyString(), anyString(), any(LocalDateTime.class), anyInt(), anyInt()))
+        .thenReturn(1);
+    lenient()
         .when(payRemoteGateway.refundCallback(any(RefundCallbackDto.class)))
         .thenReturn(Result.success(null));
     lenient().when(manager.updateById(any(PayTransactionPo.class))).thenReturn(true);
@@ -1654,7 +1659,131 @@ public class PayServiceImplTest {
     assertEquals("T1", po.getTradeNo());
     assertNotNull(po.getPaidAt());
     var ordered = inOrder(manager, payRemoteGateway);
-    ordered.verify(manager).updateById(po);
+    ordered
+        .verify(manager)
+        .markSuccessIfPending(
+            eq("PAY1"),
+            eq("T1"),
+            anyString(),
+            any(LocalDateTime.class),
+            eq(Integer.parseInt(PayStatusEnum.PENDING.getCode())),
+            eq(Integer.parseInt(PayStatusEnum.SUCCESS.getCode())));
     ordered.verify(payRemoteGateway).payByOrderNo("ORDER100");
+  }
+
+  /** 验证非待支付单不能生成收银台参数. */
+  @Test
+  public void testGetPaymentParamsRejectsClosedPayment() {
+    PayTransactionPo rec = paymentForParams(PayStatusEnum.CLOSED);
+    when(manager.getOne(any())).thenReturn(rec);
+
+    BizException ex =
+        assertThrows(BizException.class, () -> service.getPaymentParams("PAY123", 1L));
+
+    assertEquals(PayCodeEnum.PAY_NOT_PENDING.getCode(), ex.getCode());
+    verify(payGateway, never())
+        .createPagePayment(anyString(), any(BigDecimal.class), anyString(), anyString());
+  }
+
+  /** 验证过期待支付单不能生成收银台参数. */
+  @Test
+  public void testGetPaymentParamsRejectsExpiredPendingPayment() {
+    PayTransactionPo rec = paymentForParams(PayStatusEnum.PENDING);
+    rec.setExpireAt(LocalDateTime.now().minusSeconds(1));
+    when(manager.getOne(any())).thenReturn(rec);
+
+    BizException ex =
+        assertThrows(BizException.class, () -> service.getPaymentParams("PAY123", 1L));
+
+    assertEquals(PayCodeEnum.PAY_NOT_PENDING.getCode(), ex.getCode());
+    verify(payGateway, never())
+        .createPagePayment(anyString(), any(BigDecimal.class), anyString(), anyString());
+  }
+
+  /** 验证待支付单缺少活跃订单号时不能生成收银台参数. */
+  @Test
+  public void testGetPaymentParamsRejectsMissingActiveOrderNo() {
+    PayTransactionPo rec = paymentForParams(PayStatusEnum.PENDING);
+    rec.setActiveOrderNo(null);
+    when(manager.getOne(any())).thenReturn(rec);
+
+    BizException ex =
+        assertThrows(BizException.class, () -> service.getPaymentParams("PAY123", 1L));
+
+    assertEquals(PayCodeEnum.PAY_NOT_PENDING.getCode(), ex.getCode());
+  }
+
+  /** 验证关单仅使用待支付到已关闭的条件更新. */
+  @Test
+  public void testClosePaymentUsesConditionalUpdate() {
+    PayTransactionPo rec = paymentForParams(PayStatusEnum.PENDING);
+    when(manager.getOne(any())).thenReturn(rec);
+    when(payGateway.closePayment("PAY123")).thenReturn("TRADE_CLOSED");
+    when(
+            manager.closePendingPayment(
+                "PAY123",
+                Integer.parseInt(PayStatusEnum.PENDING.getCode()),
+                Integer.parseInt(PayStatusEnum.CLOSED.getCode())))
+        .thenReturn(1);
+
+    String result = service.closePayment("PAY123");
+
+    assertEquals("TRADE_CLOSED", result);
+    verify(manager)
+        .closePendingPayment(
+            "PAY123",
+            Integer.parseInt(PayStatusEnum.PENDING.getCode()),
+            Integer.parseInt(PayStatusEnum.CLOSED.getCode()));
+    verify(manager, never()).updateById(any(PayTransactionPo.class));
+  }
+
+  /** 验证关单条件更新冲突且状态已变化时拒绝覆盖. */
+  @Test
+  public void testClosePaymentRejectsConcurrentStatusChange() {
+    PayTransactionPo pending = paymentForParams(PayStatusEnum.PENDING);
+    PayTransactionPo success = paymentForParams(PayStatusEnum.SUCCESS);
+    when(manager.getOne(any())).thenReturn(pending, success);
+    when(payGateway.closePayment("PAY123")).thenReturn("TRADE_CLOSED");
+    when(
+            manager.closePendingPayment(
+                "PAY123",
+                Integer.parseInt(PayStatusEnum.PENDING.getCode()),
+                Integer.parseInt(PayStatusEnum.CLOSED.getCode())))
+        .thenReturn(0);
+
+    BizException ex = assertThrows(BizException.class, () -> service.closePayment("PAY123"));
+
+    assertEquals(PayCodeEnum.PAY_CLOSE_STATUS_INVALID.getCode(), ex.getCode());
+  }
+
+  /** 验证已关闭支付单收到迟到成功回调时不推进订单. */
+  @Test
+  public void testClosedPaymentCallbackDoesNotAdvanceOrder() {
+    PayTransactionPo rec = paymentForParams(PayStatusEnum.CLOSED);
+    when(manager.getOne(any())).thenReturn(rec);
+    when(
+            manager.markSuccessIfPending(
+                anyString(), anyString(), anyString(), any(LocalDateTime.class), anyInt(), anyInt()))
+        .thenReturn(0);
+
+    service.handleCallback(new PayCallbackDto("PAY123", "TRADE123", true, "response", null));
+
+    verify(payRemoteGateway, never()).pay(anyLong());
+    verify(payRemoteGateway, never()).payByOrderNo(anyString());
+    assertEquals(Integer.parseInt(PayStatusEnum.CLOSED.getCode()), rec.getStatus());
+  }
+
+  private PayTransactionPo paymentForParams(PayStatusEnum status) {
+    PayTransactionPo rec = new PayTransactionPo();
+    rec.setPaymentNo("PAY123");
+    rec.setOrderNo("ORDER100");
+    rec.setUserId(1L);
+    rec.setAmount(new BigDecimal("99.99"));
+    rec.setCurrency("CNY");
+    rec.setChannel(1);
+    rec.setStatus(Integer.parseInt(status.getCode()));
+    rec.setActiveOrderNo("ORDER100");
+    rec.setExpireAt(LocalDateTime.now().plusMinutes(15));
+    return rec;
   }
 }

@@ -154,14 +154,41 @@ public class PayServiceImpl implements PayService {
 
       // 过期待支付单视作无效，关闭并释放订单号
       if (status == Integer.parseInt(PayStatusEnum.PENDING.getCode())) {
+        // 查询支付宝端交易状态
+        String alipayStatus = payGateway.queryPayment(existing.getPaymentNo());
+
+        if(alipayStatus==null){
+            throw new BizException(PayCodeEnum.PAY_ALIPAY_STATUS_NULL);
+        }
+        // 根据支付宝交易状态处理支付单
+        switch (alipayStatus){
+            case "TRADE_SUCCESS":
+            case "TRADE_FINISHED":
+                log.info("支付单已支付，paymentNo={}，orderNo={}，alipayStatus={}", existing.getPaymentNo(), orderNo, alipayStatus);
+                existing.setPaidAt(LocalDateTime.now());
+                existing.setStatus(Integer.parseInt(PayStatusEnum.SUCCESS.getCode()));
+                existing.setActiveOrderNo(null);
+                payManager.updateById(existing);
+                return existing.getId();
+            case "WAIT_BUYER_PAY":
+                // 关闭待支付单
+                String result = closePayment(existing.getPaymentNo());
+                if ("TRADE_CLOSED".equals(result)) {
+                    log.info("支付单已关闭，paymentNo={}，orderNo={}", existing.getPaymentNo(), orderNo);
+                    existing.setStatus(Integer.parseInt(PayStatusEnum.CLOSED.getCode()));
+                    existing.setActiveOrderNo(null);
+                    payManager.updateById(existing);
+                    return existing.getId();
+                }
+
+        }
+
         log.warn(
             "支付单已过期但仍待支付，创建新支付单，paymentNo={}，orderNo={}，expireAt={}",
             existing.getPaymentNo(),
             orderNo,
             existing.getExpireAt());
-        existing.setStatus(Integer.parseInt(PayStatusEnum.CLOSED.getCode()));
-        existing.setActiveOrderNo(null);
-        payManager.updateById(existing);
+        closePendingPaymentOrThrow(existing.getPaymentNo());
       }
     }
 
@@ -299,19 +326,27 @@ public class PayServiceImpl implements PayService {
   }
 
   private void applyCallbackSuccess(PayTransactionPo po, PayCallbackDto dto) {
-    int status = po.getStatus();
-    if (status == Integer.parseInt(PayStatusEnum.REFUNDING.getCode())
-        || status == Integer.parseInt(PayStatusEnum.REFUNDED.getCode())
-        || status == Integer.parseInt(PayStatusEnum.FROZEN.getCode())) {
-      log.warn("成功回调已忽略，支付单不处于可支付状态，paymentNo={}，status={}", dto.getPaymentNo(), status);
+    LocalDateTime paidAt = LocalDateTime.now();
+    int updated =
+        payManager.markSuccessIfPending(
+            po.getPaymentNo(),
+            dto.getTradeNo(),
+            dto.getChannelResponse(),
+            paidAt,
+            Integer.parseInt(PayStatusEnum.PENDING.getCode()),
+            Integer.parseInt(PayStatusEnum.SUCCESS.getCode()));
+    if (updated == 0) {
+      log.warn(
+          "成功回调已忽略，支付单不处于待支付状态，paymentNo={}，status={}",
+          dto.getPaymentNo(),
+          po.getStatus());
       return;
     }
 
     po.setTradeNo(dto.getTradeNo());
     po.setStatus(Integer.parseInt(PayStatusEnum.SUCCESS.getCode()));
     po.setChannelResponse(dto.getChannelResponse());
-    po.setPaidAt(LocalDateTime.now());
-    payManager.updateById(po);
+    po.setPaidAt(paidAt);
 
     // 支付结果先落库，订单推进失败由 scanPaidButOrderPending 重试，避免已收款但支付单长期待支付
     Result<Void> advanceResult = advanceOrder(po.getOrderNo());
@@ -581,7 +616,7 @@ public class PayServiceImpl implements PayService {
   }
 
   private static void validateExistingRefund(
-      PayRefundPo refund, PayTransactionPo payTx, BigDecimal refundAmount) {
+    PayRefundPo refund, PayTransactionPo payTx, BigDecimal refundAmount) {
     if (!payTx.getPaymentNo().equals(refund.getPaymentNo())
         || refund.getAmount().compareTo(refundAmount) != 0) {
       throw new BizException(PayCodeEnum.REFUND_CONFLICT);
@@ -726,6 +761,7 @@ public class PayServiceImpl implements PayService {
    */
   @Override
   public PaymentParamsVo getPaymentParams(String paymentNo, Long userId) {
+    // 校验支付单归属
     PayTransactionPo po =
         payManager.getOne(
             Wrappers.lambdaQuery(PayTransactionPo.class)
@@ -733,6 +769,13 @@ public class PayServiceImpl implements PayService {
     if (po == null || !ownedBy(po, userId)) {
       throw new BizException(PayCodeEnum.PAY_NOT_FOUND);
     }
+    if (po.getStatus() != Integer.parseInt(PayStatusEnum.PENDING.getCode())
+        || po.getExpireAt() == null
+        || !po.getExpireAt().isAfter(LocalDateTime.now())
+        || po.getActiveOrderNo() == null) {
+      throw new BizException(PayCodeEnum.PAY_NOT_PENDING);
+    }
+    // 创建支付表单
     String payForm =
         payGateway.createPagePayment(
             po.getPaymentNo(),
@@ -853,6 +896,65 @@ public class PayServiceImpl implements PayService {
     po.setStatus(Integer.parseInt(PayStatusEnum.FROZEN.getCode()));
     payManager.updateById(po);
     log.info("支付单已冻结，paymentNo={}", paymentNo);
+  }
+
+  /**
+   * 关闭指定支付单的渠道交易并同步本地状态。
+   * 仅待支付单可关闭，已关闭单幂等返回；渠道关闭成功后释放活跃订单号并置为关闭状态。
+   *
+   * @param paymentNo 支付单号
+   * @return 渠道关闭结果
+   */
+  @Override
+  public String closePayment(String paymentNo) {
+    PayTransactionPo po =
+        payManager.getOne(
+            Wrappers.lambdaQuery(PayTransactionPo.class)
+                .eq(PayTransactionPo::getPaymentNo, paymentNo));
+    if (po == null) {
+      throw new BizException(PayCodeEnum.PAY_NOT_FOUND);
+    }
+
+    int closedCode = Integer.parseInt(PayStatusEnum.CLOSED.getCode());
+    // 已关闭视为幂等成功，避免重复调用渠道关闭接口
+    if (po.getStatus() == closedCode) {
+      return "TRADE_CLOSED";
+    }
+
+    // 仅待支付单可关闭，已支付、退款中或冻结单关闭会破坏状态一致性
+    if (po.getStatus() != Integer.parseInt(PayStatusEnum.PENDING.getCode())) {
+      throw new BizException(PayCodeEnum.PAY_CLOSE_STATUS_INVALID);
+    }
+
+    String closeResult = payGateway.closePayment(paymentNo);
+    if (closeResult == null) {
+      log.warn("关闭支付单失败，paymentNo={}", paymentNo);
+      throw new BizException(PayCodeEnum.PAY_CLOSE_FAILED);
+    }
+
+    closePendingPaymentOrThrow(paymentNo);
+    log.info("支付单已关闭，paymentNo={}", paymentNo);
+    return closeResult;
+  }
+
+  private void closePendingPaymentOrThrow(String paymentNo) {
+    int updated =
+        payManager.closePendingPayment(
+            paymentNo,
+            Integer.parseInt(PayStatusEnum.PENDING.getCode()),
+            Integer.parseInt(PayStatusEnum.CLOSED.getCode()));
+    if (updated > 0) {
+      return;
+    }
+
+    PayTransactionPo current =
+        payManager.getOne(
+            Wrappers.lambdaQuery(PayTransactionPo.class)
+                .eq(PayTransactionPo::getPaymentNo, paymentNo));
+    if (current == null
+        || current.getStatus() != Integer.parseInt(PayStatusEnum.CLOSED.getCode())) {
+      throw new BizException(PayCodeEnum.PAY_CLOSE_STATUS_INVALID);
+    }
   }
 
   /**

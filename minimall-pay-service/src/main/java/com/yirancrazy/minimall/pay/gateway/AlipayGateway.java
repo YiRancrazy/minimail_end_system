@@ -4,10 +4,12 @@ import com.alibaba.fastjson.JSONObject;
 import com.alipay.api.AlipayApiException;
 import com.alipay.api.AlipayClient;
 import com.alipay.api.internal.util.AlipaySignature;
+import com.alipay.api.request.AlipayTradeCloseRequest;
 import com.alipay.api.request.AlipayTradeFastpayRefundQueryRequest;
 import com.alipay.api.request.AlipayTradePagePayRequest;
 import com.alipay.api.request.AlipayTradeQueryRequest;
 import com.alipay.api.request.AlipayTradeRefundRequest;
+import com.alipay.api.response.AlipayTradeCloseResponse;
 import com.alipay.api.response.AlipayTradeFastpayRefundQueryResponse;
 import com.alipay.api.response.AlipayTradeQueryResponse;
 import com.alipay.api.response.AlipayTradeRefundResponse;
@@ -137,6 +139,34 @@ public class AlipayGateway implements PayGateway {
   }
 
   /**
+   * 按商户支付单号关闭支付宝交易。
+   * 仅待支付交易可关闭；成功返回 `TRADE_CLOSED`，渠道拒绝或 SDK 异常返回 null 由调用方处理。
+   *
+   * @param paymentNo 支付单号
+   * @return 关闭成功时返回 `TRADE_CLOSED`，失败时返回 null
+   */
+  @Override
+  public String closePayment(String paymentNo) {
+    AlipayTradeCloseRequest request = new AlipayTradeCloseRequest();
+    request.setBizContent(String.format("{\"out_trade_no\":\"%s\"}", paymentNo));
+    try {
+      AlipayTradeCloseResponse response = alipayClient.execute(request);
+      if (response.isSuccess()) {
+        return "TRADE_CLOSED";
+      }
+      log.warn(
+          "关闭支付失败，paymentNo={}，subCode={}，subMsg={}",
+          paymentNo,
+          response.getSubCode(),
+          response.getSubMsg());
+      return null;
+    } catch (AlipayApiException e) {
+      log.error("关闭支付失败，paymentNo={}", paymentNo, e);
+      return null;
+    }
+  }
+
+    /**
    * 向支付宝发起指定支付单的部分或全额退款。
    * 以退款单号作为 `out_request_no` 保证渠道侧幂等。
    *

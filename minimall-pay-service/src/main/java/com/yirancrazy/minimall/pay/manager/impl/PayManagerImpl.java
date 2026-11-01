@@ -48,6 +48,42 @@ public class PayManagerImpl extends ServiceImpl<PayTransactionMapper, PayTransac
   }
 
   /**
+   * 执行待支付至已关闭的条件状态更新，并原子释放活跃订单号。
+   *
+   * @param paymentNo 支付单号
+   * @param pendingStatus 待支付状态 code
+   * @param closedStatus 已关闭状态 code
+   * @return 实际更新行数
+   */
+  @Override
+  public int closePendingPayment(String paymentNo, int pendingStatus, int closedStatus) {
+    return baseMapper.closePendingPayment(paymentNo, pendingStatus, closedStatus);
+  }
+
+  /**
+   * 执行待支付至成功的条件状态更新，并原子写入渠道支付信息。
+   *
+   * @param paymentNo 支付单号
+   * @param tradeNo 渠道交易号
+   * @param channelResponse 渠道原始响应
+   * @param paidAt 支付成功时间
+   * @param pendingStatus 待支付状态 code
+   * @param successStatus 支付成功状态 code
+   * @return 实际更新行数
+   */
+  @Override
+  public int markSuccessIfPending(
+      String paymentNo,
+      String tradeNo,
+      String channelResponse,
+      LocalDateTime paidAt,
+      int pendingStatus,
+      int successStatus) {
+    return baseMapper.markSuccessIfPending(
+        paymentNo, tradeNo, channelResponse, paidAt, pendingStatus, successStatus);
+  }
+
+  /**
    * 委托 Mapper 聚合指定时间范围内的对账单数据。
    *
    * @param startTime 统计下界

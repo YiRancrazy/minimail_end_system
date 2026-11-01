@@ -65,6 +65,49 @@ public interface PayTransactionMapper extends BaseMapper<PayTransactionPo> {
       @Param("toStatus") int toStatus);
 
   /**
+   * 仅当支付单仍为待支付状态时关闭支付单并释放活跃订单号。
+   *
+   * @param paymentNo 支付单号
+   * @param pendingStatus 待支付状态 code
+   * @param closedStatus 已关闭状态 code
+   * @return 实际更新行数，0 表示状态已被并发修改
+   */
+  @Update(
+      "UPDATE t_pay_transaction "
+          + "SET status = #{closedStatus}, active_order_no = NULL, update_time = NOW() "
+          + "WHERE payment_no = #{paymentNo} AND status = #{pendingStatus} AND is_deleted = 0")
+  int closePendingPayment(
+      @Param("paymentNo") String paymentNo,
+      @Param("pendingStatus") int pendingStatus,
+      @Param("closedStatus") int closedStatus);
+
+  /**
+   * 仅当支付单仍为待支付状态时写入成功状态和渠道支付信息。
+   *
+   * @param paymentNo 支付单号
+   * @param tradeNo 渠道交易号
+   * @param channelResponse 渠道原始响应
+   * @param paidAt 支付成功时间
+   * @param pendingStatus 待支付状态 code
+   * @param successStatus 支付成功状态 code
+   * @return 实际更新行数，0 表示状态已被并发修改
+   */
+  @Update(
+      "UPDATE t_pay_transaction "
+          + "SET status = #{successStatus}, trade_no = #{tradeNo}, "
+          + "channel_response = #{channelResponse,typeHandler="
+          + "com.yirancrazy.minimall.common.security.EncryptedStringTypeHandler}, "
+          + "paid_at = #{paidAt}, update_time = NOW() "
+          + "WHERE payment_no = #{paymentNo} AND status = #{pendingStatus} AND is_deleted = 0")
+  int markSuccessIfPending(
+      @Param("paymentNo") String paymentNo,
+      @Param("tradeNo") String tradeNo,
+      @Param("channelResponse") String channelResponse,
+      @Param("paidAt") LocalDateTime paidAt,
+      @Param("pendingStatus") int pendingStatus,
+      @Param("successStatus") int successStatus);
+
+  /**
    * 汇总商家已成功、退款中及已退款流水的原始交易金额。
    *
    * @param merchantId 商家 ID

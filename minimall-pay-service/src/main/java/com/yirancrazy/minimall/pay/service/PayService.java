@@ -109,6 +109,15 @@ public interface PayService {
   PaymentParamsVo getPaymentParams(String paymentNo, Long userId);
 
   /**
+   * 关闭指定支付单的渠道交易并同步本地状态。
+   * 仅待支付单可关闭，已关闭单幂等返回；渠道关闭成功后释放活跃订单号。
+   *
+   * @param paymentNo 支付单号
+   * @return 渠道关闭结果
+   */
+  String closePayment(String paymentNo);
+
+  /**
    * 以游标方式查询指定商家的支付流水实体。
    *
    * @param merchantId 商家 ID

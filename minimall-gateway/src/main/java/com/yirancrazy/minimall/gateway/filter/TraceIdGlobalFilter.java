@@ -5,6 +5,7 @@ import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
 import org.springframework.http.server.reactive.ServerHttpRequest;
+import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
@@ -15,6 +16,7 @@ import reactor.core.publisher.Mono;
  * @Version: 1.0
  * @DateTime: 2026/10/16
  */
+@Component
 public class TraceIdGlobalFilter implements GlobalFilter, Ordered {
 
   // 全链路追踪ID（网关生成，服务间透传，用于日志归集与故障定界）

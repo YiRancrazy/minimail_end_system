@@ -14,27 +14,27 @@ import lombok.Data;
 @Data
 public class AddressCreateDto {
 
-  @NotBlank(message = "receiver cannot be blank")
-  @Size(max = 64, message = "receiver length must be <= 64")
-  private String receiver;
+    @NotBlank(message = "receiver cannot be blank")
+    @Size(max = 64, message = "receiver length must be <= 64")
+    private String receiver;
 
-  @NotBlank(message = "phone cannot be blank")
-  @Pattern(regexp = "^1[3-9]\\d{9}$", message = "phone format is invalid")
-  private String phone;
+    @NotBlank(message = "phone cannot be blank")
+    @Pattern(regexp = "^1[3-9]\\d{9}$", message = "phone format is invalid")
+    private String phone;
 
-  @NotBlank(message = "province cannot be blank")
-  @Size(max = 32, message = "province length must be <= 32")
-  private String province;
+    @NotBlank(message = "province cannot be blank")
+    @Size(max = 32, message = "province length must be <= 32")
+    private String province;
 
-  @NotBlank(message = "city cannot be blank")
-  @Size(max = 32, message = "city length must be <= 32")
-  private String city;
+    @NotBlank(message = "city cannot be blank")
+    @Size(max = 32, message = "city length must be <= 32")
+    private String city;
 
-  @NotBlank(message = "district cannot be blank")
-  @Size(max = 32, message = "district length must be <= 32")
-  private String district;
+    @NotBlank(message = "district cannot be blank")
+    @Size(max = 32, message = "district length must be <= 32")
+    private String district;
 
-  @NotBlank(message = "detail cannot be blank")
-  @Size(max = 256, message = "detail length must be <= 256")
-  private String detail;
+    @NotBlank(message = "detail cannot be blank")
+    @Size(max = 256, message = "detail length must be <= 256")
+    private String detail;
 }

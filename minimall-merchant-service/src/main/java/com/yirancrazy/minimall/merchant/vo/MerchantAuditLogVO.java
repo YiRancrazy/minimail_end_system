@@ -11,11 +11,11 @@ import lombok.Data;
  */
 @Data
 public class MerchantAuditLogVo {
-  private Long id;
-  private String auditType;
-  private Long targetId;
-  private Integer decision;
-  private String reason;
-  private Long auditorId;
-  private LocalDateTime auditAt;
+    private Long id;
+    private String auditType;
+    private Long targetId;
+    private Integer decision;
+    private String reason;
+    private Long auditorId;
+    private LocalDateTime auditAt;
 }

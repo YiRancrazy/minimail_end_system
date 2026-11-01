@@ -14,11 +14,11 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 public class NotifyListDto extends CursorPageDto {
 
-  private Long userId;
+    private Long userId;
 
-  private Integer recipientType;
+    private Integer recipientType;
 
-  private Integer messageType;
+    private Integer messageType;
 
-  private Integer readFlag;
+    private Integer readFlag;
 }

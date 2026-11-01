@@ -15,15 +15,15 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 @TableName("t_auth_permission")
 public class AuthPermissionPo extends BasePo {
-  private String permissionCode;
+    private String permissionCode;
 
-  private String permissionName;
+    private String permissionName;
 
-  private Integer resourceType;
+    private Integer resourceType;
 
-  private String resourcePath;
+    private String resourcePath;
 
-  private String description;
+    private String description;
 
-  private Integer status;
+    private Integer status;
 }

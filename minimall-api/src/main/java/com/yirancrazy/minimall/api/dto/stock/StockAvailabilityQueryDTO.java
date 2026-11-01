@@ -19,7 +19,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class StockAvailabilityQueryDto {
 
-  @NotEmpty(message = "SKU ID列表不能为空")
-  @Size(max = 500, message = "单次最多查询500个SKU")
-  private List<@NotNull(message = "SKU ID不能为空") Long> skuIds;
+    @NotEmpty(message = "SKU ID列表不能为空")
+    @Size(max = 500, message = "单次最多查询500个SKU")
+    private List<@NotNull(message = "SKU ID不能为空") Long> skuIds;
 }

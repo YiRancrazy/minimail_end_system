@@ -12,9 +12,9 @@ import lombok.Data;
 @Data
 @AllArgsConstructor
 public class UserInfoVo {
-  private Long authUserId;
-  private Long userId;
-  private String account;
-  private String role;
-  private Long roleId;
+    private Long authUserId;
+    private Long userId;
+    private String account;
+    private String role;
+    private Long roleId;
 }

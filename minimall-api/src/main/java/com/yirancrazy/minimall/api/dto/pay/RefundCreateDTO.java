@@ -17,42 +17,42 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 public class RefundCreateDto {
-  @NotNull(message = "payId cannot be null")
-  private Long payId;
+    @NotNull(message = "payId cannot be null")
+    private Long payId;
 
-  @NotNull(message = "amount cannot be null")
-  @DecimalMin(value = "0.01", message = "amount must be at least 0.01")
-  @Digits(integer = 10, fraction = 2, message = "amount must have at most 2 decimal places")
-  private BigDecimal amount;
+    @NotNull(message = "amount cannot be null")
+    @DecimalMin(value = "0.01", message = "amount must be at least 0.01")
+    @Digits(integer = 10, fraction = 2, message = "amount must have at most 2 decimal places")
+    private BigDecimal amount;
 
-  private String reason;
+    private String reason;
 
-  @NotBlank(message = "refundRequestNo cannot be blank")
-  private String refundRequestNo;
+    @NotBlank(message = "refundRequestNo cannot be blank")
+    private String refundRequestNo;
 
-  /**
-   * 创建不带退款请求号的退款参数.
-   *
-   * @param payId 支付流水 ID
-   * @param amount 本次退款金额
-   * @param reason 退款原因
-   */
-  public RefundCreateDto(Long payId, BigDecimal amount, String reason) {
-    this(payId, amount, reason, null);
-  }
+    /**
+     * 创建不带退款请求号的退款参数.
+     *
+     * @param payId 支付流水 ID
+     * @param amount 本次退款金额
+     * @param reason 退款原因
+     */
+    public RefundCreateDto(Long payId, BigDecimal amount, String reason) {
+        this(payId, amount, reason, null);
+    }
 
-  /**
-   * 创建包含幂等退款请求号的完整退款参数.
-   *
-   * @param payId 支付流水 ID
-   * @param amount 本次退款金额
-   * @param reason 退款原因
-   * @param refundRequestNo 防止重复退款的幂等请求号
-   */
-  public RefundCreateDto(Long payId, BigDecimal amount, String reason, String refundRequestNo) {
-    this.payId = payId;
-    this.amount = amount;
-    this.reason = reason;
-    this.refundRequestNo = refundRequestNo;
-  }
+    /**
+     * 创建包含幂等退款请求号的完整退款参数.
+     *
+     * @param payId 支付流水 ID
+     * @param amount 本次退款金额
+     * @param reason 退款原因
+     * @param refundRequestNo 防止重复退款的幂等请求号
+     */
+    public RefundCreateDto(Long payId, BigDecimal amount, String reason, String refundRequestNo) {
+        this.payId = payId;
+        this.amount = amount;
+        this.reason = reason;
+        this.refundRequestNo = refundRequestNo;
+    }
 }

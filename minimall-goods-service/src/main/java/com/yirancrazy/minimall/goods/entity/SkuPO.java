@@ -16,11 +16,11 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 @TableName("t_sku")
 public class SkuPo extends BasePo {
-  private Long spuId;
-  // 归属商家ID：冗余自父SPU，用于商家侧越权校验
-  private Long merchantId;
-  private String skuName;
-  private BigDecimal price;
-  // 库存展示缓存，权威库存由库存服务的 t_stock.available 维护
-  private Integer stock;
+    private Long spuId;
+    // 归属商家ID：冗余自父SPU，用于商家侧越权校验
+    private Long merchantId;
+    private String skuName;
+    private BigDecimal price;
+    // 库存展示缓存，权威库存由库存服务的 t_stock.available 维护
+    private Integer stock;
 }

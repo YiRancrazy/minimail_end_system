@@ -12,10 +12,10 @@ import lombok.Getter;
 @Getter
 @AllArgsConstructor
 public enum AuditDecisionEnum {
-  APPROVE(1, "APPROVE", "通过"),
-  REJECT(2, "REJECT", "驳回");
+    APPROVE(1, "APPROVE", "通过"),
+    REJECT(2, "REJECT", "驳回");
 
-  private final int code;
-  private final String alias;
-  private final String message;
+    private final int code;
+    private final String alias;
+    private final String message;
 }

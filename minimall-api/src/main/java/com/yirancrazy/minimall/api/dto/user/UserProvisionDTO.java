@@ -16,6 +16,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class UserProvisionDto {
 
-  @NotNull(message = "userId cannot be null")
-  private Long userId;
+    @NotNull(message = "userId cannot be null")
+    private Long userId;
 }

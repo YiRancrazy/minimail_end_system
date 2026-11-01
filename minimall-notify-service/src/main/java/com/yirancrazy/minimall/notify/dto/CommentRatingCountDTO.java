@@ -11,7 +11,7 @@ import lombok.Data;
 @Data
 public class CommentRatingCountDto {
 
-  private Integer rating;
+    private Integer rating;
 
-  private Long cnt;
+    private Long cnt;
 }

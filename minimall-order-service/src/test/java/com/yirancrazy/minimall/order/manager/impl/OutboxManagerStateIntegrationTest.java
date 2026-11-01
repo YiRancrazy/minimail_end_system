@@ -34,110 +34,110 @@ import org.springframework.test.context.ActiveProfiles;
  * @DateTime: 2026/10/30
  */
 @SpringBootTest(
-    properties = {"spring.sql.init.schema-locations=classpath:order-outbox-test-schema.sql"})
+        properties = {"spring.sql.init.schema-locations=classpath:order-outbox-test-schema.sql"})
 @ActiveProfiles("test")
 class OutboxManagerStateIntegrationTest {
 
-  @MockBean private GoodsFeignClient goodsFeignClient;
+    @MockBean private GoodsFeignClient goodsFeignClient;
 
-  @MockBean private CartFeignClient cartFeignClient;
+    @MockBean private CartFeignClient cartFeignClient;
 
-  @MockBean private CartCleanupFeignClient cartCleanupFeignClient;
+    @MockBean private CartCleanupFeignClient cartCleanupFeignClient;
 
-  @MockBean private StockFeignClient stockFeignClient;
+    @MockBean private StockFeignClient stockFeignClient;
 
-  @MockBean private PayFeignClient payFeignClient;
+    @MockBean private PayFeignClient payFeignClient;
 
-  @MockBean private IdFeignClient idFeignClient;
+    @MockBean private IdFeignClient idFeignClient;
 
-  @MockBean private EventBus eventBus;
+    @MockBean private EventBus eventBus;
 
-  @Autowired private OutboxManager outboxManager;
+    @Autowired private OutboxManager outboxManager;
 
-  /**   清理发件箱数据. */
-  @BeforeEach
-  void cleanOutbox() {
-    outboxManager.remove(Wrappers.lambdaQuery(OutboxPo.class));
-  }
+    /**   清理发件箱数据. */
+    @BeforeEach
+    void cleanOutbox() {
+        outboxManager.remove(Wrappers.lambdaQuery(OutboxPo.class));
+    }
 
-  /** 验证同一发件箱记录并发抢占仅一个实例成功. */
-  @Test
-  void testClaimForDispatchAllowsOnlyOneWinner() {
-    OutboxPo po = pendingOutbox("ORDER_PAID:1", 1L);
-    outboxManager.save(po);
-    LocalDateTime now = LocalDateTime.now();
+    /** 验证同一发件箱记录并发抢占仅一个实例成功. */
+    @Test
+    void testClaimForDispatchAllowsOnlyOneWinner() {
+        OutboxPo po = pendingOutbox("ORDER_PAID:1", 1L);
+        outboxManager.save(po);
+        LocalDateTime now = LocalDateTime.now();
 
-    boolean first = outboxManager.claimForDispatch(po.getId(), now, now.plusSeconds(30));
-    boolean second = outboxManager.claimForDispatch(po.getId(), now, now.plusSeconds(30));
+        boolean first = outboxManager.claimForDispatch(po.getId(), now, now.plusSeconds(30));
+        boolean second = outboxManager.claimForDispatch(po.getId(), now, now.plusSeconds(30));
 
-    assertTrue(first);
-    assertFalse(second);
-  }
+        assertTrue(first);
+        assertFalse(second);
+    }
 
-  /** 验证分发候选查询过滤未到期和无载荷记录. */
-  @Test
-  void testListDispatchCandidatesFiltersInvalidRecords() {
-    OutboxPo ready = pendingOutbox("ORDER_PAID:2", 2L);
-    outboxManager.save(ready);
-    OutboxPo future = pendingOutbox("ORDER_PAID:3", 3L);
-    future.setNextRetryTime(LocalDateTime.now().plusMinutes(1));
-    outboxManager.save(future);
-    OutboxPo noPayload = pendingOutbox("ORDER_PAID:4", 4L);
-    noPayload.setPayload(null);
-    outboxManager.save(noPayload);
+    /** 验证分发候选查询过滤未到期和无载荷记录. */
+    @Test
+    void testListDispatchCandidatesFiltersInvalidRecords() {
+        OutboxPo ready = pendingOutbox("ORDER_PAID:2", 2L);
+        outboxManager.save(ready);
+        OutboxPo future = pendingOutbox("ORDER_PAID:3", 3L);
+        future.setNextRetryTime(LocalDateTime.now().plusMinutes(1));
+        outboxManager.save(future);
+        OutboxPo noPayload = pendingOutbox("ORDER_PAID:4", 4L);
+        noPayload.setPayload(null);
+        outboxManager.save(noPayload);
 
-    List<OutboxPo> records = outboxManager.listDispatchCandidates(LocalDateTime.now(), 100);
+        List<OutboxPo> records = outboxManager.listDispatchCandidates(LocalDateTime.now(), 100);
 
-    assertEquals(1, records.size());
-    assertEquals(ready.getId(), records.get(0).getId());
-  }
+        assertEquals(1, records.size());
+        assertEquals(ready.getId(), records.get(0).getId());
+    }
 
-  /** 验证状态更新持久化预期值. */
-  @Test
-  void testStateUpdatesPersistExpectedValues() {
-    OutboxPo sent = pendingOutbox("ORDER_PAID:5", 5L);
-    outboxManager.save(sent);
-    outboxManager.markSent(sent.getId(), LocalDateTime.now());
-    OutboxPo savedSent = outboxManager.getById(sent.getId());
-    assertEquals(OutboxSendStatusEnum.SENT.intCode(), savedSent.getSendStatus());
-    assertNotNull(savedSent.getSentTime());
+    /** 验证状态更新持久化预期值. */
+    @Test
+    void testStateUpdatesPersistExpectedValues() {
+        OutboxPo sent = pendingOutbox("ORDER_PAID:5", 5L);
+        outboxManager.save(sent);
+        outboxManager.markSent(sent.getId(), LocalDateTime.now());
+        OutboxPo savedSent = outboxManager.getById(sent.getId());
+        assertEquals(OutboxSendStatusEnum.SENT.intCode(), savedSent.getSendStatus());
+        assertNotNull(savedSent.getSentTime());
 
-    OutboxPo retry = pendingOutbox("ORDER_PAID:6", 6L);
-    outboxManager.save(retry);
-    LocalDateTime nextRetryTime = LocalDateTime.now().plusSeconds(5);
-    outboxManager.markRetry(retry.getId(), 1, nextRetryTime, "mq down");
-    OutboxPo savedRetry = outboxManager.getById(retry.getId());
-    assertEquals(OutboxSendStatusEnum.PENDING.intCode(), savedRetry.getSendStatus());
-    assertEquals(1, savedRetry.getRetryCount());
-    assertEquals("mq down", savedRetry.getLastError());
+        OutboxPo retry = pendingOutbox("ORDER_PAID:6", 6L);
+        outboxManager.save(retry);
+        LocalDateTime nextRetryTime = LocalDateTime.now().plusSeconds(5);
+        outboxManager.markRetry(retry.getId(), 1, nextRetryTime, "mq down");
+        OutboxPo savedRetry = outboxManager.getById(retry.getId());
+        assertEquals(OutboxSendStatusEnum.PENDING.intCode(), savedRetry.getSendStatus());
+        assertEquals(1, savedRetry.getRetryCount());
+        assertEquals("mq down", savedRetry.getLastError());
 
-    OutboxPo dead = pendingOutbox("ORDER_PAID:7", 7L);
-    outboxManager.save(dead);
-    outboxManager.markDead(dead.getId(), 10, "max retry exceeded");
-    OutboxPo savedDead = outboxManager.getById(dead.getId());
-    assertEquals(OutboxSendStatusEnum.DEAD.intCode(), savedDead.getSendStatus());
-    assertEquals(10, savedDead.getRetryCount());
-  }
+        OutboxPo dead = pendingOutbox("ORDER_PAID:7", 7L);
+        outboxManager.save(dead);
+        outboxManager.markDead(dead.getId(), 10, "max retry exceeded");
+        OutboxPo savedDead = outboxManager.getById(dead.getId());
+        assertEquals(OutboxSendStatusEnum.DEAD.intCode(), savedDead.getSendStatus());
+        assertEquals(10, savedDead.getRetryCount());
+    }
 
-  /**
-   * 构造待发送事件.
-   *
-   * @param eventId 事件键
-   * @param orderId 订单 ID
-   * @return 待发送事件
-   */
-  private OutboxPo pendingOutbox(String eventId, Long orderId) {
-    OutboxPo po = new OutboxPo();
-    po.setEventId(eventId);
-    po.setEventType("OrderPaidDto");
-    po.setAggregateType("ORDER");
-    po.setAggregateId(orderId);
-    po.setTopic("minimall-events");
-    po.setTag("OrderPaidDto");
-    po.setPayload("{}");
-    po.setSendStatus(OutboxSendStatusEnum.PENDING.intCode());
-    po.setRetryCount(0);
-    po.setNextRetryTime(LocalDateTime.now().minusSeconds(1));
-    return po;
-  }
+    /**
+     * 构造待发送事件.
+     *
+     * @param eventId 事件键
+     * @param orderId 订单 ID
+     * @return 待发送事件
+     */
+    private OutboxPo pendingOutbox(String eventId, Long orderId) {
+        OutboxPo po = new OutboxPo();
+        po.setEventId(eventId);
+        po.setEventType("OrderPaidDto");
+        po.setAggregateType("ORDER");
+        po.setAggregateId(orderId);
+        po.setTopic("minimall-events");
+        po.setTag("OrderPaidDto");
+        po.setPayload("{}");
+        po.setSendStatus(OutboxSendStatusEnum.PENDING.intCode());
+        po.setRetryCount(0);
+        po.setNextRetryTime(LocalDateTime.now().minusSeconds(1));
+        return po;
+    }
 }

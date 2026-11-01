@@ -15,12 +15,12 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
 @MapperScan("com.yirancrazy.minimall.user.mapper")
 @EnableFeignClients(basePackages = "com.yirancrazy.minimall.api.feign")
 public class UserApplication {
-  /**
-   * 启动用户服务 Spring 容器。
-   *
-   * @param args 命令行启动参数，可为空
-   */
-  public static void main(String[] args) {
-    SpringApplication.run(UserApplication.class, args);
-  }
+    /**
+     * 启动用户服务 Spring 容器。
+     *
+     * @param args 命令行启动参数，可为空
+     */
+    public static void main(String[] args) {
+        SpringApplication.run(UserApplication.class, args);
+    }
 }

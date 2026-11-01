@@ -13,12 +13,12 @@ import org.springframework.web.bind.annotation.RequestBody;
  */
 public interface NotifyFeignClient {
 
-  /**
-   * 向指定用户投递站内通知事件.
-   *
-   * @param dto 通知接收人、标题和正文
-   * @return 包装后的通知受理结果
-   */
-  @PostMapping("/internal/notify/push")
-  Result<Boolean> push(@RequestBody NotifyEventDto dto);
+    /**
+     * 向指定用户投递站内通知事件.
+     *
+     * @param dto 通知接收人、标题和正文
+     * @return 包装后的通知受理结果
+     */
+    @PostMapping("/internal/notify/push")
+    Result<Boolean> push(@RequestBody NotifyEventDto dto);
 }

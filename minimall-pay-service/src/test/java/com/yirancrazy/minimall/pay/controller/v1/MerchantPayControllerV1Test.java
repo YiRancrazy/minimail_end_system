@@ -28,34 +28,34 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
  */
 class MerchantPayControllerV1Test {
 
-  private MockMvc mockMvc;
-  private PayService service;
+    private MockMvc mockMvc;
+    private PayService service;
 
-  @BeforeEach
-  void setUp() {
-    service = mock(PayService.class);
-    mockMvc = MockMvcBuilders.standaloneSetup(new MerchantPayControllerV1(service)).build();
-  }
+    @BeforeEach
+    void setUp() {
+        service = mock(PayService.class);
+        mockMvc = MockMvcBuilders.standaloneSetup(new MerchantPayControllerV1(service)).build();
+    }
 
-  /** 验证商家流水查询：配置空游标页并携带商家请求头请求，预期返回成功码和空游标页. */
-  @Test
-  void testTransactionsReturnsCursorResult() throws Exception {
-    when(service.pageVo(anyLong(), any(PayPageDto.class)))
-        .thenReturn(new CursorPageVo<>(Collections.emptyList(), null, false, 20));
-    mockMvc
-        .perform(get("/api/v1/merchant/pay/transactions").header("X-Merchant-Id", 1L))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.code").value("00000"));
-  }
+    /** 验证商家流水查询：配置空游标页并携带商家请求头请求，预期返回成功码和空游标页. */
+    @Test
+    void testTransactionsReturnsCursorResult() throws Exception {
+        when(service.pageVo(anyLong(), any(PayPageDto.class)))
+                .thenReturn(new CursorPageVo<>(Collections.emptyList(), null, false, 20));
+        mockMvc
+                .perform(get("/api/v1/merchant/pay/transactions").header("X-Merchant-Id", 1L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("00000"));
+    }
 
-  /** 验证商家统计：配置五笔交易的服务结果，预期成功响应中的交易笔数为五. */
-  @Test
-  void testStatisticsReturnsVo() throws Exception {
-    PayStatisticsVo vo = new PayStatisticsVo(BigDecimal.TEN, BigDecimal.ZERO, 5L);
-    when(service.statistics(anyLong(), any(PayPageDto.class))).thenReturn(vo);
-    mockMvc
-        .perform(get("/api/v1/merchant/pay/statistics").header("X-Merchant-Id", 1L))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.data.transactionCount").value(5));
-  }
+    /** 验证商家统计：配置五笔交易的服务结果，预期成功响应中的交易笔数为五. */
+    @Test
+    void testStatisticsReturnsVo() throws Exception {
+        PayStatisticsVo vo = new PayStatisticsVo(BigDecimal.TEN, BigDecimal.ZERO, 5L);
+        when(service.statistics(anyLong(), any(PayPageDto.class))).thenReturn(vo);
+        mockMvc
+                .perform(get("/api/v1/merchant/pay/statistics").header("X-Merchant-Id", 1L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.transactionCount").value(5));
+    }
 }

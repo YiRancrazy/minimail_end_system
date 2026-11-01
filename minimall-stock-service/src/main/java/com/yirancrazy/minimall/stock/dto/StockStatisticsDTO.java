@@ -15,8 +15,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class StockStatisticsDto {
 
-  private Long totalSkuCount;
-  private Long totalAvailable;
-  private Long totalReserved;
-  private Long alertSkuCount;
+    private Long totalSkuCount;
+    private Long totalAvailable;
+    private Long totalReserved;
+    private Long alertSkuCount;
 }

@@ -14,7 +14,7 @@ import lombok.Data;
 @Data
 public class NotifyBatchDeleteDto {
 
-  @NotEmpty(message = "消息ID列表不能为空")
-  @Size(max = 100, message = "单次最多删除100条消息")
-  private List<Long> ids;
+    @NotEmpty(message = "消息ID列表不能为空")
+    @Size(max = 100, message = "单次最多删除100条消息")
+    private List<Long> ids;
 }

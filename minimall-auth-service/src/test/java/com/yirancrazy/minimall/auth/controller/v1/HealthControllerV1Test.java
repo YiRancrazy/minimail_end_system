@@ -12,12 +12,12 @@ import org.junit.jupiter.api.Test;
  */
 class HealthControllerV1Test {
 
-  /** 验证健康检查成功：直接创建控制器，调用 health 后预期成功码为 00000 且数据为 auth-ok. */
-  @Test
-  void testHealthReturnsAuthOk() {
-    HealthControllerV1 controller = new HealthControllerV1();
-    var result = controller.health();
-    assertEquals("00000", result.getCode());
-    assertEquals("auth-ok", result.getData());
-  }
+    /** 验证健康检查成功：直接创建控制器，调用 health 后预期成功码为 00000 且数据为 auth-ok. */
+    @Test
+    void testHealthReturnsAuthOk() {
+        HealthControllerV1 controller = new HealthControllerV1();
+        var result = controller.health();
+        assertEquals("00000", result.getCode());
+        assertEquals("auth-ok", result.getData());
+    }
 }

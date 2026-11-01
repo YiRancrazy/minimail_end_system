@@ -13,10 +13,10 @@ import lombok.Data;
 @Data
 @AllArgsConstructor
 public class AdminVo {
-  private Long id;
-  private String account;
-  private Integer status;
-  private LocalDateTime createTime;
-  private String role;
-  private String contact;
+    private Long id;
+    private String account;
+    private Integer status;
+    private LocalDateTime createTime;
+    private String role;
+    private String contact;
 }

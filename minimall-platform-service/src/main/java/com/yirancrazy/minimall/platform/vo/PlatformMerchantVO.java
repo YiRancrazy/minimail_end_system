@@ -16,12 +16,12 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class PlatformMerchantVo {
 
-  private Long merchantId;
-  private Long userId;
-  private String merchantName;
-  private String licenseNo;
-  private Integer auditStatus;
-  private String auditReason;
-  private LocalDateTime auditAt;
-  private LocalDateTime createTime;
+    private Long merchantId;
+    private Long userId;
+    private String merchantName;
+    private String licenseNo;
+    private Integer auditStatus;
+    private String auditReason;
+    private LocalDateTime auditAt;
+    private LocalDateTime createTime;
 }

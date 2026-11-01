@@ -14,25 +14,25 @@ import org.junit.jupiter.api.Test;
  */
 class InternalTokenFeignInterceptorTest {
 
-  /** 非空内部令牌应写入 X-Internal-Token 请求头. */
-  @Test
-  void testApplyGivenTokenThenHeaderInjected() {
-    InternalTokenFeignInterceptor interceptor = new InternalTokenFeignInterceptor("test-token");
-    RequestTemplate template = new RequestTemplate();
+    /** 非空内部令牌应写入 X-Internal-Token 请求头. */
+    @Test
+    void testApplyGivenTokenThenHeaderInjected() {
+        InternalTokenFeignInterceptor interceptor = new InternalTokenFeignInterceptor("test-token");
+        RequestTemplate template = new RequestTemplate();
 
-    interceptor.apply(template);
+        interceptor.apply(template);
 
-    assertEquals("test-token", template.headers().get("X-Internal-Token").iterator().next());
-  }
+        assertEquals("test-token", template.headers().get("X-Internal-Token").iterator().next());
+    }
 
-  /** 空白内部令牌不应写入请求头. */
-  @Test
-  void testApplyGivenBlankTokenThenNoHeaderAdded() {
-    InternalTokenFeignInterceptor interceptor = new InternalTokenFeignInterceptor("  ");
-    RequestTemplate template = new RequestTemplate();
+    /** 空白内部令牌不应写入请求头. */
+    @Test
+    void testApplyGivenBlankTokenThenNoHeaderAdded() {
+        InternalTokenFeignInterceptor interceptor = new InternalTokenFeignInterceptor("  ");
+        RequestTemplate template = new RequestTemplate();
 
-    interceptor.apply(template);
+        interceptor.apply(template);
 
-    assertNull(template.headers().get("X-Internal-Token"));
-  }
+        assertNull(template.headers().get("X-Internal-Token"));
+    }
 }

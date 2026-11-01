@@ -13,30 +13,30 @@ import lombok.Getter;
 @Getter
 @AllArgsConstructor
 public enum CommentStatusEnum implements BaseEnum {
-  NORMAL(1, "NORMAL", "正常"),
-  HIDDEN(2, "HIDDEN", "已隐藏"),
-  DELETED(3, "DELETED", "已删除");
+    NORMAL(1, "NORMAL", "正常"),
+    HIDDEN(2, "HIDDEN", "已隐藏"),
+    DELETED(3, "DELETED", "已删除");
 
-  private final int code;
-  private final String alias;
-  private final String message;
+    private final int code;
+    private final String alias;
+    private final String message;
 
-  /**
-   * 将评价状态编码转换为 BaseEnum 约定的字符串形式.
-   *
-   * @return 评价状态的十进制字符串编码
-   */
-  @Override
-  public String getCode() {
-    return String.valueOf(code);
-  }
+    /**
+     * 将评价状态编码转换为 BaseEnum 约定的字符串形式.
+     *
+     * @return 评价状态的十进制字符串编码
+     */
+    @Override
+    public String getCode() {
+        return String.valueOf(code);
+    }
 
-  /**
-   * 返回可直接用于数据库状态字段比较的整数编码.
-   *
-   * @return 评价状态整数编码
-   */
-  public int intCode() {
-    return code;
-  }
+    /**
+     * 返回可直接用于数据库状态字段比较的整数编码.
+     *
+     * @return 评价状态整数编码
+     */
+    public int intCode() {
+        return code;
+    }
 }

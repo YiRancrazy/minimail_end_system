@@ -14,4 +14,4 @@ import com.yirancrazy.minimall.notify.mapper.PreferenceMapper;
  */
 @Manager
 public class PreferenceManagerImpl extends ServiceImpl<PreferenceMapper, PreferencePo>
-    implements PreferenceManager {}
+        implements PreferenceManager {}

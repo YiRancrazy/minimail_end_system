@@ -17,14 +17,14 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class OrderPaySnapshotDto {
 
-  private Long orderId;
-  private String orderNo;
-  private Long userId;
-  private Long merchantId;
+    private Long orderId;
+    private String orderNo;
+    private Long userId;
+    private Long merchantId;
 
-  @Digits(integer = 10, fraction = 2, message = "payAmount must have at most 2 decimal places")
-  private BigDecimal payAmount;
+    @Digits(integer = 10, fraction = 2, message = "payAmount must have at most 2 decimal places")
+    private BigDecimal payAmount;
 
-  private Integer status;
-  private Long payId;
+    private Integer status;
+    private Long payId;
 }

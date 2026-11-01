@@ -17,17 +17,17 @@ import org.apache.ibatis.annotations.Select;
 @Mapper
 public interface CommentMapper extends BaseMapper<CommentPo> {
 
-  /**
-   * 按评分值聚合 SPU 下指定状态的未删除评价数量.
-   *
-   * @param spuId 商品 SPU 编号
-   * @param status 需要统计的评价状态编码
-   * @return 每个存在评价的评分值及其数量
-   */
-  @Select(
-      "SELECT rating AS rating, COUNT(*) AS cnt FROM t_notify_comment "
-          + "WHERE spu_id = #{spuId} AND status = #{status} AND is_deleted = 0 "
-          + "GROUP BY rating")
-  List<CommentRatingCountDto> countGroupByRating(
-      @Param("spuId") Long spuId, @Param("status") Integer status);
+    /**
+     * 按评分值聚合 SPU 下指定状态的未删除评价数量.
+     *
+     * @param spuId 商品 SPU 编号
+     * @param status 需要统计的评价状态编码
+     * @return 每个存在评价的评分值及其数量
+     */
+    @Select(
+            "SELECT rating AS rating, COUNT(*) AS cnt FROM t_notify_comment "
+                    + "WHERE spu_id = #{spuId} AND status = #{status} AND is_deleted = 0 "
+                    + "GROUP BY rating")
+    List<CommentRatingCountDto> countGroupByRating(
+            @Param("spuId") Long spuId, @Param("status") Integer status);
 }

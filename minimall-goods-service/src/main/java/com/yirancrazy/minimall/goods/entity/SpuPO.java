@@ -14,14 +14,14 @@ import lombok.Data;
 @Data
 @TableName("t_goods_spu")
 public class SpuPo extends BasePo {
-  private String spuNo;
-  // 归属店铺ID，商品必须挂靠在营业中店铺下，杜绝无店铺发布
-  private Long shopId;
-  private Long merchantId;
-  private Long categoryId;
-  private String title;
-  private String subtitle;
-  private String mainImageUrl;
-  private Integer status;
-  private LocalDateTime publishAt;
+    private String spuNo;
+    // 归属店铺ID，商品必须挂靠在营业中店铺下，杜绝无店铺发布
+    private Long shopId;
+    private Long merchantId;
+    private Long categoryId;
+    private String title;
+    private String subtitle;
+    private String mainImageUrl;
+    private Integer status;
+    private LocalDateTime publishAt;
 }

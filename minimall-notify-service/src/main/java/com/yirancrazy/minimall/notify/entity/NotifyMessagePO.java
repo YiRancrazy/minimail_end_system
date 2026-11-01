@@ -16,18 +16,18 @@ import lombok.EqualsAndHashCode;
 @TableName("t_notify_message")
 public class NotifyMessagePo extends BasePo {
 
-  private Long userId;
+    private Long userId;
 
-  private Integer recipientType;
+    private Integer recipientType;
 
-  private Integer messageType;
+    private Integer messageType;
 
-  private Long senderId;
+    private Long senderId;
 
-  private String bizId;
+    private String bizId;
 
-  private String title;
-  private String content;
+    private String title;
+    private String content;
 
-  private Integer readFlag;
+    private Integer readFlag;
 }

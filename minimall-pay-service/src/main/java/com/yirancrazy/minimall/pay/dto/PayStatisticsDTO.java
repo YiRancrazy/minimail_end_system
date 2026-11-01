@@ -17,7 +17,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class PayStatisticsDto {
 
-  private BigDecimal totalAmount;
-  private BigDecimal refundAmount;
-  private Long transactionCount;
+    private BigDecimal totalAmount;
+    private BigDecimal refundAmount;
+    private Long transactionCount;
 }

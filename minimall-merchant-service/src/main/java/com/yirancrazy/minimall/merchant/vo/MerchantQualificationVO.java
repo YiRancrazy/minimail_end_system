@@ -13,18 +13,18 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 public class MerchantQualificationVo {
-  private Long id;
+    private Long id;
 
-  private Long merchantId;
-  private Long userId;
-  private String merchantName;
-  private String licenseNo;
+    private Long merchantId;
+    private Long userId;
+    private String merchantName;
+    private String licenseNo;
 
-  private String licenseImageUrl;
-  private Integer auditStatus;
-  private String auditReason;
-  private LocalDateTime auditAt;
-  private String legalPhoneMasked;
-  private String idCardNoMasked;
-  private String bankAccountMasked;
+    private String licenseImageUrl;
+    private Integer auditStatus;
+    private String auditReason;
+    private LocalDateTime auditAt;
+    private String legalPhoneMasked;
+    private String idCardNoMasked;
+    private String bankAccountMasked;
 }

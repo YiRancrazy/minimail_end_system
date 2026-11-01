@@ -10,9 +10,9 @@ import lombok.Data;
  */
 @Data
 public class TokenPayloadDto {
-  private Long authUserId;
-  private Long userId;
-  private String role;
-  private Long issuedAt;
-  private Long expiresAt;
+    private Long authUserId;
+    private Long userId;
+    private String role;
+    private Long issuedAt;
+    private Long expiresAt;
 }

@@ -16,9 +16,9 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 public class PayPageDto extends CursorPageDto {
 
-  private Integer status;
+    private Integer status;
 
-  private LocalDateTime startTime;
+    private LocalDateTime startTime;
 
-  private LocalDateTime endTime;
+    private LocalDateTime endTime;
 }

@@ -13,10 +13,10 @@ import org.junit.jupiter.api.Test;
  */
 class SeataParticipantWiringTest {
 
-  /** 验证 Seata 依赖：加载注解与代理类，预期类均可用且不建立事务. */
-  @Test
-  void testSeataClientClassesAvailable() throws Exception {
-    assertNotNull(Class.forName("io.seata.spring.annotation.GlobalTransactional"));
-    assertNotNull(Class.forName("io.seata.rm.datasource.DataSourceProxy"));
-  }
+    /** 验证 Seata 依赖：加载注解与代理类，预期类均可用且不建立事务. */
+    @Test
+    void testSeataClientClassesAvailable() throws Exception {
+        assertNotNull(Class.forName("io.seata.spring.annotation.GlobalTransactional"));
+        assertNotNull(Class.forName("io.seata.rm.datasource.DataSourceProxy"));
+    }
 }

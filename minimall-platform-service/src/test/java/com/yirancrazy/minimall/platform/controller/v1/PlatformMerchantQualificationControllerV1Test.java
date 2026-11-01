@@ -21,40 +21,40 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class PlatformMerchantQualificationControllerV1Test {
 
-  @Mock private PlatformMerchantService platformMerchantService;
+    @Mock private PlatformMerchantService platformMerchantService;
 
-  private PlatformMerchantQualificationControllerV1 controller;
+    private PlatformMerchantQualificationControllerV1 controller;
 
-  /** 使用 Mockito 商家服务替身为每个测试创建控制器实例。 */
-  @BeforeEach
-  void setUp() {
-    controller = new PlatformMerchantQualificationControllerV1(platformMerchantService);
-  }
+    /** 使用 Mockito 商家服务替身为每个测试创建控制器实例。 */
+    @BeforeEach
+    void setUp() {
+        controller = new PlatformMerchantQualificationControllerV1(platformMerchantService);
+    }
 
-  /** 目标：验证审核通过委派；前置：服务替身和资质 100、approved=true；步骤：审核商家 1；预期：code=00000 且传递同一请求. */
-  @Test
-  void testAuditApprovedDelegatesToMerchantService() {
-    MerchantQualificationAuditDto dto = new MerchantQualificationAuditDto();
-    dto.setQualificationId(100L);
-    dto.setApproved(true);
+    /** 目标：验证审核通过委派；前置：服务替身和资质 100、approved=true；步骤：审核商家 1；预期：code=00000 且传递同一请求. */
+    @Test
+    void testAuditApprovedDelegatesToMerchantService() {
+        MerchantQualificationAuditDto dto = new MerchantQualificationAuditDto();
+        dto.setQualificationId(100L);
+        dto.setApproved(true);
 
-    Result<Void> result = controller.audit(1L, dto);
+        Result<Void> result = controller.audit(1L, dto);
 
-    assertEquals("00000", result.getCode());
-    verify(platformMerchantService).auditQualification(1L, dto);
-  }
+        assertEquals("00000", result.getCode());
+        verify(platformMerchantService).auditQualification(1L, dto);
+    }
 
-  /** 目标：验证拒绝原因传递；前置：服务替身和 approved=false、拒绝原因；步骤：审核商家 1；预期：code=00000 且原因随请求传递. */
-  @Test
-  void testAuditRejectedPassesReasonToMerchantService() {
-    MerchantQualificationAuditDto dto = new MerchantQualificationAuditDto();
-    dto.setQualificationId(100L);
-    dto.setApproved(false);
-    dto.setReason("证照不清晰");
+    /** 目标：验证拒绝原因传递；前置：服务替身和 approved=false、拒绝原因；步骤：审核商家 1；预期：code=00000 且原因随请求传递. */
+    @Test
+    void testAuditRejectedPassesReasonToMerchantService() {
+        MerchantQualificationAuditDto dto = new MerchantQualificationAuditDto();
+        dto.setQualificationId(100L);
+        dto.setApproved(false);
+        dto.setReason("证照不清晰");
 
-    Result<Void> result = controller.audit(1L, dto);
+        Result<Void> result = controller.audit(1L, dto);
 
-    assertEquals("00000", result.getCode());
-    verify(platformMerchantService).auditQualification(1L, dto);
-  }
+        assertEquals("00000", result.getCode());
+        verify(platformMerchantService).auditQualification(1L, dto);
+    }
 }

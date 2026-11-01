@@ -13,10 +13,10 @@ import lombok.Getter;
 @Getter
 @AllArgsConstructor
 public enum SkuCodeEnum implements BaseEnum {
-  SKU_NOT_FOUND("13001", "SKU_NOT_FOUND", "SKU 不存在"),
-  STOCK_ADJUST_FAILED("13002", "STOCK_ADJUST_FAILED", "库存服务调整失败");
+    SKU_NOT_FOUND("13001", "SKU_NOT_FOUND", "SKU 不存在"),
+    STOCK_ADJUST_FAILED("13002", "STOCK_ADJUST_FAILED", "库存服务调整失败");
 
-  private final String code;
-  private final String alias;
-  private final String message;
+    private final String code;
+    private final String alias;
+    private final String message;
 }

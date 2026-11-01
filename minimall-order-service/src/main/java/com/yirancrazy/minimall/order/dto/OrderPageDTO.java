@@ -17,10 +17,10 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 public class OrderPageDto extends CursorPageDto {
 
-  private Long userId;
-  private Long merchantId;
+    private Long userId;
+    private Long merchantId;
 
-  private String status;
-  private LocalDateTime startTime;
-  private LocalDateTime endTime;
+    private String status;
+    private LocalDateTime startTime;
+    private LocalDateTime endTime;
 }

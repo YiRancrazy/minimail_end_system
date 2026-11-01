@@ -13,7 +13,7 @@ import lombok.Data;
 @Data
 public class SpuRejectDto {
 
-  @NotBlank(message = "reason cannot be blank")
-  @Size(max = 512, message = "reason length must be <= 512")
-  private String reason;
+    @NotBlank(message = "reason cannot be blank")
+    @Size(max = 512, message = "reason length must be <= 512")
+    private String reason;
 }

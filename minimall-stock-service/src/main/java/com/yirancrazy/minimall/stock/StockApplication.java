@@ -16,12 +16,12 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 @MapperScan("com.yirancrazy.minimall.stock.mapper")
 public class StockApplication {
-  /**
-   * 启动库存微服务并等待外部组件完成 Bean 初始化。
-   *
-   * @param args Spring Boot 命令行参数
-   */
-  public static void main(String[] args) {
-    SpringApplication.run(StockApplication.class, args);
-  }
+    /**
+     * 启动库存微服务并等待外部组件完成 Bean 初始化。
+     *
+     * @param args Spring Boot 命令行参数
+     */
+    public static void main(String[] args) {
+        SpringApplication.run(StockApplication.class, args);
+    }
 }

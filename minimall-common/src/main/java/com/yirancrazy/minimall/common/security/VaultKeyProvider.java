@@ -9,10 +9,10 @@ package com.yirancrazy.minimall.common.security;
  */
 public interface VaultKeyProvider {
 
-  /**
-   * 返回当前 AES-256 密钥。
-   *
-   * @return 32 字节密钥
-   */
-  byte[] getKey();
+    /**
+     * 返回当前 AES-256 密钥。
+     *
+     * @return 32 字节密钥
+     */
+    byte[] getKey();
 }

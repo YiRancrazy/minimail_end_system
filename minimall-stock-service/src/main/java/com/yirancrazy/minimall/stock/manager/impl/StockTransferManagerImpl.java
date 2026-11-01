@@ -14,4 +14,4 @@ import com.yirancrazy.minimall.stock.mapper.StockTransferMapper;
  */
 @Manager
 public class StockTransferManagerImpl extends ServiceImpl<StockTransferMapper, StockTransferPo>
-    implements StockTransferManager {}
+        implements StockTransferManager {}

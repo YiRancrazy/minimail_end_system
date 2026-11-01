@@ -13,7 +13,7 @@ import lombok.Data;
 @Data
 public class AdminRoleDto {
 
-  @NotBlank(message = "roleCode cannot be blank")
-  @Size(max = 64, message = "roleCode length must be <= 64")
-  private String roleCode;
+    @NotBlank(message = "roleCode cannot be blank")
+    @Size(max = 64, message = "roleCode length must be <= 64")
+    private String roleCode;
 }

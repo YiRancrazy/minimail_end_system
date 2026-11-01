@@ -17,10 +17,10 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class ChangePasswordDto {
 
-  @NotBlank(message = "oldPassword cannot be blank")
-  private String oldPassword;
+    @NotBlank(message = "oldPassword cannot be blank")
+    private String oldPassword;
 
-  @NotBlank(message = "newPassword cannot be blank")
-  @Size(min = 6, max = 64, message = "newPassword length must be between 6 and 64")
-  private String newPassword;
+    @NotBlank(message = "newPassword cannot be blank")
+    @Size(min = 6, max = 64, message = "newPassword length must be between 6 and 64")
+    private String newPassword;
 }

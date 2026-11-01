@@ -30,115 +30,115 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
  */
 class UploadControllerV1Test {
 
-  private MockMvc mockMvc;
-  private ChunkUploadService chunkUploadService;
+    private MockMvc mockMvc;
+    private ChunkUploadService chunkUploadService;
 
-  /**
-   * 初始化分片上传服务替身和 MockMvc。
-   */
-  @BeforeEach
-  void setUp() {
-    chunkUploadService = mock(ChunkUploadService.class);
-    mockMvc = MockMvcBuilders.standaloneSetup(new UploadControllerV1(chunkUploadService)).build();
-  }
+    /**
+     * 初始化分片上传服务替身和 MockMvc。
+     */
+    @BeforeEach
+    void setUp() {
+        chunkUploadService = mock(ChunkUploadService.class);
+        mockMvc = MockMvcBuilders.standaloneSetup(new UploadControllerV1(chunkUploadService)).build();
+    }
 
-  /** 验证分片未完成：服务返回 1/3，上传第 0 片，预期 00000、done=false、received=1. */
-  @Test
-  void testChunkReturnsReceivedCountWhenNotDone() throws Exception {
-    when(chunkUploadService.saveChunk(
-            anyLong(),
-            anyString(),
-            anyInt(),
-            anyInt(),
-            anyString(),
-            any(),
-            any(ChunkUploadService.ChunkInputStreamSupplier.class)))
-        .thenReturn(new ChunkResult(false, 1, null));
+    /** 验证分片未完成：服务返回 1/3，上传第 0 片，预期 00000、done=false、received=1. */
+    @Test
+    void testChunkReturnsReceivedCountWhenNotDone() throws Exception {
+        when(chunkUploadService.saveChunk(
+                        anyLong(),
+                        anyString(),
+                        anyInt(),
+                        anyInt(),
+                        anyString(),
+                        any(),
+                        any(ChunkUploadService.ChunkInputStreamSupplier.class)))
+                .thenReturn(new ChunkResult(false, 1, null));
 
-    MockMultipartFile file =
-        new MockMultipartFile("file", "a.png", "image/png", new byte[] {1, 2, 3});
-    mockMvc
-        .perform(
-            multipart("/api/v1/user/upload/chunk")
-                .file(file)
-                .header("X-User-Id", "42")
-                .param("uploadId", "task-1")
-                .param("chunkIndex", "0")
-                .param("totalChunks", "3"))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.code").value("00000"))
-        .andExpect(jsonPath("$.data.done").value(false))
-        .andExpect(jsonPath("$.data.received").value(1));
-    verify(chunkUploadService)
-        .saveChunk(
-            eq(42L),
-            eq("task-1"),
-            eq(0),
-            eq(3),
-            eq("image/png"),
-            any(),
-            any(ChunkUploadService.ChunkInputStreamSupplier.class));
-  }
+        MockMultipartFile file =
+                new MockMultipartFile("file", "a.png", "image/png", new byte[] {1, 2, 3});
+        mockMvc
+                .perform(
+                        multipart("/api/v1/user/upload/chunk")
+                                .file(file)
+                                .header("X-User-Id", "42")
+                                .param("uploadId", "task-1")
+                                .param("chunkIndex", "0")
+                                .param("totalChunks", "3"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("00000"))
+                .andExpect(jsonPath("$.data.done").value(false))
+                .andExpect(jsonPath("$.data.received").value(1));
+        verify(chunkUploadService)
+                .saveChunk(
+                        eq(42L),
+                        eq("task-1"),
+                        eq(0),
+                        eq(3),
+                        eq("image/png"),
+                        any(),
+                        any(ChunkUploadService.ChunkInputStreamSupplier.class));
+    }
 
-  /** 验证末片完成：服务返回 3/3 和 final-key，上传第 2 片，预期 done=true、objectKey=final-key. */
-  @Test
-  void testChunkReturnsObjectKeyWhenDone() throws Exception {
-    when(chunkUploadService.saveChunk(
-            anyLong(),
-            anyString(),
-            anyInt(),
-            anyInt(),
-            anyString(),
-            any(),
-            any(ChunkUploadService.ChunkInputStreamSupplier.class)))
-        .thenReturn(new ChunkResult(true, 3, "final-key"));
+    /** 验证末片完成：服务返回 3/3 和 final-key，上传第 2 片，预期 done=true、objectKey=final-key. */
+    @Test
+    void testChunkReturnsObjectKeyWhenDone() throws Exception {
+        when(chunkUploadService.saveChunk(
+                        anyLong(),
+                        anyString(),
+                        anyInt(),
+                        anyInt(),
+                        anyString(),
+                        any(),
+                        any(ChunkUploadService.ChunkInputStreamSupplier.class)))
+                .thenReturn(new ChunkResult(true, 3, "final-key"));
 
-    MockMultipartFile file =
-        new MockMultipartFile("file", "a.png", "image/png", new byte[] {1, 2, 3});
-    mockMvc
-        .perform(
-            multipart("/api/v1/user/upload/chunk")
-                .file(file)
-                .header("X-User-Id", "42")
-                .param("uploadId", "task-1")
-                .param("chunkIndex", "2")
-                .param("totalChunks", "3"))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.data.done").value(true))
-        .andExpect(jsonPath("$.data.objectKey").value("final-key"));
-  }
+        MockMultipartFile file =
+                new MockMultipartFile("file", "a.png", "image/png", new byte[] {1, 2, 3});
+        mockMvc
+                .perform(
+                        multipart("/api/v1/user/upload/chunk")
+                                .file(file)
+                                .header("X-User-Id", "42")
+                                .param("uploadId", "task-1")
+                                .param("chunkIndex", "2")
+                                .param("totalChunks", "3"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.done").value(true))
+                .andExpect(jsonPath("$.data.objectKey").value("final-key"));
+    }
 
-  /** 验证状态查询：3 片任务已收 0、2，预期 00000、receivedChunks=[0,2]、done=false. */
-  @Test
-  void testStatusReturnsReceivedChunks() throws Exception {
-    when(chunkUploadService.receivedChunks(42L, "task-1", 3)).thenReturn(List.of(0, 2));
+    /** 验证状态查询：3 片任务已收 0、2，预期 00000、receivedChunks=[0,2]、done=false. */
+    @Test
+    void testStatusReturnsReceivedChunks() throws Exception {
+        when(chunkUploadService.receivedChunks(42L, "task-1", 3)).thenReturn(List.of(0, 2));
 
-    mockMvc
-        .perform(
-            get("/api/v1/user/upload/status")
-                .header("X-User-Id", "42")
-                .param("uploadId", "task-1")
-                .param("totalChunks", "3"))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.code").value("00000"))
-        .andExpect(jsonPath("$.data.receivedChunks[0]").value(0))
-        .andExpect(jsonPath("$.data.receivedChunks[1]").value(2))
-        .andExpect(jsonPath("$.data.done").value(false));
-    verify(chunkUploadService).receivedChunks(42L, "task-1", 3);
-  }
+        mockMvc
+                .perform(
+                        get("/api/v1/user/upload/status")
+                                .header("X-User-Id", "42")
+                                .param("uploadId", "task-1")
+                                .param("totalChunks", "3"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("00000"))
+                .andExpect(jsonPath("$.data.receivedChunks[0]").value(0))
+                .andExpect(jsonPath("$.data.receivedChunks[1]").value(2))
+                .andExpect(jsonPath("$.data.done").value(false));
+        verify(chunkUploadService).receivedChunks(42L, "task-1", 3);
+    }
 
-  /** 验证状态完成：2 片任务已收 0、1，调用 status，预期 done=true. */
-  @Test
-  void testStatusMarksDoneWhenAllReceived() throws Exception {
-    when(chunkUploadService.receivedChunks(42L, "task-1", 2)).thenReturn(List.of(0, 1));
+    /** 验证状态完成：2 片任务已收 0、1，调用 status，预期 done=true. */
+    @Test
+    void testStatusMarksDoneWhenAllReceived() throws Exception {
+        when(chunkUploadService.receivedChunks(42L, "task-1", 2)).thenReturn(List.of(0, 1));
 
-    mockMvc
-        .perform(
-            get("/api/v1/user/upload/status")
-                .header("X-User-Id", "42")
-                .param("uploadId", "task-1")
-                .param("totalChunks", "2"))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.data.done").value(true));
-  }
+        mockMvc
+                .perform(
+                        get("/api/v1/user/upload/status")
+                                .header("X-User-Id", "42")
+                                .param("uploadId", "task-1")
+                                .param("totalChunks", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.done").value(true));
+    }
 }

@@ -18,15 +18,15 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class OrderSummaryVo {
 
-  private Long totalCount;
+    private Long totalCount;
 
-  private BigDecimal totalAmount;
+    private BigDecimal totalAmount;
 
-  private BigDecimal paidAmount;
+    private BigDecimal paidAmount;
 
-  private BigDecimal pendingAmount;
+    private BigDecimal pendingAmount;
 
-  private BigDecimal refundAmount;
+    private BigDecimal refundAmount;
 
-  private BigDecimal netIncome;
+    private BigDecimal netIncome;
 }

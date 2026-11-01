@@ -10,13 +10,13 @@ import com.yirancrazy.minimall.common.result.ResultCode;
  * @DateTime: 2026/10/16
  */
 public interface BaseEnum extends ResultCode {
-  /**
-   * 返回枚举常量名作为默认业务码。
-   *
-   * @return 当前枚举常量的 name
-   */
-  @Override
-  default String getCode() {
-    return ((Enum<?>) this).name();
-  }
+    /**
+     * 返回枚举常量名作为默认业务码。
+     *
+     * @return 当前枚举常量的 name
+     */
+    @Override
+    default String getCode() {
+        return ((Enum<?>) this).name();
+    }
 }

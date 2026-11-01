@@ -22,14 +22,14 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 @AutoConfigureAfter(RedisAutoConfiguration.class)
 public class IdempotentAutoConfiguration {
 
-  /**
-   * 创建并注册使用 Redis 存储幂等键的切面。
-   *
-   * @param redisTemplate Spring 容器中的字符串 Redis 模板
-   * @return 已注入 Redis 依赖的幂等切面
-   */
-  @Bean
-  public IdempotentAspect idempotentAspect(StringRedisTemplate redisTemplate) {
-    return new IdempotentAspect(redisTemplate);
-  }
+    /**
+     * 创建并注册使用 Redis 存储幂等键的切面。
+     *
+     * @param redisTemplate Spring 容器中的字符串 Redis 模板
+     * @return 已注入 Redis 依赖的幂等切面
+     */
+    @Bean
+    public IdempotentAspect idempotentAspect(StringRedisTemplate redisTemplate) {
+        return new IdempotentAspect(redisTemplate);
+    }
 }

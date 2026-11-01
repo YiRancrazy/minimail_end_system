@@ -15,13 +15,13 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class SpuDetailVo {
-  private Long spuId;
-  private String spuNo;
-  private String title;
-  private String subtitle;
-  private String mainImageUrl;
-  private Long merchantId;
-  private Long categoryId;
-  private Boolean isOnSale;
-  private List<SkuVo> skus;
+    private Long spuId;
+    private String spuNo;
+    private String title;
+    private String subtitle;
+    private String mainImageUrl;
+    private Long merchantId;
+    private Long categoryId;
+    private Boolean isOnSale;
+    private List<SkuVo> skus;
 }

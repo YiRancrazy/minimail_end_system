@@ -13,12 +13,12 @@ import java.util.List;
  */
 public interface CommentManager extends IService<CommentPo> {
 
-  /**
-   * 查询 SPU 下指定评价状态的评分分组计数.
-   *
-   * @param spuId 商品 SPU 编号
-   * @param status 需要统计的评价状态编码
-   * @return 各评分值对应的评价数量
-   */
-  List<CommentRatingCountDto> countGroupByRating(Long spuId, Integer status);
+    /**
+     * 查询 SPU 下指定评价状态的评分分组计数.
+     *
+     * @param spuId 商品 SPU 编号
+     * @param status 需要统计的评价状态编码
+     * @return 各评分值对应的评价数量
+     */
+    List<CommentRatingCountDto> countGroupByRating(Long spuId, Integer status);
 }

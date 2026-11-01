@@ -16,25 +16,25 @@ import lombok.EqualsAndHashCode;
 @TableName("t_notify_complaint")
 public class ComplaintPo extends BasePo {
 
-  private Integer complainantType;
+    private Integer complainantType;
 
-  private Long complainantId;
+    private Long complainantId;
 
-  private Integer defendantType;
+    private Integer defendantType;
 
-  private Long defendantId;
+    private Long defendantId;
 
-  private String orderNo;
+    private String orderNo;
 
-  private String complaintType;
+    private String complaintType;
 
-  private String title;
+    private String title;
 
-  private String content;
+    private String content;
 
-  private Integer status;
+    private Integer status;
 
-  private Long handlerId;
+    private Long handlerId;
 
-  private String handlerResult;
+    private String handlerResult;
 }

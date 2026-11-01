@@ -15,10 +15,10 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class SkuSnapshotDto {
-  private Long skuId;
-  private Long spuId;
-  private String skuName;
-  private BigDecimal price;
-  private Integer stock;
-  private Long merchantId;
+    private Long skuId;
+    private Long spuId;
+    private String skuName;
+    private BigDecimal price;
+    private Integer stock;
+    private Long merchantId;
 }

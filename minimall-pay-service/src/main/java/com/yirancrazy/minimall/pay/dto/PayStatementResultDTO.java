@@ -17,12 +17,12 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class PayStatementResultDto {
 
-  private Long totalCount;
-  private BigDecimal totalAmount;
-  private Long paidCount;
-  private BigDecimal paidAmount;
-  private Long refundedCount;
-  private BigDecimal refundedAmount;
-  private Long frozenCount;
-  private BigDecimal frozenAmount;
+    private Long totalCount;
+    private BigDecimal totalAmount;
+    private Long paidCount;
+    private BigDecimal paidAmount;
+    private Long refundedCount;
+    private BigDecimal refundedAmount;
+    private Long frozenCount;
+    private BigDecimal frozenAmount;
 }

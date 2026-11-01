@@ -22,42 +22,42 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/user/complaints")
 public class UserComplaintControllerV1 {
 
-  private final ComplaintService complaintService;
+    private final ComplaintService complaintService;
 
-  /**
-   * 注入投诉业务服务.
-   *
-   * @param complaintService 用户投诉查询入口
-   */
-  public UserComplaintControllerV1(ComplaintService complaintService) {
-    this.complaintService = complaintService;
-  }
+    /**
+     * 注入投诉业务服务.
+     *
+     * @param complaintService 用户投诉查询入口
+     */
+    public UserComplaintControllerV1(ComplaintService complaintService) {
+        this.complaintService = complaintService;
+    }
 
-  /**
-   * 查询当前用户投诉游标分页，并强制用请求头用户编号覆盖请求中的投诉人筛选值.
-   *
-   * @param userId 当前登录用户编号
-   * @param dto 游标及其他投诉筛选条件
-   * @return 当前页投诉视图及下一页游标
-   */
-  @GetMapping
-  public Result<CursorPageVo<ComplaintVo>> page(
-      @RequestHeader("X-User-Id") Long userId, @Valid ComplaintPageDto dto) {
-    // 强制覆盖 userId 字段，防止前端传入他人 ID 越权查询
-    dto.setUserId(userId);
-    return Result.success(complaintService.pageVo(dto));
-  }
+    /**
+     * 查询当前用户投诉游标分页，并强制用请求头用户编号覆盖请求中的投诉人筛选值.
+     *
+     * @param userId 当前登录用户编号
+     * @param dto 游标及其他投诉筛选条件
+     * @return 当前页投诉视图及下一页游标
+     */
+    @GetMapping
+    public Result<CursorPageVo<ComplaintVo>> page(
+            @RequestHeader("X-User-Id") Long userId, @Valid ComplaintPageDto dto) {
+        // 强制覆盖 userId 字段，防止前端传入他人 ID 越权查询
+        dto.setUserId(userId);
+        return Result.success(complaintService.pageVo(dto));
+    }
 
-  /**
-   * 查询当前用户作为投诉人的指定投诉详情；非本人记录由服务层按不存在处理.
-   *
-   * @param id 投诉主键
-   * @param userId 当前登录用户编号
-   * @return 用户侧投诉详情
-   */
-  @GetMapping("/{id}")
-  public Result<ComplaintVo> detail(
-      @PathVariable("id") Long id, @RequestHeader("X-User-Id") Long userId) {
-    return Result.success(complaintService.detailForUser(id, userId));
-  }
+    /**
+     * 查询当前用户作为投诉人的指定投诉详情；非本人记录由服务层按不存在处理.
+     *
+     * @param id 投诉主键
+     * @param userId 当前登录用户编号
+     * @return 用户侧投诉详情
+     */
+    @GetMapping("/{id}")
+    public Result<ComplaintVo> detail(
+            @PathVariable("id") Long id, @RequestHeader("X-User-Id") Long userId) {
+        return Result.success(complaintService.detailForUser(id, userId));
+    }
 }

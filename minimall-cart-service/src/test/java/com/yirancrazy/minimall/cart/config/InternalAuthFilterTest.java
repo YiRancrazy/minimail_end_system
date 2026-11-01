@@ -18,44 +18,44 @@ import org.springframework.mock.web.MockHttpServletResponse;
  */
 class InternalAuthFilterTest {
 
-  private InternalAuthFilter filter;
+    private InternalAuthFilter filter;
 
-  @BeforeEach
-  void setUp() {
-    filter = new InternalAuthFilter("test-token", new ObjectMapper());
-  }
+    @BeforeEach
+    void setUp() {
+        filter = new InternalAuthFilter("test-token", new ObjectMapper());
+    }
 
-  /** 验证内部路径缺少 X-Internal-Token 时返回 403，且不进入后续业务处理. */
-  @Test
-  void testInternalPathRejectsMissingToken() throws Exception {
-    MockHttpServletRequest request = new MockHttpServletRequest("POST", "/internal/cart/count");
-    MockHttpServletResponse response = new MockHttpServletResponse();
+    /** 验证内部路径缺少 X-Internal-Token 时返回 403，且不进入后续业务处理. */
+    @Test
+    void testInternalPathRejectsMissingToken() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/internal/cart/count");
+        MockHttpServletResponse response = new MockHttpServletResponse();
 
-    filter.doFilter(request, response, new MockFilterChain());
+        filter.doFilter(request, response, new MockFilterChain());
 
-    assertEquals(403, response.getStatus());
-  }
+        assertEquals(403, response.getStatus());
+    }
 
-  /** 验证公开购物车路径不校验内部令牌，过滤器链继续执行并保持 200 响应. */
-  @Test
-  void testPublicPathSkipsInternalCheck() throws Exception {
-    MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/user/cart");
-    MockHttpServletResponse response = new MockHttpServletResponse();
+    /** 验证公开购物车路径不校验内部令牌，过滤器链继续执行并保持 200 响应. */
+    @Test
+    void testPublicPathSkipsInternalCheck() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/user/cart");
+        MockHttpServletResponse response = new MockHttpServletResponse();
 
-    filter.doFilter(request, response, new MockFilterChain());
+        filter.doFilter(request, response, new MockFilterChain());
 
-    assertEquals(200, response.getStatus());
-  }
+        assertEquals(200, response.getStatus());
+    }
 
-  /** 验证内部路径携带正确令牌时放行请求，过滤器链继续执行并保持 200 响应. */
-  @Test
-  void testInternalPathAcceptsValidToken() throws Exception {
-    MockHttpServletRequest request = new MockHttpServletRequest("POST", "/internal/cart/count");
-    request.addHeader("X-Internal-Token", "test-token");
-    MockHttpServletResponse response = new MockHttpServletResponse();
+    /** 验证内部路径携带正确令牌时放行请求，过滤器链继续执行并保持 200 响应. */
+    @Test
+    void testInternalPathAcceptsValidToken() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/internal/cart/count");
+        request.addHeader("X-Internal-Token", "test-token");
+        MockHttpServletResponse response = new MockHttpServletResponse();
 
-    filter.doFilter(request, response, new MockFilterChain());
+        filter.doFilter(request, response, new MockFilterChain());
 
-    assertEquals(200, response.getStatus());
-  }
+        assertEquals(200, response.getStatus());
+    }
 }

@@ -17,11 +17,11 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 @TableName("t_order_status_log")
 public class OrderStatusLogPo extends BasePo {
-  private Long orderId;
-  private Integer fromStatus;
-  private Integer toStatus;
-  private Integer orderVersion;
-  private String triggerSource;
-  private Long operatorId;
-  private String note;
+    private Long orderId;
+    private Integer fromStatus;
+    private Integer toStatus;
+    private Integer orderVersion;
+    private String triggerSource;
+    private Long operatorId;
+    private String note;
 }

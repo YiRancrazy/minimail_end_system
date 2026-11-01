@@ -23,40 +23,40 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/goods/comments")
 public class PublicCommentControllerV1 {
 
-  private final CommentService commentService;
+    private final CommentService commentService;
 
-  /**
-   * 注入评价业务服务.
-   *
-   * @param commentService 公开评价查询入口
-   */
-  public PublicCommentControllerV1(CommentService commentService) {
-    this.commentService = commentService;
-  }
+    /**
+     * 注入评价业务服务.
+     *
+     * @param commentService 公开评价查询入口
+     */
+    public PublicCommentControllerV1(CommentService commentService) {
+        this.commentService = commentService;
+    }
 
-  /**
-   * 查询指定 SPU 的公开评价游标分页，并由接口强制状态为 NORMAL.
-   *
-   * @param spuId 商品 SPU 编号
-   * @param dto 游标及公开评价查询条件
-   * @return 当前页公开评价及下一页游标
-   */
-  @GetMapping("/{spuId}")
-  public Result<CursorPageVo<CommentVo>> pageBySpu(
-      @PathVariable Long spuId, @Valid CommentPageDto dto) {
-    dto.setSpuId(spuId);
-    dto.setStatus(CommentStatusEnum.NORMAL.intCode());
-    return Result.success(commentService.pageVo(dto));
-  }
+    /**
+     * 查询指定 SPU 的公开评价游标分页，并由接口强制状态为 NORMAL.
+     *
+     * @param spuId 商品 SPU 编号
+     * @param dto 游标及公开评价查询条件
+     * @return 当前页公开评价及下一页游标
+     */
+    @GetMapping("/{spuId}")
+    public Result<CursorPageVo<CommentVo>> pageBySpu(
+            @PathVariable Long spuId, @Valid CommentPageDto dto) {
+        dto.setSpuId(spuId);
+        dto.setStatus(CommentStatusEnum.NORMAL.intCode());
+        return Result.success(commentService.pageVo(dto));
+    }
 
-  /**
-   * 查询指定 SPU 的正常评价总数、平均分和各评分数量.
-   *
-   * @param spuId 商品 SPU 编号
-   * @return 评分统计视图
-   */
-  @GetMapping("/{spuId}/_stats")
-  public Result<CommentStatsVo> stats(@PathVariable Long spuId) {
-    return Result.success(commentService.stats(spuId));
-  }
+    /**
+     * 查询指定 SPU 的正常评价总数、平均分和各评分数量.
+     *
+     * @param spuId 商品 SPU 编号
+     * @return 评分统计视图
+     */
+    @GetMapping("/{spuId}/_stats")
+    public Result<CommentStatsVo> stats(@PathVariable Long spuId) {
+        return Result.success(commentService.stats(spuId));
+    }
 }

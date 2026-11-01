@@ -14,6 +14,6 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 public class StockTransferPageDto extends CursorPageDto {
 
-  private Long fromSkuId;
-  private Long toSkuId;
+    private Long fromSkuId;
+    private Long toSkuId;
 }

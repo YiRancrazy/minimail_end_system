@@ -31,85 +31,85 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
  */
 class PlatformOrderControllerV1Test {
 
-  private MockMvc mockMvc;
-  private OrderService service;
+    private MockMvc mockMvc;
+    private OrderService service;
 
-  /**
-   * 初始化当前测试类的共享夹具。
-   *
-   * <p>按测试类型创建 Mockito 桩、事务模板替身或 MockMvc，并为成功路径设置宽松默认值。
-   */
-  @BeforeEach
-  void setUp() {
-    service = mock(OrderService.class);
-    mockMvc = MockMvcBuilders.standaloneSetup(new PlatformOrderControllerV1(service)).build();
-  }
+    /**
+     * 初始化当前测试类的共享夹具。
+     *
+     * <p>按测试类型创建 Mockito 桩、事务模板替身或 MockMvc，并为成功路径设置宽松默认值。
+     */
+    @BeforeEach
+    void setUp() {
+        service = mock(OrderService.class);
+        mockMvc = MockMvcBuilders.standaloneSetup(new PlatformOrderControllerV1(service)).build();
+    }
 
-  /** 验证分页返回游标结果. */
-  @Test
-  void testPageReturnsCursorResult() throws Exception {
-    when(service.pageVo(any(OrderPageDto.class)))
-        .thenReturn(new CursorPageVo<>(Collections.emptyList(), null, false, 20));
-    mockMvc
-        .perform(get("/api/v1/platform/orders"))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.code").value("00000"));
-  }
+    /** 验证分页返回游标结果. */
+    @Test
+    void testPageReturnsCursorResult() throws Exception {
+        when(service.pageVo(any(OrderPageDto.class)))
+                .thenReturn(new CursorPageVo<>(Collections.emptyList(), null, false, 20));
+        mockMvc
+                .perform(get("/api/v1/platform/orders"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("00000"));
+    }
 
-  /** 验证状态返回整数. */
-  @Test
-  void testStatusReturnsInteger() throws Exception {
-    when(service.getStatus(anyLong())).thenReturn(2);
-    mockMvc
-        .perform(get("/api/v1/platform/orders/99"))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.data").value(2));
-  }
+    /** 验证状态返回整数. */
+    @Test
+    void testStatusReturnsInteger() throws Exception {
+        when(service.getStatus(anyLong())).thenReturn(2);
+        mockMvc
+                .perform(get("/api/v1/platform/orders/99"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data").value(2));
+    }
 
-  /** 验证详情返回视图对象. */
-  @Test
-  void testDetailReturnsVo() throws Exception {
-    OrderVo vo = new OrderVo();
-    vo.setId(99L);
-    vo.setUserId(1L);
-    vo.setAmount("10");
-    vo.setStatus("PAID");
-    when(service.platformDetailVo(anyLong())).thenReturn(vo);
-    mockMvc
-        .perform(get("/api/v1/platform/orders/99/detail"))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.data.id").value(99));
-  }
+    /** 验证详情返回视图对象. */
+    @Test
+    void testDetailReturnsVo() throws Exception {
+        OrderVo vo = new OrderVo();
+        vo.setId(99L);
+        vo.setUserId(1L);
+        vo.setAmount("10");
+        vo.setStatus("PAID");
+        when(service.platformDetailVo(anyLong())).thenReturn(vo);
+        mockMvc
+                .perform(get("/api/v1/platform/orders/99/detail"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(99));
+    }
 
-  /** 验证商家关闭订单调用订单服务. */
-  @Test
-  void testCloseInvokesService() throws Exception {
-    mockMvc
-        .perform(post("/api/v1/platform/orders/99/close"))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.code").value("00000"));
-    verify(service).platformClose(99L);
-  }
+    /** 验证商家关闭订单调用订单服务. */
+    @Test
+    void testCloseInvokesService() throws Exception {
+        mockMvc
+                .perform(post("/api/v1/platform/orders/99/close"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("00000"));
+        verify(service).platformClose(99L);
+    }
 
-  /** 验证平台退款仲裁调用订单服务. */
-  @Test
-  void testArbitrateInvokesService() throws Exception {
-    mockMvc
-        .perform(post("/api/v1/platform/orders/99/arbitrate").param("approved", "true"))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.code").value("00000"));
-    verify(service).arbitrateRefund(99L, true);
-  }
+    /** 验证平台退款仲裁调用订单服务. */
+    @Test
+    void testArbitrateInvokesService() throws Exception {
+        mockMvc
+                .perform(post("/api/v1/platform/orders/99/arbitrate").param("approved", "true"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("00000"));
+        verify(service).arbitrateRefund(99L, true);
+    }
 
-  /** 验证平台统计接口返回订单统计视图. */
-  @Test
-  void testStatisticsReturnsVo() throws Exception {
-    OrderStatisticsVo vo = new OrderStatisticsVo();
-    vo.setTotalOrderCount(10L);
-    when(service.statistics(any(OrderPageDto.class))).thenReturn(vo);
-    mockMvc
-        .perform(get("/api/v1/platform/orders/statistics"))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.data.totalOrderCount").value(10));
-  }
+    /** 验证平台统计接口返回订单统计视图. */
+    @Test
+    void testStatisticsReturnsVo() throws Exception {
+        OrderStatisticsVo vo = new OrderStatisticsVo();
+        vo.setTotalOrderCount(10L);
+        when(service.statistics(any(OrderPageDto.class))).thenReturn(vo);
+        mockMvc
+                .perform(get("/api/v1/platform/orders/statistics"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalOrderCount").value(10));
+    }
 }

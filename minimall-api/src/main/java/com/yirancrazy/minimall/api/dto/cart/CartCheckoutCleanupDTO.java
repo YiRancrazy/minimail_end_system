@@ -20,11 +20,11 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class CartCheckoutCleanupDto {
 
-  @NotNull(message = "用户ID不能为空")
-  private Long userId;
+    @NotNull(message = "用户ID不能为空")
+    private Long userId;
 
-  @NotEmpty(message = "购物车清理项不能为空")
-  @Size(max = 100, message = "单次最多清理100个购物车条目")
-  @Valid
-  private List<CartCheckoutItemDto> items;
+    @NotEmpty(message = "购物车清理项不能为空")
+    @Size(max = 100, message = "单次最多清理100个购物车条目")
+    @Valid
+    private List<CartCheckoutItemDto> items;
 }

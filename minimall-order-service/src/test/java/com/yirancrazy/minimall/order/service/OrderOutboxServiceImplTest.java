@@ -27,38 +27,38 @@ import org.junit.jupiter.api.Test;
  */
 class OrderOutboxServiceImplTest {
 
-  private OutboxManager outboxManager;
-  private OrderOutboxService orderOutboxService;
+    private OutboxManager outboxManager;
+    private OrderOutboxService orderOutboxService;
 
-  /**
-   * 初始化当前测试类的共享夹具。
-   *
-   * <p>按测试类型创建 Mockito 桩、事务模板替身或 MockMvc，并为成功路径设置宽松默认值。
-   */
-  @BeforeEach
-  void setUp() {
-    outboxManager = mock(OutboxManager.class);
-    orderOutboxService = new OrderOutboxServiceImpl(outboxManager, "minimall-events");
-  }
+    /**
+     * 初始化当前测试类的共享夹具。
+     *
+     * <p>按测试类型创建 Mockito 桩、事务模板替身或 MockMvc，并为成功路径设置宽松默认值。
+     */
+    @BeforeEach
+    void setUp() {
+        outboxManager = mock(OutboxManager.class);
+        orderOutboxService = new OrderOutboxServiceImpl(outboxManager, "minimall-events");
+    }
 
-  /** 验证发件箱保存返回 false 时抛出业务异常. */
-  @Test
-  void testRecordPaidEventThrowsWhenSaveReturnsFalse() {
-    when(outboxManager.save(any(OutboxPo.class))).thenReturn(false);
+    /** 验证发件箱保存返回 false 时抛出业务异常. */
+    @Test
+    void testRecordPaidEventThrowsWhenSaveReturnsFalse() {
+        when(outboxManager.save(any(OutboxPo.class))).thenReturn(false);
 
-    BizException exception =
-        assertThrows(BizException.class, () -> orderOutboxService.recordPaidEvent(paidEvent()));
+        BizException exception =
+                assertThrows(BizException.class, () -> orderOutboxService.recordPaidEvent(paidEvent()));
 
-    assertEquals(OrderCodeEnum.ORDER_OUTBOX_SAVE_FAILED.getCode(), exception.getCode());
-    assertEquals(OrderCodeEnum.ORDER_OUTBOX_SAVE_FAILED.getMessage(), exception.getMessage());
-  }
+        assertEquals(OrderCodeEnum.ORDER_OUTBOX_SAVE_FAILED.getCode(), exception.getCode());
+        assertEquals(OrderCodeEnum.ORDER_OUTBOX_SAVE_FAILED.getMessage(), exception.getMessage());
+    }
 
-  /**
-   * 构造订单支付成功事件.
-   *
-   * @return 订单支付成功事件
-   */
-  private OrderPaidDto paidEvent() {
-    return new OrderPaidDto(99L, 7L, new BigDecimal("10.00"), LocalDateTime.now().toString());
-  }
+    /**
+     * 构造订单支付成功事件.
+     *
+     * @return 订单支付成功事件
+     */
+    private OrderPaidDto paidEvent() {
+        return new OrderPaidDto(99L, 7L, new BigDecimal("10.00"), LocalDateTime.now().toString());
+    }
 }

@@ -15,10 +15,10 @@ import lombok.Data;
 @Data
 public class MerchantRefundExecuteDto {
 
-  @NotBlank(message = "退款金额不能为空")
-  @Pattern(regexp = "^(0|[1-9][0-9]*)(\\.\\d{1,2})?$", message = "退款金额必须是合法数字（最多两位小数）")
-  private String refundAmount;
+    @NotBlank(message = "退款金额不能为空")
+    @Pattern(regexp = "^(0|[1-9][0-9]*)(\\.\\d{1,2})?$", message = "退款金额必须是合法数字（最多两位小数）")
+    private String refundAmount;
 
-  @NotBlank(message = "退款原因不能为空")
-  private String reason;
+    @NotBlank(message = "退款原因不能为空")
+    private String reason;
 }

@@ -14,4 +14,4 @@ import com.yirancrazy.minimall.common.annotation.Manager;
  */
 @Manager
 public class AuthUserManagerImpl extends ServiceImpl<AuthUserMapper, AuthUserPo>
-    implements AuthUserManager {}
+        implements AuthUserManager {}

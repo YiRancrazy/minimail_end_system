@@ -13,10 +13,10 @@ import lombok.Getter;
 @Getter
 @AllArgsConstructor
 public enum MerchantCodeEnum implements BaseEnum {
-  MERCHANT_NOT_FOUND("15002", "MERCHANT_NOT_FOUND", "商家资质不存在"),
-  MERCHANT_ALREADY_AUDITED("15003", "MERCHANT_ALREADY_AUDITED", "商家资质已审核，不可重复审核");
+    MERCHANT_NOT_FOUND("15002", "MERCHANT_NOT_FOUND", "商家资质不存在"),
+    MERCHANT_ALREADY_AUDITED("15003", "MERCHANT_ALREADY_AUDITED", "商家资质已审核，不可重复审核");
 
-  private final String code;
-  private final String alias;
-  private final String message;
+    private final String code;
+    private final String alias;
+    private final String message;
 }

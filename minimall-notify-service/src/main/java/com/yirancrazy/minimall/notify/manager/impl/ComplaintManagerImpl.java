@@ -14,4 +14,4 @@ import com.yirancrazy.minimall.notify.mapper.ComplaintMapper;
  */
 @Manager
 public class ComplaintManagerImpl extends ServiceImpl<ComplaintMapper, ComplaintPo>
-    implements ComplaintManager {}
+        implements ComplaintManager {}

@@ -18,80 +18,80 @@ import java.time.LocalDateTime;
  */
 @Manager
 public class PayManagerImpl extends ServiceImpl<PayTransactionMapper, PayTransactionPo>
-    implements PayManager {
+        implements PayManager {
 
-  /**
-   * 委托 Mapper 聚合支付成功金额、退款金额和交易笔数。
-   *
-   * @param merchantId 商家筛选条件，可为空
-   * @param startTime 创建时间下界，可为空
-   * @param endTime 创建时间上界，可为空
-   * @return 支付统计数据库结果
-   */
-  @Override
-  public PayStatisticsDto statistics(
-      Long merchantId, LocalDateTime startTime, LocalDateTime endTime) {
-    return baseMapper.statistics(merchantId, startTime, endTime);
-  }
+    /**
+     * 委托 Mapper 聚合支付成功金额、退款金额和交易笔数。
+     *
+     * @param merchantId 商家筛选条件，可为空
+     * @param startTime 创建时间下界，可为空
+     * @param endTime 创建时间上界，可为空
+     * @return 支付统计数据库结果
+     */
+    @Override
+    public PayStatisticsDto statistics(
+            Long merchantId, LocalDateTime startTime, LocalDateTime endTime) {
+        return baseMapper.statistics(merchantId, startTime, endTime);
+    }
 
-  /**
-   * 执行带原状态条件的支付单状态更新。
-   *
-   * @param paymentNo 支付单号
-   * @param fromStatus 期望的原状态 code
-   * @param toStatus 目标状态 code
-   * @return 实际更新行数
-   */
-  @Override
-  public int updateStatusIf(String paymentNo, int fromStatus, int toStatus) {
-    return baseMapper.updateStatusIf(paymentNo, fromStatus, toStatus);
-  }
+    /**
+     * 执行带原状态条件的支付单状态更新。
+     *
+     * @param paymentNo 支付单号
+     * @param fromStatus 期望的原状态 code
+     * @param toStatus 目标状态 code
+     * @return 实际更新行数
+     */
+    @Override
+    public int updateStatusIf(String paymentNo, int fromStatus, int toStatus) {
+        return baseMapper.updateStatusIf(paymentNo, fromStatus, toStatus);
+    }
 
-  /**
-   * 执行待支付至已关闭的条件状态更新，并原子释放活跃订单号。
-   *
-   * @param paymentNo 支付单号
-   * @param pendingStatus 待支付状态 code
-   * @param closedStatus 已关闭状态 code
-   * @return 实际更新行数
-   */
-  @Override
-  public int closePendingPayment(String paymentNo, int pendingStatus, int closedStatus) {
-    return baseMapper.closePendingPayment(paymentNo, pendingStatus, closedStatus);
-  }
+    /**
+     * 执行待支付至已关闭的条件状态更新，并原子释放活跃订单号。
+     *
+     * @param paymentNo 支付单号
+     * @param pendingStatus 待支付状态 code
+     * @param closedStatus 已关闭状态 code
+     * @return 实际更新行数
+     */
+    @Override
+    public int closePendingPayment(String paymentNo, int pendingStatus, int closedStatus) {
+        return baseMapper.closePendingPayment(paymentNo, pendingStatus, closedStatus);
+    }
 
-  /**
-   * 执行待支付至成功的条件状态更新，并原子写入渠道支付信息。
-   *
-   * @param paymentNo 支付单号
-   * @param tradeNo 渠道交易号
-   * @param channelResponse 渠道原始响应
-   * @param paidAt 支付成功时间
-   * @param pendingStatus 待支付状态 code
-   * @param successStatus 支付成功状态 code
-   * @return 实际更新行数
-   */
-  @Override
-  public int markSuccessIfPending(
-      String paymentNo,
-      String tradeNo,
-      String channelResponse,
-      LocalDateTime paidAt,
-      int pendingStatus,
-      int successStatus) {
-    return baseMapper.markSuccessIfPending(
-        paymentNo, tradeNo, channelResponse, paidAt, pendingStatus, successStatus);
-  }
+    /**
+     * 执行待支付至成功的条件状态更新，并原子写入渠道支付信息。
+     *
+     * @param paymentNo 支付单号
+     * @param tradeNo 渠道交易号
+     * @param channelResponse 渠道原始响应
+     * @param paidAt 支付成功时间
+     * @param pendingStatus 待支付状态 code
+     * @param successStatus 支付成功状态 code
+     * @return 实际更新行数
+     */
+    @Override
+    public int markSuccessIfPending(
+            String paymentNo,
+            String tradeNo,
+            String channelResponse,
+            LocalDateTime paidAt,
+            int pendingStatus,
+            int successStatus) {
+        return baseMapper.markSuccessIfPending(
+                paymentNo, tradeNo, channelResponse, paidAt, pendingStatus, successStatus);
+    }
 
-  /**
-   * 委托 Mapper 聚合指定时间范围内的对账单数据。
-   *
-   * @param startTime 统计下界
-   * @param endTime 统计上界
-   * @return 支付对账单数据库结果
-   */
-  @Override
-  public PayStatementResultDto statement(LocalDateTime startTime, LocalDateTime endTime) {
-    return baseMapper.statement(startTime, endTime);
-  }
+    /**
+     * 委托 Mapper 聚合指定时间范围内的对账单数据。
+     *
+     * @param startTime 统计下界
+     * @param endTime 统计上界
+     * @return 支付对账单数据库结果
+     */
+    @Override
+    public PayStatementResultDto statement(LocalDateTime startTime, LocalDateTime endTime) {
+        return baseMapper.statement(startTime, endTime);
+    }
 }

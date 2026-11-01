@@ -13,6 +13,6 @@ import lombok.Data;
 @Data
 public class CartCountDto {
 
-  @NotNull(message = "userId cannot be null")
-  private Long userId;
+    @NotNull(message = "userId cannot be null")
+    private Long userId;
 }

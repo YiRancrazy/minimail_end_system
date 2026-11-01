@@ -8,14 +8,14 @@ package com.yirancrazy.minimall.common.result;
  * @DateTime: 2026/10/16
  */
 public final class CommonCode {
-  /** 常量容器禁止实例化。 */
-  private CommonCode() {}
+    /** 常量容器禁止实例化。 */
+    private CommonCode() {}
 
-  public static final String SUCCESS = "00000";
-  public static final String SYS_ERROR = "20000";
-  public static final String PARAM_INVALID = "20001";
-  public static final String FORBIDDEN = "20003";
+    public static final String SUCCESS = "00000";
+    public static final String SYS_ERROR = "20000";
+    public static final String PARAM_INVALID = "20001";
+    public static final String FORBIDDEN = "20003";
 
-  public static final String IDEMPOTENT_KEY_REUSED = "13002";
-  public static final String IDEMPOTENT_KEY_NOT_EXIST = "13003";
+    public static final String IDEMPOTENT_KEY_REUSED = "13002";
+    public static final String IDEMPOTENT_KEY_NOT_EXIST = "13003";
 }

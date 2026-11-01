@@ -13,19 +13,19 @@ import lombok.Setter;
 @Setter
 @Getter
 public class RocketMqTransactionRollbackException extends RuntimeException {
-  private final String tag;
-  private final transient Object event;
+    private final String tag;
+    private final transient Object event;
 
-  /**
-   * 创建本地事务回滚异常.
-   *
-   * @param tag 消息标签
-   * @param event 事务事件
-   * @param cause 原始异常
-   */
-  public RocketMqTransactionRollbackException(String tag, Object event, Throwable cause) {
-    super("RocketMQ 本地事务回滚，event=" + event.getClass().getSimpleName() + ", tag=" + tag, cause);
-    this.tag = tag;
-    this.event = event;
-  }
+    /**
+     * 创建本地事务回滚异常.
+     *
+     * @param tag 消息标签
+     * @param event 事务事件
+     * @param cause 原始异常
+     */
+    public RocketMqTransactionRollbackException(String tag, Object event, Throwable cause) {
+        super("RocketMQ 本地事务回滚，event=" + event.getClass().getSimpleName() + ", tag=" + tag, cause);
+        this.tag = tag;
+        this.event = event;
+    }
 }

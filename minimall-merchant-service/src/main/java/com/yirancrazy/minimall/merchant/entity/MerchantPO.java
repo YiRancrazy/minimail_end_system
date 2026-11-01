@@ -18,27 +18,27 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 @TableName(value = "t_merch_merchant", autoResultMap = true)
 public class MerchantPo extends BasePo {
-  private Long userId;
-  private String merchantName;
-  private String licenseNo;
+    private Long userId;
+    private String merchantName;
+    private String licenseNo;
 
-  private String licenseImageUrl;
-  private Integer auditStatus;
-  private String auditReason;
-  private LocalDateTime auditAt;
+    private String licenseImageUrl;
+    private Integer auditStatus;
+    private String auditReason;
+    private LocalDateTime auditAt;
 
-  @TableField(typeHandler = EncryptedStringTypeHandler.class)
-  private String legalPersonEnc;
+    @TableField(typeHandler = EncryptedStringTypeHandler.class)
+    private String legalPersonEnc;
 
-  @TableField(typeHandler = EncryptedStringTypeHandler.class)
-  private String legalPhoneEnc;
+    @TableField(typeHandler = EncryptedStringTypeHandler.class)
+    private String legalPhoneEnc;
 
-  @TableField(typeHandler = EncryptedStringTypeHandler.class)
-  private String idCardNoEnc;
+    @TableField(typeHandler = EncryptedStringTypeHandler.class)
+    private String idCardNoEnc;
 
-  @TableField(typeHandler = EncryptedStringTypeHandler.class)
-  private String businessLicenseNoEnc;
+    @TableField(typeHandler = EncryptedStringTypeHandler.class)
+    private String businessLicenseNoEnc;
 
-  @TableField(typeHandler = EncryptedStringTypeHandler.class)
-  private String bankAccountEnc;
+    @TableField(typeHandler = EncryptedStringTypeHandler.class)
+    private String bankAccountEnc;
 }

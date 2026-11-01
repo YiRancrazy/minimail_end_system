@@ -13,12 +13,12 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
 @SpringBootApplication
 @EnableFeignClients(basePackages = "com.yirancrazy.minimall.api.feign")
 public class PlatformApplication {
-  /**
-   * 启动平台管理服务并加载平台端接口及远程服务客户端.
-   *
-   * @param args Spring Boot 启动参数
-   */
-  public static void main(String[] args) {
-    SpringApplication.run(PlatformApplication.class, args);
-  }
+    /**
+     * 启动平台管理服务并加载平台端接口及远程服务客户端.
+     *
+     * @param args Spring Boot 启动参数
+     */
+    public static void main(String[] args) {
+        SpringApplication.run(PlatformApplication.class, args);
+    }
 }

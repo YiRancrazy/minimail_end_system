@@ -21,37 +21,37 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/platform/merchants/manage")
 public class PlatformMerchantControllerV1 {
 
-  private final PlatformMerchantService platformMerchantService;
+    private final PlatformMerchantService platformMerchantService;
 
-  /**
-   * 注入平台商家服务，构造商家管理接口.
-   *
-   * @param platformMerchantService 平台商家业务服务
-   */
-  public PlatformMerchantControllerV1(PlatformMerchantService platformMerchantService) {
-    this.platformMerchantService = platformMerchantService;
-  }
+    /**
+     * 注入平台商家服务，构造商家管理接口.
+     *
+     * @param platformMerchantService 平台商家业务服务
+     */
+    public PlatformMerchantControllerV1(PlatformMerchantService platformMerchantService) {
+        this.platformMerchantService = platformMerchantService;
+    }
 
-  /**
-   * 按游标、关键词及审核状态查询商家管理列表.
-   *
-   * @param dto 商家分页筛选条件
-   * @return 商家游标分页数据
-   */
-  @GetMapping
-  public Result<CursorPageVo<PlatformMerchantVo>> page(@Valid PlatformMerchantPageDto dto) {
-    return Result.success(platformMerchantService.page(dto));
-  }
+    /**
+     * 按游标、关键词及审核状态查询商家管理列表.
+     *
+     * @param dto 商家分页筛选条件
+     * @return 商家游标分页数据
+     */
+    @GetMapping
+    public Result<CursorPageVo<PlatformMerchantVo>> page(@Valid PlatformMerchantPageDto dto) {
+        return Result.success(platformMerchantService.page(dto));
+    }
 
-  /**
-   * 查询指定商家的管理详情.
-   *
-   * @param merchantId 商家 ID
-   * @return 商家管理详情
-   * @throws com.yirancrazy.minimall.common.exception.BizException 商家服务未返回商家数据时抛出
-   */
-  @GetMapping("/{merchantId}")
-  public Result<PlatformMerchantVo> detail(@PathVariable("merchantId") Long merchantId) {
-    return Result.success(platformMerchantService.detail(merchantId));
-  }
+    /**
+     * 查询指定商家的管理详情.
+     *
+     * @param merchantId 商家 ID
+     * @return 商家管理详情
+     * @throws com.yirancrazy.minimall.common.exception.BizException 商家服务未返回商家数据时抛出
+     */
+    @GetMapping("/{merchantId}")
+    public Result<PlatformMerchantVo> detail(@PathVariable("merchantId") Long merchantId) {
+        return Result.success(platformMerchantService.detail(merchantId));
+    }
 }

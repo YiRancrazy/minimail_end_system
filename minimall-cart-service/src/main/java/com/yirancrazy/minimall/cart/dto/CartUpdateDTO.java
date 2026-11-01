@@ -14,9 +14,9 @@ import lombok.Data;
 @Data
 public class CartUpdateDto {
 
-  @Min(value = 1, message = "数量至少为1")
-  @Max(value = 999, message = "数量不能超过999")
-  private Integer quantity;
+    @Min(value = 1, message = "数量至少为1")
+    @Max(value = 999, message = "数量不能超过999")
+    private Integer quantity;
 
-  private Boolean isSelected;
+    private Boolean isSelected;
 }

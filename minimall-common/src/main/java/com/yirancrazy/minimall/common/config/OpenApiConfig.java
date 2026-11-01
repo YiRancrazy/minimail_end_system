@@ -17,23 +17,23 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class OpenApiConfig {
 
-  /**
-   * 构建薄荷商城 API 文档元信息。
-   *
-   * @return 包含项目标题、版本、联系人和许可证的 OpenAPI 模型
-   */
-  @Bean
-  public OpenAPI minimallOpenApi() {
-    return new OpenAPI()
-        .info(
-            new Info()
-                .title("Minimall API")
-                .description("薄荷商城后台系统 - 服务 API 文档")
-                .version("1.0.0-SNAPSHOT")
-                .contact(new Contact().name("yirancrazy").email("yirancrazy@gmail.com"))
-                .license(
-                    new License()
-                        .name("Apache 2.0")
-                        .url("https://www.apache.org/licenses/LICENSE-2.0")));
-  }
+    /**
+     * 构建薄荷商城 API 文档元信息。
+     *
+     * @return 包含项目标题、版本、联系人和许可证的 OpenAPI 模型
+     */
+    @Bean
+    public OpenAPI minimallOpenApi() {
+        return new OpenAPI()
+                .info(
+                        new Info()
+                                .title("Minimall API")
+                                .description("薄荷商城后台系统 - 服务 API 文档")
+                                .version("1.0.0-SNAPSHOT")
+                                .contact(new Contact().name("yirancrazy").email("yirancrazy@gmail.com"))
+                                .license(
+                                        new License()
+                                                .name("Apache 2.0")
+                                                .url("https://www.apache.org/licenses/LICENSE-2.0")));
+    }
 }

@@ -14,15 +14,16 @@ import org.slf4j.MDC;
  */
 public class TraceIdFeignInterceptor implements RequestInterceptor {
 
-  /**
-   * 将当前非空 MDC TraceId 写入 Feign 请求头.
-   *
-   * @param template 待补充请求头的 Feign 请求模板
-   */
-  public void apply(RequestTemplate template) {
-    String traceId = MDC.get(Result.TRACE_ID_KEY);
-    if (traceId != null && !traceId.isBlank()) {
-      template.header(TraceIdFilter.HEADER, traceId);
+    /**
+     * 将当前非空 MDC TraceId 写入 Feign 请求头.
+     *
+     * @param template 待补充请求头的 Feign 请求模板
+     */
+    @Override
+    public void apply(RequestTemplate template) {
+        String traceId = MDC.get(Result.TRACE_ID_KEY);
+        if (traceId != null && !traceId.isBlank()) {
+            template.header(TraceIdFilter.HEADER, traceId);
+        }
     }
-  }
 }

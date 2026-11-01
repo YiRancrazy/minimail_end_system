@@ -15,15 +15,15 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class NotifyPushGatewayImpl implements NotifyPushGateway {
 
-  private final SseHub sseHub;
+    private final SseHub sseHub;
 
-  /**
-   * 将通知标题推送到指定用户当前已建立的 SSE 连接.
-   *
-   * @param userId 接收通知的用户编号
-   * @param payload 实时推送的展示内容
-   */
-  public void send(Long userId, String payload) {
-    sseHub.send(userId, payload);
-  }
+    /**
+     * 将通知标题推送到指定用户当前已建立的 SSE 连接.
+     *
+     * @param userId 接收通知的用户编号
+     * @param payload 实时推送的展示内容
+     */
+    public void send(Long userId, String payload) {
+        sseHub.send(userId, payload);
+    }
 }

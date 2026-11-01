@@ -17,32 +17,32 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class AlipayCallbackDto {
 
-  private Map<String, String> params;
+    private Map<String, String> params;
 
-  /**
-   * 从支付宝原始参数中读取商户支付单号。
-   *
-   * @return `out_trade_no`；参数缺失时返回 null
-   */
-  public String getOutTradeNo() {
-    return params == null ? null : params.get("out_trade_no");
-  }
+    /**
+     * 从支付宝原始参数中读取商户支付单号。
+     *
+     * @return `out_trade_no`；参数缺失时返回 null
+     */
+    public String getOutTradeNo() {
+        return params == null ? null : params.get("out_trade_no");
+    }
 
-  /**
-   * 从支付宝原始参数中读取交易状态，用于判断成功、关闭或待处理。
-   *
-   * @return `trade_status`；参数缺失时返回 null
-   */
-  public String getTradeStatus() {
-    return params == null ? null : params.get("trade_status");
-  }
+    /**
+     * 从支付宝原始参数中读取交易状态，用于判断成功、关闭或待处理。
+     *
+     * @return `trade_status`；参数缺失时返回 null
+     */
+    public String getTradeStatus() {
+        return params == null ? null : params.get("trade_status");
+    }
 
-  /**
-   * 从支付宝原始参数中读取回调金额文本。
-   *
-   * @return `total_amount`；参数缺失时返回 null
-   */
-  public String getTotalAmount() {
-    return params == null ? null : params.get("total_amount");
-  }
+    /**
+     * 从支付宝原始参数中读取回调金额文本。
+     *
+     * @return `total_amount`；参数缺失时返回 null
+     */
+    public String getTotalAmount() {
+        return params == null ? null : params.get("total_amount");
+    }
 }

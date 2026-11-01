@@ -19,12 +19,12 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
 @MapperScan("com.yirancrazy.minimall.cart.mapper")
 @EnableFeignClients(basePackages = "com.yirancrazy.minimall.api.feign")
 public class CartApplication {
-  /**
-   * 使用传入的 Spring Boot 参数启动购物车服务.
-   *
-   * @param args 原样转发给 SpringApplication 的命令行参数
-   */
-  public static void main(String[] args) {
-    SpringApplication.run(CartApplication.class, args);
-  }
+    /**
+     * 使用传入的 Spring Boot 参数启动购物车服务.
+     *
+     * @param args 原样转发给 SpringApplication 的命令行参数
+     */
+    public static void main(String[] args) {
+        SpringApplication.run(CartApplication.class, args);
+    }
 }

@@ -16,10 +16,10 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class UserManageVo {
 
-  private Long id;
-  private String nickname;
-  private String avatar;
-  private String phoneMasked;
-  private Integer gender;
-  private LocalDateTime createTime;
+    private Long id;
+    private String nickname;
+    private String avatar;
+    private String phoneMasked;
+    private Integer gender;
+    private LocalDateTime createTime;
 }

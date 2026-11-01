@@ -15,38 +15,38 @@ import lombok.Getter;
 @Getter
 @AllArgsConstructor
 public enum OrderStatusEnum implements BaseEnum {
-  PENDING(1, "PENDING", "待支付"),
-  PAID(2, "PAID", "已支付"),
-  SHIPPED(3, "SHIPPED", "已发货"),
-  COMPLETED(4, "COMPLETED", "已完成"),
-  CANCELED(5, "CANCELED", "已取消"),
-  REFUNDING(6, "REFUNDING", "退款中"),
-  REFUNDED(7, "REFUNDED", "已退款");
+    PENDING(1, "PENDING", "待支付"),
+    PAID(2, "PAID", "已支付"),
+    SHIPPED(3, "SHIPPED", "已发货"),
+    COMPLETED(4, "COMPLETED", "已完成"),
+    CANCELED(5, "CANCELED", "已取消"),
+    REFUNDING(6, "REFUNDING", "退款中"),
+    REFUNDED(7, "REFUNDED", "已退款");
 
-  private final int code;
-  private final String alias;
-  private final String message;
+    private final int code;
+    private final String alias;
+    private final String message;
 
-  /**
-   * 返回枚举的字符串编码。
-   *
-   * <p>用于 BaseEnum 统一协议，不改变持久化 code。
-   *
-   * @return 十进制字符串编码。
-   */
-  @Override
-  public String getCode() {
-    return String.valueOf(code);
-  }
+    /**
+     * 返回枚举的字符串编码。
+     *
+     * <p>用于 BaseEnum 统一协议，不改变持久化 code。
+     *
+     * @return 十进制字符串编码。
+     */
+    @Override
+    public String getCode() {
+        return String.valueOf(code);
+    }
 
-  /**
-   * 返回枚举整数编码。
-   *
-   * <p>供数据库持久化和条件查询使用。
-   *
-   * @return 整数编码。
-   */
-  public int intCode() {
-    return code;
-  }
+    /**
+     * 返回枚举整数编码。
+     *
+     * <p>供数据库持久化和条件查询使用。
+     *
+     * @return 整数编码。
+     */
+    public int intCode() {
+        return code;
+    }
 }

@@ -13,18 +13,18 @@ import lombok.Data;
 @Data
 public class SpuSearchDto {
 
-  private String keyword;
+    private String keyword;
 
-  private Long categoryId;
+    private Long categoryId;
 
-  private Long minPrice;
+    private Long minPrice;
 
-  private Long maxPrice;
+    private Long maxPrice;
 
-  @Min(value = 1, message = "pageNo must be >= 1")
-  private Integer pageNo = 1;
+    @Min(value = 1, message = "pageNo must be >= 1")
+    private Integer pageNo = 1;
 
-  @Min(value = 1, message = "pageSize must be >= 1")
-  @Max(value = 100, message = "pageSize must be <= 100")
-  private Integer pageSize = 20;
+    @Min(value = 1, message = "pageSize must be >= 1")
+    @Max(value = 100, message = "pageSize must be <= 100")
+    private Integer pageSize = 20;
 }

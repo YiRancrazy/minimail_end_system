@@ -17,13 +17,13 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PaymentParamsVo {
-  private String paymentNo;
-  private String orderNo;
-  private BigDecimal amount;
-  private String currency;
-  private Integer channel;
-  private String subject;
-  private LocalDateTime expireAt;
+    private String paymentNo;
+    private String orderNo;
+    private BigDecimal amount;
+    private String currency;
+    private Integer channel;
+    private String subject;
+    private LocalDateTime expireAt;
 
-  private String payForm;
+    private String payForm;
 }

@@ -14,25 +14,25 @@ import lombok.Getter;
 @Getter
 @AllArgsConstructor
 public enum PayStatusEnum implements BaseEnum {
-  PENDING(1, "PENDING", "待支付"),
-  SUCCESS(2, "SUCCESS", "支付成功"),
-  FAILED(3, "FAILED", "支付失败"),
-  CLOSED(4, "CLOSED", "已关闭"),
-  REFUNDING(5, "REFUNDING", "退款中"),
-  REFUNDED(6, "REFUNDED", "已退款"),
-  FROZEN(7, "FROZEN", "已冻结");
+    PENDING(1, "PENDING", "待支付"),
+    SUCCESS(2, "SUCCESS", "支付成功"),
+    FAILED(3, "FAILED", "支付失败"),
+    CLOSED(4, "CLOSED", "已关闭"),
+    REFUNDING(5, "REFUNDING", "退款中"),
+    REFUNDED(6, "REFUNDED", "已退款"),
+    FROZEN(7, "FROZEN", "已冻结");
 
-  private final int code;
-  private final String alias;
-  private final String message;
+    private final int code;
+    private final String alias;
+    private final String message;
 
-  /**
-   * 返回支付状态的十进制整数字符串，以兼容 `BaseEnum`。
-   *
-   * @return 支付状态 code 的字符串形式
-   */
-  @Override
-  public String getCode() {
-    return String.valueOf(code);
-  }
+    /**
+     * 返回支付状态的十进制整数字符串，以兼容 `BaseEnum`。
+     *
+     * @return 支付状态 code 的字符串形式
+     */
+    @Override
+    public String getCode() {
+        return String.valueOf(code);
+    }
 }

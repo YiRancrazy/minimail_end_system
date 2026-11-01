@@ -16,12 +16,12 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class StockInitDto {
-  @NotNull(message = "SKU ID不能为空")
-  private Long skuId;
+    @NotNull(message = "SKU ID不能为空")
+    private Long skuId;
 
-  @NotNull(message = "商家ID不能为空")
-  private Long merchantId;
+    @NotNull(message = "商家ID不能为空")
+    private Long merchantId;
 
-  @Min(value = 0, message = "初始库存不能为负数")
-  private Integer initialQuantity;
+    @Min(value = 0, message = "初始库存不能为负数")
+    private Integer initialQuantity;
 }

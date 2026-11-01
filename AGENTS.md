@@ -150,7 +150,7 @@ docs(ai-guidelines): 更新提交规范
 - 缩写按单词处理：`UserDto`、`SmsService`、`JwtUtil`；新增类型禁止 `UserDTO`、`UserPO`、`UserVO`，存量 `BasePO` 等类型逐步迁移
 
 **格式**：
-- 基础缩进 2 空格，续行缩进 4 空格；禁 Tab
+- 基础缩进 4 空格，续行缩进 8 空格；禁 Tab
 - 行宽 ≤ 100 字符；package、import、URL 等按 Checkstyle 配置豁免
 - 左花括号不换行；`case` / `default` 的左花括号换行；`else`、`catch`、`finally` 紧跟前一个右花括号
 - 静态 import 独立成组置于普通 import 之前，组内按字母排序；禁通配符 `.*` import

@@ -26,12 +26,12 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableFeignClients(basePackages = "com.yirancrazy.minimall.api.feign")
 @EnableScheduling
 public class OrderApplication {
-  /**
-   * 应用启动入口.
-   *
-   * @param args 启动参数
-   */
-  public static void main(String[] args) {
-    SpringApplication.run(OrderApplication.class, args);
-  }
+    /**
+     * 应用启动入口.
+     *
+     * @param args 启动参数
+     */
+    public static void main(String[] args) {
+        SpringApplication.run(OrderApplication.class, args);
+    }
 }

@@ -14,13 +14,13 @@ import lombok.Data;
 @Data
 public class PreferenceUpdateDto {
 
-  @NotBlank(message = "categoryCode cannot be blank")
-  private String categoryCode;
+    @NotBlank(message = "categoryCode cannot be blank")
+    private String categoryCode;
 
-  @NotBlank(message = "channel cannot be blank")
-  @Pattern(regexp = "^(SITE|SMS|EMAIL)$", message = "channel must be SITE/SMS/EMAIL")
-  private String channel;
+    @NotBlank(message = "channel cannot be blank")
+    @Pattern(regexp = "^(SITE|SMS|EMAIL)$", message = "channel must be SITE/SMS/EMAIL")
+    private String channel;
 
-  @NotNull(message = "enabled cannot be null")
-  private Integer enabled;
+    @NotNull(message = "enabled cannot be null")
+    private Integer enabled;
 }

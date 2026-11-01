@@ -18,19 +18,19 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 @TableName("t_order_item")
 public class OrderItemPo extends BasePo {
-  private Long orderId;
-  private Long spuId;
-  private Long merchantId;
-  private String spuSnapshotJson;
-  private String skuSnapshotJson;
-  private String skuImageUrl;
-  private Long skuId;
-  private String skuName;
-  private Integer quantity;
-  private BigDecimal unitPrice;
-  private BigDecimal amount;
-  private BigDecimal subtotalAmount;
-  private BigDecimal discountAmount;
-  private BigDecimal payAmount;
-  private Integer refundStatus;
+    private Long orderId;
+    private Long spuId;
+    private Long merchantId;
+    private String spuSnapshotJson;
+    private String skuSnapshotJson;
+    private String skuImageUrl;
+    private Long skuId;
+    private String skuName;
+    private Integer quantity;
+    private BigDecimal unitPrice;
+    private BigDecimal amount;
+    private BigDecimal subtotalAmount;
+    private BigDecimal discountAmount;
+    private BigDecimal payAmount;
+    private Integer refundStatus;
 }

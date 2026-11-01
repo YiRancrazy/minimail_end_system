@@ -17,12 +17,12 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 @MapperScan("com.yirancrazy.minimall.id.mapper")
 public class IdApplication {
-  /**
-   * 启动 Spring Boot 应用，触发组件扫描、Mapper 注册和 ID 服务依赖初始化。
-   *
-   * @param args 传给 Spring Boot 的命令行参数
-   */
-  public static void main(String[] args) {
-    SpringApplication.run(IdApplication.class, args);
-  }
+    /**
+     * 启动 Spring Boot 应用，触发组件扫描、Mapper 注册和 ID 服务依赖初始化。
+     *
+     * @param args 传给 Spring Boot 的命令行参数
+     */
+    public static void main(String[] args) {
+        SpringApplication.run(IdApplication.class, args);
+    }
 }

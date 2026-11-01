@@ -16,5 +16,5 @@ import com.yirancrazy.minimall.order.mapper.OrderPaymentSnapshotMapper;
  */
 @Manager
 public class OrderPaymentSnapshotManagerImpl
-    extends ServiceImpl<OrderPaymentSnapshotMapper, OrderPaymentSnapshotPo>
-    implements OrderPaymentSnapshotManager {}
+        extends ServiceImpl<OrderPaymentSnapshotMapper, OrderPaymentSnapshotPo>
+        implements OrderPaymentSnapshotManager {}

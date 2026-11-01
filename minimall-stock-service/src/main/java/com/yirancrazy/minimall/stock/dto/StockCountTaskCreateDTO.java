@@ -12,10 +12,10 @@ import lombok.Data;
 @Data
 public class StockCountTaskCreateDto {
 
-  @NotNull(message = "skuId cannot be null")
-  private Long skuId;
+    @NotNull(message = "skuId cannot be null")
+    private Long skuId;
 
-  private String remark;
+    private String remark;
 
-  private Long operatorId;
+    private Long operatorId;
 }

@@ -17,12 +17,12 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class OrderExportItemDto {
 
-  private Long id;
-  private Long userId;
-  private Long merchantId;
-  private Long skuId;
-  private Integer quantity;
-  private BigDecimal amount;
-  private Integer status;
-  private LocalDateTime createTime;
+    private Long id;
+    private Long userId;
+    private Long merchantId;
+    private Long skuId;
+    private Integer quantity;
+    private BigDecimal amount;
+    private Integer status;
+    private LocalDateTime createTime;
 }

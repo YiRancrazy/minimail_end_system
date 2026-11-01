@@ -14,5 +14,5 @@ import com.yirancrazy.minimall.common.annotation.Manager;
  */
 @Manager
 public class AuthTokenBlacklistManagerImpl
-    extends ServiceImpl<AuthTokenBlacklistMapper, AuthTokenBlacklistPo>
-    implements AuthTokenBlacklistManager {}
+        extends ServiceImpl<AuthTokenBlacklistMapper, AuthTokenBlacklistPo>
+        implements AuthTokenBlacklistManager {}

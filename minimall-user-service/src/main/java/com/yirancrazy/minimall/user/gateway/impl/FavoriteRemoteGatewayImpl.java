@@ -20,27 +20,27 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class FavoriteRemoteGatewayImpl implements FavoriteRemoteGateway {
 
-  private final GoodsFeignClient goodsFeignClient;
+    private final GoodsFeignClient goodsFeignClient;
 
-  /**
-   * 通过商品服务 Feign 客户端批量读取 SKU 快照。
-   *
-   * @param skuIds SKU ID 列表
-   * @return 商品服务响应；远程异常和降级由 Feign fallback 机制处理
-   */
-  @Override
-  public Result<Map<Long, SkuSnapshotDto>> batchSkuSnapshot(List<Long> skuIds) {
-    return goodsFeignClient.batchSkuSnapshot(skuIds);
-  }
+    /**
+     * 通过商品服务 Feign 客户端批量读取 SKU 快照。
+     *
+     * @param skuIds SKU ID 列表
+     * @return 商品服务响应；远程异常和降级由 Feign fallback 机制处理
+     */
+    @Override
+    public Result<Map<Long, SkuSnapshotDto>> batchSkuSnapshot(List<Long> skuIds) {
+        return goodsFeignClient.batchSkuSnapshot(skuIds);
+    }
 
-  /**
-   * 通过商品服务 Feign 客户端批量读取 SPU 快照。
-   *
-   * @param spuIds SPU ID 列表
-   * @return 商品服务响应；远程异常和降级由 Feign fallback 机制处理
-   */
-  @Override
-  public Result<Map<Long, SpuSnapshotDto>> batchSpuSnapshot(List<Long> spuIds) {
-    return goodsFeignClient.batchSpuSnapshot(spuIds);
-  }
+    /**
+     * 通过商品服务 Feign 客户端批量读取 SPU 快照。
+     *
+     * @param spuIds SPU ID 列表
+     * @return 商品服务响应；远程异常和降级由 Feign fallback 机制处理
+     */
+    @Override
+    public Result<Map<Long, SpuSnapshotDto>> batchSpuSnapshot(List<Long> spuIds) {
+        return goodsFeignClient.batchSpuSnapshot(spuIds);
+    }
 }

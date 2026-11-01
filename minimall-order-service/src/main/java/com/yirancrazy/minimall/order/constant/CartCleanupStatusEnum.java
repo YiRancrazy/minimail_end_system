@@ -15,30 +15,30 @@ import lombok.Getter;
 @Getter
 @AllArgsConstructor
 public enum CartCleanupStatusEnum implements BaseEnum {
-  PENDING(0, "PENDING", "待清理"),
-  SUCCESS(1, "SUCCESS", "已清理"),
-  FAILED(2, "FAILED", "清理失败");
+    PENDING(0, "PENDING", "待清理"),
+    SUCCESS(1, "SUCCESS", "已清理"),
+    FAILED(2, "FAILED", "清理失败");
 
-  private final int code;
-  private final String alias;
-  private final String message;
+    private final int code;
+    private final String alias;
+    private final String message;
 
-  /**
-   * 获取字符串状态码.
-   *
-   * @return 状态码
-   */
-  @Override
-  public String getCode() {
-    return String.valueOf(code);
-  }
+    /**
+     * 获取字符串状态码.
+     *
+     * @return 状态码
+     */
+    @Override
+    public String getCode() {
+        return String.valueOf(code);
+    }
 
-  /**
-   * 获取整数状态码.
-   *
-   * @return 状态码
-   */
-  public int intCode() {
-    return code;
-  }
+    /**
+     * 获取整数状态码.
+     *
+     * @return 状态码
+     */
+    public int intCode() {
+        return code;
+    }
 }

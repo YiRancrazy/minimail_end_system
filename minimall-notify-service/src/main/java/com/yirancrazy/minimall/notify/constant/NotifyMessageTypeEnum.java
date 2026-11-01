@@ -13,34 +13,34 @@ import lombok.Getter;
 @Getter
 @AllArgsConstructor
 public enum NotifyMessageTypeEnum implements BaseEnum {
-  ORDER(1, "ORDER", "订单"),
-  LOGISTICS(2, "LOGISTICS", "物流"),
-  REFUND(3, "REFUND", "退款"),
-  PROMOTION(4, "PROMOTION", "营销"),
-  ANNOUNCEMENT(5, "ANNOUNCEMENT", "公告"),
-  SYSTEM(6, "SYSTEM", "系统"),
-  VIOLATION(7, "VIOLATION", "违规");
+    ORDER(1, "ORDER", "订单"),
+    LOGISTICS(2, "LOGISTICS", "物流"),
+    REFUND(3, "REFUND", "退款"),
+    PROMOTION(4, "PROMOTION", "营销"),
+    ANNOUNCEMENT(5, "ANNOUNCEMENT", "公告"),
+    SYSTEM(6, "SYSTEM", "系统"),
+    VIOLATION(7, "VIOLATION", "违规");
 
-  private final int code;
-  private final String alias;
-  private final String message;
+    private final int code;
+    private final String alias;
+    private final String message;
 
-  /**
-   * 将通知类型编码转换为 BaseEnum 约定的字符串形式.
-   *
-   * @return 通知类型的十进制字符串编码
-   */
-  @Override
-  public String getCode() {
-    return String.valueOf(code);
-  }
+    /**
+     * 将通知类型编码转换为 BaseEnum 约定的字符串形式.
+     *
+     * @return 通知类型的十进制字符串编码
+     */
+    @Override
+    public String getCode() {
+        return String.valueOf(code);
+    }
 
-  /**
-   * 返回可直接用于数据库消息类型字段比较的整数编码.
-   *
-   * @return 通知类型整数编码
-   */
-  public int intCode() {
-    return code;
-  }
+    /**
+     * 返回可直接用于数据库消息类型字段比较的整数编码.
+     *
+     * @return 通知类型整数编码
+     */
+    public int intCode() {
+        return code;
+    }
 }

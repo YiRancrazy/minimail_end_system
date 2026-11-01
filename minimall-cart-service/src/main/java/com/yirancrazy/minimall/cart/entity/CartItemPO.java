@@ -16,8 +16,8 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 @TableName("t_cart_item")
 public class CartItemPo extends BasePo {
-  private Long userId;
-  private Long skuId;
-  private Integer quantity;
-  private Integer selected;
+    private Long userId;
+    private Long skuId;
+    private Integer quantity;
+    private Integer selected;
 }

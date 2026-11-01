@@ -14,4 +14,4 @@ import com.yirancrazy.minimall.user.mapper.AddressMapper;
  */
 @Manager
 public class AddressManagerImpl extends ServiceImpl<AddressMapper, AddressPo>
-    implements AddressManager {}
+        implements AddressManager {}

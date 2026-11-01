@@ -18,12 +18,12 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
 @MapperScan("com.yirancrazy.minimall.notify.mapper")
 @EnableFeignClients(basePackages = "com.yirancrazy.minimall.api.feign")
 public class NotifyApplication {
-  /**
-   * 启动 Spring Boot 应用并进入通知服务运行进程.
-   *
-   * @param args Spring Boot 命令行参数
-   */
-  public static void main(String[] args) {
-    SpringApplication.run(NotifyApplication.class, args);
-  }
+    /**
+     * 启动 Spring Boot 应用并进入通知服务运行进程.
+     *
+     * @param args Spring Boot 命令行参数
+     */
+    public static void main(String[] args) {
+        SpringApplication.run(NotifyApplication.class, args);
+    }
 }

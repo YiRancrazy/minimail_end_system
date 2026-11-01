@@ -15,19 +15,19 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class PayStatementVo {
 
-  private Long totalCount;
+    private Long totalCount;
 
-  private BigDecimal totalAmount;
+    private BigDecimal totalAmount;
 
-  private Long paidCount;
+    private Long paidCount;
 
-  private BigDecimal paidAmount;
+    private BigDecimal paidAmount;
 
-  private Long refundedCount;
+    private Long refundedCount;
 
-  private BigDecimal refundedAmount;
+    private BigDecimal refundedAmount;
 
-  private Long frozenCount;
+    private Long frozenCount;
 
-  private BigDecimal frozenAmount;
+    private BigDecimal frozenAmount;
 }

@@ -14,13 +14,13 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 public class CommentPageDto extends CursorPageDto {
 
-  private Long spuId;
+    private Long spuId;
 
-  private Long userId;
+    private Long userId;
 
-  private Long merchantId;
+    private Long merchantId;
 
-  private String orderNo;
+    private String orderNo;
 
-  private Integer status;
+    private Integer status;
 }

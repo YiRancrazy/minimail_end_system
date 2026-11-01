@@ -14,27 +14,27 @@ import lombok.Data;
 @Data
 public class SkuVo {
 
-  private Long id;
-  private Long spuId;
-  private String skuName;
-  private BigDecimal price;
-  private Integer stock;
-  private LocalDateTime createTime;
+    private Long id;
+    private Long spuId;
+    private String skuName;
+    private BigDecimal price;
+    private Integer stock;
+    private LocalDateTime createTime;
 
-  /**
-   * 将 SKU 持久化对象映射为视图对象，不修改源对象。
-   *
-   * @param po 待转换的持久化对象
-   * @return 转换后的 SKU 视图对象
-   */
-  public static SkuVo from(SkuPo po) {
-    SkuVo vo = new SkuVo();
-    vo.setId(po.getId());
-    vo.setSpuId(po.getSpuId());
-    vo.setSkuName(po.getSkuName());
-    vo.setPrice(po.getPrice());
-    vo.setStock(po.getStock());
-    vo.setCreateTime(po.getCreateTime());
-    return vo;
-  }
+    /**
+     * 将 SKU 持久化对象映射为视图对象，不修改源对象。
+     *
+     * @param po 待转换的持久化对象
+     * @return 转换后的 SKU 视图对象
+     */
+    public static SkuVo from(SkuPo po) {
+        SkuVo vo = new SkuVo();
+        vo.setId(po.getId());
+        vo.setSpuId(po.getSpuId());
+        vo.setSkuName(po.getSkuName());
+        vo.setPrice(po.getPrice());
+        vo.setStock(po.getStock());
+        vo.setCreateTime(po.getCreateTime());
+        return vo;
+    }
 }

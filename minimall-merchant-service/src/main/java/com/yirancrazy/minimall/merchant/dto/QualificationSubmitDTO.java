@@ -14,29 +14,29 @@ import lombok.Data;
 @Data
 public class QualificationSubmitDto {
 
-  @NotBlank(message = "merchantName must not be blank")
-  @Size(max = 64, message = "merchantName must be <= 64 chars")
-  private String merchantName;
+    @NotBlank(message = "merchantName must not be blank")
+    @Size(max = 64, message = "merchantName must be <= 64 chars")
+    private String merchantName;
 
-  @NotBlank(message = "licenseNo must not be blank")
-  @Size(max = 64, message = "licenseNo must be <= 64 chars")
-  private String licenseNo;
+    @NotBlank(message = "licenseNo must not be blank")
+    @Size(max = 64, message = "licenseNo must be <= 64 chars")
+    private String licenseNo;
 
-  @Size(max = 512, message = "licenseImageUrl must be <= 512 chars")
-  private String licenseImageUrl;
+    @Size(max = 512, message = "licenseImageUrl must be <= 512 chars")
+    private String licenseImageUrl;
 
-  @Size(max = 64, message = "legalPerson must be <= 64 chars")
-  private String legalPerson;
+    @Size(max = 64, message = "legalPerson must be <= 64 chars")
+    private String legalPerson;
 
-  @Pattern(regexp = "^$|^1\\d{10}$", message = "legalPhone must be a valid mobile number")
-  private String legalPhone;
+    @Pattern(regexp = "^$|^1\\d{10}$", message = "legalPhone must be a valid mobile number")
+    private String legalPhone;
 
-  @Pattern(regexp = "^$|^\\d{15,18}$", message = "idCardNo must be 15-18 digits")
-  private String idCardNo;
+    @Pattern(regexp = "^$|^\\d{15,18}$", message = "idCardNo must be 15-18 digits")
+    private String idCardNo;
 
-  @Size(max = 64, message = "businessLicenseNo must be <= 64 chars")
-  private String businessLicenseNo;
+    @Size(max = 64, message = "businessLicenseNo must be <= 64 chars")
+    private String businessLicenseNo;
 
-  @Pattern(regexp = "^$|^\\d{8,30}$", message = "bankAccount must be 8-30 digits")
-  private String bankAccount;
+    @Pattern(regexp = "^$|^\\d{8,30}$", message = "bankAccount must be 8-30 digits")
+    private String bankAccount;
 }

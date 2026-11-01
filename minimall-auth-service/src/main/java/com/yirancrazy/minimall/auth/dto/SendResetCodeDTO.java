@@ -16,6 +16,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class SendResetCodeDto {
 
-  @NotBlank(message = "account cannot be blank")
-  private String account;
+    @NotBlank(message = "account cannot be blank")
+    private String account;
 }

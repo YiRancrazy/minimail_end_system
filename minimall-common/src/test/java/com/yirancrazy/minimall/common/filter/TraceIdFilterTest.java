@@ -18,38 +18,38 @@ import org.springframework.mock.web.MockHttpServletResponse;
  */
 class TraceIdFilterTest {
 
-  private final TraceIdFilter filter = new TraceIdFilter();
+    private final TraceIdFilter filter = new TraceIdFilter();
 
-  /** * 验证补全traceId；请求头缺失；执行过滤器；预期过滤链与响应有值且结束后清理. */
-  @Test
-  void testMissingHeaderGeneratesTraceIdAndCleansMdc() throws Exception {
-    MockHttpServletRequest request = new MockHttpServletRequest();
-    MockHttpServletResponse response = new MockHttpServletResponse();
+    /** * 验证补全traceId；请求头缺失；执行过滤器；预期过滤链与响应有值且结束后清理. */
+    @Test
+    void testMissingHeaderGeneratesTraceIdAndCleansMdc() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
 
-    filter.doFilter(
-        request,
-        response,
-        (req, res) -> {
-          assertNotNull(MDC.get(Result.TRACE_ID_KEY));
-          assertNotNull(((MockHttpServletResponse) res).getHeader(TraceIdFilter.HEADER));
-        });
+        filter.doFilter(
+                request,
+                response,
+                (req, res) -> {
+                    assertNotNull(MDC.get(Result.TRACE_ID_KEY));
+                    assertNotNull(((MockHttpServletResponse) res).getHeader(TraceIdFilter.HEADER));
+                });
 
-    assertNull(MDC.get(Result.TRACE_ID_KEY));
-  }
+        assertNull(MDC.get(Result.TRACE_ID_KEY));
+    }
 
-  /** * 验证透传traceId；请求头为incoming-tid；执行过滤器；预期链内与响应均保留且结束后清理. */
-  @Test
-  void testIncomingHeaderIsPreservedInMdcAndResponse() throws Exception {
-    MockHttpServletRequest request = new MockHttpServletRequest();
-    request.addHeader(TraceIdFilter.HEADER, "incoming-tid");
-    MockHttpServletResponse response = new MockHttpServletResponse();
+    /** * 验证透传traceId；请求头为incoming-tid；执行过滤器；预期链内与响应均保留且结束后清理. */
+    @Test
+    void testIncomingHeaderIsPreservedInMdcAndResponse() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader(TraceIdFilter.HEADER, "incoming-tid");
+        MockHttpServletResponse response = new MockHttpServletResponse();
 
-    filter.doFilter(
-        request,
-        response,
-        (req, res) -> assertEquals("incoming-tid", MDC.get(Result.TRACE_ID_KEY)));
+        filter.doFilter(
+                request,
+                response,
+                (req, res) -> assertEquals("incoming-tid", MDC.get(Result.TRACE_ID_KEY)));
 
-    assertEquals("incoming-tid", response.getHeader(TraceIdFilter.HEADER));
-    assertNull(MDC.get(Result.TRACE_ID_KEY));
-  }
+        assertEquals("incoming-tid", response.getHeader(TraceIdFilter.HEADER));
+        assertNull(MDC.get(Result.TRACE_ID_KEY));
+    }
 }

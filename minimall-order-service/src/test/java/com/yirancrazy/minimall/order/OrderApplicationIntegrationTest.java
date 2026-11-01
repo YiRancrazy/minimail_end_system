@@ -24,17 +24,17 @@ import org.springframework.test.context.ActiveProfiles;
 @ActiveProfiles("test")
 class OrderApplicationIntegrationTest {
 
-  @MockBean private GoodsFeignClient goodsFeignClient;
+    @MockBean private GoodsFeignClient goodsFeignClient;
 
-  @MockBean private CartFeignClient cartFeignClient;
+    @MockBean private CartFeignClient cartFeignClient;
 
-  @MockBean private CartCleanupFeignClient cartCleanupFeignClient;
+    @MockBean private CartCleanupFeignClient cartCleanupFeignClient;
 
-  @MockBean private StockFeignClient stockFeignClient;
+    @MockBean private StockFeignClient stockFeignClient;
 
-  @MockBean private PayFeignClient payFeignClient;
+    @MockBean private PayFeignClient payFeignClient;
 
-  @MockBean private IdFeignClient idFeignClient;
+    @MockBean private IdFeignClient idFeignClient;
 
-  @Autowired private OrderService orderService;
+    @Autowired private OrderService orderService;
 }

@@ -12,15 +12,15 @@ import com.yirancrazy.minimall.order.dto.OrderCheckoutDto;
  */
 public interface OrderCheckoutService {
 
-  /**
-   * 提交用户结算请求。
-   *
-   * <p>用户 ID 取自请求头，结算来源和明细由 OrderCheckoutService 校验并创建订单。
-   *
-   * @param userId 用户 ID，必须对应当前订单归属
-   * @param dto 用户结算请求
-   * @return 新订单 ID 的统一响应。
-   * @throws BizException 结算参数、快照、库存或订单创建失败。
-   */
-  Long checkout(Long userId, OrderCheckoutDto dto);
+    /**
+     * 提交用户结算请求。
+     *
+     * <p>用户 ID 取自请求头，结算来源和明细由 OrderCheckoutService 校验并创建订单。
+     *
+     * @param userId 用户 ID，必须对应当前订单归属
+     * @param dto 用户结算请求
+     * @return 新订单 ID 的统一响应。
+     * @throws BizException 结算参数、快照、库存或订单创建失败。
+     */
+    Long checkout(Long userId, OrderCheckoutDto dto);
 }

@@ -17,15 +17,15 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class StockAdjustDto {
 
-  @NotNull(message = "SKU ID不能为空")
-  private Long skuId;
+    @NotNull(message = "SKU ID不能为空")
+    private Long skuId;
 
-  @NotNull(message = "商家ID不能为空")
-  private Long merchantId;
+    @NotNull(message = "商家ID不能为空")
+    private Long merchantId;
 
-  @NotNull(message = "调整数量不能为空")
-  private Long quantity;
+    @NotNull(message = "调整数量不能为空")
+    private Long quantity;
 
-  @Size(max = 255, message = "调整原因不能超过255字符")
-  private String reason;
+    @Size(max = 255, message = "调整原因不能超过255字符")
+    private String reason;
 }

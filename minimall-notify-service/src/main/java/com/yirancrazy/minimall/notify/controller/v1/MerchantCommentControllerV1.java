@@ -25,45 +25,45 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/merchant/comments")
 public class MerchantCommentControllerV1 {
 
-  private final CommentService commentService;
+    private final CommentService commentService;
 
-  /**
-   * 注入评价业务服务.
-   *
-   * @param commentService 评价查询和回复入口
-   */
-  public MerchantCommentControllerV1(CommentService commentService) {
-    this.commentService = commentService;
-  }
+    /**
+     * 注入评价业务服务.
+     *
+     * @param commentService 评价查询和回复入口
+     */
+    public MerchantCommentControllerV1(CommentService commentService) {
+        this.commentService = commentService;
+    }
 
-  /**
-   * 查询当前商家的评价游标分页；请求头商家编号会覆盖查询参数中的同名字段.
-   *
-   * @param merchantId 当前登录商家编号
-   * @param dto 游标及评价筛选条件
-   * @return 当前页评价视图及下一页游标
-   */
-  @GetMapping
-  public Result<CursorPageVo<CommentVo>> page(
-      @RequestHeader("X-Merchant-Id") Long merchantId, @Valid CommentPageDto dto) {
-    dto.setMerchantId(merchantId);
-    return Result.success(commentService.pageVo(dto));
-  }
+    /**
+     * 查询当前商家的评价游标分页；请求头商家编号会覆盖查询参数中的同名字段.
+     *
+     * @param merchantId 当前登录商家编号
+     * @param dto 游标及评价筛选条件
+     * @return 当前页评价视图及下一页游标
+     */
+    @GetMapping
+    public Result<CursorPageVo<CommentVo>> page(
+            @RequestHeader("X-Merchant-Id") Long merchantId, @Valid CommentPageDto dto) {
+        dto.setMerchantId(merchantId);
+        return Result.success(commentService.pageVo(dto));
+    }
 
-  /**
-   * 以当前商家身份回复指定评价，服务层会再次校验评价归属.
-   *
-   * @param id 评价主键
-   * @param merchantId 当前登录商家编号
-   * @param dto 回复正文
-   * @return 无业务数据的成功响应
-   */
-  @PostMapping("/{id}/reply")
-  public Result<Void> reply(
-      @PathVariable Long id,
-      @RequestHeader("X-Merchant-Id") Long merchantId,
-      @Valid @RequestBody CommentReplyDto dto) {
-    commentService.reply(id, merchantId, dto.getReply());
-    return Result.success(null);
-  }
+    /**
+     * 以当前商家身份回复指定评价，服务层会再次校验评价归属.
+     *
+     * @param id 评价主键
+     * @param merchantId 当前登录商家编号
+     * @param dto 回复正文
+     * @return 无业务数据的成功响应
+     */
+    @PostMapping("/{id}/reply")
+    public Result<Void> reply(
+            @PathVariable Long id,
+            @RequestHeader("X-Merchant-Id") Long merchantId,
+            @Valid @RequestBody CommentReplyDto dto) {
+        commentService.reply(id, merchantId, dto.getReply());
+        return Result.success(null);
+    }
 }

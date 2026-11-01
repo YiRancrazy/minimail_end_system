@@ -13,44 +13,44 @@ import com.yirancrazy.minimall.notify.vo.CommentVo;
  */
 public interface PlatformCommentService {
 
-  /**
-   * 按游标查询平台评价实体，支持状态和订单号过滤.
-   *
-   * @param dto 游标及平台评价筛选条件
-   * @return 当前页评价实体及下一页游标
-   */
-  CursorPageVo<CommentPo> page(CommentPageDto dto);
+    /**
+     * 按游标查询平台评价实体，支持状态和订单号过滤.
+     *
+     * @param dto 游标及平台评价筛选条件
+     * @return 当前页评价实体及下一页游标
+     */
+    CursorPageVo<CommentPo> page(CommentPageDto dto);
 
-  /**
-   * 按游标查询平台评价并映射为带图片访问地址的视图.
-   *
-   * @param dto 游标及平台评价筛选条件
-   * @return 当前页评价视图及下一页游标
-   */
-  CursorPageVo<CommentVo> pageVo(CommentPageDto dto);
+    /**
+     * 按游标查询平台评价并映射为带图片访问地址的视图.
+     *
+     * @param dto 游标及平台评价筛选条件
+     * @return 当前页评价视图及下一页游标
+     */
+    CursorPageVo<CommentVo> pageVo(CommentPageDto dto);
 
-  /**
-   * 将评价置为正常状态；已经是正常状态时不重复更新.
-   *
-   * @param id 评价主键
-   * @throws com.yirancrazy.minimall.common.exception.BizException 评价不存在时抛出
-   */
-  void approve(Long id);
+    /**
+     * 将评价置为正常状态；已经是正常状态时不重复更新.
+     *
+     * @param id 评价主键
+     * @throws com.yirancrazy.minimall.common.exception.BizException 评价不存在时抛出
+     */
+    void approve(Long id);
 
-  /**
-   * 将评价置为隐藏状态.
-   *
-   * @param id 评价主键
-   * @throws com.yirancrazy.minimall.common.exception.BizException 评价不存在时抛出
-   */
-  void hide(Long id);
+    /**
+     * 将评价置为隐藏状态.
+     *
+     * @param id 评价主键
+     * @throws com.yirancrazy.minimall.common.exception.BizException 评价不存在时抛出
+     */
+    void hide(Long id);
 
-  /**
-   * 以平台身份写入评价回复并记录回复时间.
-   *
-   * @param id 评价主键
-   * @param reply 回复正文
-   * @throws com.yirancrazy.minimall.common.exception.BizException 评价不存在时抛出
-   */
-  void reply(Long id, String reply);
+    /**
+     * 以平台身份写入评价回复并记录回复时间.
+     *
+     * @param id 评价主键
+     * @param reply 回复正文
+     * @throws com.yirancrazy.minimall.common.exception.BizException 评价不存在时抛出
+     */
+    void reply(Long id, String reply);
 }

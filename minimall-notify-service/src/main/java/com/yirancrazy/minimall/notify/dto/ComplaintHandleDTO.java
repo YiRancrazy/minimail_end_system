@@ -13,9 +13,9 @@ import lombok.Data;
 @Data
 public class ComplaintHandleDto {
 
-  @NotNull(message = "status cannot be null")
-  private Integer status;
+    @NotNull(message = "status cannot be null")
+    private Integer status;
 
-  @NotBlank(message = "result cannot be blank")
-  private String result;
+    @NotBlank(message = "result cannot be blank")
+    private String result;
 }

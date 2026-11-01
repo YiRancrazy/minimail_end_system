@@ -13,24 +13,24 @@ import lombok.Getter;
 @Getter
 @AllArgsConstructor
 public enum NotifyCategoryEnum implements BaseEnum {
-  ORDER("ORDER", "订单通知"),
-  PAYMENT("PAYMENT", "支付通知"),
-  REFUND("REFUND", "退款通知"),
-  STOCK("STOCK", "库存通知"),
-  COMMENT("COMMENT", "评价回复通知"),
-  ACTIVITY("ACTIVITY", "活动通知"),
-  SYSTEM("SYSTEM", "系统通知");
+    ORDER("ORDER", "订单通知"),
+    PAYMENT("PAYMENT", "支付通知"),
+    REFUND("REFUND", "退款通知"),
+    STOCK("STOCK", "库存通知"),
+    COMMENT("COMMENT", "评价回复通知"),
+    ACTIVITY("ACTIVITY", "活动通知"),
+    SYSTEM("SYSTEM", "系统通知");
 
-  private final String code;
-  private final String message;
+    private final String code;
+    private final String message;
 
-  /**
-   * 返回用于持久化和查询的通知类别别名字符串.
-   *
-   * @return 通知类别别名
-   */
-  @Override
-  public String getAlias() {
-    return code;
-  }
+    /**
+     * 返回用于持久化和查询的通知类别别名字符串.
+     *
+     * @return 通知类别别名
+     */
+    @Override
+    public String getAlias() {
+        return code;
+    }
 }

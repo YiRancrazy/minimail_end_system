@@ -15,15 +15,15 @@ import org.junit.jupiter.api.Test;
  */
 class CartFeignFallbackFactoryTest {
 
-  /** 计数应降级为 -1，结算快照应降级为系统错误. */
-  @Test
-  void testFallbackReturnsMinusOne() {
-    CartFeignFallbackFactory f = new CartFeignFallbackFactory();
-    CartFeignClient client = f.create(new RuntimeException("down"));
-    assertNotNull(client);
-    assertEquals(-1L, client.countByUser(1L).getData());
-    assertEquals(
-        "20000",
-        client.getCheckoutItems(new CartCheckoutQueryDto(1L, java.util.List.of(9L))).getCode());
-  }
+    /** 计数应降级为 -1，结算快照应降级为系统错误. */
+    @Test
+    void testFallbackReturnsMinusOne() {
+        CartFeignFallbackFactory f = new CartFeignFallbackFactory();
+        CartFeignClient client = f.create(new RuntimeException("down"));
+        assertNotNull(client);
+        assertEquals(-1L, client.countByUser(1L).getData());
+        assertEquals(
+                "20000",
+                client.getCheckoutItems(new CartCheckoutQueryDto(1L, java.util.List.of(9L))).getCode());
+    }
 }

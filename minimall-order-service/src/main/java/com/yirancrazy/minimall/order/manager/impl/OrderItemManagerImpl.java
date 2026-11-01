@@ -16,4 +16,4 @@ import com.yirancrazy.minimall.order.mapper.OrderItemMapper;
  */
 @Manager
 public class OrderItemManagerImpl extends ServiceImpl<OrderItemMapper, OrderItemPo>
-    implements OrderItemManager {}
+        implements OrderItemManager {}

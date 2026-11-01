@@ -15,11 +15,11 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 @TableName("t_stock_count_task")
 public class StockCountTaskPo extends BasePo {
-  private Long skuId;
-  private Long expectedQuantity;
-  private Long actualQuantity;
-  private Long diffQuantity;
-  private Integer status;
-  private String remark;
-  private Long operatorId;
+    private Long skuId;
+    private Long expectedQuantity;
+    private Long actualQuantity;
+    private Long diffQuantity;
+    private Integer status;
+    private String remark;
+    private Long operatorId;
 }

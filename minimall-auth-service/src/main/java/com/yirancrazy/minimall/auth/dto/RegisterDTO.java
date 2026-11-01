@@ -16,9 +16,9 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class RegisterDto {
-  @NotBlank private String account;
+    @NotBlank private String account;
 
-  @NotBlank
-  @Size(min = 6, max = 64, message = "password length must be between 6 and 64")
-  private String password;
+    @NotBlank
+    @Size(min = 6, max = 64, message = "password length must be between 6 and 64")
+    private String password;
 }

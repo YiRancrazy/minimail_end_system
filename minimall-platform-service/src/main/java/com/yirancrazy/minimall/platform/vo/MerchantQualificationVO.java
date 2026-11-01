@@ -16,25 +16,25 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class MerchantQualificationVo {
 
-  private Long id;
+    private Long id;
 
-  private Long merchantId;
+    private Long merchantId;
 
-  private String merchantName;
+    private String merchantName;
 
-  private String licenseNo;
+    private String licenseNo;
 
-  private String legalPerson;
+    private String legalPerson;
 
-  private String businessScope;
+    private String businessScope;
 
-  private String licenseImageUrl;
+    private String licenseImageUrl;
 
-  private String status;
+    private String status;
 
-  private String rejectReason;
+    private String rejectReason;
 
-  private LocalDateTime submitTime;
+    private LocalDateTime submitTime;
 
-  private LocalDateTime auditTime;
+    private LocalDateTime auditTime;
 }

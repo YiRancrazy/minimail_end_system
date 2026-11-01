@@ -15,7 +15,7 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 @TableName("t_auth_role_permission")
 public class AuthRolePermissionPo extends BasePo {
-  private Long roleId;
+    private Long roleId;
 
-  private Long permissionId;
+    private Long permissionId;
 }

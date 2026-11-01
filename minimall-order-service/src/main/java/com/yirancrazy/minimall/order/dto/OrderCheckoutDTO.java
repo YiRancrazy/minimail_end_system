@@ -18,13 +18,13 @@ import lombok.Data;
 @Data
 public class OrderCheckoutDto {
 
-  @NotNull(message = "结算来源不能为空")
-  private CheckoutSourceEnum checkoutSource;
+    @NotNull(message = "结算来源不能为空")
+    private CheckoutSourceEnum checkoutSource;
 
-  @Size(max = 100, message = "单次最多结算100个购物车条目")
-  private List<@NotNull(message = "购物车条目ID不能为空") Long> cartItemIds;
+    @Size(max = 100, message = "单次最多结算100个购物车条目")
+    private List<@NotNull(message = "购物车条目ID不能为空") Long> cartItemIds;
 
-  @Valid private List<OrderCheckoutItemDto> items;
+    @Valid private List<OrderCheckoutItemDto> items;
 
-  @Valid private ReceiverDto receiver;
+    @Valid private ReceiverDto receiver;
 }

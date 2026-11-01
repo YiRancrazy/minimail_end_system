@@ -16,13 +16,13 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 @TableName("t_auth_token_blacklist")
 public class AuthTokenBlacklistPo extends BasePo {
-  private String jti;
+    private String jti;
 
-  private Long userId;
+    private Long userId;
 
-  private LocalDateTime expiresAt;
+    private LocalDateTime expiresAt;
 
-  private LocalDateTime revokedAt;
+    private LocalDateTime revokedAt;
 
-  private String reason;
+    private String reason;
 }

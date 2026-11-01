@@ -23,41 +23,41 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/merchant/pay")
 public class MerchantPayControllerV1 {
 
-  private final PayService payService;
+    private final PayService payService;
 
-  /**
-   * 注入商家支付查询与统计服务。
-   *
-   * @param payService 提供商家维度的支付查询能力
-   */
-  public MerchantPayControllerV1(PayService payService) {
-    this.payService = payService;
-  }
+    /**
+     * 注入商家支付查询与统计服务。
+     *
+     * @param payService 提供商家维度的支付查询能力
+     */
+    public MerchantPayControllerV1(PayService payService) {
+        this.payService = payService;
+    }
 
-  /**
-   * 分页查询指定商家的支付流水。
-   * 商家范围来自可信请求头，状态和时间条件由分页 DTO 提供。
-   *
-   * @param merchantId 可信商家 ID
-   * @param dto 游标、状态和时间筛选条件
-   * @return 商家范围内的支付流水游标页
-   */
-  @GetMapping("/transactions")
-  public Result<CursorPageVo<PayTransactionVo>> transactions(
-      @RequestHeader("X-Merchant-Id") Long merchantId, @Valid PayPageDto dto) {
-    return Result.success(payService.pageVo(merchantId, dto));
-  }
+    /**
+     * 分页查询指定商家的支付流水。
+     * 商家范围来自可信请求头，状态和时间条件由分页 DTO 提供。
+     *
+     * @param merchantId 可信商家 ID
+     * @param dto 游标、状态和时间筛选条件
+     * @return 商家范围内的支付流水游标页
+     */
+    @GetMapping("/transactions")
+    public Result<CursorPageVo<PayTransactionVo>> transactions(
+            @RequestHeader("X-Merchant-Id") Long merchantId, @Valid PayPageDto dto) {
+        return Result.success(payService.pageVo(merchantId, dto));
+    }
 
-  /**
-   * 统计指定商家的支付金额、退款金额和交易笔数。
-   *
-   * @param merchantId 可信商家 ID
-   * @param dto 统计时间范围筛选条件
-   * @return 商家支付统计视图
-   */
-  @GetMapping("/statistics")
-  public Result<PayStatisticsVo> statistics(
-      @RequestHeader("X-Merchant-Id") Long merchantId, @Valid PayPageDto dto) {
-    return Result.success(payService.statistics(merchantId, dto));
-  }
+    /**
+     * 统计指定商家的支付金额、退款金额和交易笔数。
+     *
+     * @param merchantId 可信商家 ID
+     * @param dto 统计时间范围筛选条件
+     * @return 商家支付统计视图
+     */
+    @GetMapping("/statistics")
+    public Result<PayStatisticsVo> statistics(
+            @RequestHeader("X-Merchant-Id") Long merchantId, @Valid PayPageDto dto) {
+        return Result.success(payService.statistics(merchantId, dto));
+    }
 }

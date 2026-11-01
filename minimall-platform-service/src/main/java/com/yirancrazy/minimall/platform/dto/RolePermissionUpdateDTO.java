@@ -13,6 +13,6 @@ import lombok.Data;
  */
 @Data
 public class RolePermissionUpdateDto {
-  @NotEmpty(message = "权限列表不能为空")
-  private List<@NotBlank String> permissionCodes;
+    @NotEmpty(message = "权限列表不能为空")
+    private List<@NotBlank String> permissionCodes;
 }

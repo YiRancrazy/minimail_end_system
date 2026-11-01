@@ -19,8 +19,8 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 @TableName("t_order_payment_snapshot")
 public class OrderPaymentSnapshotPo extends BasePo {
-  private Long orderId;
-  private BigDecimal payAmount;
-  private Integer payMethod;
-  private LocalDateTime expireAt;
+    private Long orderId;
+    private BigDecimal payAmount;
+    private Integer payMethod;
+    private LocalDateTime expireAt;
 }

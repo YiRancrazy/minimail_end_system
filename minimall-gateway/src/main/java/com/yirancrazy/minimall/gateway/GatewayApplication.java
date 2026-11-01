@@ -20,22 +20,22 @@ import org.springframework.context.annotation.Bean;
 @EnableDiscoveryClient
 @SpringBootApplication
 public class GatewayApplication {
-  /**
-   * 启动 Spring Boot 应用上下文，并在响应式网关运行期间阻塞主线程。
-   *
-   * @param args 转发给 Spring Boot 的命令行参数
-   */
-  public static void main(String[] args) {
-    SpringApplication.run(GatewayApplication.class, args);
-  }
+    /**
+     * 启动 Spring Boot 应用上下文，并在响应式网关运行期间阻塞主线程。
+     *
+     * @param args 转发给 Spring Boot 的命令行参数
+     */
+    public static void main(String[] args) {
+        SpringApplication.run(GatewayApplication.class, args);
+    }
 
-  /**
-   * 创建 Spring Cloud Gateway 运行时使用的 Netty 响应式 Web 服务器工厂。
-   *
-   * @return 生命周期由 Spring Boot 管理的 Netty 响应式 Web 服务器工厂
-   */
-  @Bean
-  public ReactiveWebServerFactory nettyReactiveWebServerFactory() {
-    return new org.springframework.boot.web.embedded.netty.NettyReactiveWebServerFactory();
-  }
+    /**
+     * 创建 Spring Cloud Gateway 运行时使用的 Netty 响应式 Web 服务器工厂。
+     *
+     * @return 生命周期由 Spring Boot 管理的 Netty 响应式 Web 服务器工厂
+     */
+    @Bean
+    public ReactiveWebServerFactory nettyReactiveWebServerFactory() {
+        return new org.springframework.boot.web.embedded.netty.NettyReactiveWebServerFactory();
+    }
 }

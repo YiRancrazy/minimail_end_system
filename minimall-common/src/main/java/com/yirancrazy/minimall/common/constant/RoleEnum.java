@@ -13,28 +13,28 @@ import lombok.Getter;
 @Getter
 @AllArgsConstructor
 public enum RoleEnum {
-  USER("USER", "C端用户"),
-  MERCHANT("MERCHANT", "商家"),
-  PLATFORM("PLATFORM", "平台管理员");
+    USER("USER", "C端用户"),
+    MERCHANT("MERCHANT", "商家"),
+    PLATFORM("PLATFORM", "平台管理员");
 
-  private final String code;
-  private final String description;
+    private final String code;
+    private final String description;
 
-  /**
-   * 按角色编码精确查找枚举值。
-   *
-   * @param code 角色编码，可为 null
-   * @return 匹配的角色；输入为 null 或编码未知时返回 null
-   */
-  public static RoleEnum fromCode(String code) {
-    if (code == null) {
-      return null;
+    /**
+     * 按角色编码精确查找枚举值。
+     *
+     * @param code 角色编码，可为 null
+     * @return 匹配的角色；输入为 null 或编码未知时返回 null
+     */
+    public static RoleEnum fromCode(String code) {
+        if (code == null) {
+            return null;
+        }
+        for (RoleEnum role : values()) {
+            if (role.code.equals(code)) {
+                return role;
+            }
+        }
+        return null;
     }
-    for (RoleEnum role : values()) {
-      if (role.code.equals(code)) {
-        return role;
-      }
-    }
-    return null;
-  }
 }

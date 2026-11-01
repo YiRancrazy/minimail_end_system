@@ -8,11 +8,11 @@ package com.yirancrazy.minimall.notify.gateway;
  */
 public interface NotifyPushGateway {
 
-  /**
-   * 向指定用户的已建立通知连接推送标题；没有在线连接时按 SSE 实现静默跳过.
-   *
-   * @param userId 接收通知的用户编号
-   * @param payload 实时推送的展示内容
-   */
-  void send(Long userId, String payload);
+    /**
+     * 向指定用户的已建立通知连接推送标题；没有在线连接时按 SSE 实现静默跳过.
+     *
+     * @param userId 接收通知的用户编号
+     * @param payload 实时推送的展示内容
+     */
+    void send(Long userId, String payload);
 }

@@ -15,10 +15,10 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class PlatformOrderSummaryVo {
 
-  private Long paid;
-  private Long pending;
-  private Long refunding;
-  private Long shipped;
-  private Long completed;
-  private Long cancelled;
+    private Long paid;
+    private Long pending;
+    private Long refunding;
+    private Long shipped;
+    private Long completed;
+    private Long cancelled;
 }

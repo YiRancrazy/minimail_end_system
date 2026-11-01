@@ -17,19 +17,19 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class CommentRemoteGatewayImpl implements CommentRemoteGateway {
 
-  private final OrderFeignClient orderFeignClient;
+    private final OrderFeignClient orderFeignClient;
 
-  /**
-   * 调用订单服务查询指定订单商品的评价资格.
-   *
-   * @param orderNo 待评价订单编号
-   * @param userId 发起评价的用户编号
-   * @param spuId 待评价商品 SPU 编号
-   * @return 订单服务的评价资格响应；网络或服务端错误由 Feign 调用链抛出
-   */
-  @Override
-  public Result<OrderCommentEligibilityDto> commentEligibility(
-      String orderNo, Long userId, Long spuId) {
-    return orderFeignClient.commentEligibility(orderNo, userId, spuId);
-  }
+    /**
+     * 调用订单服务查询指定订单商品的评价资格.
+     *
+     * @param orderNo 待评价订单编号
+     * @param userId 发起评价的用户编号
+     * @param spuId 待评价商品 SPU 编号
+     * @return 订单服务的评价资格响应；网络或服务端错误由 Feign 调用链抛出
+     */
+    @Override
+    public Result<OrderCommentEligibilityDto> commentEligibility(
+            String orderNo, Long userId, Long spuId) {
+        return orderFeignClient.commentEligibility(orderNo, userId, spuId);
+    }
 }

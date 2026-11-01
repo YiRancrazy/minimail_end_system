@@ -15,13 +15,13 @@ import org.junit.jupiter.api.Test;
  */
 class CartCleanupFeignFallbackFactoryTest {
 
-  /** 购物车清理服务不可达时应返回系统错误而非成功. */
-  @Test
-  void testFallbackReturnsRetryableSystemError() {
-    CartCleanupFeignFallbackFactory factory = new CartCleanupFeignFallbackFactory();
-    CartCleanupFeignClient client = factory.create(new RuntimeException("down"));
-    CartCheckoutCleanupDto dto = new CartCheckoutCleanupDto(1L, java.util.List.of());
+    /** 购物车清理服务不可达时应返回系统错误而非成功. */
+    @Test
+    void testFallbackReturnsRetryableSystemError() {
+        CartCleanupFeignFallbackFactory factory = new CartCleanupFeignFallbackFactory();
+        CartCleanupFeignClient client = factory.create(new RuntimeException("down"));
+        CartCheckoutCleanupDto dto = new CartCheckoutCleanupDto(1L, java.util.List.of());
 
-    assertEquals(CommonCode.SYS_ERROR, client.cleanupCheckout(dto).getCode());
-  }
+        assertEquals(CommonCode.SYS_ERROR, client.cleanupCheckout(dto).getCode());
+    }
 }

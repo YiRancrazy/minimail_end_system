@@ -19,18 +19,18 @@ import lombok.Data;
  */
 @Data
 public abstract class BasePo implements Serializable {
-  @TableId(type = IdType.ASSIGN_ID)
-  private Long id;
+    @TableId(type = IdType.ASSIGN_ID)
+    private Long id;
 
-  @TableField(fill = FieldFill.INSERT)
-  private LocalDateTime createTime;
+    @TableField(fill = FieldFill.INSERT)
+    private LocalDateTime createTime;
 
-  @TableField(fill = FieldFill.INSERT_UPDATE)
-  private LocalDateTime updateTime;
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private LocalDateTime updateTime;
 
-  @TableLogic(value = "0", delval = "NULL")
-  @TableField(fill = FieldFill.INSERT)
-  private Integer isDeleted;
+    @TableLogic(value = "0", delval = "NULL")
+    @TableField(fill = FieldFill.INSERT)
+    private Integer isDeleted;
 
-  @Version private Integer version;
+    @Version private Integer version;
 }

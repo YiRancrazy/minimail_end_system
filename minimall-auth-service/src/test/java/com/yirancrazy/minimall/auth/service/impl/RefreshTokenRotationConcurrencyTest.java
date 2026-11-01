@@ -52,150 +52,150 @@ import org.springframework.data.redis.core.script.RedisScript;
 @MockitoSettings(strictness = Strictness.LENIENT)
 class RefreshTokenRotationConcurrencyTest {
 
-  private static final int CONCURRENT_REQUESTS = 8;
+    private static final int CONCURRENT_REQUESTS = 8;
 
-  @Mock private AuthUserManager authUserManager;
-  @Mock private AuthRoleManager authRoleManager;
-  @Mock private AuthTokenBlacklistManager tokenBlacklistManager;
-  @Mock private AuthRemoteGateway authRemoteGateway;
-  @Mock private JwtUtil jwtUtil;
-  @Mock private StringRedisTemplate redisTemplate;
+    @Mock private AuthUserManager authUserManager;
+    @Mock private AuthRoleManager authRoleManager;
+    @Mock private AuthTokenBlacklistManager tokenBlacklistManager;
+    @Mock private AuthRemoteGateway authRemoteGateway;
+    @Mock private JwtUtil jwtUtil;
+    @Mock private StringRedisTemplate redisTemplate;
 
-  private AuthServiceImpl authService;
+    private AuthServiceImpl authService;
 
-  @BeforeEach
-  void setUp() {
-    ValueOperations<String, String> valueOperations = mock(ValueOperations.class);
-    when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+    @BeforeEach
+    void setUp() {
+        ValueOperations<String, String> valueOperations = mock(ValueOperations.class);
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
 
-    Claims claims = mock(Claims.class);
-    when(claims.getSubject()).thenReturn("1");
-    when(claims.get("jti", String.class)).thenReturn("race-jti");
-    when(claims.get("type", String.class)).thenReturn(JwtType.REFRESH);
-    when(jwtUtil.parse("refresh-jwt")).thenReturn(claims);
-    when(jwtUtil.sign(
-            anyLong(),
-            anyLong(),
-            anyString(),
-            anyString(),
-            anyLong(),
-            anyString(),
-            eq(JwtType.ACCESS),
-            eq(900_000L)))
-        .thenReturn("access-token");
-    when(jwtUtil.sign(
-            anyLong(),
-            anyLong(),
-            anyString(),
-            anyString(),
-            anyLong(),
-            anyString(),
-            eq(JwtType.REFRESH),
-            eq(604_800_000L)))
-        .thenReturn("refresh-token");
+        Claims claims = mock(Claims.class);
+        when(claims.getSubject()).thenReturn("1");
+        when(claims.get("jti", String.class)).thenReturn("race-jti");
+        when(claims.get("type", String.class)).thenReturn(JwtType.REFRESH);
+        when(jwtUtil.parse("refresh-jwt")).thenReturn(claims);
+        when(jwtUtil.sign(
+                        anyLong(),
+                        anyLong(),
+                        anyString(),
+                        anyString(),
+                        anyLong(),
+                        anyString(),
+                        eq(JwtType.ACCESS),
+                        eq(900_000L)))
+                .thenReturn("access-token");
+        when(jwtUtil.sign(
+                        anyLong(),
+                        anyLong(),
+                        anyString(),
+                        anyString(),
+                        anyLong(),
+                        anyString(),
+                        eq(JwtType.REFRESH),
+                        eq(604_800_000L)))
+                .thenReturn("refresh-token");
 
-    AuthRolePo role = new AuthRolePo();
-    role.setId(1L);
-    role.setRoleCode("USER");
-    when(authRoleManager.getById(1L)).thenReturn(role);
-    AuthUserPo user = new AuthUserPo();
-    user.setId(1L);
-    user.setAccount("alice");
-    user.setRoleId(1L);
-    user.setUserId(9001L);
-    when(authUserManager.getById(1L)).thenReturn(user);
+        AuthRolePo role = new AuthRolePo();
+        role.setId(1L);
+        role.setRoleCode("USER");
+        when(authRoleManager.getById(1L)).thenReturn(role);
+        AuthUserPo user = new AuthUserPo();
+        user.setId(1L);
+        user.setAccount("alice");
+        user.setRoleId(1L);
+        user.setUserId(9001L);
+        when(authUserManager.getById(1L)).thenReturn(user);
 
-    // Redis 侧比较并删除只可能成功一次，其余并发请求全部拿到 0
-    AtomicInteger remainingWinners = new AtomicInteger(1);
-    when(redisTemplate.execute(any(RedisScript.class), anyList(), any()))
-        .thenAnswer(invocation -> remainingWinners.getAndDecrement() > 0 ? 1L : 0L);
+        // Redis 侧比较并删除只可能成功一次，其余并发请求全部拿到 0
+        AtomicInteger remainingWinners = new AtomicInteger(1);
+        when(redisTemplate.execute(any(RedisScript.class), anyList(), any()))
+                .thenAnswer(invocation -> remainingWinners.getAndDecrement() > 0 ? 1L : 0L);
 
-    authService =
-        new AuthServiceImpl(
-            authUserManager,
-            authRoleManager,
-            tokenBlacklistManager,
-            authRemoteGateway,
-            jwtUtil,
-            redisTemplate,
-            900_000L,
-            604_800_000L);
-  }
-
-  /** 验证并发刷新仅一个请求成功：8 个请求争抢同一记录，放行后预期 1 次签发、7 次刷新令牌无效. */
-  @Test
-  void testConcurrentRefreshOnlyWinnerRotates() throws Exception {
-    AtomicInteger winners = new AtomicInteger();
-    AtomicInteger rejected = new AtomicInteger();
-    CountDownLatch startGate = new CountDownLatch(1);
-    ThreadPoolExecutor pool =
-        new ThreadPoolExecutor(
-            CONCURRENT_REQUESTS,
-            CONCURRENT_REQUESTS,
-            0L,
-            TimeUnit.MILLISECONDS,
-            new ArrayBlockingQueue<>(CONCURRENT_REQUESTS),
-            new NamedThreadFactory("refresh-race"));
-    try {
-      List<Future<Void>> futures = new ArrayList<>(CONCURRENT_REQUESTS);
-      for (int i = 0; i < CONCURRENT_REQUESTS; i++) {
-        futures.add(pool.submit(refreshTask(startGate, winners, rejected)));
-      }
-      startGate.countDown();
-      for (Future<Void> future : futures) {
-        future.get(5, TimeUnit.SECONDS);
-      }
-    } finally {
-      pool.shutdownNow();
+        authService =
+                new AuthServiceImpl(
+                        authUserManager,
+                        authRoleManager,
+                        tokenBlacklistManager,
+                        authRemoteGateway,
+                        jwtUtil,
+                        redisTemplate,
+                        900_000L,
+                        604_800_000L);
     }
 
-    assertEquals(1, winners.get(), "only the winner of the atomic delete may rotate the token");
-    assertEquals(CONCURRENT_REQUESTS - 1, rejected.get());
-  }
-
-  private Callable<Void> refreshTask(
-      CountDownLatch startGate, AtomicInteger winners, AtomicInteger rejected) {
-    return () -> {
-      startGate.await();
-      try {
-        TokenVo vo = authService.refreshToken("refresh-jwt");
-        if (vo != null) {
-          winners.incrementAndGet();
+    /** 验证并发刷新仅一个请求成功：8 个请求争抢同一记录，放行后预期 1 次签发、7 次刷新令牌无效. */
+    @Test
+    void testConcurrentRefreshOnlyWinnerRotates() throws Exception {
+        AtomicInteger winners = new AtomicInteger();
+        AtomicInteger rejected = new AtomicInteger();
+        CountDownLatch startGate = new CountDownLatch(1);
+        ThreadPoolExecutor pool =
+                new ThreadPoolExecutor(
+                        CONCURRENT_REQUESTS,
+                        CONCURRENT_REQUESTS,
+                        0L,
+                        TimeUnit.MILLISECONDS,
+                        new ArrayBlockingQueue<>(CONCURRENT_REQUESTS),
+                        new NamedThreadFactory("refresh-race"));
+        try {
+            List<Future<Void>> futures = new ArrayList<>(CONCURRENT_REQUESTS);
+            for (int i = 0; i < CONCURRENT_REQUESTS; i++) {
+                futures.add(pool.submit(refreshTask(startGate, winners, rejected)));
+            }
+            startGate.countDown();
+            for (Future<Void> future : futures) {
+                future.get(5, TimeUnit.SECONDS);
+            }
+        } finally {
+            pool.shutdownNow();
         }
-      } catch (BizException ex) {
-        assertEquals(AuthCodeEnum.REFRESH_TOKEN_INVALID.getCode(), ex.getCode());
-        rejected.incrementAndGet();
-      }
-      return null;
-    };
-  }
 
-  /**
-   * @Author: yirancrazy@gmail.com
-   * @Description: 测试专用线程工厂；为并发刷新任务生成带统一前缀和非零序号的守护线程。
-   * @Version: 1.0
-   * @DateTime: 2026/10/16
-   */
-  private static final class NamedThreadFactory implements ThreadFactory {
+        assertEquals(1, winners.get(), "only the winner of the atomic delete may rotate the token");
+        assertEquals(CONCURRENT_REQUESTS - 1, rejected.get());
+    }
 
-    private final String prefix;
-    private final AtomicInteger counter = new AtomicInteger();
-
-    private NamedThreadFactory(String prefix) {
-      this.prefix = prefix;
+    private Callable<Void> refreshTask(
+            CountDownLatch startGate, AtomicInteger winners, AtomicInteger rejected) {
+        return () -> {
+            startGate.await();
+            try {
+                TokenVo vo = authService.refreshToken("refresh-jwt");
+                if (vo != null) {
+                    winners.incrementAndGet();
+                }
+            } catch (BizException ex) {
+                assertEquals(AuthCodeEnum.REFRESH_TOKEN_INVALID.getCode(), ex.getCode());
+                rejected.incrementAndGet();
+            }
+            return null;
+        };
     }
 
     /**
-     * 创建带统一前缀和递增序号的守护线程。
-     *
-     * @param runnable 线程要执行的任务
-     * @return 已命名的守护线程
+     * @Author: yirancrazy@gmail.com
+     * @Description: 测试专用线程工厂；为并发刷新任务生成带统一前缀和非零序号的守护线程。
+     * @Version: 1.0
+     * @DateTime: 2026/10/16
      */
-    @Override
-    public Thread newThread(Runnable runnable) {
-      Thread thread = new Thread(runnable, prefix + "-" + counter.incrementAndGet());
-      thread.setDaemon(true);
-      return thread;
+    private static final class NamedThreadFactory implements ThreadFactory {
+
+        private final String prefix;
+        private final AtomicInteger counter = new AtomicInteger();
+
+        private NamedThreadFactory(String prefix) {
+            this.prefix = prefix;
+        }
+
+        /**
+         * 创建带统一前缀和递增序号的守护线程。
+         *
+         * @param runnable 线程要执行的任务
+         * @return 已命名的守护线程
+         */
+        @Override
+        public Thread newThread(Runnable runnable) {
+            Thread thread = new Thread(runnable, prefix + "-" + counter.incrementAndGet());
+            thread.setDaemon(true);
+            return thread;
+        }
     }
-  }
 }

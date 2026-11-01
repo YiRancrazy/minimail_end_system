@@ -16,27 +16,27 @@ import lombok.EqualsAndHashCode;
 @TableName("t_notify_comment")
 public class CommentPo extends BasePo {
 
-  private String orderNo;
+    private String orderNo;
 
-  private Long spuId;
+    private Long spuId;
 
-  private Long skuId;
+    private Long skuId;
 
-  private Long userId;
+    private Long userId;
 
-  private Long merchantId;
+    private Long merchantId;
 
-  private Integer rating;
+    private Integer rating;
 
-  private String content;
+    private String content;
 
-  private String images;
+    private String images;
 
-  private Integer anonymous;
+    private Integer anonymous;
 
-  private Integer status;
+    private Integer status;
 
-  private String merchantReply;
+    private String merchantReply;
 
-  private java.time.LocalDateTime merchantReplyTime;
+    private java.time.LocalDateTime merchantReplyTime;
 }

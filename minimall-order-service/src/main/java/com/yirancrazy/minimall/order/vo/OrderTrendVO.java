@@ -18,5 +18,5 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class OrderTrendVo {
 
-  private List<OrderTrendPointVo> points;
+    private List<OrderTrendPointVo> points;
 }

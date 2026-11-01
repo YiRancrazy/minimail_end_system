@@ -13,17 +13,17 @@ import lombok.Data;
 @Data
 public class OrderStatusCountsVo {
 
-  private long pendingCount;
+    private long pendingCount;
 
-  private long paidCount;
+    private long paidCount;
 
-  private long shippedCount;
+    private long shippedCount;
 
-  private long completedCount;
+    private long completedCount;
 
-  private long canceledCount;
+    private long canceledCount;
 
-  private long refundingCount;
+    private long refundingCount;
 
-  private long refundedCount;
+    private long refundedCount;
 }

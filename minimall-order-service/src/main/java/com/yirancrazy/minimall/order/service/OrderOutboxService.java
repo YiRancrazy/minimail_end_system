@@ -12,10 +12,10 @@ import com.yirancrazy.minimall.api.dto.order.OrderPaidDto;
  */
 public interface OrderOutboxService {
 
-  /**
-   * 在当前事务中记录订单支付成功事件.
-   *
-   * @param event 订单支付成功事件
-   */
-  void recordPaidEvent(OrderPaidDto event);
+    /**
+     * 在当前事务中记录订单支付成功事件.
+     *
+     * @param event 订单支付成功事件
+     */
+    void recordPaidEvent(OrderPaidDto event);
 }

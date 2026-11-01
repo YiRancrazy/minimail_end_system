@@ -16,26 +16,26 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 public class NotifyFeignFallbackFactory implements FallbackFactory<NotifyFeignClient> {
-  /**
-   * 为通知远程调用异常创建降级客户端.
-   *
-   * @param cause 通知远程调用异常
-   * @return 通知降级客户端
-   */
-  @Override
-  public NotifyFeignClient create(Throwable cause) {
-    log.warn("notify-service 不可达: {}", cause.getMessage());
-    return new NotifyFeignClient() {
-      /**
-       * 通知服务不可用时返回 false，表示通知未受理.
-       *
-       * @param dto 通知事件
-       * @return 数据为 false 的成功响应
-       */
-      @Override
-      public Result<Boolean> push(NotifyEventDto dto) {
-        return Result.success(false);
-      }
-    };
-  }
+    /**
+     * 为通知远程调用异常创建降级客户端.
+     *
+     * @param cause 通知远程调用异常
+     * @return 通知降级客户端
+     */
+    @Override
+    public NotifyFeignClient create(Throwable cause) {
+        log.warn("notify-service 不可达: {}", cause.getMessage());
+        return new NotifyFeignClient() {
+            /**
+             * 通知服务不可用时返回 false，表示通知未受理.
+             *
+             * @param dto 通知事件
+             * @return 数据为 false 的成功响应
+             */
+            @Override
+            public Result<Boolean> push(NotifyEventDto dto) {
+                return Result.success(false);
+            }
+        };
+    }
 }

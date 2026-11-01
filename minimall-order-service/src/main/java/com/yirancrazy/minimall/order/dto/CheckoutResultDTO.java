@@ -17,9 +17,9 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class CheckoutResultDto {
 
-  private Long orderId;
+    private Long orderId;
 
-  private String orderGroupNo;
+    private String orderGroupNo;
 
-  private Long cartCleanupTaskId;
+    private Long cartCleanupTaskId;
 }

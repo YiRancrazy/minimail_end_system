@@ -24,45 +24,45 @@ import org.yaml.snakeyaml.Yaml;
  */
 class RedisConfigTest {
 
-  private static final String REDIS_PASSWORD_PLACEHOLDER = "${REDIS_PASSWORD:}";
+    private static final String REDIS_PASSWORD_PLACEHOLDER = "${REDIS_PASSWORD:}";
 
-  /** 验证网关从环境变量读取 Redis 密码；前置为类路径存在配置；执行加载 YAML；预期密码为环境占位符. */
-  @Test
-  void testGatewayReadsRedisPasswordFromEnvironment() throws IOException {
-    List<PropertySource<?>> sources =
-        new YamlPropertySourceLoader()
-            .load("application", new ClassPathResource("application.yml"));
-    assertEquals(1, sources.size());
-    assertEquals(
-        REDIS_PASSWORD_PLACEHOLDER, sources.get(0).getProperty("spring.data.redis.password"));
-  }
-
-  /** 验证 Compose 统一注入 Redis 密码；前置为仓库存在编排文件；执行解析共享环境；预期密码使用默认回退表达式. */
-  @Test
-  void testComposeInjectsRedisPasswordIntoApps() throws IOException {
-    Path compose = locateRepositoryFile("docker-compose.yml");
-    assumeTrue(compose != null, "docker-compose.yml only exists inside the repository");
-    Map<String, Object> root = new Yaml().load(Files.readString(compose));
-    Object appEnv = root.get("x-app-env");
-    assertNotNull(appEnv, "x-app-env anchor must exist");
-    assertEquals("${REDIS_PASSWORD:-redis123}", ((Map<?, ?>) appEnv).get("REDIS_PASSWORD"));
-  }
-
-  /**
-   * 从当前目录逐级向上查找仓库文件。
-   *
-   * @param fileName 要查找的文件名
-   * @return 第一个匹配的普通文件；所有父目录均不存在时返回 null
-   */
-  private static Path locateRepositoryFile(String fileName) {
-    Path dir = Path.of("").toAbsolutePath();
-    while (dir != null) {
-      Path candidate = dir.resolve(fileName);
-      if (Files.isRegularFile(candidate)) {
-        return candidate;
-      }
-      dir = dir.getParent();
+    /** 验证网关从环境变量读取 Redis 密码；前置为类路径存在配置；执行加载 YAML；预期密码为环境占位符. */
+    @Test
+    void testGatewayReadsRedisPasswordFromEnvironment() throws IOException {
+        List<PropertySource<?>> sources =
+                new YamlPropertySourceLoader()
+                        .load("application", new ClassPathResource("application.yml"));
+        assertEquals(1, sources.size());
+        assertEquals(
+                REDIS_PASSWORD_PLACEHOLDER, sources.get(0).getProperty("spring.data.redis.password"));
     }
-    return null;
-  }
+
+    /** 验证 Compose 统一注入 Redis 密码；前置为仓库存在编排文件；执行解析共享环境；预期密码使用默认回退表达式. */
+    @Test
+    void testComposeInjectsRedisPasswordIntoApps() throws IOException {
+        Path compose = locateRepositoryFile("docker-compose.yml");
+        assumeTrue(compose != null, "docker-compose.yml only exists inside the repository");
+        Map<String, Object> root = new Yaml().load(Files.readString(compose));
+        Object appEnv = root.get("x-app-env");
+        assertNotNull(appEnv, "x-app-env anchor must exist");
+        assertEquals("${REDIS_PASSWORD:-redis123}", ((Map<?, ?>) appEnv).get("REDIS_PASSWORD"));
+    }
+
+    /**
+     * 从当前目录逐级向上查找仓库文件。
+     *
+     * @param fileName 要查找的文件名
+     * @return 第一个匹配的普通文件；所有父目录均不存在时返回 null
+     */
+    private static Path locateRepositoryFile(String fileName) {
+        Path dir = Path.of("").toAbsolutePath();
+        while (dir != null) {
+            Path candidate = dir.resolve(fileName);
+            if (Files.isRegularFile(candidate)) {
+                return candidate;
+            }
+            dir = dir.getParent();
+        }
+        return null;
+    }
 }

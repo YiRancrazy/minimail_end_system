@@ -16,33 +16,33 @@ import lombok.Data;
 @Data
 public class OrderExportVo {
 
-  private Long id;
-  private Long userId;
-  private Long merchantId;
-  private Long skuId;
-  private Integer quantity;
-  private BigDecimal amount;
-  private Integer status;
-  private LocalDateTime createTime;
+    private Long id;
+    private Long userId;
+    private Long merchantId;
+    private Long skuId;
+    private Integer quantity;
+    private BigDecimal amount;
+    private Integer status;
+    private LocalDateTime createTime;
 
-  /**
-   * 把订单持久化对象转换为展示视图。
-   *
-   * <p>复制展示字段并转换金额、状态或图片地址；不查询数据库。
-   *
-   * @param po 订单持久化对象
-   * @return 转换后的视图对象。
-   */
-  public static OrderExportVo from(OrderPo po) {
-    OrderExportVo vo = new OrderExportVo();
-    vo.setId(po.getId());
-    vo.setUserId(po.getUserId());
-    vo.setMerchantId(po.getMerchantId());
-    vo.setSkuId(po.getSkuId());
-    vo.setQuantity(po.getQuantity());
-    vo.setAmount(po.getAmount());
-    vo.setStatus(po.getStatus());
-    vo.setCreateTime(po.getCreateTime());
-    return vo;
-  }
+    /**
+     * 把订单持久化对象转换为展示视图。
+     *
+     * <p>复制展示字段并转换金额、状态或图片地址；不查询数据库。
+     *
+     * @param po 订单持久化对象
+     * @return 转换后的视图对象。
+     */
+    public static OrderExportVo from(OrderPo po) {
+        OrderExportVo vo = new OrderExportVo();
+        vo.setId(po.getId());
+        vo.setUserId(po.getUserId());
+        vo.setMerchantId(po.getMerchantId());
+        vo.setSkuId(po.getSkuId());
+        vo.setQuantity(po.getQuantity());
+        vo.setAmount(po.getAmount());
+        vo.setStatus(po.getStatus());
+        vo.setCreateTime(po.getCreateTime());
+        return vo;
+    }
 }

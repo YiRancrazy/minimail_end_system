@@ -20,21 +20,21 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 @TableName(value = "t_pay_transaction", autoResultMap = true)
 public class PayTransactionPo extends BasePo {
-  private String paymentNo;
-  private String tradeNo;
-  private String orderNo;
-  private String activeOrderNo;
-  private Long userId;
-  private Long merchantId;
-  private BigDecimal amount;
-  private String currency;
-  private Integer status;
-  private Integer channel;
+    private String paymentNo;
+    private String tradeNo;
+    private String orderNo;
+    private String activeOrderNo;
+    private Long userId;
+    private Long merchantId;
+    private BigDecimal amount;
+    private String currency;
+    private Integer status;
+    private Integer channel;
 
-  @TableField(typeHandler = EncryptedStringTypeHandler.class)
-  private String channelResponse;
+    @TableField(typeHandler = EncryptedStringTypeHandler.class)
+    private String channelResponse;
 
-  private LocalDateTime paidAt;
-  private LocalDateTime expireAt;
-  private String idempotencyKey;
+    private LocalDateTime paidAt;
+    private LocalDateTime expireAt;
+    private String idempotencyKey;
 }

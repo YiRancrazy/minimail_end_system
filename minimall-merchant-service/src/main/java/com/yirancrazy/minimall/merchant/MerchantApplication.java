@@ -18,12 +18,12 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
 @MapperScan("com.yirancrazy.minimall.merchant.mapper")
 @EnableFeignClients(basePackages = "com.yirancrazy.minimall.api.feign")
 public class MerchantApplication {
-  /**
-   * 启动商家服务进程并加载 Spring Boot 上下文。
-   *
-   * @param args 命令行参数，本入口未做额外解析。
-   */
-  public static void main(String[] args) {
-    SpringApplication.run(MerchantApplication.class, args);
-  }
+    /**
+     * 启动商家服务进程并加载 Spring Boot 上下文。
+     *
+     * @param args 命令行参数，本入口未做额外解析。
+     */
+    public static void main(String[] args) {
+        SpringApplication.run(MerchantApplication.class, args);
+    }
 }

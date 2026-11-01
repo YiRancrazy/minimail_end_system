@@ -16,17 +16,17 @@ import lombok.Data;
 @Data
 public class SkuItemDto {
 
-  private Long id;
+    private Long id;
 
-  // 兼容前端字段名 spec，即规格描述，落库为 skuName
-  @JsonAlias("spec")
-  @Size(max = 200, message = "skuName length must be <= 200")
-  private String skuName;
+    // 兼容前端字段名 spec，即规格描述，落库为 skuName
+    @JsonAlias("spec")
+    @Size(max = 200, message = "skuName length must be <= 200")
+    private String skuName;
 
-  @Min(value = 0, message = "price must be non-negative")
-  @Digits(integer = 10, fraction = 2, message = "price must have at most 2 decimal places")
-  private BigDecimal price;
+    @Min(value = 0, message = "price must be non-negative")
+    @Digits(integer = 10, fraction = 2, message = "price must have at most 2 decimal places")
+    private BigDecimal price;
 
-  @Min(value = 0, message = "stock must be non-negative")
-  private Integer stock;
+    @Min(value = 0, message = "stock must be non-negative")
+    private Integer stock;
 }

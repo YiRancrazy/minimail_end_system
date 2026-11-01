@@ -10,6 +10,6 @@ import lombok.Data;
  */
 @Data
 public class IdSegmentDto {
-  private String bizTag;
-  private Long id;
+    private String bizTag;
+    private Long id;
 }

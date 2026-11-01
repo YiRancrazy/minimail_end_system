@@ -14,4 +14,4 @@ import com.yirancrazy.minimall.merchant.mapper.MerchantMapper;
  */
 @Manager
 public class MerchantManagerImpl extends ServiceImpl<MerchantMapper, MerchantPo>
-    implements MerchantManager {}
+        implements MerchantManager {}

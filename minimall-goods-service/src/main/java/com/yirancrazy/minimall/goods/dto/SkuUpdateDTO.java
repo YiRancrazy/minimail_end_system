@@ -16,14 +16,14 @@ import lombok.Data;
 @Data
 public class SkuUpdateDto {
 
-  @NotBlank(message = "skuName cannot be blank")
-  @Size(min = 1, max = 200, message = "skuName length must be between 1 and 200")
-  private String skuName;
+    @NotBlank(message = "skuName cannot be blank")
+    @Size(min = 1, max = 200, message = "skuName length must be between 1 and 200")
+    private String skuName;
 
-  @Min(value = 0, message = "price must be non-negative")
-  @Digits(integer = 10, fraction = 2, message = "price must have at most 2 decimal places")
-  private BigDecimal price;
+    @Min(value = 0, message = "price must be non-negative")
+    @Digits(integer = 10, fraction = 2, message = "price must have at most 2 decimal places")
+    private BigDecimal price;
 
-  @Min(value = 0, message = "stock must be non-negative")
-  private Integer stock;
+    @Min(value = 0, message = "stock must be non-negative")
+    private Integer stock;
 }

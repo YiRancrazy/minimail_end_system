@@ -18,31 +18,31 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class PageResult<T> {
-  private Long total;
-  private Long pages;
-  private Long current;
-  private Long size;
-  private List<T> records;
+    private Long total;
+    private Long pages;
+    private Long current;
+    private Long size;
+    private List<T> records;
 
-  /**
-   * 创建无记录的分页结果，当前页为 1、页大小为 10、总数和总页数均为 0。
-   *
-   * @param <T> 记录类型
-   * @return 空分页结果
-   */
-  public static <T> PageResult<T> empty() {
-    return new PageResult<>(0L, 0L, 1L, 10L, Collections.emptyList());
-  }
+    /**
+     * 创建无记录的分页结果，当前页为 1、页大小为 10、总数和总页数均为 0。
+     *
+     * @param <T> 记录类型
+     * @return 空分页结果
+     */
+    public static <T> PageResult<T> empty() {
+        return new PageResult<>(0L, 0L, 1L, 10L, Collections.emptyList());
+    }
 
-  /**
-   * 将 MyBatis-Plus 分页对象转换为接口响应结构。
-   *
-   * @param <T> 记录类型
-   * @param page MyBatis-Plus 分页查询结果
-   * @return 包含统计信息和当前页记录的 PageResult
-   */
-  public static <T> PageResult<T> of(IPage<T> page) {
-    return new PageResult<>(
-        page.getTotal(), page.getPages(), page.getCurrent(), page.getSize(), page.getRecords());
-  }
+    /**
+     * 将 MyBatis-Plus 分页对象转换为接口响应结构。
+     *
+     * @param <T> 记录类型
+     * @param page MyBatis-Plus 分页查询结果
+     * @return 包含统计信息和当前页记录的 PageResult
+     */
+    public static <T> PageResult<T> of(IPage<T> page) {
+        return new PageResult<>(
+                page.getTotal(), page.getPages(), page.getCurrent(), page.getSize(), page.getRecords());
+    }
 }

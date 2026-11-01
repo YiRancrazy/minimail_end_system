@@ -15,13 +15,13 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/platform")
 public class HealthControllerV1 {
 
-  /**
-   * 返回平台管理服务的固定健康标识，不访问数据库或下游服务.
-   *
-   * @return 成功响应，数据固定为 platform-ok
-   */
-  @GetMapping("/health")
-  public Result<String> health() {
-    return Result.success("platform-ok");
-  }
+    /**
+     * 返回平台管理服务的固定健康标识，不访问数据库或下游服务.
+     *
+     * @return 成功响应，数据固定为 platform-ok
+     */
+    @GetMapping("/health")
+    public Result<String> health() {
+        return Result.success("platform-ok");
+    }
 }

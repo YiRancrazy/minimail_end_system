@@ -13,7 +13,7 @@ import lombok.Data;
 @Data
 public class CommentReplyDto {
 
-  @NotBlank(message = "reply cannot be blank")
-  @Size(max = 1024, message = "reply length must be <= 1024")
-  private String reply;
+    @NotBlank(message = "reply cannot be blank")
+    @Size(max = 1024, message = "reply length must be <= 1024")
+    private String reply;
 }

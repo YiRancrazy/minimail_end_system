@@ -18,13 +18,13 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class NotifyEventDto {
 
-  @NotNull(message = "userId cannot be null")
-  private Long userId;
+    @NotNull(message = "userId cannot be null")
+    private Long userId;
 
-  @NotBlank(message = "title cannot be blank")
-  @Size(min = 1, max = 100, message = "title length must be between 1 and 100")
-  private String title;
+    @NotBlank(message = "title cannot be blank")
+    @Size(min = 1, max = 100, message = "title length must be between 1 and 100")
+    private String title;
 
-  @NotBlank(message = "content cannot be blank")
-  private String content;
+    @NotBlank(message = "content cannot be blank")
+    private String content;
 }

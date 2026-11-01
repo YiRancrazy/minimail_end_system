@@ -14,5 +14,5 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 public class PlatformUserPageDto extends CursorPageDto {
 
-  private String keyword;
+    private String keyword;
 }

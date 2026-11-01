@@ -10,13 +10,13 @@ package com.yirancrazy.minimall.order.service;
  */
 public interface OrderOutboxPublisher {
 
-  /**
-   * 批量发布到期的订单发件箱事件。
-   *
-   * <p>每批先查询候选并用数据库条件抢占，投递成功标记已发送，失败按指数退避重试或进入死信；返回仅统计成功发送数。
-   *
-   * @param limit 单批最大处理数量
-   * @return 本轮成功发送的事件数量。
-   */
-  int publishPending(int limit);
+    /**
+     * 批量发布到期的订单发件箱事件。
+     *
+     * <p>每批先查询候选并用数据库条件抢占，投递成功标记已发送，失败按指数退避重试或进入死信；返回仅统计成功发送数。
+     *
+     * @param limit 单批最大处理数量
+     * @return 本轮成功发送的事件数量。
+     */
+    int publishPending(int limit);
 }

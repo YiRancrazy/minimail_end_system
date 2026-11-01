@@ -15,27 +15,27 @@ import org.springframework.context.annotation.Bean;
 @AutoConfiguration
 public class TraceIdFeignAutoConfiguration {
 
-  /**
-   * 创建从 MDC 读取链路标识的 Feign 拦截器.
-   *
-   * @return TraceId Feign 请求拦截器
-   */
-  @Bean
-  @ConditionalOnMissingBean(name = "traceIdFeignInterceptor")
-  public RequestInterceptor traceIdFeignInterceptor() {
-    return new TraceIdFeignInterceptor();
-  }
+    /**
+     * 创建从 MDC 读取链路标识的 Feign 拦截器.
+     *
+     * @return TraceId Feign 请求拦截器
+     */
+    @Bean
+    @ConditionalOnMissingBean(name = "traceIdFeignInterceptor")
+    public RequestInterceptor traceIdFeignInterceptor() {
+        return new TraceIdFeignInterceptor();
+    }
 
-  /**
-   * 创建从配置读取内部令牌的 Feign 拦截器.
-   *
-   * @param internalToken 服务间访问令牌
-   * @return 内部令牌 Feign 请求拦截器
-   */
-  @Bean
-  @ConditionalOnMissingBean(name = "internalTokenFeignInterceptor")
-  public RequestInterceptor internalTokenFeignInterceptor(
-      @Value("${minimall.security.internal-token:}") String internalToken) {
-    return new InternalTokenFeignInterceptor(internalToken);
-  }
+    /**
+     * 创建从配置读取内部令牌的 Feign 拦截器.
+     *
+     * @param internalToken 服务间访问令牌
+     * @return 内部令牌 Feign 请求拦截器
+     */
+    @Bean
+    @ConditionalOnMissingBean(name = "internalTokenFeignInterceptor")
+    public RequestInterceptor internalTokenFeignInterceptor(
+            @Value("${minimall.security.internal-token:}") String internalToken) {
+        return new InternalTokenFeignInterceptor(internalToken);
+    }
 }

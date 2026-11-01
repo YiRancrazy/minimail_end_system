@@ -16,47 +16,47 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 public class PayCallbackDto {
-  @NotBlank(message = "支付单号不能为空")
-  private String paymentNo;
+    @NotBlank(message = "支付单号不能为空")
+    private String paymentNo;
 
-  private String tradeNo;
-  private boolean success;
-  private String channelResponse;
+    private String tradeNo;
+    private boolean success;
+    private String channelResponse;
 
-  @Digits(integer = 10, fraction = 2, message = "回调金额最多10位整数且最多2位小数")
-  private BigDecimal totalAmount;
+    @Digits(integer = 10, fraction = 2, message = "回调金额最多10位整数且最多2位小数")
+    private BigDecimal totalAmount;
 
-  /**
-   * 创建不含回调金额的支付结果对象，兼容旧调用。
-   *
-   * @param paymentNo 支付单号
-   * @param tradeNo 渠道交易号
-   * @param success 渠道是否返回支付成功
-   * @param channelResponse 渠道原始响应摘要
-   */
-  public PayCallbackDto(String paymentNo, String tradeNo, boolean success, String channelResponse) {
-    this(paymentNo, tradeNo, success, channelResponse, null);
-  }
+    /**
+     * 创建不含回调金额的支付结果对象，兼容旧调用。
+     *
+     * @param paymentNo 支付单号
+     * @param tradeNo 渠道交易号
+     * @param success 渠道是否返回支付成功
+     * @param channelResponse 渠道原始响应摘要
+     */
+    public PayCallbackDto(String paymentNo, String tradeNo, boolean success, String channelResponse) {
+        this(paymentNo, tradeNo, success, channelResponse, null);
+    }
 
-  /**
-   * 创建包含可选回调金额的支付结果对象。
-   *
-   * @param paymentNo 支付单号
-   * @param tradeNo 渠道交易号
-   * @param success 渠道是否返回支付成功
-   * @param channelResponse 渠道原始响应摘要
-   * @param totalAmount 渠道回调金额，可为空
-   */
-  public PayCallbackDto(
-      String paymentNo,
-      String tradeNo,
-      boolean success,
-      String channelResponse,
-      BigDecimal totalAmount) {
-    this.paymentNo = paymentNo;
-    this.tradeNo = tradeNo;
-    this.success = success;
-    this.channelResponse = channelResponse;
-    this.totalAmount = totalAmount;
-  }
+    /**
+     * 创建包含可选回调金额的支付结果对象。
+     *
+     * @param paymentNo 支付单号
+     * @param tradeNo 渠道交易号
+     * @param success 渠道是否返回支付成功
+     * @param channelResponse 渠道原始响应摘要
+     * @param totalAmount 渠道回调金额，可为空
+     */
+    public PayCallbackDto(
+            String paymentNo,
+            String tradeNo,
+            boolean success,
+            String channelResponse,
+            BigDecimal totalAmount) {
+        this.paymentNo = paymentNo;
+        this.tradeNo = tradeNo;
+        this.success = success;
+        this.channelResponse = channelResponse;
+        this.totalAmount = totalAmount;
+    }
 }

@@ -13,12 +13,12 @@ import lombok.Getter;
 @Getter
 @AllArgsConstructor
 public enum ComplaintTypeEnum implements BaseEnum {
-  QUALITY("QUALITY", "QUALITY", "质量问题"),
-  SERVICE("SERVICE", "SERVICE", "服务问题"),
-  FRAUD("FRAUD", "FRAUD", "欺诈行为"),
-  OTHER("OTHER", "OTHER", "其他");
+    QUALITY("QUALITY", "QUALITY", "质量问题"),
+    SERVICE("SERVICE", "SERVICE", "服务问题"),
+    FRAUD("FRAUD", "FRAUD", "欺诈行为"),
+    OTHER("OTHER", "OTHER", "其他");
 
-  private final String code;
-  private final String alias;
-  private final String message;
+    private final String code;
+    private final String alias;
+    private final String message;
 }

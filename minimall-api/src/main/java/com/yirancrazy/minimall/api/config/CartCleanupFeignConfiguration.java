@@ -14,13 +14,13 @@ import org.springframework.context.annotation.Configuration;
 @Configuration(proxyBeanMethods = false)
 public class CartCleanupFeignConfiguration {
 
-  /**
-   * 创建连接和读取均限制为 500 毫秒的 Feign 请求选项.
-   *
-   * @return 购物车清理专用 Feign 请求选项
-   */
-  @Bean
-  public Request.Options cartCleanupRequestOptions() {
-    return new Request.Options(500, TimeUnit.MILLISECONDS, 500, TimeUnit.MILLISECONDS, true);
-  }
+    /**
+     * 创建连接和读取均限制为 500 毫秒的 Feign 请求选项.
+     *
+     * @return 购物车清理专用 Feign 请求选项
+     */
+    @Bean
+    public Request.Options cartCleanupRequestOptions() {
+        return new Request.Options(500, TimeUnit.MILLISECONDS, 500, TimeUnit.MILLISECONDS, true);
+    }
 }

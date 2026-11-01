@@ -11,16 +11,16 @@ import lombok.Getter;
  */
 @Getter
 public class BaseException extends RuntimeException {
-  private final String code;
+    private final String code;
 
-  /**
-   * 创建带错误码和调用方可见消息的基础异常。
-   *
-   * @param code 稳定错误码
-   * @param message 面向调用方的错误消息
-   */
-  public BaseException(String code, String message) {
-    super(message);
-    this.code = code;
-  }
+    /**
+     * 创建带错误码和调用方可见消息的基础异常。
+     *
+     * @param code 稳定错误码
+     * @param message 面向调用方的错误消息
+     */
+    public BaseException(String code, String message) {
+        super(message);
+        this.code = code;
+    }
 }

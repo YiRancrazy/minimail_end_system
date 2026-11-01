@@ -17,14 +17,14 @@ import org.junit.jupiter.api.Test;
  */
 class OrderCheckoutDtoTest {
 
-  /** 验证结算来源是必需. */
-  @Test
-  void testCheckoutSourceIsRequired() {
-    OrderCheckoutDto dto = new OrderCheckoutDto();
-    Set<ConstraintViolation<OrderCheckoutDto>> violations =
-        Validation.buildDefaultValidatorFactory().getValidator().validate(dto);
+    /** 验证结算来源是必需. */
+    @Test
+    void testCheckoutSourceIsRequired() {
+        OrderCheckoutDto dto = new OrderCheckoutDto();
+        Set<ConstraintViolation<OrderCheckoutDto>> violations =
+                Validation.buildDefaultValidatorFactory().getValidator().validate(dto);
 
-    assertTrue(
-        violations.stream().anyMatch(v -> "checkoutSource".equals(v.getPropertyPath().toString())));
-  }
+        assertTrue(
+                violations.stream().anyMatch(v -> "checkoutSource".equals(v.getPropertyPath().toString())));
+    }
 }

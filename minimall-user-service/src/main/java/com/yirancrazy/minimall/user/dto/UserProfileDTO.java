@@ -12,11 +12,11 @@ import lombok.Data;
 @Data
 public class UserProfileDto {
 
-  @Size(max = 100, message = "nickname length must be <= 100")
-  private String nickname;
+    @Size(max = 100, message = "nickname length must be <= 100")
+    private String nickname;
 
-  @Size(max = 512, message = "avatar length must be <= 512")
-  private String avatar;
+    @Size(max = 512, message = "avatar length must be <= 512")
+    private String avatar;
 
-  private Integer gender;
+    private Integer gender;
 }

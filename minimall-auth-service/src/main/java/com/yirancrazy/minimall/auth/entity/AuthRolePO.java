@@ -15,11 +15,11 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 @TableName("t_auth_role")
 public class AuthRolePo extends BasePo {
-  private String roleCode;
+    private String roleCode;
 
-  private String roleName;
+    private String roleName;
 
-  private String description;
+    private String description;
 
-  private Integer status;
+    private Integer status;
 }

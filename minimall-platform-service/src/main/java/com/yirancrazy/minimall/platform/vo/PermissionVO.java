@@ -13,6 +13,6 @@ import lombok.Data;
 @AllArgsConstructor
 public class PermissionVo {
 
-  private String permissionCode;
-  private String description;
+    private String permissionCode;
+    private String description;
 }

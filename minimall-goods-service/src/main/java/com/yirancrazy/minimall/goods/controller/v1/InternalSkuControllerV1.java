@@ -22,36 +22,36 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/internal/goods/sku")
 public class InternalSkuControllerV1 {
 
-  private final SkuService skuService;
+    private final SkuService skuService;
 
-  /**
-   * 注入SKU 业务服务，构造 InternalSkuControllerV1 实例。
-   *
-   * @param skuService SKU 业务服务
-   */
-  public InternalSkuControllerV1(SkuService skuService) {
-    this.skuService = skuService;
-  }
+    /**
+     * 注入SKU 业务服务，构造 InternalSkuControllerV1 实例。
+     *
+     * @param skuService SKU 业务服务
+     */
+    public InternalSkuControllerV1(SkuService skuService) {
+        this.skuService = skuService;
+    }
 
-  /**
-   * 读取内部 SKU 快照，供购物车或订单链路获取价格、库存和商家。
-   *
-   * @param id SKU 主键
-   * @return 统一响应包装；data 为SKU 价格、库存和商家归属快照
-   */
-  @GetMapping("/{id}")
-  public Result<SkuSnapshotDto> snapshot(@PathVariable Long id) {
-    return Result.success(skuService.getSnapshot(id));
-  }
+    /**
+     * 读取内部 SKU 快照，供购物车或订单链路获取价格、库存和商家。
+     *
+     * @param id SKU 主键
+     * @return 统一响应包装；data 为SKU 价格、库存和商家归属快照
+     */
+    @GetMapping("/{id}")
+    public Result<SkuSnapshotDto> snapshot(@PathVariable Long id) {
+        return Result.success(skuService.getSnapshot(id));
+    }
 
-  /**
-   * 批量读取 SKU 快照，忽略空主键并以 SKU 主键建立返回映射。
-   *
-   * @param skuIds 待查询的 SKU 主键列表，空列表返回空映射
-   * @return 统一响应包装；data 为以 SKU 主键为键的快照映射；缺失或非在售记录不包含
-   */
-  @PostMapping("/batch-snapshot")
-  public Result<Map<Long, SkuSnapshotDto>> batchSnapshot(@RequestBody List<Long> skuIds) {
-    return Result.success(skuService.listSnapshots(skuIds));
-  }
+    /**
+     * 批量读取 SKU 快照，忽略空主键并以 SKU 主键建立返回映射。
+     *
+     * @param skuIds 待查询的 SKU 主键列表，空列表返回空映射
+     * @return 统一响应包装；data 为以 SKU 主键为键的快照映射；缺失或非在售记录不包含
+     */
+    @PostMapping("/batch-snapshot")
+    public Result<Map<Long, SkuSnapshotDto>> batchSnapshot(@RequestBody List<Long> skuIds) {
+        return Result.success(skuService.listSnapshots(skuIds));
+    }
 }

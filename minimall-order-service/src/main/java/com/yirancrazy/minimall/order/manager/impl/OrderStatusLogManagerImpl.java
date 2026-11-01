@@ -16,4 +16,4 @@ import com.yirancrazy.minimall.order.mapper.OrderStatusLogMapper;
  */
 @Manager
 public class OrderStatusLogManagerImpl extends ServiceImpl<OrderStatusLogMapper, OrderStatusLogPo>
-    implements OrderStatusLogManager {}
+        implements OrderStatusLogManager {}

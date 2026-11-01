@@ -16,13 +16,13 @@ import com.yirancrazy.minimall.common.result.Result;
  */
 public class StockFeignFallbackFactoryTest {
 
-  /** 库存服务不可达时预占应返回系统错误. */
-  public void fallbackReturnsSysError() {
-    StockFeignFallbackFactory f = new StockFeignFallbackFactory();
-    StockFeignClient client = f.create(new RuntimeException("down"));
-    assertNotNull(client);
-    Result<Boolean> resp = client.reserve(null);
-    assertEquals(CommonCode.SYS_ERROR, resp.getCode());
-    assertNull(resp.getData());
-  }
+    /** 库存服务不可达时预占应返回系统错误. */
+    public void fallbackReturnsSysError() {
+        StockFeignFallbackFactory f = new StockFeignFallbackFactory();
+        StockFeignClient client = f.create(new RuntimeException("down"));
+        assertNotNull(client);
+        Result<Boolean> resp = client.reserve(null);
+        assertEquals(CommonCode.SYS_ERROR, resp.getCode());
+        assertNull(resp.getData());
+    }
 }

@@ -16,7 +16,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PayStatisticsVo {
-  private BigDecimal totalAmount;
-  private BigDecimal refundAmount;
-  private Long transactionCount;
+    private BigDecimal totalAmount;
+    private BigDecimal refundAmount;
+    private Long transactionCount;
 }

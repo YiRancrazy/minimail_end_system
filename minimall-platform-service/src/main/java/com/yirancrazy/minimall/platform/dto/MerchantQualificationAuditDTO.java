@@ -12,11 +12,11 @@ import lombok.Data;
 @Data
 public class MerchantQualificationAuditDto {
 
-  @NotNull(message = "资质ID不能为空")
-  private Long qualificationId;
+    @NotNull(message = "资质ID不能为空")
+    private Long qualificationId;
 
-  @NotNull(message = "审核结果不能为空")
-  private Boolean approved;
+    @NotNull(message = "审核结果不能为空")
+    private Boolean approved;
 
-  private String reason;
+    private String reason;
 }

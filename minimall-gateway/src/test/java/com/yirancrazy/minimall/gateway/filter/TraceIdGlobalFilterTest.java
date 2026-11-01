@@ -19,16 +19,16 @@ import reactor.core.publisher.Mono;
  */
 class TraceIdGlobalFilterTest {
 
-  /** 验证已有链路标识可透传；前置为请求头含 UUID；执行过滤器与空链；预期返回非空且原请求头保留. */
-  @Test
-  void testPassthroughTraceHeader() {
-    TraceIdGlobalFilter f = new TraceIdGlobalFilter();
-    String provided = UUID.randomUUID().toString();
-    ServerWebExchange ex =
-        MockServerWebExchange.from(
-            MockServerHttpRequest.get("/x").header("X-Trace-Id", provided).build());
-    Mono<Void> result = f.filter(ex, e -> Mono.empty());
-    assertNotNull(result);
-    assertEquals(provided, ex.getRequest().getHeaders().getFirst("X-Trace-Id"));
-  }
+    /** 验证已有链路标识可透传；前置为请求头含 UUID；执行过滤器与空链；预期返回非空且原请求头保留. */
+    @Test
+    void testPassthroughTraceHeader() {
+        TraceIdGlobalFilter f = new TraceIdGlobalFilter();
+        String provided = UUID.randomUUID().toString();
+        ServerWebExchange ex =
+                MockServerWebExchange.from(
+                        MockServerHttpRequest.get("/x").header("X-Trace-Id", provided).build());
+        Mono<Void> result = f.filter(ex, e -> Mono.empty());
+        assertNotNull(result);
+        assertEquals(provided, ex.getRequest().getHeaders().getFirst("X-Trace-Id"));
+    }
 }

@@ -14,4 +14,4 @@ import com.yirancrazy.minimall.notify.mapper.NotifyMessageMapper;
  */
 @Manager
 public class NotifyManagerImpl extends ServiceImpl<NotifyMessageMapper, NotifyMessagePo>
-    implements NotifyManager {}
+        implements NotifyManager {}

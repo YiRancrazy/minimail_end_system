@@ -19,62 +19,62 @@ import java.util.List;
  */
 public interface OrderManager extends IService<OrderPo> {
 
-  /**
-   * 执行订单统计 SQL。
-   *
-   * <p>按商家和时间范围聚合单量、支付金额、退款金额及分状态计数。
-   *
-   * @param merchantId 商家 ID，用于订单归属或统计范围校验
-   * @param startTime 筛选开始时间，包含边界
-   * @param endTime 筛选结束时间，包含边界
-   * @return 订单统计数据库投影。
-   */
-  OrderStatisticsResultDto statistics(
-      Long merchantId, LocalDateTime startTime, LocalDateTime endTime);
+    /**
+     * 执行订单统计 SQL。
+     *
+     * <p>按商家和时间范围聚合单量、支付金额、退款金额及分状态计数。
+     *
+     * @param merchantId 商家 ID，用于订单归属或统计范围校验
+     * @param startTime 筛选开始时间，包含边界
+     * @param endTime 筛选结束时间，包含边界
+     * @return 订单统计数据库投影。
+     */
+    OrderStatisticsResultDto statistics(
+            Long merchantId, LocalDateTime startTime, LocalDateTime endTime);
 
-  /**
-   * 按用户统计各订单状态数量。
-   *
-   * <p>只统计未删除订单并按 status 分组。
-   *
-   * @param userId 用户 ID，必须对应当前订单归属
-   * @return 状态与数量的分组列表。
-   */
-  List<OrderStatusCountDto> countByStatus(Long userId);
+    /**
+     * 按用户统计各订单状态数量。
+     *
+     * <p>只统计未删除订单并按 status 分组。
+     *
+     * @param userId 用户 ID，必须对应当前订单归属
+     * @return 状态与数量的分组列表。
+     */
+    List<OrderStatusCountDto> countByStatus(Long userId);
 
-  /**
-   * 查询订单经营汇总。
-   *
-   * <p>起止日期和商家 ID 均可空，格式非法时由服务层降级。
-   *
-   * @param merchantId 商家 ID，用于订单归属或统计范围校验
-   * @param startTime 筛选开始时间，包含边界
-   * @param endTime 筛选结束时间，包含边界
-   * @return 订单汇总统一响应。
-   */
-  OrderSummaryResultDto summary(Long merchantId, LocalDateTime startTime, LocalDateTime endTime);
+    /**
+     * 查询订单经营汇总。
+     *
+     * <p>起止日期和商家 ID 均可空，格式非法时由服务层降级。
+     *
+     * @param merchantId 商家 ID，用于订单归属或统计范围校验
+     * @param startTime 筛选开始时间，包含边界
+     * @param endTime 筛选结束时间，包含边界
+     * @return 订单汇总统一响应。
+     */
+    OrderSummaryResultDto summary(Long merchantId, LocalDateTime startTime, LocalDateTime endTime);
 
-  /**
-   * 查询订单趋势。
-   *
-   * <p>按日期聚合单量和已支付金额，无数据返回空点位。
-   *
-   * @param merchantId 商家 ID，用于订单归属或统计范围校验
-   * @param startTime 筛选开始时间，包含边界
-   * @param endTime 筛选结束时间，包含边界
-   * @return 订单趋势统一响应。
-   */
-  List<OrderTrendPointDto> trend(Long merchantId, LocalDateTime startTime, LocalDateTime endTime);
+    /**
+     * 查询订单趋势。
+     *
+     * <p>按日期聚合单量和已支付金额，无数据返回空点位。
+     *
+     * @param merchantId 商家 ID，用于订单归属或统计范围校验
+     * @param startTime 筛选开始时间，包含边界
+     * @param endTime 筛选结束时间，包含边界
+     * @return 订单趋势统一响应。
+     */
+    List<OrderTrendPointDto> trend(Long merchantId, LocalDateTime startTime, LocalDateTime endTime);
 
-  /**
-   * 按 ID 游标查询支付已过期或缺少过期时间的订单。
-   *
-   * <p>使用 payExpireAt<=now 或 payExpireAt 为空作为兜底条件，并限制状态和批量大小。
-   *
-   * @param status 订单状态筛选值或状态编码
-   * @param lastId 上一批最后一条订单 ID，用于游标续扫
-   * @param pageSize 单批查询数量
-   * @return 符合条件的订单列表。
-   */
-  List<OrderPo> listExpiredPendingOrders(Integer status, Long lastId, Integer pageSize);
+    /**
+     * 按 ID 游标查询支付已过期或缺少过期时间的订单。
+     *
+     * <p>使用 payExpireAt<=now 或 payExpireAt 为空作为兜底条件，并限制状态和批量大小。
+     *
+     * @param status 订单状态筛选值或状态编码
+     * @param lastId 上一批最后一条订单 ID，用于游标续扫
+     * @param pageSize 单批查询数量
+     * @return 符合条件的订单列表。
+     */
+    List<OrderPo> listExpiredPendingOrders(Integer status, Long lastId, Integer pageSize);
 }

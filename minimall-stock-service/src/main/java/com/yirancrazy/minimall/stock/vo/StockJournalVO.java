@@ -13,29 +13,29 @@ import lombok.Data;
 @Data
 public class StockJournalVo {
 
-  private Long id;
-  private Long skuId;
-  private Long quantity;
-  private Integer type;
-  private String reason;
-  private String orderNo;
-  private LocalDateTime createTime;
+    private Long id;
+    private Long skuId;
+    private Long quantity;
+    private Integer type;
+    private String reason;
+    private String orderNo;
+    private LocalDateTime createTime;
 
-  /**
-   * 将库存流水持久化对象转换为适合接口序列化的视图。
-   *
-   * @param po 库存流水持久化对象
-   * @return 与流水记录字段对应的视图对象
-   */
-  public static StockJournalVo from(StockJournalPo po) {
-    StockJournalVo vo = new StockJournalVo();
-    vo.setId(po.getId());
-    vo.setSkuId(po.getSkuId());
-    vo.setQuantity(po.getQuantity());
-    vo.setType(po.getType());
-    vo.setReason(po.getReason());
-    vo.setOrderNo(po.getOrderNo());
-    vo.setCreateTime(po.getCreateTime());
-    return vo;
-  }
+    /**
+     * 将库存流水持久化对象转换为适合接口序列化的视图。
+     *
+     * @param po 库存流水持久化对象
+     * @return 与流水记录字段对应的视图对象
+     */
+    public static StockJournalVo from(StockJournalPo po) {
+        StockJournalVo vo = new StockJournalVo();
+        vo.setId(po.getId());
+        vo.setSkuId(po.getSkuId());
+        vo.setQuantity(po.getQuantity());
+        vo.setType(po.getType());
+        vo.setReason(po.getReason());
+        vo.setOrderNo(po.getOrderNo());
+        vo.setCreateTime(po.getCreateTime());
+        return vo;
+    }
 }

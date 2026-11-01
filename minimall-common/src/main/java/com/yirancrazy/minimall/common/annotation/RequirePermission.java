@@ -17,17 +17,17 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface RequirePermission {
 
-  /**
-   * 指定访问目标方法所需的权限集合，可选择一个或多个权限码。
-   *
-   * @return 所需权限数组
-   */
-  PermissionEnum[] value();
+    /**
+     * 指定访问目标方法所需的权限集合，可选择一个或多个权限码。
+     *
+     * @return 所需权限数组
+     */
+    PermissionEnum[] value();
 
-  /**
-   * 指定权限匹配方式；默认满足任一权限即可，设为 true 时必须拥有全部权限。
-   *
-   * @return true 表示要求全部权限，false 表示要求任一权限
-   */
-  boolean requireAll() default false;
+    /**
+     * 指定权限匹配方式；默认满足任一权限即可，设为 true 时必须拥有全部权限。
+     *
+     * @return true 表示要求全部权限，false 表示要求任一权限
+     */
+    boolean requireAll() default false;
 }

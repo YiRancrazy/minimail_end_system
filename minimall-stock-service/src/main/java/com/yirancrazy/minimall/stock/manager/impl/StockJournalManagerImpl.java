@@ -14,4 +14,4 @@ import com.yirancrazy.minimall.stock.mapper.StockJournalMapper;
  */
 @Manager
 public class StockJournalManagerImpl extends ServiceImpl<StockJournalMapper, StockJournalPo>
-    implements StockJournalManager {}
+        implements StockJournalManager {}

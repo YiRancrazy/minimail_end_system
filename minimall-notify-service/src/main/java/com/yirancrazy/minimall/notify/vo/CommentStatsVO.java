@@ -15,17 +15,17 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class CommentStatsVo {
 
-  private long totalCount;
+    private long totalCount;
 
-  private double avgRating;
+    private double avgRating;
 
-  private long rating5Count;
+    private long rating5Count;
 
-  private long rating4Count;
+    private long rating4Count;
 
-  private long rating3Count;
+    private long rating3Count;
 
-  private long rating2Count;
+    private long rating2Count;
 
-  private long rating1Count;
+    private long rating1Count;
 }

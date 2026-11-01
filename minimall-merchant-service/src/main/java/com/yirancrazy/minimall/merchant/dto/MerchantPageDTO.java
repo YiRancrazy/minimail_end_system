@@ -14,7 +14,7 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 public class MerchantPageDto extends CursorPageDto {
 
-  private String keyword;
+    private String keyword;
 
-  private Integer auditStatus;
+    private Integer auditStatus;
 }

@@ -27,44 +27,44 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class PlatformRoleControllerV1 {
 
-  private final RolePermissionService rolePermissionService;
+    private final RolePermissionService rolePermissionService;
 
-  /**
-   * 查询平台全部角色及其当前生效权限，要求 ROLE_VIEW 权限.
-   *
-   * @return 角色及生效权限列表
-   */
-  @GetMapping
-  @RequirePermission(PermissionEnum.ROLE_VIEW)
-  public Result<List<RoleVo>> listRoles() {
-    return Result.success(rolePermissionService.listRoles());
-  }
+    /**
+     * 查询平台全部角色及其当前生效权限，要求 ROLE_VIEW 权限.
+     *
+     * @return 角色及生效权限列表
+     */
+    @GetMapping
+    @RequirePermission(PermissionEnum.ROLE_VIEW)
+    public Result<List<RoleVo>> listRoles() {
+        return Result.success(rolePermissionService.listRoles());
+    }
 
-  /**
-   * 查询指定角色的生效权限，要求 ROLE_VIEW 权限.
-   *
-   * @param roleCode 角色编码
-   * @return 角色权限视图；角色编码未知时数据为 null
-   */
-  @GetMapping("/{roleCode}/permissions")
-  @RequirePermission(PermissionEnum.ROLE_VIEW)
-  public Result<RoleVo> getRolePermissions(@PathVariable String roleCode) {
-    return Result.success(rolePermissionService.getRolePermissions(roleCode));
-  }
+    /**
+     * 查询指定角色的生效权限，要求 ROLE_VIEW 权限.
+     *
+     * @param roleCode 角色编码
+     * @return 角色权限视图；角色编码未知时数据为 null
+     */
+    @GetMapping("/{roleCode}/permissions")
+    @RequirePermission(PermissionEnum.ROLE_VIEW)
+    public Result<RoleVo> getRolePermissions(@PathVariable String roleCode) {
+        return Result.success(rolePermissionService.getRolePermissions(roleCode));
+    }
 
-  /**
-   * 更新指定角色的权限，要求 ROLE_MANAGE 权限并校验权限码列表.
-   *
-   * @param roleCode 角色编码
-   * @param dto 新权限码列表
-   * @return 成功响应，不携带数据
-   * @throws com.yirancrazy.minimall.common.exception.BizException 角色不存在、不可修改或更新失败时抛出
-   */
-  @PostMapping("/{roleCode}/permissions")
-  @RequirePermission(PermissionEnum.ROLE_MANAGE)
-  public Result<Void> updatePermissions(
-      @PathVariable String roleCode, @Valid @RequestBody RolePermissionUpdateDto dto) {
-    rolePermissionService.updatePermissions(roleCode, dto.getPermissionCodes());
-    return Result.success();
-  }
+    /**
+     * 更新指定角色的权限，要求 ROLE_MANAGE 权限并校验权限码列表.
+     *
+     * @param roleCode 角色编码
+     * @param dto 新权限码列表
+     * @return 成功响应，不携带数据
+     * @throws com.yirancrazy.minimall.common.exception.BizException 角色不存在、不可修改或更新失败时抛出
+     */
+    @PostMapping("/{roleCode}/permissions")
+    @RequirePermission(PermissionEnum.ROLE_MANAGE)
+    public Result<Void> updatePermissions(
+            @PathVariable String roleCode, @Valid @RequestBody RolePermissionUpdateDto dto) {
+        rolePermissionService.updatePermissions(roleCode, dto.getPermissionCodes());
+        return Result.success();
+    }
 }

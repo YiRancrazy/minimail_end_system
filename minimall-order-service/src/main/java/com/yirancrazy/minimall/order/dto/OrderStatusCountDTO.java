@@ -13,7 +13,7 @@ import lombok.Data;
 @Data
 public class OrderStatusCountDto {
 
-  private Integer status;
+    private Integer status;
 
-  private Long cnt;
+    private Long cnt;
 }

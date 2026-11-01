@@ -15,9 +15,9 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 @TableName("t_stock_journal")
 public class StockJournalPo extends BasePo {
-  private Long skuId;
-  private Long quantity;
-  private Integer type;
-  private String reason;
-  private String orderNo;
+    private Long skuId;
+    private Long quantity;
+    private Integer type;
+    private String reason;
+    private String orderNo;
 }

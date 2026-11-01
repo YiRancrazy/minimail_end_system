@@ -13,9 +13,9 @@ import lombok.Data;
 @Data
 public class StockCountTaskCompleteDto {
 
-  @NotNull(message = "actualQuantity cannot be null")
-  @Min(value = 0, message = "actualQuantity must be >= 0")
-  private Long actualQuantity;
+    @NotNull(message = "actualQuantity cannot be null")
+    @Min(value = 0, message = "actualQuantity must be >= 0")
+    private Long actualQuantity;
 
-  private String remark;
+    private String remark;
 }

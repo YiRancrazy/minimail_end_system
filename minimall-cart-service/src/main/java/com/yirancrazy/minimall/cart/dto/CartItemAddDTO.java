@@ -15,13 +15,13 @@ import lombok.Data;
 @Data
 public class CartItemAddDto {
 
-  @NotNull(message = "skuId cannot be null")
-  private Long skuId;
+    @NotNull(message = "skuId cannot be null")
+    private Long skuId;
 
-  @NotNull(message = "quantity cannot be null")
-  @Min(value = 1, message = "quantity must be at least 1")
-  @Max(value = 999, message = "quantity must not exceed 999")
-  private Integer quantity;
+    @NotNull(message = "quantity cannot be null")
+    @Min(value = 1, message = "quantity must be at least 1")
+    @Max(value = 999, message = "quantity must not exceed 999")
+    private Integer quantity;
 
-  private Integer selected;
+    private Integer selected;
 }

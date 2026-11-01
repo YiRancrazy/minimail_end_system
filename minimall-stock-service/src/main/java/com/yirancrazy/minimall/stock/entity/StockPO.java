@@ -15,10 +15,10 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 @TableName("t_stock")
 public class StockPo extends BasePo {
-  private Long skuId;
+    private Long skuId;
 
-  private Long merchantId;
-  private Long available;
-  private Long reserved;
-  private Long alertThreshold;
+    private Long merchantId;
+    private Long available;
+    private Long reserved;
+    private Long alertThreshold;
 }

@@ -14,12 +14,12 @@ import lombok.Getter;
 @Getter
 @AllArgsConstructor
 public enum IdBizTagEnum implements BaseEnum {
-  ORDER("order", "ORDER_ID", "订单"),
-  PAY("pay", "PAY_ID", "支付"),
-  STOCK("stock", "STOCK_ID", "库存"),
-  USER("user", "USER_ID", "用户");
+    ORDER("order", "ORDER_ID", "订单"),
+    PAY("pay", "PAY_ID", "支付"),
+    STOCK("stock", "STOCK_ID", "库存"),
+    USER("user", "USER_ID", "用户");
 
-  private final String code;
-  private final String alias;
-  private final String message;
+    private final String code;
+    private final String alias;
+    private final String message;
 }

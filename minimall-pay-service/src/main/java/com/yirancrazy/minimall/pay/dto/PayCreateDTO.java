@@ -22,13 +22,13 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class PayCreateDto {
 
-  @NotBlank(message = "订单号不能为空")
-  private String orderNo;
+    @NotBlank(message = "订单号不能为空")
+    private String orderNo;
 
-  @NotNull(message = "支付金额不能为空")
-  @Positive(message = "支付金额必须大于0")
-  @Digits(integer = 10, fraction = 2, message = "支付金额最多10位整数且最多2位小数")
-  private BigDecimal amount;
+    @NotNull(message = "支付金额不能为空")
+    @Positive(message = "支付金额必须大于0")
+    @Digits(integer = 10, fraction = 2, message = "支付金额最多10位整数且最多2位小数")
+    private BigDecimal amount;
 
-  private PayChannelEnum channel;
+    private PayChannelEnum channel;
 }

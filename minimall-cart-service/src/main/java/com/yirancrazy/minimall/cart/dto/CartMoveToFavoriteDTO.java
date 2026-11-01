@@ -14,6 +14,6 @@ import lombok.Data;
 @Data
 public class CartMoveToFavoriteDto {
 
-  @NotEmpty(message = "购物车条目不能为空")
-  private List<Long> itemIds;
+    @NotEmpty(message = "购物车条目不能为空")
+    private List<Long> itemIds;
 }

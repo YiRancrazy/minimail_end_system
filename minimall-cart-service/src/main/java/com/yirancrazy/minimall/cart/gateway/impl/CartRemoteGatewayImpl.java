@@ -22,40 +22,40 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class CartRemoteGatewayImpl implements CartRemoteGateway {
 
-  private final GoodsFeignClient goodsFeignClient;
-  private final UserFeignClient userFeignClient;
+    private final GoodsFeignClient goodsFeignClient;
+    private final UserFeignClient userFeignClient;
 
-  /**
-   * 将批量 SKU 快照查询委托给商品服务.
-   *
-   * @param skuIds 待解析的 SKU 主键
-   * @return 以 SKU 主键映射的商品服务响应
-   */
-  @Override
-  public Result<Map<Long, SkuSnapshotDto>> batchSkuSnapshot(List<Long> skuIds) {
-    return goodsFeignClient.batchSkuSnapshot(skuIds);
-  }
+    /**
+     * 将批量 SKU 快照查询委托给商品服务.
+     *
+     * @param skuIds 待解析的 SKU 主键
+     * @return 以 SKU 主键映射的商品服务响应
+     */
+    @Override
+    public Result<Map<Long, SkuSnapshotDto>> batchSkuSnapshot(List<Long> skuIds) {
+        return goodsFeignClient.batchSkuSnapshot(skuIds);
+    }
 
-  /**
-   * 将批量 SPU 快照查询委托给商品服务.
-   *
-   * @param spuIds 待解析的 SPU 主键
-   * @return 以 SPU 主键映射的商品服务响应
-   */
-  @Override
-  public Result<Map<Long, SpuSnapshotDto>> batchSpuSnapshot(List<Long> spuIds) {
-    return goodsFeignClient.batchSpuSnapshot(spuIds);
-  }
+    /**
+     * 将批量 SPU 快照查询委托给商品服务.
+     *
+     * @param spuIds 待解析的 SPU 主键
+     * @return 以 SPU 主键映射的商品服务响应
+     */
+    @Override
+    public Result<Map<Long, SpuSnapshotDto>> batchSpuSnapshot(List<Long> spuIds) {
+        return goodsFeignClient.batchSpuSnapshot(spuIds);
+    }
 
-  /**
-   * 将收藏创建操作委托给用户服务.
-   *
-   * @param userId 收藏记录所属用户
-   * @param skuId 待收藏的 SKU
-   * @return 表示远程成功或失败的用户服务响应
-   */
-  @Override
-  public Result<Void> addFavorite(Long userId, Long skuId) {
-    return userFeignClient.addFavorite(userId, skuId);
-  }
+    /**
+     * 将收藏创建操作委托给用户服务.
+     *
+     * @param userId 收藏记录所属用户
+     * @param skuId 待收藏的 SKU
+     * @return 表示远程成功或失败的用户服务响应
+     */
+    @Override
+    public Result<Void> addFavorite(Long userId, Long skuId) {
+        return userFeignClient.addFavorite(userId, skuId);
+    }
 }

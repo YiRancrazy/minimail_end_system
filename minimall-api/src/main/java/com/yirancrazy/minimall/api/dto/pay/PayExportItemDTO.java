@@ -17,12 +17,12 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class PayExportItemDto {
 
-  private String paymentNo;
-  private String orderNo;
-  private Long userId;
-  private Long merchantId;
-  private BigDecimal amount;
-  private Integer channel;
-  private Integer status;
-  private LocalDateTime createTime;
+    private String paymentNo;
+    private String orderNo;
+    private Long userId;
+    private Long merchantId;
+    private BigDecimal amount;
+    private Integer channel;
+    private Integer status;
+    private LocalDateTime createTime;
 }

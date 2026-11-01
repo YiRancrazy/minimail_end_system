@@ -13,14 +13,14 @@ import lombok.Data;
 @Data
 public class NotifyViolationWarningDto {
 
-  @NotNull(message = "merchantId cannot be null")
-  private Long merchantId;
+    @NotNull(message = "merchantId cannot be null")
+    private Long merchantId;
 
-  @NotBlank(message = "title cannot be blank")
-  private String title;
+    @NotBlank(message = "title cannot be blank")
+    private String title;
 
-  @NotBlank(message = "content cannot be blank")
-  private String content;
+    @NotBlank(message = "content cannot be blank")
+    private String content;
 
-  private String violationType;
+    private String violationType;
 }

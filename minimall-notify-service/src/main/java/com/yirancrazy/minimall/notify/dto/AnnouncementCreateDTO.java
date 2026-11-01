@@ -12,11 +12,11 @@ import lombok.Data;
  */
 @Data
 public class AnnouncementCreateDto {
-  @NotBlank(message = "公告标题不能为空")
-  @Size(max = 128, message = "标题最长128字")
-  private String title;
+    @NotBlank(message = "公告标题不能为空")
+    @Size(max = 128, message = "标题最长128字")
+    private String title;
 
-  @NotBlank(message = "公告内容不能为空")
-  @Size(max = 4000, message = "内容最长4000字")
-  private String content;
+    @NotBlank(message = "公告内容不能为空")
+    @Size(max = 4000, message = "内容最长4000字")
+    private String content;
 }

@@ -16,13 +16,13 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class StockStatisticsVo {
 
-  private Long totalSkuCount;
+    private Long totalSkuCount;
 
-  private Long totalAvailable;
+    private Long totalAvailable;
 
-  private Long totalReserved;
+    private Long totalReserved;
 
-  private Long alertSkuCount;
+    private Long alertSkuCount;
 
-  private BigDecimal alertRatio;
+    private BigDecimal alertRatio;
 }

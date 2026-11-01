@@ -19,8 +19,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class StockBatchReserveDto {
 
-  @NotEmpty(message = "预占明细不能为空")
-  @Size(max = 100, message = "单次最多预占100个SKU")
-  @Valid
-  private List<StockReserveDto> items;
+    @NotEmpty(message = "预占明细不能为空")
+    @Size(max = 100, message = "单次最多预占100个SKU")
+    @Valid
+    private List<StockReserveDto> items;
 }

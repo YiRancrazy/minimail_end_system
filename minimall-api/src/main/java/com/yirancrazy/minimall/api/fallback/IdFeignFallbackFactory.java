@@ -16,27 +16,27 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 public class IdFeignFallbackFactory implements FallbackFactory<IdFeignClient> {
-  /**
-   * 为 ID 远程调用异常创建降级客户端.
-   *
-   * @param cause ID 远程调用异常
-   * @return ID 降级客户端
-   */
-  @Override
-  public IdFeignClient create(Throwable cause) {
-    log.warn("id-service 不可达: {}", cause.getMessage());
-    return new IdFeignClient() {
-      /**
-       * ID 服务不可用时返回系统错误，避免将 -1 当作合法 ID 落库.
-       *
-       * @param bizTag 业务标识
-       * @return 系统错误响应
-       */
-      @Override
-      public Result<Long> nextId(String bizTag) {
-        // 不可用即返回系统错误，避免调用方把 -1 当合法 ID 落库
-        return Result.fail(CommonCode.SYS_ERROR, "ID服务不可用");
-      }
-    };
-  }
+    /**
+     * 为 ID 远程调用异常创建降级客户端.
+     *
+     * @param cause ID 远程调用异常
+     * @return ID 降级客户端
+     */
+    @Override
+    public IdFeignClient create(Throwable cause) {
+        log.warn("id-service 不可达: {}", cause.getMessage());
+        return new IdFeignClient() {
+            /**
+             * ID 服务不可用时返回系统错误，避免将 -1 当作合法 ID 落库.
+             *
+             * @param bizTag 业务标识
+             * @return 系统错误响应
+             */
+            @Override
+            public Result<Long> nextId(String bizTag) {
+                // 不可用即返回系统错误，避免调用方把 -1 当合法 ID 落库
+                return Result.fail(CommonCode.SYS_ERROR, "ID服务不可用");
+            }
+        };
+    }
 }

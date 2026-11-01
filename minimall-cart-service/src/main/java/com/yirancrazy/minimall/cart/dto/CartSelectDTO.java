@@ -14,8 +14,8 @@ import lombok.Data;
 @Data
 public class CartSelectDto {
 
-  @NotNull(message = "选中状态不能为空")
-  @Min(value = 0, message = "selected 只能为 0 或 1")
-  @Max(value = 1, message = "selected 只能为 0 或 1")
-  private Integer selected;
+    @NotNull(message = "选中状态不能为空")
+    @Min(value = 0, message = "selected 只能为 0 或 1")
+    @Max(value = 1, message = "selected 只能为 0 或 1")
+    private Integer selected;
 }

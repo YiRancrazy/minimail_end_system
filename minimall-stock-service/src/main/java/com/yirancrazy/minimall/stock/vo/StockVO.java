@@ -12,27 +12,27 @@ import lombok.Data;
 @Data
 public class StockVo {
 
-  private Long id;
-  private Long skuId;
-  private Long merchantId;
-  private Long available;
-  private Long reserved;
-  private Long alertThreshold;
+    private Long id;
+    private Long skuId;
+    private Long merchantId;
+    private Long available;
+    private Long reserved;
+    private Long alertThreshold;
 
-  /**
-   * 将库存持久化对象转换为接口视图，不修改库存统计值。
-   *
-   * @param po 库存持久化对象
-   * @return 与库存记录字段对应的视图对象
-   */
-  public static StockVo from(StockPo po) {
-    StockVo vo = new StockVo();
-    vo.setId(po.getId());
-    vo.setSkuId(po.getSkuId());
-    vo.setMerchantId(po.getMerchantId());
-    vo.setAvailable(po.getAvailable());
-    vo.setReserved(po.getReserved());
-    vo.setAlertThreshold(po.getAlertThreshold());
-    return vo;
-  }
+    /**
+     * 将库存持久化对象转换为接口视图，不修改库存统计值。
+     *
+     * @param po 库存持久化对象
+     * @return 与库存记录字段对应的视图对象
+     */
+    public static StockVo from(StockPo po) {
+        StockVo vo = new StockVo();
+        vo.setId(po.getId());
+        vo.setSkuId(po.getSkuId());
+        vo.setMerchantId(po.getMerchantId());
+        vo.setAvailable(po.getAvailable());
+        vo.setReserved(po.getReserved());
+        vo.setAlertThreshold(po.getAlertThreshold());
+        return vo;
+    }
 }

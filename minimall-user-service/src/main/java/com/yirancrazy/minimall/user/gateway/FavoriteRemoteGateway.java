@@ -14,19 +14,19 @@ import java.util.Map;
  */
 public interface FavoriteRemoteGateway {
 
-  /**
-   * 批量查询收藏展示所需的 SKU 快照。
-   *
-   * @param skuIds SKU ID 列表；调用方应避免传入重复值
-   * @return 以 SKU ID 为键的远程查询结果，商品服务不可用时由 Feign fallback 提供降级结果
-   */
-  Result<Map<Long, SkuSnapshotDto>> batchSkuSnapshot(List<Long> skuIds);
+    /**
+     * 批量查询收藏展示所需的 SKU 快照。
+     *
+     * @param skuIds SKU ID 列表；调用方应避免传入重复值
+     * @return 以 SKU ID 为键的远程查询结果，商品服务不可用时由 Feign fallback 提供降级结果
+     */
+    Result<Map<Long, SkuSnapshotDto>> batchSkuSnapshot(List<Long> skuIds);
 
-  /**
-   * 批量查询收藏展示所需的 SPU 快照。
-   *
-   * @param spuIds SPU ID 列表；调用方应避免传入重复值
-   * @return 以 SPU ID 为键的远程查询结果，商品服务不可用时由 Feign fallback 提供降级结果
-   */
-  Result<Map<Long, SpuSnapshotDto>> batchSpuSnapshot(List<Long> spuIds);
+    /**
+     * 批量查询收藏展示所需的 SPU 快照。
+     *
+     * @param spuIds SPU ID 列表；调用方应避免传入重复值
+     * @return 以 SPU ID 为键的远程查询结果，商品服务不可用时由 Feign fallback 提供降级结果
+     */
+    Result<Map<Long, SpuSnapshotDto>> batchSpuSnapshot(List<Long> spuIds);
 }

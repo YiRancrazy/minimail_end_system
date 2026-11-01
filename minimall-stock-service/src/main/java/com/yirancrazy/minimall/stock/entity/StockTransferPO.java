@@ -15,9 +15,9 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 @TableName("t_stock_transfer")
 public class StockTransferPo extends BasePo {
-  private Long fromSkuId;
-  private Long toSkuId;
-  private Long quantity;
-  private String reason;
-  private Long operatorId;
+    private Long fromSkuId;
+    private Long toSkuId;
+    private Long quantity;
+    private String reason;
+    private Long operatorId;
 }

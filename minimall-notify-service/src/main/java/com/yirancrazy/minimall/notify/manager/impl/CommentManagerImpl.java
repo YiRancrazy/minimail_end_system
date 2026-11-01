@@ -16,17 +16,17 @@ import java.util.List;
  */
 @Manager
 public class CommentManagerImpl extends ServiceImpl<CommentMapper, CommentPo>
-    implements CommentManager {
+        implements CommentManager {
 
-  /**
-   * 将评分分组统计请求直接委托给 CommentMapper.
-   *
-   * @param spuId 商品 SPU 编号
-   * @param status 需要统计的评价状态编码
-   * @return 各评分值对应的评价数量
-   */
-  @Override
-  public List<CommentRatingCountDto> countGroupByRating(Long spuId, Integer status) {
-    return baseMapper.countGroupByRating(spuId, status);
-  }
+    /**
+     * 将评分分组统计请求直接委托给 CommentMapper.
+     *
+     * @param spuId 商品 SPU 编号
+     * @param status 需要统计的评价状态编码
+     * @return 各评分值对应的评价数量
+     */
+    @Override
+    public List<CommentRatingCountDto> countGroupByRating(Long spuId, Integer status) {
+        return baseMapper.countGroupByRating(spuId, status);
+    }
 }

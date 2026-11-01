@@ -12,11 +12,11 @@ import lombok.Data;
 @Data
 public class NotifySystemAlertDto {
 
-  @NotBlank(message = "title cannot be blank")
-  private String title;
+    @NotBlank(message = "title cannot be blank")
+    private String title;
 
-  @NotBlank(message = "content cannot be blank")
-  private String content;
+    @NotBlank(message = "content cannot be blank")
+    private String content;
 
-  private String alertLevel;
+    private String alertLevel;
 }

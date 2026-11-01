@@ -13,19 +13,19 @@ import lombok.Setter;
 @Setter
 @Getter
 public class RocketMqTransactionUnknownException extends RuntimeException {
-  private final String tag;
-  private final transient Object event;
+    private final String tag;
+    private final transient Object event;
 
-  /**
-   * 创建本地事务状态未知异常.
-   *
-   * @param tag 消息标签
-   * @param event 事务事件
-   * @param cause 原始异常
-   */
-  public RocketMqTransactionUnknownException(String tag, Object event, Throwable cause) {
-    super("RocketMQ 本地事务状态未知，event=" + event.getClass().getSimpleName() + ", tag=" + tag, cause);
-    this.tag = tag;
-    this.event = event;
-  }
+    /**
+     * 创建本地事务状态未知异常.
+     *
+     * @param tag 消息标签
+     * @param event 事务事件
+     * @param cause 原始异常
+     */
+    public RocketMqTransactionUnknownException(String tag, Object event, Throwable cause) {
+        super("RocketMQ 本地事务状态未知，event=" + event.getClass().getSimpleName() + ", tag=" + tag, cause);
+        this.tag = tag;
+        this.event = event;
+    }
 }

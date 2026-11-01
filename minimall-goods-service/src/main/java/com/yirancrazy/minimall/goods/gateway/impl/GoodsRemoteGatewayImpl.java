@@ -23,50 +23,50 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class GoodsRemoteGatewayImpl implements GoodsRemoteGateway {
 
-  private final MerchantFeignClient merchantFeignClient;
-  private final StockFeignClient stockFeignClient;
+    private final MerchantFeignClient merchantFeignClient;
+    private final StockFeignClient stockFeignClient;
 
-  /**
-   * 通过 MerchantFeignClient 查询店铺快照，用于商品发布前归属与状态校验。
-   *
-   * @param shopId 店铺主键，必须属于当前商家且处于营业状态
-   * @return 远程服务统一响应；调用方需检查 code 和 data
-   */
-  @Override
-  public Result<ShopSnapshotDto> shopSnapshot(Long shopId) {
-    return merchantFeignClient.shopSnapshot(shopId);
-  }
+    /**
+     * 通过 MerchantFeignClient 查询店铺快照，用于商品发布前归属与状态校验。
+     *
+     * @param shopId 店铺主键，必须属于当前商家且处于营业状态
+     * @return 远程服务统一响应；调用方需检查 code 和 data
+     */
+    @Override
+    public Result<ShopSnapshotDto> shopSnapshot(Long shopId) {
+        return merchantFeignClient.shopSnapshot(shopId);
+    }
 
-  /**
-   * 通过 StockFeignClient 为新建 SKU 初始化权威库存。
-   *
-   * @param dto 请求参数
-   * @return 远程服务统一响应；调用方需检查 code 和 data
-   */
-  @Override
-  public Result<Void> initStock(StockInitDto dto) {
-    return stockFeignClient.initStock(dto);
-  }
+    /**
+     * 通过 StockFeignClient 为新建 SKU 初始化权威库存。
+     *
+     * @param dto 请求参数
+     * @return 远程服务统一响应；调用方需检查 code 和 data
+     */
+    @Override
+    public Result<Void> initStock(StockInitDto dto) {
+        return stockFeignClient.initStock(dto);
+    }
 
-  /**
-   * 通过 StockFeignClient 按增量调整指定商家 SKU 的库存。
-   *
-   * @param dto 请求参数
-   * @return 远程服务统一响应；调用方需检查 code 和 data
-   */
-  @Override
-  public Result<Void> adjustStock(StockAdjustDto dto) {
-    return stockFeignClient.adjustStock(dto);
-  }
+    /**
+     * 通过 StockFeignClient 按增量调整指定商家 SKU 的库存。
+     *
+     * @param dto 请求参数
+     * @return 远程服务统一响应；调用方需检查 code 和 data
+     */
+    @Override
+    public Result<Void> adjustStock(StockAdjustDto dto) {
+        return stockFeignClient.adjustStock(dto);
+    }
 
-  /**
-   * 通过 StockFeignClient 批量查询 SKU 权威可用库存。
-   *
-   * @param dto 请求参数
-   * @return 远程服务统一响应；调用方需检查 code 和 data
-   */
-  @Override
-  public Result<List<StockAvailabilityDto>> queryAvailability(StockAvailabilityQueryDto dto) {
-    return stockFeignClient.queryAvailability(dto);
-  }
+    /**
+     * 通过 StockFeignClient 批量查询 SKU 权威可用库存。
+     *
+     * @param dto 请求参数
+     * @return 远程服务统一响应；调用方需检查 code 和 data
+     */
+    @Override
+    public Result<List<StockAvailabilityDto>> queryAvailability(StockAvailabilityQueryDto dto) {
+        return stockFeignClient.queryAvailability(dto);
+    }
 }

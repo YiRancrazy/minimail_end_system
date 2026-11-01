@@ -17,16 +17,16 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 @TableName(value = "t_user", autoResultMap = true)
 public class UserPo extends BasePo {
-  private String nickname;
+    private String nickname;
 
-  @TableField(typeHandler = EncryptedStringTypeHandler.class)
-  private String phone;
+    @TableField(typeHandler = EncryptedStringTypeHandler.class)
+    private String phone;
 
-  @TableField(typeHandler = EncryptedStringTypeHandler.class)
-  private String email;
+    @TableField(typeHandler = EncryptedStringTypeHandler.class)
+    private String email;
 
-  private String phoneMasked;
+    private String phoneMasked;
 
-  private String avatar;
-  private Integer gender;
+    private String avatar;
+    private Integer gender;
 }

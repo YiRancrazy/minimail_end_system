@@ -17,14 +17,14 @@ import org.junit.jupiter.api.Test;
  */
 class IdFeignFallbackFactoryTest {
 
-  /** ID 服务不可达时应返回系统错误且数据为空. */
-  @Test
-  void testFallbackReturnsSysErrorAndLogsWarning() {
-    IdFeignFallbackFactory f = new IdFeignFallbackFactory();
-    IdFeignClient client = f.create(new RuntimeException("down"));
-    assertNotNull(client);
-    Result<Long> resp = client.nextId("order");
-    assertEquals(CommonCode.SYS_ERROR, resp.getCode());
-    assertNull(resp.getData());
-  }
+    /** ID 服务不可达时应返回系统错误且数据为空. */
+    @Test
+    void testFallbackReturnsSysErrorAndLogsWarning() {
+        IdFeignFallbackFactory f = new IdFeignFallbackFactory();
+        IdFeignClient client = f.create(new RuntimeException("down"));
+        assertNotNull(client);
+        Result<Long> resp = client.nextId("order");
+        assertEquals(CommonCode.SYS_ERROR, resp.getCode());
+        assertNull(resp.getData());
+    }
 }

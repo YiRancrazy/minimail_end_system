@@ -19,35 +19,35 @@ import org.junit.jupiter.api.Test;
  */
 class OrderFeignFallbackFactoryTest {
 
-  /** 当前覆盖的订单远程方法在降级时应返回系统错误且不携带数据. */
-  @Test
-  void testFallbackReturnsSysErrorForAllMethods() {
-    OrderFeignFallbackFactory f = new OrderFeignFallbackFactory();
-    OrderFeignClient client = f.create(new RuntimeException("down"));
-    assertNotNull(client);
+    /** 当前覆盖的订单远程方法在降级时应返回系统错误且不携带数据. */
+    @Test
+    void testFallbackReturnsSysErrorForAllMethods() {
+        OrderFeignFallbackFactory f = new OrderFeignFallbackFactory();
+        OrderFeignClient client = f.create(new RuntimeException("down"));
+        assertNotNull(client);
 
-    Result<Integer> status = client.status(1L);
-    assertEquals(CommonCode.SYS_ERROR, status.getCode());
-    assertNull(status.getData());
+        Result<Integer> status = client.status(1L);
+        assertEquals(CommonCode.SYS_ERROR, status.getCode());
+        assertNull(status.getData());
 
-    Result<Long> merchantId = client.merchantId("ORDER1");
-    assertEquals(CommonCode.SYS_ERROR, merchantId.getCode());
-    assertNull(merchantId.getData());
+        Result<Long> merchantId = client.merchantId("ORDER1");
+        assertEquals(CommonCode.SYS_ERROR, merchantId.getCode());
+        assertNull(merchantId.getData());
 
-    Result<OrderPaySnapshotDto> paySnapshot = client.paySnapshot("ORDER1");
-    assertEquals(CommonCode.SYS_ERROR, paySnapshot.getCode());
-    assertNull(paySnapshot.getData());
+        Result<OrderPaySnapshotDto> paySnapshot = client.paySnapshot("ORDER1");
+        assertEquals(CommonCode.SYS_ERROR, paySnapshot.getCode());
+        assertNull(paySnapshot.getData());
 
-    Result<Void> pay = client.pay(1L);
-    assertEquals(CommonCode.SYS_ERROR, pay.getCode());
-    assertNull(pay.getData());
+        Result<Void> pay = client.pay(1L);
+        assertEquals(CommonCode.SYS_ERROR, pay.getCode());
+        assertNull(pay.getData());
 
-    Result<Void> payByOrderNo = client.payByOrderNo("ORDER1");
-    assertEquals(CommonCode.SYS_ERROR, payByOrderNo.getCode());
-    assertNull(payByOrderNo.getData());
+        Result<Void> payByOrderNo = client.payByOrderNo("ORDER1");
+        assertEquals(CommonCode.SYS_ERROR, payByOrderNo.getCode());
+        assertNull(payByOrderNo.getData());
 
-    Result<Void> refundCallback = client.refundCallback(new RefundCallbackDto());
-    assertEquals(CommonCode.SYS_ERROR, refundCallback.getCode());
-    assertNull(refundCallback.getData());
-  }
+        Result<Void> refundCallback = client.refundCallback(new RefundCallbackDto());
+        assertEquals(CommonCode.SYS_ERROR, refundCallback.getCode());
+        assertNull(refundCallback.getData());
+    }
 }

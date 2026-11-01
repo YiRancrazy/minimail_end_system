@@ -16,4 +16,4 @@ import com.yirancrazy.minimall.order.mapper.OrderLogisticsMapper;
  */
 @Manager
 public class OrderLogisticsManagerImpl extends ServiceImpl<OrderLogisticsMapper, OrderLogisticsPo>
-    implements OrderLogisticsManager {}
+        implements OrderLogisticsManager {}

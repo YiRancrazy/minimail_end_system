@@ -11,11 +11,11 @@ import lombok.Data;
 @Data
 public class InternalPageQuery {
 
-  private String cursor;
+    private String cursor;
 
-  private Integer limit;
+    private Integer limit;
 
-  private String keyword;
+    private String keyword;
 
-  private Integer status;
+    private Integer status;
 }

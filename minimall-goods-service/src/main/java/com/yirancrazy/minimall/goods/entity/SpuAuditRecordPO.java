@@ -17,9 +17,9 @@ import lombok.EqualsAndHashCode;
 @TableName("t_goods_audit_record")
 public class SpuAuditRecordPo extends BasePo {
 
-  private Long spuId;
-  private Long auditorId;
-  private Integer decision;
-  private String reason;
-  private LocalDateTime auditAt;
+    private Long spuId;
+    private Long auditorId;
+    private Integer decision;
+    private String reason;
+    private LocalDateTime auditAt;
 }

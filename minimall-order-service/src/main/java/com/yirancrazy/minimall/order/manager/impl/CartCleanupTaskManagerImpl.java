@@ -16,5 +16,5 @@ import com.yirancrazy.minimall.order.mapper.CartCleanupTaskMapper;
  */
 @Manager
 public class CartCleanupTaskManagerImpl
-    extends ServiceImpl<CartCleanupTaskMapper, CartCleanupTaskPo>
-    implements CartCleanupTaskManager {}
+        extends ServiceImpl<CartCleanupTaskMapper, CartCleanupTaskPo>
+        implements CartCleanupTaskManager {}

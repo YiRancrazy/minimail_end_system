@@ -16,14 +16,14 @@ import org.springframework.core.task.TaskDecorator;
 @AutoConfiguration
 public class TraceIdPropagationAutoConfiguration {
 
-  /**
-   * 创建 MDC 上下文传播装饰器。
-   *
-   * @return 可包装异步 Runnable 的 MDC 装饰器
-   */
-  @Bean
-  @ConditionalOnMissingBean
-  public TaskDecorator mdcTaskDecorator() {
-    return new MdcTaskDecorator();
-  }
+    /**
+     * 创建 MDC 上下文传播装饰器。
+     *
+     * @return 可包装异步 Runnable 的 MDC 装饰器
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public TaskDecorator mdcTaskDecorator() {
+        return new MdcTaskDecorator();
+    }
 }

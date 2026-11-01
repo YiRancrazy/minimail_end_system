@@ -17,7 +17,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class OrderLogisticsVo {
-  private String node;
-  private String description;
-  private LocalDateTime createTime;
+    private String node;
+    private String description;
+    private LocalDateTime createTime;
 }

@@ -15,12 +15,12 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class SpuListVo {
-  private Long spuId;
-  private String spuNo;
-  private String title;
-  private String subtitle;
-  private String mainImageUrl;
-  private Long merchantId;
+    private Long spuId;
+    private String spuNo;
+    private String title;
+    private String subtitle;
+    private String mainImageUrl;
+    private Long merchantId;
 
-  private BigDecimal minPrice;
+    private BigDecimal minPrice;
 }

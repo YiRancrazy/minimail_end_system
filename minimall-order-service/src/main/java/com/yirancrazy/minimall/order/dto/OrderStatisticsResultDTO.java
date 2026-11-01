@@ -18,14 +18,14 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class OrderStatisticsResultDto {
 
-  private Long totalOrderCount;
-  private BigDecimal totalAmount;
-  private BigDecimal refundAmount;
-  private Long pendingCount;
-  private Long paidCount;
-  private Long shippedCount;
-  private Long receivedCount;
-  private Long cancelledCount;
-  private Long refundingCount;
-  private Long refundedCount;
+    private Long totalOrderCount;
+    private BigDecimal totalAmount;
+    private BigDecimal refundAmount;
+    private Long pendingCount;
+    private Long paidCount;
+    private Long shippedCount;
+    private Long receivedCount;
+    private Long cancelledCount;
+    private Long refundingCount;
+    private Long refundedCount;
 }

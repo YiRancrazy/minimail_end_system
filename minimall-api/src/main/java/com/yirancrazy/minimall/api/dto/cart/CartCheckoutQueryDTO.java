@@ -19,10 +19,10 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class CartCheckoutQueryDto {
 
-  @NotNull(message = "用户ID不能为空")
-  private Long userId;
+    @NotNull(message = "用户ID不能为空")
+    private Long userId;
 
-  @NotEmpty(message = "购物车条目不能为空")
-  @Size(max = 100, message = "单次最多查询100个购物车条目")
-  private List<@NotNull(message = "购物车条目ID不能为空") Long> itemIds;
+    @NotEmpty(message = "购物车条目不能为空")
+    @Size(max = 100, message = "单次最多查询100个购物车条目")
+    private List<@NotNull(message = "购物车条目ID不能为空") Long> itemIds;
 }

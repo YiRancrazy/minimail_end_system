@@ -15,20 +15,20 @@ import lombok.Data;
 @Data
 public class SpuUpdateDto {
 
-  private Long shopId;
+    private Long shopId;
 
-  private Long categoryId;
+    private Long categoryId;
 
-  @Size(min = 1, max = 128, message = "title length must be between 1 and 128")
-  private String title;
+    @Size(min = 1, max = 128, message = "title length must be between 1 and 128")
+    private String title;
 
-  @Size(max = 255, message = "subtitle length must be <= 255")
-  private String subtitle;
+    @Size(max = 255, message = "subtitle length must be <= 255")
+    private String subtitle;
 
-  // 兼容前端字段名 mainImage，两者均映射主图 URL 列
-  @JsonAlias("mainImage")
-  @Size(max = 255, message = "mainImageUrl length must be <= 255")
-  private String mainImageUrl;
+    // 兼容前端字段名 mainImage，两者均映射主图 URL 列
+    @JsonAlias("mainImage")
+    @Size(max = 255, message = "mainImageUrl length must be <= 255")
+    private String mainImageUrl;
 
-  @Valid private List<SkuItemDto> skus;
+    @Valid private List<SkuItemDto> skus;
 }

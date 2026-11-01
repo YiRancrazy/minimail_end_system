@@ -13,31 +13,31 @@ import lombok.Getter;
 @Getter
 @AllArgsConstructor
 public enum RecipientTypeEnum implements BaseEnum {
-  USER(1, "USER", "用户"),
-  MERCHANT(2, "MERCHANT", "商家"),
-  PLATFORM(3, "PLATFORM", "平台"),
-  ALL(4, "ALL", "全部");
+    USER(1, "USER", "用户"),
+    MERCHANT(2, "MERCHANT", "商家"),
+    PLATFORM(3, "PLATFORM", "平台"),
+    ALL(4, "ALL", "全部");
 
-  private final int code;
-  private final String alias;
-  private final String message;
+    private final int code;
+    private final String alias;
+    private final String message;
 
-  /**
-   * 将接收方类型编码转换为 BaseEnum 约定的字符串形式.
-   *
-   * @return 接收方类型的十进制字符串编码
-   */
-  @Override
-  public String getCode() {
-    return String.valueOf(code);
-  }
+    /**
+     * 将接收方类型编码转换为 BaseEnum 约定的字符串形式.
+     *
+     * @return 接收方类型的十进制字符串编码
+     */
+    @Override
+    public String getCode() {
+        return String.valueOf(code);
+    }
 
-  /**
-   * 返回可直接用于数据库接收方类型字段比较的整数编码.
-   *
-   * @return 接收方类型整数编码
-   */
-  public int intCode() {
-    return code;
-  }
+    /**
+     * 返回可直接用于数据库接收方类型字段比较的整数编码.
+     *
+     * @return 接收方类型整数编码
+     */
+    public int intCode() {
+        return code;
+    }
 }

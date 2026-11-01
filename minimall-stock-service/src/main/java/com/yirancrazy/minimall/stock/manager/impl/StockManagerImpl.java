@@ -16,49 +16,49 @@ import com.yirancrazy.minimall.stock.mapper.StockMapper;
 @Manager
 public class StockManagerImpl extends ServiceImpl<StockMapper, StockPo> implements StockManager {
 
-  /**
-   * 查询库存汇总指标，未在应用层二次修正聚合值。
-   *
-   * @return 库存聚合结果
-   */
-  @Override
-  public StockStatisticsDto statistics() {
-    return baseMapper.statistics();
-  }
+    /**
+     * 查询库存汇总指标，未在应用层二次修正聚合值。
+     *
+     * @return 库存聚合结果
+     */
+    @Override
+    public StockStatisticsDto statistics() {
+        return baseMapper.statistics();
+    }
 
-  /**
-   * 通过条件更新扣减可用量并增加预占量。
-   *
-   * @param skuId SKU ID
-   * @param quantity 预占数量
-   * @return 实际更新行数；0 表示 SKU 不存在或库存不足
-   */
-  @Override
-  public int deductAvailable(Long skuId, long quantity) {
-    return baseMapper.deductAvailable(skuId, quantity);
-  }
+    /**
+     * 通过条件更新扣减可用量并增加预占量。
+     *
+     * @param skuId SKU ID
+     * @param quantity 预占数量
+     * @return 实际更新行数；0 表示 SKU 不存在或库存不足
+     */
+    @Override
+    public int deductAvailable(Long skuId, long quantity) {
+        return baseMapper.deductAvailable(skuId, quantity);
+    }
 
-  /**
-   * 通过条件更新减少预占量并恢复可用量。
-   *
-   * @param skuId SKU ID
-   * @param quantity 释放数量
-   * @return 实际更新行数；0 表示 SKU 不存在或预占量不足
-   */
-  @Override
-  public int restoreReserved(Long skuId, long quantity) {
-    return baseMapper.restoreReserved(skuId, quantity);
-  }
+    /**
+     * 通过条件更新减少预占量并恢复可用量。
+     *
+     * @param skuId SKU ID
+     * @param quantity 释放数量
+     * @return 实际更新行数；0 表示 SKU 不存在或预占量不足
+     */
+    @Override
+    public int restoreReserved(Long skuId, long quantity) {
+        return baseMapper.restoreReserved(skuId, quantity);
+    }
 
-  /**
-   * 通过原子 SQL 增加指定 SKU 的可用量。
-   *
-   * @param skuId SKU ID
-   * @param quantity 增加数量
-   * @return 实际更新行数；0 表示 SKU 不存在
-   */
-  @Override
-  public int increaseAvailable(Long skuId, long quantity) {
-    return baseMapper.increaseAvailable(skuId, quantity);
-  }
+    /**
+     * 通过原子 SQL 增加指定 SKU 的可用量。
+     *
+     * @param skuId SKU ID
+     * @param quantity 增加数量
+     * @return 实际更新行数；0 表示 SKU 不存在
+     */
+    @Override
+    public int increaseAvailable(Long skuId, long quantity) {
+        return baseMapper.increaseAvailable(skuId, quantity);
+    }
 }

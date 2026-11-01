@@ -19,39 +19,39 @@ import org.slf4j.MDC;
  */
 class TraceIdFeignInterceptorTest {
 
-  private TraceIdFeignInterceptor interceptor;
+    private TraceIdFeignInterceptor interceptor;
 
-  /** 为每个测试创建独立的 TraceId 拦截器. */
-  @BeforeEach
-  void setUp() {
-    interceptor = new TraceIdFeignInterceptor();
-  }
+    /** 为每个测试创建独立的 TraceId 拦截器. */
+    @BeforeEach
+    void setUp() {
+        interceptor = new TraceIdFeignInterceptor();
+    }
 
-  /** 清理 MDC，避免 TraceId 在测试之间泄漏. */
-  @AfterEach
-  void tearDown() {
-    MDC.clear();
-  }
+    /** 清理 MDC，避免 TraceId 在测试之间泄漏. */
+    @AfterEach
+    void tearDown() {
+        MDC.clear();
+    }
 
-  /** 非空 MDC TraceId 应写入 Feign 请求头. */
-  @Test
-  void testApplyGivenMdcTraceIdThenHeaderInjected() {
-    MDC.put(Result.TRACE_ID_KEY, "tid-123");
-    RequestTemplate template = new RequestTemplate();
+    /** 非空 MDC TraceId 应写入 Feign 请求头. */
+    @Test
+    void testApplyGivenMdcTraceIdThenHeaderInjected() {
+        MDC.put(Result.TRACE_ID_KEY, "tid-123");
+        RequestTemplate template = new RequestTemplate();
 
-    interceptor.apply(template);
+        interceptor.apply(template);
 
-    assertEquals("tid-123", template.headers().get(TraceIdFilter.HEADER).iterator().next());
-  }
+        assertEquals("tid-123", template.headers().get(TraceIdFilter.HEADER).iterator().next());
+    }
 
-  /** 空白 MDC TraceId 不应写入请求头. */
-  @Test
-  void testApplyGivenBlankMdcThenNoHeaderAdded() {
-    MDC.put(Result.TRACE_ID_KEY, "  ");
-    RequestTemplate template = new RequestTemplate();
+    /** 空白 MDC TraceId 不应写入请求头. */
+    @Test
+    void testApplyGivenBlankMdcThenNoHeaderAdded() {
+        MDC.put(Result.TRACE_ID_KEY, "  ");
+        RequestTemplate template = new RequestTemplate();
 
-    interceptor.apply(template);
+        interceptor.apply(template);
 
-    assertNull(template.headers().get(TraceIdFilter.HEADER));
-  }
+        assertNull(template.headers().get(TraceIdFilter.HEADER));
+    }
 }

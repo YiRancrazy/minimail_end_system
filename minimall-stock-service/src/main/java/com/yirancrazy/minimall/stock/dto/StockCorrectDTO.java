@@ -13,9 +13,9 @@ import lombok.Data;
 @Data
 public class StockCorrectDto {
 
-  @NotNull(message = "correctQuantity cannot be null")
-  @Min(value = 0, message = "correctQuantity must be >= 0")
-  private Long correctQuantity;
+    @NotNull(message = "correctQuantity cannot be null")
+    @Min(value = 0, message = "correctQuantity must be >= 0")
+    private Long correctQuantity;
 
-  private String reason;
+    private String reason;
 }

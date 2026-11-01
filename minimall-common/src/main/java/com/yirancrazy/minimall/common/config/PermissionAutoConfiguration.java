@@ -16,14 +16,14 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 @AutoConfiguration
 public class PermissionAutoConfiguration {
 
-  /**
-   * 创建权限切面，并注入可用的 Redis 权限模板。
-   *
-   * @param redisProvider Redis 模板提供者，容器无对应 Bean 时返回空
-   * @return 使用可用 Redis 模板的权限切面
-   */
-  @Bean
-  public PermissionAspect permissionAspect(ObjectProvider<StringRedisTemplate> redisProvider) {
-    return new PermissionAspect(redisProvider.getIfAvailable());
-  }
+    /**
+     * 创建权限切面，并注入可用的 Redis 权限模板。
+     *
+     * @param redisProvider Redis 模板提供者，容器无对应 Bean 时返回空
+     * @return 使用可用 Redis 模板的权限切面
+     */
+    @Bean
+    public PermissionAspect permissionAspect(ObjectProvider<StringRedisTemplate> redisProvider) {
+        return new PermissionAspect(redisProvider.getIfAvailable());
+    }
 }

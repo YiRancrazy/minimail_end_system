@@ -13,11 +13,11 @@ import lombok.Data;
 @Data
 public class NotifyMarketingPushDto {
 
-  @NotBlank(message = "title cannot be blank")
-  private String title;
+    @NotBlank(message = "title cannot be blank")
+    private String title;
 
-  @NotBlank(message = "content cannot be blank")
-  private String content;
+    @NotBlank(message = "content cannot be blank")
+    private String content;
 
-  private List<Long> userIds;
+    private List<Long> userIds;
 }

@@ -38,122 +38,122 @@ import org.mockito.Mockito;
  */
 class OrderManagerImplExpirationBoundaryTest {
 
-  private static final LocalDateTime FIXED_NOW = LocalDateTime.of(2026, 10, 25, 12, 0, 0);
+    private static final LocalDateTime FIXED_NOW = LocalDateTime.of(2026, 10, 25, 12, 0, 0);
 
-  private OrderMapper orderMapper;
+    private OrderMapper orderMapper;
 
-  private OrderManagerImpl orderManager;
+    private OrderManagerImpl orderManager;
 
-  private MockedStatic<LocalDateTime> localDateTimeMock;
+    private MockedStatic<LocalDateTime> localDateTimeMock;
 
-  /**   初始化 Lambda 查询所需的实体元数据. */
-  @BeforeAll
-  static void initTableInfo() {
-    MybatisConfiguration configuration = new MybatisConfiguration();
-    TableInfoHelper.initTableInfo(new MapperBuilderAssistant(configuration, ""), OrderPo.class);
-  }
+    /**   初始化 Lambda 查询所需的实体元数据. */
+    @BeforeAll
+    static void initTableInfo() {
+        MybatisConfiguration configuration = new MybatisConfiguration();
+        TableInfoHelper.initTableInfo(new MapperBuilderAssistant(configuration, ""), OrderPo.class);
+    }
 
-  /**   初始化被测 Manager 并固定当前时间. */
-  @BeforeEach
-  void setUp() {
-    orderMapper = mock(OrderMapper.class);
-    when(orderMapper.selectList(any())).thenReturn(Collections.emptyList());
-    orderManager = new OrderManagerImpl(orderMapper);
-    localDateTimeMock = Mockito.mockStatic(LocalDateTime.class, Mockito.CALLS_REAL_METHODS);
-    localDateTimeMock.when(LocalDateTime::now).thenReturn(FIXED_NOW);
-  }
+    /**   初始化被测 Manager 并固定当前时间. */
+    @BeforeEach
+    void setUp() {
+        orderMapper = mock(OrderMapper.class);
+        when(orderMapper.selectList(any())).thenReturn(Collections.emptyList());
+        orderManager = new OrderManagerImpl(orderMapper);
+        localDateTimeMock = Mockito.mockStatic(LocalDateTime.class, Mockito.CALLS_REAL_METHODS);
+        localDateTimeMock.when(LocalDateTime::now).thenReturn(FIXED_NOW);
+    }
 
-  /**   恢复 LocalDateTime 的真实静态行为. */
-  @AfterEach
-  void tearDown() {
-    localDateTimeMock.close();
-  }
+    /**   恢复 LocalDateTime 的真实静态行为. */
+    @AfterEach
+    void tearDown() {
+        localDateTimeMock.close();
+    }
 
-  /** 验证查询边界排除订单之前三十分钟. */
-  @Test
-  void testQueryBoundaryExcludesOrderBeforeThirtyMinutes() {
-    LambdaQueryWrapper<OrderPo> wrapper = queryWrapper();
-    LocalDateTime threshold = singleTimeParameter(wrapper);
+    /** 验证查询边界排除订单之前三十分钟. */
+    @Test
+    void testQueryBoundaryExcludesOrderBeforeThirtyMinutes() {
+        LambdaQueryWrapper<OrderPo> wrapper = queryWrapper();
+        LocalDateTime threshold = singleTimeParameter(wrapper);
 
-    assertTrue(wrapper.getSqlSegment().contains("pay_expire_at <="));
-    assertEquals(FIXED_NOW, threshold);
-    assertFalse(matchesInclusiveUpperBound(FIXED_NOW.plusSeconds(1), threshold));
-  }
+        assertTrue(wrapper.getSqlSegment().contains("pay_expire_at <="));
+        assertEquals(FIXED_NOW, threshold);
+        assertFalse(matchesInclusiveUpperBound(FIXED_NOW.plusSeconds(1), threshold));
+    }
 
-  /** 验证查询边界包含订单在三十分钟. */
-  @Test
-  void testQueryBoundaryIncludesOrderAtThirtyMinutes() {
-    LambdaQueryWrapper<OrderPo> wrapper = queryWrapper();
-    LocalDateTime threshold = singleTimeParameter(wrapper);
+    /** 验证查询边界包含订单在三十分钟. */
+    @Test
+    void testQueryBoundaryIncludesOrderAtThirtyMinutes() {
+        LambdaQueryWrapper<OrderPo> wrapper = queryWrapper();
+        LocalDateTime threshold = singleTimeParameter(wrapper);
 
-    assertTrue(wrapper.getSqlSegment().contains("pay_expire_at <="));
-    assertEquals(FIXED_NOW, threshold);
-    assertTrue(matchesInclusiveUpperBound(FIXED_NOW, threshold));
-  }
+        assertTrue(wrapper.getSqlSegment().contains("pay_expire_at <="));
+        assertEquals(FIXED_NOW, threshold);
+        assertTrue(matchesInclusiveUpperBound(FIXED_NOW, threshold));
+    }
 
-  /** 验证查询边界包含订单之后三十分钟. */
-  @Test
-  void testQueryBoundaryIncludesOrderAfterThirtyMinutes() {
-    LambdaQueryWrapper<OrderPo> wrapper = queryWrapper();
-    LocalDateTime threshold = singleTimeParameter(wrapper);
+    /** 验证查询边界包含订单之后三十分钟. */
+    @Test
+    void testQueryBoundaryIncludesOrderAfterThirtyMinutes() {
+        LambdaQueryWrapper<OrderPo> wrapper = queryWrapper();
+        LocalDateTime threshold = singleTimeParameter(wrapper);
 
-    assertTrue(wrapper.getSqlSegment().contains("pay_expire_at <="));
-    assertEquals(FIXED_NOW, threshold);
-    assertTrue(matchesInclusiveUpperBound(FIXED_NOW.minusMinutes(1), threshold));
-  }
+        assertTrue(wrapper.getSqlSegment().contains("pay_expire_at <="));
+        assertEquals(FIXED_NOW, threshold);
+        assertTrue(matchesInclusiveUpperBound(FIXED_NOW.minusMinutes(1), threshold));
+    }
 
-  /** 验证支付过期时间为空时降级到创建时间边界. */
-  @Test
-  @Disabled("O-05 null fallback is temporarily ignored")
-  void testQueryBoundaryUsesCreateTimeFallbackWhenPayExpireAtIsNull() {
-    LambdaQueryWrapper<OrderPo> wrapper = queryWrapper();
-    Map<String, Object> parameters = wrapper.getParamNameValuePairs();
-    LocalDateTime fallbackThreshold = FIXED_NOW.minusMinutes(30);
+    /** 验证支付过期时间为空时降级到创建时间边界. */
+    @Test
+    @Disabled("O-05 null fallback is temporarily ignored")
+    void testQueryBoundaryUsesCreateTimeFallbackWhenPayExpireAtIsNull() {
+        LambdaQueryWrapper<OrderPo> wrapper = queryWrapper();
+        Map<String, Object> parameters = wrapper.getParamNameValuePairs();
+        LocalDateTime fallbackThreshold = FIXED_NOW.minusMinutes(30);
 
-    assertTrue(wrapper.getSqlSegment().contains("create_time <="));
-    assertTrue(parameters.containsValue(fallbackThreshold));
-    assertFalse(
-        matchesInclusiveUpperBound(FIXED_NOW.minusMinutes(29).minusSeconds(59), fallbackThreshold));
-    assertTrue(
-        matchesInclusiveUpperBound(FIXED_NOW.minusMinutes(30).minusSeconds(1), fallbackThreshold));
-  }
+        assertTrue(wrapper.getSqlSegment().contains("create_time <="));
+        assertTrue(parameters.containsValue(fallbackThreshold));
+        assertFalse(
+                matchesInclusiveUpperBound(FIXED_NOW.minusMinutes(29).minusSeconds(59), fallbackThreshold));
+        assertTrue(
+                matchesInclusiveUpperBound(FIXED_NOW.minusMinutes(30).minusSeconds(1), fallbackThreshold));
+    }
 
-  /**
-   * 捕获 Manager 实际提交给 Mapper 的查询条件.
-   *
-   * @return 超时订单查询条件
-   */
-  private LambdaQueryWrapper<OrderPo> queryWrapper() {
-    orderManager.listExpiredPendingOrders(OrderStatusEnum.PENDING.intCode(), 0L, 100);
-    ArgumentCaptor<Wrapper<OrderPo>> captor = ArgumentCaptor.forClass(Wrapper.class);
-    verify(orderMapper).selectList(captor.capture());
-    LambdaQueryWrapper<OrderPo> wrapper = (LambdaQueryWrapper<OrderPo>) captor.getValue();
-    wrapper.getSqlSegment();
-    return wrapper;
-  }
+    /**
+     * 捕获 Manager 实际提交给 Mapper 的查询条件.
+     *
+     * @return 超时订单查询条件
+     */
+    private LambdaQueryWrapper<OrderPo> queryWrapper() {
+        orderManager.listExpiredPendingOrders(OrderStatusEnum.PENDING.intCode(), 0L, 100);
+        ArgumentCaptor<Wrapper<OrderPo>> captor = ArgumentCaptor.forClass(Wrapper.class);
+        verify(orderMapper).selectList(captor.capture());
+        LambdaQueryWrapper<OrderPo> wrapper = (LambdaQueryWrapper<OrderPo>) captor.getValue();
+        wrapper.getSqlSegment();
+        return wrapper;
+    }
 
-  /**
-   * 获取唯一的时间边界参数.
-   *
-   * @param wrapper 查询条件
-   * @return 时间边界参数
-   */
-  private LocalDateTime singleTimeParameter(LambdaQueryWrapper<OrderPo> wrapper) {
-    return wrapper.getParamNameValuePairs().values().stream()
-        .filter(LocalDateTime.class::isInstance)
-        .map(LocalDateTime.class::cast)
-        .findFirst()
-        .orElseThrow();
-  }
+    /**
+     * 获取唯一的时间边界参数.
+     *
+     * @param wrapper 查询条件
+     * @return 时间边界参数
+     */
+    private LocalDateTime singleTimeParameter(LambdaQueryWrapper<OrderPo> wrapper) {
+        return wrapper.getParamNameValuePairs().values().stream()
+                .filter(LocalDateTime.class::isInstance)
+                .map(LocalDateTime.class::cast)
+                .findFirst()
+                .orElseThrow();
+    }
 
-  /**
-   * 判断候选时间是否满足包含等值点的时间上界.
-   *
-   * @param candidate 候选时间
-   * @param threshold 时间上界
-   * @return 候选时间不晚于上界时返回 true
-   */
-  private boolean matchesInclusiveUpperBound(LocalDateTime candidate, LocalDateTime threshold) {
-    return !candidate.isAfter(threshold);
-  }
+    /**
+     * 判断候选时间是否满足包含等值点的时间上界.
+     *
+     * @param candidate 候选时间
+     * @param threshold 时间上界
+     * @return 候选时间不晚于上界时返回 true
+     */
+    private boolean matchesInclusiveUpperBound(LocalDateTime candidate, LocalDateTime threshold) {
+        return !candidate.isAfter(threshold);
+    }
 }

@@ -20,29 +20,29 @@ import org.springframework.data.elasticsearch.annotations.Setting;
 @Setting(shards = 1, replicas = 0)
 public class SpuDocument {
 
-  @Id private Long spuId;
+    @Id private Long spuId;
 
-  @Field(type = FieldType.Text, analyzer = "ik_max_word", searchAnalyzer = "ik_smart")
-  private String title;
+    @Field(type = FieldType.Text, analyzer = "ik_max_word", searchAnalyzer = "ik_smart")
+    private String title;
 
-  @Field(type = FieldType.Long)
-  private Long categoryId;
+    @Field(type = FieldType.Long)
+    private Long categoryId;
 
-  @Field(type = FieldType.Long)
-  private Long merchantId;
+    @Field(type = FieldType.Long)
+    private Long merchantId;
 
-  @Field(type = FieldType.Long)
-  private Long minPrice;
+    @Field(type = FieldType.Long)
+    private Long minPrice;
 
-  @Field(type = FieldType.Long)
-  private Long maxPrice;
+    @Field(type = FieldType.Long)
+    private Long maxPrice;
 
-  @Field(type = FieldType.Integer)
-  private Integer saleStatus;
+    @Field(type = FieldType.Integer)
+    private Integer saleStatus;
 
-  @Field(type = FieldType.Keyword)
-  private String mainImage;
+    @Field(type = FieldType.Keyword)
+    private String mainImage;
 
-  @Field(type = FieldType.Date, format = DateFormat.epoch_millis)
-  private Instant createTime;
+    @Field(type = FieldType.Date, format = DateFormat.epoch_millis)
+    private Instant createTime;
 }

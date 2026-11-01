@@ -17,14 +17,14 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class ResetPasswordDto {
 
-  @NotBlank(message = "account cannot be blank")
-  private String account;
+    @NotBlank(message = "account cannot be blank")
+    private String account;
 
-  @NotBlank(message = "verifyCode cannot be blank")
-  @Size(min = 6, max = 6, message = "verifyCode must be 6 digits")
-  private String verifyCode;
+    @NotBlank(message = "verifyCode cannot be blank")
+    @Size(min = 6, max = 6, message = "verifyCode must be 6 digits")
+    private String verifyCode;
 
-  @NotBlank(message = "newPassword cannot be blank")
-  @Size(min = 6, max = 64, message = "newPassword length must be between 6 and 64")
-  private String newPassword;
+    @NotBlank(message = "newPassword cannot be blank")
+    @Size(min = 6, max = 64, message = "newPassword length must be between 6 and 64")
+    private String newPassword;
 }

@@ -14,4 +14,4 @@ import com.yirancrazy.minimall.common.annotation.Manager;
  */
 @Manager
 public class AuthRoleManagerImpl extends ServiceImpl<AuthRoleMapper, AuthRolePo>
-    implements AuthRoleManager {}
+        implements AuthRoleManager {}

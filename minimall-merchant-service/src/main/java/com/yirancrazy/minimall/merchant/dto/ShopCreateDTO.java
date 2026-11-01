@@ -14,11 +14,11 @@ import lombok.Data;
 @Data
 public class ShopCreateDto {
 
-  @NotBlank(message = "shopName cannot be blank")
-  @Size(min = 1, max = 100, message = "shopName length must be between 1 and 100")
-  private String shopName;
+    @NotBlank(message = "shopName cannot be blank")
+    @Size(min = 1, max = 100, message = "shopName length must be between 1 and 100")
+    private String shopName;
 
-  @NotBlank(message = "licenseNo cannot be blank")
-  @Pattern(regexp = "^[A-Z0-9]{15,20}$", message = "licenseNo format is invalid")
-  private String licenseNo;
+    @NotBlank(message = "licenseNo cannot be blank")
+    @Pattern(regexp = "^[A-Z0-9]{15,20}$", message = "licenseNo format is invalid")
+    private String licenseNo;
 }

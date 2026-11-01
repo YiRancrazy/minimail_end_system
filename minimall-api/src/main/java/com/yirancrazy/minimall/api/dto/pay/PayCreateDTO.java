@@ -16,12 +16,12 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class PayCreateDto {
-  private String orderNo;
-  private Long userId;
-  private Long merchantId;
+    private String orderNo;
+    private Long userId;
+    private Long merchantId;
 
-  @Digits(integer = 10, fraction = 2, message = "amount must have at most 2 decimal places")
-  private BigDecimal amount;
+    @Digits(integer = 10, fraction = 2, message = "amount must have at most 2 decimal places")
+    private BigDecimal amount;
 
-  private Integer channel;
+    private Integer channel;
 }

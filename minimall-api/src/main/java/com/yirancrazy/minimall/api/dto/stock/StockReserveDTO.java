@@ -18,14 +18,14 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class StockReserveDto {
-  @NotNull(message = "SKU ID不能为空")
-  private Long skuId;
+    @NotNull(message = "SKU ID不能为空")
+    private Long skuId;
 
-  @NotNull(message = "数量不能为空")
-  @Min(value = 1, message = "数量至少为1")
-  private Integer quantity;
+    @NotNull(message = "数量不能为空")
+    @Min(value = 1, message = "数量至少为1")
+    private Integer quantity;
 
-  @NotBlank(message = "订单号不能为空")
-  @Size(max = 32, message = "订单号不能超过32个字符")
-  private String orderNo;
+    @NotBlank(message = "订单号不能为空")
+    @Size(max = 32, message = "订单号不能超过32个字符")
+    private String orderNo;
 }

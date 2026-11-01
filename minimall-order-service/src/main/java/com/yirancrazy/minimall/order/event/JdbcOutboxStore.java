@@ -18,49 +18,49 @@ import org.springframework.stereotype.Component;
 @Component
 public class JdbcOutboxStore implements OutboxStore {
 
-  private final OutboxManager outboxManager;
+    private final OutboxManager outboxManager;
 
-  /**
-   * 创建 JDBC 发件箱存储适配器。
-   *
-   * <p>构造器注入 OutboxManager，后续提交标记和查询都通过该 Manager 访问持久化表。
-   *
-   * @param outboxManager 发件箱记录持久化与条件更新入口
-   */
-  public JdbcOutboxStore(OutboxManager outboxManager) {
-    this.outboxManager = outboxManager;
-  }
-
-  /**
-   * 登记通用消息键的提交标记。
-   *
-   * <p>只保存 eventId 占位记录；重复键按幂等忽略，不构造订单事件。
-   *
-   * @param messageKey 事件或消息的稳定幂等键
-   */
-  public void recordCommit(String messageKey) {
-    OutboxPo po = new OutboxPo();
-    po.setEventId(messageKey);
-    try {
-      outboxManager.save(po);
-    } catch (DuplicateKeyException e) {
-      // ignore duplicate event records for idempotency
+    /**
+     * 创建 JDBC 发件箱存储适配器。
+     *
+     * <p>构造器注入 OutboxManager，后续提交标记和查询都通过该 Manager 访问持久化表。
+     *
+     * @param outboxManager 发件箱记录持久化与条件更新入口
+     */
+    public JdbcOutboxStore(OutboxManager outboxManager) {
+        this.outboxManager = outboxManager;
     }
-  }
 
-  /**
-   * 判断消息键是否已写入发件箱提交记录。
-   *
-   * <p>按 eventId 计数，大于零即视为已提交。
-   *
-   * @param messageKey 事件或消息的稳定幂等键
-   * @return 存在记录时返回 true。
-   */
-  @Override
-  public boolean isCommitted(String messageKey) {
-    long count =
-        outboxManager.count(
-            Wrappers.lambdaQuery(OutboxPo.class).eq(OutboxPo::getEventId, messageKey));
-    return count > 0;
-  }
+    /**
+     * 登记通用消息键的提交标记。
+     *
+     * <p>只保存 eventId 占位记录；重复键按幂等忽略，不构造订单事件。
+     *
+     * @param messageKey 事件或消息的稳定幂等键
+     */
+    public void recordCommit(String messageKey) {
+        OutboxPo po = new OutboxPo();
+        po.setEventId(messageKey);
+        try {
+            outboxManager.save(po);
+        } catch (DuplicateKeyException e) {
+            // ignore duplicate event records for idempotency
+        }
+    }
+
+    /**
+     * 判断消息键是否已写入发件箱提交记录。
+     *
+     * <p>按 eventId 计数，大于零即视为已提交。
+     *
+     * @param messageKey 事件或消息的稳定幂等键
+     * @return 存在记录时返回 true。
+     */
+    @Override
+    public boolean isCommitted(String messageKey) {
+        long count =
+                outboxManager.count(
+                        Wrappers.lambdaQuery(OutboxPo.class).eq(OutboxPo::getEventId, messageKey));
+        return count > 0;
+    }
 }

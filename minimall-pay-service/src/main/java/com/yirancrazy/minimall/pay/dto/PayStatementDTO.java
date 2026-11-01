@@ -14,9 +14,9 @@ import lombok.Data;
 @Data
 public class PayStatementDto {
 
-  @NotNull(message = "startDate cannot be null")
-  private LocalDate startDate;
+    @NotNull(message = "startDate cannot be null")
+    private LocalDate startDate;
 
-  @NotNull(message = "endDate cannot be null")
-  private LocalDate endDate;
+    @NotNull(message = "endDate cannot be null")
+    private LocalDate endDate;
 }

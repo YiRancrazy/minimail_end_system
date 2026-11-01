@@ -8,19 +8,19 @@ package com.yirancrazy.minimall.auth.gateway;
  */
 public interface AuthRemoteGateway {
 
-  /**
-   * 向 ID 服务申请一个新的业务用户 ID。
-   *
-   * @return 业务用户 ID
-   * @throws com.yirancrazy.minimall.common.exception.BizException 远程调用失败或返回空 ID 时抛出
-   */
-  Long nextUserId();
+    /**
+     * 向 ID 服务申请一个新的业务用户 ID。
+     *
+     * @return 业务用户 ID
+     * @throws com.yirancrazy.minimall.common.exception.BizException 远程调用失败或返回空 ID 时抛出
+     */
+    Long nextUserId();
 
-  /**
-   * 请求用户服务为指定业务用户 ID 创建档案。
-   *
-   * @param userId 业务用户 ID
-   * @throws com.yirancrazy.minimall.common.exception.BizException 远程调用失败时抛出
-   */
-  void provisionUserProfile(Long userId);
+    /**
+     * 请求用户服务为指定业务用户 ID 创建档案。
+     *
+     * @param userId 业务用户 ID
+     * @throws com.yirancrazy.minimall.common.exception.BizException 远程调用失败时抛出
+     */
+    void provisionUserProfile(Long userId);
 }

@@ -14,7 +14,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class SpuSnapshotDto {
-  private Long spuId;
-  private String title;
-  private String mainImageUrl;
+    private Long spuId;
+    private String title;
+    private String mainImageUrl;
 }

@@ -16,8 +16,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class RefundVo {
-  private String refundNo;
-  private String paymentNo;
-  private BigDecimal amount;
-  private Integer status;
+    private String refundNo;
+    private String paymentNo;
+    private BigDecimal amount;
+    private Integer status;
 }

@@ -16,13 +16,13 @@ import lombok.EqualsAndHashCode;
 @TableName("t_notify_preference")
 public class PreferencePo extends BasePo {
 
-  private Long userId;
+    private Long userId;
 
-  private String categoryCode;
+    private String categoryCode;
 
-  private Integer siteEnabled;
+    private Integer siteEnabled;
 
-  private Integer smsEnabled;
+    private Integer smsEnabled;
 
-  private Integer emailEnabled;
+    private Integer emailEnabled;
 }

@@ -20,61 +20,61 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class PayRemoteGatewayImpl implements PayRemoteGateway {
 
-  private final IdFeignClient idFeignClient;
-  private final OrderFeignClient orderFeignClient;
+    private final IdFeignClient idFeignClient;
+    private final OrderFeignClient orderFeignClient;
 
-  /**
-   * 通过 ID Feign 客户端生成全局唯一标识。
-   *
-   * @param bizTag ID 业务标签
-   * @return ID 服务原始统一响应
-   */
-  @Override
-  public Result<Long> nextId(String bizTag) {
-    return idFeignClient.nextId(bizTag);
-  }
+    /**
+     * 通过 ID Feign 客户端生成全局唯一标识。
+     *
+     * @param bizTag ID 业务标签
+     * @return ID 服务原始统一响应
+     */
+    @Override
+    public Result<Long> nextId(String bizTag) {
+        return idFeignClient.nextId(bizTag);
+    }
 
-  /**
-   * 通过订单 Feign 客户端按数字订单 ID 推进支付。
-   *
-   * @param orderId 数字订单 ID
-   * @return 订单服务原始统一响应
-   */
-  @Override
-  public Result<Void> pay(Long orderId) {
-    return orderFeignClient.pay(orderId);
-  }
+    /**
+     * 通过订单 Feign 客户端按数字订单 ID 推进支付。
+     *
+     * @param orderId 数字订单 ID
+     * @return 订单服务原始统一响应
+     */
+    @Override
+    public Result<Void> pay(Long orderId) {
+        return orderFeignClient.pay(orderId);
+    }
 
-  /**
-   * 通过订单 Feign 客户端按业务订单号推进支付。
-   *
-   * @param orderNo 业务订单号
-   * @return 订单服务原始统一响应
-   */
-  @Override
-  public Result<Void> payByOrderNo(String orderNo) {
-    return orderFeignClient.payByOrderNo(orderNo);
-  }
+    /**
+     * 通过订单 Feign 客户端按业务订单号推进支付。
+     *
+     * @param orderNo 业务订单号
+     * @return 订单服务原始统一响应
+     */
+    @Override
+    public Result<Void> payByOrderNo(String orderNo) {
+        return orderFeignClient.payByOrderNo(orderNo);
+    }
 
-  /**
-   * 通过订单 Feign 客户端提交退款结果。
-   *
-   * @param dto 退款回调数据
-   * @return 订单服务原始统一响应
-   */
-  @Override
-  public Result<Void> refundCallback(RefundCallbackDto dto) {
-    return orderFeignClient.refundCallback(dto);
-  }
+    /**
+     * 通过订单 Feign 客户端提交退款结果。
+     *
+     * @param dto 退款回调数据
+     * @return 订单服务原始统一响应
+     */
+    @Override
+    public Result<Void> refundCallback(RefundCallbackDto dto) {
+        return orderFeignClient.refundCallback(dto);
+    }
 
-  /**
-   * 通过订单 Feign 客户端读取支付校验快照。
-   *
-   * @param orderNo 业务订单号
-   * @return 订单快照或失败码的统一响应
-   */
-  @Override
-  public Result<OrderPaySnapshotDto> paySnapshot(String orderNo) {
-    return orderFeignClient.paySnapshot(orderNo);
-  }
+    /**
+     * 通过订单 Feign 客户端读取支付校验快照。
+     *
+     * @param orderNo 业务订单号
+     * @return 订单快照或失败码的统一响应
+     */
+    @Override
+    public Result<OrderPaySnapshotDto> paySnapshot(String orderNo) {
+        return orderFeignClient.paySnapshot(orderNo);
+    }
 }

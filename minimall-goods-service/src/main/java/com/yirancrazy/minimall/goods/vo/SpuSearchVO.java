@@ -15,15 +15,15 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class SpuSearchVo {
 
-  private Long spuId;
+    private Long spuId;
 
-  private String title;
+    private String title;
 
-  private Long minPrice;
+    private Long minPrice;
 
-  private Long maxPrice;
+    private Long maxPrice;
 
-  private String mainImage;
+    private String mainImage;
 
-  private Long merchantId;
+    private Long merchantId;
 }

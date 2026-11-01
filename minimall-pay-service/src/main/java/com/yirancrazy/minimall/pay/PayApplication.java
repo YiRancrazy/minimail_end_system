@@ -21,12 +21,12 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableFeignClients(basePackages = "com.yirancrazy.minimall.api.feign")
 @EnableScheduling
 public class PayApplication {
-  /**
-   * 启动支付服务 Spring Boot 应用。
-   *
-   * @param args 命令行启动参数
-   */
-  public static void main(String[] args) {
-    SpringApplication.run(PayApplication.class, args);
-  }
+    /**
+     * 启动支付服务 Spring Boot 应用。
+     *
+     * @param args 命令行启动参数
+     */
+    public static void main(String[] args) {
+        SpringApplication.run(PayApplication.class, args);
+    }
 }

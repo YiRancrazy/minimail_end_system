@@ -15,6 +15,6 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 @TableName("t_user_favorite")
 public class UserFavoritePo extends BasePo {
-  private Long userId;
-  private Long skuId;
+    private Long userId;
+    private Long skuId;
 }

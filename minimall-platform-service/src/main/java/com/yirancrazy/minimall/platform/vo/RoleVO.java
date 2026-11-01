@@ -14,7 +14,7 @@ import lombok.Data;
 @AllArgsConstructor
 public class RoleVo {
 
-  private String roleCode;
-  private String description;
-  private List<PermissionVo> permissions;
+    private String roleCode;
+    private String description;
+    private List<PermissionVo> permissions;
 }

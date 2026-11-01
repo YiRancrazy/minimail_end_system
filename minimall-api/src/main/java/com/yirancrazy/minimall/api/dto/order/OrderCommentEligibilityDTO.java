@@ -15,13 +15,13 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class OrderCommentEligibilityDto {
 
-  private boolean eligible;
+    private boolean eligible;
 
-  private Long orderId;
+    private Long orderId;
 
-  private Long userId;
+    private Long userId;
 
-  private Long merchantId;
+    private Long merchantId;
 
-  private Integer status;
+    private Integer status;
 }

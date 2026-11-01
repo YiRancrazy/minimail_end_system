@@ -27,87 +27,87 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/platform/goods")
 public class PlatformGoodsControllerV1 {
 
-  private final SpuService spuService;
+    private final SpuService spuService;
 
-  /**
-   * 注入SPU 聚合服务，构造 PlatformGoodsControllerV1 实例。
-   *
-   * @param spuService SPU 聚合服务
-   */
-  public PlatformGoodsControllerV1(SpuService spuService) {
-    this.spuService = spuService;
-  }
+    /**
+     * 注入SPU 聚合服务，构造 PlatformGoodsControllerV1 实例。
+     *
+     * @param spuService SPU 聚合服务
+     */
+    public PlatformGoodsControllerV1(SpuService spuService) {
+        this.spuService = spuService;
+    }
 
-  /**
-   * 分页查询待平台审核的 SPU，并转换为视图对象。
-   *
-   * @param dto SPU 游标分页或状态过滤参数
-   * @return 统一响应包装；data 为按主键游标分页的结果；记录项为转换后的 SPU 视图对象
-   */
-  @GetMapping("/spus/pending")
-  public Result<CursorPageVo<SpuVo>> pending(@Valid SpuPageDto dto) {
-    return Result.success(spuService.pendingVo(dto));
-  }
+    /**
+     * 分页查询待平台审核的 SPU，并转换为视图对象。
+     *
+     * @param dto SPU 游标分页或状态过滤参数
+     * @return 统一响应包装；data 为按主键游标分页的结果；记录项为转换后的 SPU 视图对象
+     */
+    @GetMapping("/spus/pending")
+    public Result<CursorPageVo<SpuVo>> pending(@Valid SpuPageDto dto) {
+        return Result.success(spuService.pendingVo(dto));
+    }
 
-  /**
-   * 平台按 SPU 主键查看商品主数据和 SKU。
-   *
-   * @param spuId SPU 主键
-   * @return 统一响应包装；data 为转换后的 SPU 视图对象
-   */
-  @GetMapping("/spus/{spuId}")
-  public Result<SpuVo> detail(@PathVariable("spuId") Long spuId) {
-    return Result.success(spuService.detailVo(spuId));
-  }
+    /**
+     * 平台按 SPU 主键查看商品主数据和 SKU。
+     *
+     * @param spuId SPU 主键
+     * @return 统一响应包装；data 为转换后的 SPU 视图对象
+     */
+    @GetMapping("/spus/{spuId}")
+    public Result<SpuVo> detail(@PathVariable("spuId") Long spuId) {
+        return Result.success(spuService.detailVo(spuId));
+    }
 
-  /**
-   * 查询指定 SPU 的审核记录，按审核时间倒序返回。
-   *
-   * @param spuId SPU 主键
-   * @return 统一响应包装；data 为商品审核记录视图对象列表；无数据时返回空列表
-   */
-  @GetMapping("/spus/{spuId}/audit-logs")
-  public Result<List<SpuAuditRecordVo>> auditLogs(@PathVariable("spuId") Long spuId) {
-    return Result.success(spuService.listAuditRecordsVo(spuId));
-  }
+    /**
+     * 查询指定 SPU 的审核记录，按审核时间倒序返回。
+     *
+     * @param spuId SPU 主键
+     * @return 统一响应包装；data 为商品审核记录视图对象列表；无数据时返回空列表
+     */
+    @GetMapping("/spus/{spuId}/audit-logs")
+    public Result<List<SpuAuditRecordVo>> auditLogs(@PathVariable("spuId") Long spuId) {
+        return Result.success(spuService.listAuditRecordsVo(spuId));
+    }
 
-  /**
-   * 平台审核通过待审 SPU，审核人取自可信请求头。
-   *
-   * @param spuId SPU 主键
-   * @param auditorId 平台审核人用户 ID
-   * @return 统一响应包装；data 为操作实际影响记录时为 true，否则为 false
-   */
-  @PostMapping("/spus/{spuId}/approve")
-  public Result<Boolean> approve(
-      @PathVariable("spuId") Long spuId, @RequestHeader("X-User-Id") Long auditorId) {
-    return Result.success(spuService.approve(spuId, auditorId));
-  }
+    /**
+     * 平台审核通过待审 SPU，审核人取自可信请求头。
+     *
+     * @param spuId SPU 主键
+     * @param auditorId 平台审核人用户 ID
+     * @return 统一响应包装；data 为操作实际影响记录时为 true，否则为 false
+     */
+    @PostMapping("/spus/{spuId}/approve")
+    public Result<Boolean> approve(
+            @PathVariable("spuId") Long spuId, @RequestHeader("X-User-Id") Long auditorId) {
+        return Result.success(spuService.approve(spuId, auditorId));
+    }
 
-  /**
-   * 平台驳回待审 SPU，审核人取自可信请求头并使用请求体中的驳回原因。
-   *
-   * @param spuId SPU 主键
-   * @param auditorId 平台审核人用户 ID
-   * @param dto 商品审核驳回参数
-   * @return 统一响应包装；data 为操作实际影响记录时为 true，否则为 false
-   */
-  @PostMapping("/spus/{spuId}/reject")
-  public Result<Boolean> reject(
-      @PathVariable("spuId") Long spuId,
-      @RequestHeader("X-User-Id") Long auditorId,
-      @Valid @RequestBody SpuRejectDto dto) {
-    return Result.success(spuService.reject(spuId, auditorId, dto.getReason()));
-  }
+    /**
+     * 平台驳回待审 SPU，审核人取自可信请求头并使用请求体中的驳回原因。
+     *
+     * @param spuId SPU 主键
+     * @param auditorId 平台审核人用户 ID
+     * @param dto 商品审核驳回参数
+     * @return 统一响应包装；data 为操作实际影响记录时为 true，否则为 false
+     */
+    @PostMapping("/spus/{spuId}/reject")
+    public Result<Boolean> reject(
+            @PathVariable("spuId") Long spuId,
+            @RequestHeader("X-User-Id") Long auditorId,
+            @Valid @RequestBody SpuRejectDto dto) {
+        return Result.success(spuService.reject(spuId, auditorId, dto.getReason()));
+    }
 
-  /**
-   * 查询指定 SPU 的审核记录，与审核日志接口共用同一视图。
-   *
-   * @param spuId SPU 主键
-   * @return 统一响应包装；data 为商品审核记录视图对象列表；无数据时返回空列表
-   */
-  @GetMapping("/spus/{spuId}/audit-records")
-  public Result<List<SpuAuditRecordVo>> auditRecords(@PathVariable("spuId") Long spuId) {
-    return Result.success(spuService.listAuditRecordsVo(spuId));
-  }
+    /**
+     * 查询指定 SPU 的审核记录，与审核日志接口共用同一视图。
+     *
+     * @param spuId SPU 主键
+     * @return 统一响应包装；data 为商品审核记录视图对象列表；无数据时返回空列表
+     */
+    @GetMapping("/spus/{spuId}/audit-records")
+    public Result<List<SpuAuditRecordVo>> auditRecords(@PathVariable("spuId") Long spuId) {
+        return Result.success(spuService.listAuditRecordsVo(spuId));
+    }
 }

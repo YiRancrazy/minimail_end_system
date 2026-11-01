@@ -14,11 +14,11 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 public class ComplaintPageDto extends CursorPageDto {
 
-  private Integer status;
+    private Integer status;
 
-  private String orderNo;
+    private String orderNo;
 
-  private Long userId;
+    private Long userId;
 
-  private Long defendantId;
+    private Long defendantId;
 }

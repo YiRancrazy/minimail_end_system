@@ -14,7 +14,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class UserSnapshotDto {
-  private Long userId;
-  private String nickname;
-  private String role;
+    private Long userId;
+    private String nickname;
+    private String role;
 }

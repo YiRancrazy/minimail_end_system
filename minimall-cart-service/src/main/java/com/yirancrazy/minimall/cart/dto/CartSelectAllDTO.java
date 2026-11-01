@@ -12,6 +12,6 @@ import lombok.Data;
 @Data
 public class CartSelectAllDto {
 
-  @NotNull(message = "选中状态不能为空")
-  private Boolean isSelected;
+    @NotNull(message = "选中状态不能为空")
+    private Boolean isSelected;
 }

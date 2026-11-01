@@ -13,17 +13,17 @@ import lombok.Data;
 @Data
 public class StockTransferDto {
 
-  @NotNull(message = "fromSkuId cannot be null")
-  private Long fromSkuId;
+    @NotNull(message = "fromSkuId cannot be null")
+    private Long fromSkuId;
 
-  @NotNull(message = "toSkuId cannot be null")
-  private Long toSkuId;
+    @NotNull(message = "toSkuId cannot be null")
+    private Long toSkuId;
 
-  @NotNull(message = "quantity cannot be null")
-  @Min(value = 1, message = "quantity must be >= 1")
-  private Long quantity;
+    @NotNull(message = "quantity cannot be null")
+    @Min(value = 1, message = "quantity must be >= 1")
+    private Long quantity;
 
-  private String reason;
+    private String reason;
 
-  private Long operatorId;
+    private Long operatorId;
 }

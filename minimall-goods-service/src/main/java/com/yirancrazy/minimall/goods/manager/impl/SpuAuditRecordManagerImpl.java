@@ -14,4 +14,4 @@ import com.yirancrazy.minimall.goods.mapper.SpuAuditRecordMapper;
  */
 @Manager
 public class SpuAuditRecordManagerImpl extends ServiceImpl<SpuAuditRecordMapper, SpuAuditRecordPo>
-    implements SpuAuditRecordManager {}
+        implements SpuAuditRecordManager {}

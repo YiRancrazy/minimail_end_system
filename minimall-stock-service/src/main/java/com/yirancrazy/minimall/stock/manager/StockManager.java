@@ -12,37 +12,37 @@ import com.yirancrazy.minimall.stock.entity.StockPo;
  */
 public interface StockManager extends IService<StockPo> {
 
-  /**
-   * 汇总全部 SKU 数量、可用量、预占量和触发告警的 SKU 数量。
-   *
-   * @return 库存聚合结果
-   */
-  StockStatisticsDto statistics();
+    /**
+     * 汇总全部 SKU 数量、可用量、预占量和触发告警的 SKU 数量。
+     *
+     * @return 库存聚合结果
+     */
+    StockStatisticsDto statistics();
 
-  /**
-   * 在可用量充足时原子扣减可用量并等量增加预占量。
-   *
-   * @param skuId SKU ID
-   * @param quantity 需要预占的数量
-   * @return 实际更新行数；0 表示 SKU 不存在或可用量不足
-   */
-  int deductAvailable(Long skuId, long quantity);
+    /**
+     * 在可用量充足时原子扣减可用量并等量增加预占量。
+     *
+     * @param skuId SKU ID
+     * @param quantity 需要预占的数量
+     * @return 实际更新行数；0 表示 SKU 不存在或可用量不足
+     */
+    int deductAvailable(Long skuId, long quantity);
 
-  /**
-   * 在预占量充足时原子减少预占量并等量恢复可用量。
-   *
-   * @param skuId SKU ID
-   * @param quantity 需要释放的数量
-   * @return 实际更新行数；0 表示 SKU 不存在或预占量不足
-   */
-  int restoreReserved(Long skuId, long quantity);
+    /**
+     * 在预占量充足时原子减少预占量并等量恢复可用量。
+     *
+     * @param skuId SKU ID
+     * @param quantity 需要释放的数量
+     * @return 实际更新行数；0 表示 SKU 不存在或预占量不足
+     */
+    int restoreReserved(Long skuId, long quantity);
 
-  /**
-   * 原子增加指定 SKU 的可用量，不改变预占量。
-   *
-   * @param skuId SKU ID
-   * @param quantity 需要增加的数量
-   * @return 实际更新行数；0 表示 SKU 不存在
-   */
-  int increaseAvailable(Long skuId, long quantity);
+    /**
+     * 原子增加指定 SKU 的可用量，不改变预占量。
+     *
+     * @param skuId SKU ID
+     * @param quantity 需要增加的数量
+     * @return 实际更新行数；0 表示 SKU 不存在
+     */
+    int increaseAvailable(Long skuId, long quantity);
 }

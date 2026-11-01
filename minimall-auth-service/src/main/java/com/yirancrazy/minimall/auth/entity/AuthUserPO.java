@@ -16,21 +16,21 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 @TableName("t_auth_user")
 public class AuthUserPo extends BasePo {
-  private Long userId;
+    private Long userId;
 
-  private String account;
+    private String account;
 
-  private String passwordHash;
+    private String passwordHash;
 
-  private String salt;
+    private String salt;
 
-  private Integer accountType;
+    private Integer accountType;
 
-  private Long roleId;
+    private Long roleId;
 
-  private Integer status;
+    private Integer status;
 
-  private String contact;
+    private String contact;
 
-  private LocalDateTime lastLoginAt;
+    private LocalDateTime lastLoginAt;
 }

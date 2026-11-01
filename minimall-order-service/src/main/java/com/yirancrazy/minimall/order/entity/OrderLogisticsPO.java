@@ -18,8 +18,8 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 @TableName("t_order_logistics")
 public class OrderLogisticsPo extends BasePo {
-  private Long orderId;
-  private String node;
-  private String description;
-  private LocalDateTime createdTime;
+    private Long orderId;
+    private String node;
+    private String description;
+    private LocalDateTime createdTime;
 }

@@ -14,7 +14,7 @@ import lombok.Data;
 @Data
 public class PreferenceBatchUpdateDto {
 
-  @NotEmpty(message = "items cannot be empty")
-  @Valid
-  private List<PreferenceUpdateDto> items;
+    @NotEmpty(message = "items cannot be empty")
+    @Valid
+    private List<PreferenceUpdateDto> items;
 }

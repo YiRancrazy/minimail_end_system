@@ -13,21 +13,21 @@ import lombok.Getter;
 @Getter
 @AllArgsConstructor
 public enum MerchantAuditStatusEnum implements BaseEnum {
-  PENDING(0, "PENDING", "待审核"),
-  APPROVED(1, "APPROVED", "已通过"),
-  REJECTED(2, "REJECTED", "已驳回");
+    PENDING(0, "PENDING", "待审核"),
+    APPROVED(1, "APPROVED", "已通过"),
+    REJECTED(2, "REJECTED", "已驳回");
 
-  private final int code;
-  private final String alias;
-  private final String message;
+    private final int code;
+    private final String alias;
+    private final String message;
 
-  /**
-   * 将审核状态的整数 code 转换为 BaseEnum 约定的字符串形式。
-   *
-   * @return 0（待审核）、1（已通过）或 2（已驳回）的字符串值。
-   */
-  @Override
-  public String getCode() {
-    return String.valueOf(code);
-  }
+    /**
+     * 将审核状态的整数 code 转换为 BaseEnum 约定的字符串形式。
+     *
+     * @return 0（待审核）、1（已通过）或 2（已驳回）的字符串值。
+     */
+    @Override
+    public String getCode() {
+        return String.valueOf(code);
+    }
 }

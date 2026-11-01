@@ -14,9 +14,9 @@ import lombok.Data;
 @Data
 public class CursorPageDto {
 
-  private String cursor;
+    private String cursor;
 
-  @Min(value = 1, message = "limit must be >= 1")
-  @Max(value = 100, message = "limit must be <= 100")
-  private Integer limit = 20;
+    @Min(value = 1, message = "limit must be >= 1")
+    @Max(value = 100, message = "limit must be <= 100")
+    private Integer limit = 20;
 }

@@ -14,6 +14,6 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 public class GoodsPageDto extends CursorPageDto {
 
-  private String keyword; // 查询关键字
-  private Long categoryId; // 查询分类ID
+    private String keyword; // 查询关键字
+    private Long categoryId; // 查询分类ID
 }

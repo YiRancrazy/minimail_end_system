@@ -21,15 +21,15 @@ import org.springframework.context.annotation.Import;
  */
 @AutoConfiguration
 @Import({
-  CartCleanupFeignFallbackFactory.class,
-  CartFeignFallbackFactory.class,
-  GoodsFeignFallbackFactory.class,
-  IdFeignFallbackFactory.class,
-  MerchantFeignFallbackFactory.class,
-  NotifyFeignFallbackFactory.class,
-  OrderFeignFallbackFactory.class,
-  PayFeignFallbackFactory.class,
-  StockFeignFallbackFactory.class,
-  UserFeignFallbackFactory.class
+    CartCleanupFeignFallbackFactory.class,
+    CartFeignFallbackFactory.class,
+    GoodsFeignFallbackFactory.class,
+    IdFeignFallbackFactory.class,
+    MerchantFeignFallbackFactory.class,
+    NotifyFeignFallbackFactory.class,
+    OrderFeignFallbackFactory.class,
+    PayFeignFallbackFactory.class,
+    StockFeignFallbackFactory.class,
+    UserFeignFallbackFactory.class
 })
 public class FeignFallbackAutoConfiguration {}

@@ -14,9 +14,9 @@ import lombok.Data;
 @TableName("t_merch_shop")
 public class ShopPo extends BasePo {
 
-  private Long merchantId;
-  private String shopName;
-  private String licenseNo;
-  // 状态: 1-营业中, 2-已停业, 3-已冻结（对应 ShopStatusEnum int code）
-  private Integer status;
+    private Long merchantId;
+    private String shopName;
+    private String licenseNo;
+    // 状态: 1-营业中, 2-已停业, 3-已冻结（对应 ShopStatusEnum int code）
+    private Integer status;
 }

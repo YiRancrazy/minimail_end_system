@@ -19,23 +19,23 @@ import lombok.EqualsAndHashCode;
 @TableName(value = "t_user_address", autoResultMap = true)
 public class AddressPo extends BasePo {
 
-  private Long userId;
+    private Long userId;
 
-  @TableField(typeHandler = EncryptedStringTypeHandler.class)
-  private String receiverName;
+    @TableField(typeHandler = EncryptedStringTypeHandler.class)
+    private String receiverName;
 
-  @TableField(typeHandler = EncryptedStringTypeHandler.class)
-  private String receiverPhone;
+    @TableField(typeHandler = EncryptedStringTypeHandler.class)
+    private String receiverPhone;
 
-  private String province;
+    private String province;
 
-  private String city;
+    private String city;
 
-  private String district;
+    private String district;
 
-  @TableField(typeHandler = EncryptedStringTypeHandler.class)
-  private String detailAddress;
+    @TableField(typeHandler = EncryptedStringTypeHandler.class)
+    private String detailAddress;
 
-  @TableField(value = "is_default", insertStrategy = FieldStrategy.IGNORED)
-  private Integer isDefault;
+    @TableField(value = "is_default", insertStrategy = FieldStrategy.IGNORED)
+    private Integer isDefault;
 }

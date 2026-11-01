@@ -14,9 +14,9 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class ShopSnapshotDto {
-  private Long shopId;
+    private Long shopId;
 
-  private Long merchantId;
-  private String shopName;
-  private String status;
+    private Long merchantId;
+    private String shopName;
+    private String status;
 }

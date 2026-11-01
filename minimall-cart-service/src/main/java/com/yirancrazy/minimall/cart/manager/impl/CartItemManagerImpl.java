@@ -16,35 +16,35 @@ import com.yirancrazy.minimall.common.annotation.Manager;
  */
 @Manager
 public class CartItemManagerImpl extends ServiceImpl<CartItemMapper, CartItemPo>
-    implements CartItemManager {
+        implements CartItemManager {
 
-  /**
-   * 按用户和 SKU 唯一键读取一条购物车记录.
-   *
-   * @param userId 购物车所属用户
-   * @param skuId 购物车中保存的 SKU
-   * @return 匹配记录；不存在时返回 null
-   */
-  @Override
-  public CartItemPo getByUserIdAndSkuId(Long userId, Long skuId) {
-    return getOne(
-        Wrappers.lambdaQuery(CartItemPo.class)
-            .eq(CartItemPo::getUserId, userId)
-            .eq(CartItemPo::getSkuId, skuId));
-  }
+    /**
+     * 按用户和 SKU 唯一键读取一条购物车记录.
+     *
+     * @param userId 购物车所属用户
+     * @param skuId 购物车中保存的 SKU
+     * @return 匹配记录；不存在时返回 null
+     */
+    @Override
+    public CartItemPo getByUserIdAndSkuId(Long userId, Long skuId) {
+        return getOne(
+                Wrappers.lambdaQuery(CartItemPo.class)
+                        .eq(CartItemPo::getUserId, userId)
+                        .eq(CartItemPo::getSkuId, skuId));
+    }
 
-  /**
-   * 执行 Mapper 的插入或数量累加语句.
-   *
-   * @param id 新记录主键
-   * @param userId 购物车所属用户
-   * @param skuId 待插入或合并的 SKU
-   * @param quantity 待累加数量
-   * @param selected 仅在插入时使用的勾选编码
-   * @return 数据库返回的影响行数
-   */
-  @Override
-  public int upsertQuantity(Long id, Long userId, Long skuId, Integer quantity, Integer selected) {
-    return baseMapper.upsertQuantity(id, userId, skuId, quantity, selected);
-  }
+    /**
+     * 执行 Mapper 的插入或数量累加语句.
+     *
+     * @param id 新记录主键
+     * @param userId 购物车所属用户
+     * @param skuId 待插入或合并的 SKU
+     * @param quantity 待累加数量
+     * @param selected 仅在插入时使用的勾选编码
+     * @return 数据库返回的影响行数
+     */
+    @Override
+    public int upsertQuantity(Long id, Long userId, Long skuId, Integer quantity, Integer selected) {
+        return baseMapper.upsertQuantity(id, userId, skuId, quantity, selected);
+    }
 }

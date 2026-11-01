@@ -16,12 +16,12 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
 @MapperScan("com.yirancrazy.minimall.auth.mapper")
 @EnableFeignClients(basePackages = "com.yirancrazy.minimall.api.feign")
 public class AuthApplication {
-  /**
-   * 启动认证服务并初始化 Spring 容器。
-   *
-   * @param args Spring Boot 启动参数
-   */
-  public static void main(String[] args) {
-    SpringApplication.run(AuthApplication.class, args);
-  }
+    /**
+     * 启动认证服务并初始化 Spring 容器。
+     *
+     * @param args Spring Boot 启动参数
+     */
+    public static void main(String[] args) {
+        SpringApplication.run(AuthApplication.class, args);
+    }
 }

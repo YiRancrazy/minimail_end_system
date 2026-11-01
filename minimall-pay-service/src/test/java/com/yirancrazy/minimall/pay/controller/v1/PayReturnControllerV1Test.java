@@ -18,34 +18,34 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
  */
 class PayReturnControllerV1Test {
 
-  private MockMvc mockMvc;
+    private MockMvc mockMvc;
 
-  @BeforeEach
-  void setUp() {
-    mockMvc = MockMvcBuilders.standaloneSetup(new PayReturnControllerV1()).build();
-  }
+    @BeforeEach
+    void setUp() {
+        mockMvc = MockMvcBuilders.standaloneSetup(new PayReturnControllerV1()).build();
+    }
 
-  /** 验证同步返回页：带支付单号和金额请求，预期页面展示成功文案及两项参数. */
-  @Test
-  void testSuccessReturnsSuccessPage() throws Exception {
-    mockMvc
-        .perform(
-            get("/api/v1/pay/success")
-                .param("out_trade_no", "PAY123")
-                .param("trade_no", "T123")
-                .param("total_amount", "899.00"))
-        .andExpect(status().isOk())
-        .andExpect(content().string(org.hamcrest.Matchers.containsString("支付成功")))
-        .andExpect(content().string(org.hamcrest.Matchers.containsString("PAY123")))
-        .andExpect(content().string(org.hamcrest.Matchers.containsString("899.00")));
-  }
+    /** 验证同步返回页：带支付单号和金额请求，预期页面展示成功文案及两项参数. */
+    @Test
+    void testSuccessReturnsSuccessPage() throws Exception {
+        mockMvc
+                .perform(
+                        get("/api/v1/pay/success")
+                                .param("out_trade_no", "PAY123")
+                                .param("trade_no", "T123")
+                                .param("total_amount", "899.00"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("支付成功")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("PAY123")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("899.00")));
+    }
 
-  /** 验证同步返回页：不传可选参数请求，预期仍返回成功文案且不抛异常. */
-  @Test
-  void testSuccessWithoutParamsStillReturnsPage() throws Exception {
-    mockMvc
-        .perform(get("/api/v1/pay/success"))
-        .andExpect(status().isOk())
-        .andExpect(content().string(org.hamcrest.Matchers.containsString("支付成功")));
-  }
+    /** 验证同步返回页：不传可选参数请求，预期仍返回成功文案且不抛异常. */
+    @Test
+    void testSuccessWithoutParamsStillReturnsPage() throws Exception {
+        mockMvc
+                .perform(get("/api/v1/pay/success"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("支付成功")));
+    }
 }

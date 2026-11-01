@@ -18,19 +18,19 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class JacksonConfig {
 
-  /**
-   * 注册 JavaTimeModule、ISO 时间输出以及大整数和高精度小数的字符串序列化器。
-   *
-   * @return 由 Spring Boot Jackson 自动配置应用的定制器
-   */
-  @Bean
-  public Jackson2ObjectMapperBuilderCustomizer jacksonCustomizer() {
-    return builder ->
-        builder
-            .modules(new JavaTimeModule())
-            .featuresToDisable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
-            .serializerByType(Long.class, ToStringSerializer.instance)
-            .serializerByType(Long.TYPE, ToStringSerializer.instance)
-            .serializerByType(BigDecimal.class, ToStringSerializer.instance);
-  }
+    /**
+     * 注册 JavaTimeModule、ISO 时间输出以及大整数和高精度小数的字符串序列化器。
+     *
+     * @return 由 Spring Boot Jackson 自动配置应用的定制器
+     */
+    @Bean
+    public Jackson2ObjectMapperBuilderCustomizer jacksonCustomizer() {
+        return builder ->
+                builder
+                        .modules(new JavaTimeModule())
+                        .featuresToDisable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+                        .serializerByType(Long.class, ToStringSerializer.instance)
+                        .serializerByType(Long.TYPE, ToStringSerializer.instance)
+                        .serializerByType(BigDecimal.class, ToStringSerializer.instance);
+    }
 }

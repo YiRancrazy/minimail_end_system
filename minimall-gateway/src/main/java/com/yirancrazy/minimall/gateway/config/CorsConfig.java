@@ -17,31 +17,31 @@ import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 @Configuration
 public class CorsConfig {
 
-  /**
-   * 为全部网关路径构建 CORS 过滤器。
-   *
-   * <p>策略允许 localhost 和 127.0.0.1 的 5173-5175 端口携带凭据访问，允许常用 HTTP 方法和全部
-   * 请求头。过滤器在下游处理器之前生效，但不负责请求鉴权。
-   *
-   * @return 注册到全部路径的响应式 CORS 过滤器
-   */
-  @Bean
-  public CorsWebFilter corsWebFilter() {
-    CorsConfiguration cfg = new CorsConfiguration();
-    // 携带凭据的 CORS 不允许通配 "*"，仅放行三端前端 dev 端口（user-web/merchant-admin/platform-admin）
-    cfg.setAllowedOriginPatterns(
-        List.of(
-            "http://localhost:5173",
-            "http://localhost:5174",
-            "http://localhost:5175",
-            "http://127.0.0.1:5173",
-            "http://127.0.0.1:5174",
-            "http://127.0.0.1:5175"));
-    cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
-    cfg.setAllowedHeaders(List.of("*"));
-    cfg.setAllowCredentials(true);
-    UrlBasedCorsConfigurationSource src = new UrlBasedCorsConfigurationSource();
-    src.registerCorsConfiguration("/**", cfg);
-    return new CorsWebFilter(src);
-  }
+    /**
+     * 为全部网关路径构建 CORS 过滤器。
+     *
+     * <p>策略允许 localhost 和 127.0.0.1 的 5173-5175 端口携带凭据访问，允许常用 HTTP 方法和全部
+     * 请求头。过滤器在下游处理器之前生效，但不负责请求鉴权。
+     *
+     * @return 注册到全部路径的响应式 CORS 过滤器
+     */
+    @Bean
+    public CorsWebFilter corsWebFilter() {
+        CorsConfiguration cfg = new CorsConfiguration();
+        // 携带凭据的 CORS 不允许通配 "*"，仅放行三端前端 dev 端口（user-web/merchant-admin/platform-admin）
+        cfg.setAllowedOriginPatterns(
+                List.of(
+                        "http://localhost:5173",
+                        "http://localhost:5174",
+                        "http://localhost:5175",
+                        "http://127.0.0.1:5173",
+                        "http://127.0.0.1:5174",
+                        "http://127.0.0.1:5175"));
+        cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+        cfg.setAllowedHeaders(List.of("*"));
+        cfg.setAllowCredentials(true);
+        UrlBasedCorsConfigurationSource src = new UrlBasedCorsConfigurationSource();
+        src.registerCorsConfiguration("/**", cfg);
+        return new CorsWebFilter(src);
+    }
 }

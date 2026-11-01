@@ -14,7 +14,7 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 public class StockPageDto extends CursorPageDto {
 
-  private Long skuId;
+    private Long skuId;
 
-  private Boolean lowStockOnly;
+    private Boolean lowStockOnly;
 }

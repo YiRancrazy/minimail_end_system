@@ -15,17 +15,17 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class FavoriteVo {
 
-  private Long id;
+    private Long id;
 
-  private Long skuId;
+    private Long skuId;
 
-  private Long spuId;
+    private Long spuId;
 
-  private String skuName;
+    private String skuName;
 
-  private String skuImage;
+    private String skuImage;
 
-  private BigDecimal price;
+    private BigDecimal price;
 
-  private LocalDateTime createTime;
+    private LocalDateTime createTime;
 }

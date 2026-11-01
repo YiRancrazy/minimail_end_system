@@ -18,28 +18,28 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/internal/merchant/shop")
 public class InternalShopControllerV1 {
 
-  private final ShopService shopService;
+    private final ShopService shopService;
 
-  /**
-   * 注入店铺领域服务。
-   *
-   * @param shopService 店铺领域服务
-   */
-  public InternalShopControllerV1(ShopService shopService) {
-    this.shopService = shopService;
-  }
+    /**
+     * 注入店铺领域服务。
+     *
+     * @param shopService 店铺领域服务
+     */
+    public InternalShopControllerV1(ShopService shopService) {
+        this.shopService = shopService;
+    }
 
-  /**
-   * 读取店铺快照供其他服务组装业务数据。
-   *
-   * 内部调用不携带商家上下文，因此仅校验店铺存在，不校验商家归属。
-   *
-   * @param id 店铺主键
-   * @return 统一响应，数据为店铺快照
-   * @throws BizException 店铺不存在时抛出 SHOP_NOT_FOUND
-   */
-  @GetMapping("/{id}")
-  public Result<ShopSnapshotDto> snapshot(@PathVariable Long id) {
-    return Result.success(shopService.getSnapshot(id));
-  }
+    /**
+     * 读取店铺快照供其他服务组装业务数据。
+     *
+     * 内部调用不携带商家上下文，因此仅校验店铺存在，不校验商家归属。
+     *
+     * @param id 店铺主键
+     * @return 统一响应，数据为店铺快照
+     * @throws BizException 店铺不存在时抛出 SHOP_NOT_FOUND
+     */
+    @GetMapping("/{id}")
+    public Result<ShopSnapshotDto> snapshot(@PathVariable Long id) {
+        return Result.success(shopService.getSnapshot(id));
+    }
 }

@@ -20,21 +20,21 @@ import org.springframework.web.bind.annotation.RequestParam;
 @FeignClient(name = "minimall-cart-service", fallbackFactory = CartFeignFallbackFactory.class)
 public interface CartFeignClient {
 
-  /**
-   * 统计指定用户购物车中的有效商品件数.
-   *
-   * @param userId 用户 ID
-   * @return 包装后的购物车商品件数
-   */
-  @GetMapping("/internal/cart/count")
-  Result<Long> countByUser(@RequestParam("userId") Long userId);
+    /**
+     * 统计指定用户购物车中的有效商品件数.
+     *
+     * @param userId 用户 ID
+     * @return 包装后的购物车商品件数
+     */
+    @GetMapping("/internal/cart/count")
+    Result<Long> countByUser(@RequestParam("userId") Long userId);
 
-  /**
-   * 按用户与购物车条目 ID 获取结算所需快照.
-   *
-   * @param dto 用户及待结算购物车条目 ID
-   * @return 包装后的购物车条目快照列表
-   */
-  @PostMapping("/internal/cart/checkout-snapshot")
-  Result<List<CartCheckoutItemDto>> getCheckoutItems(@RequestBody CartCheckoutQueryDto dto);
+    /**
+     * 按用户与购物车条目 ID 获取结算所需快照.
+     *
+     * @param dto 用户及待结算购物车条目 ID
+     * @return 包装后的购物车条目快照列表
+     */
+    @PostMapping("/internal/cart/checkout-snapshot")
+    Result<List<CartCheckoutItemDto>> getCheckoutItems(@RequestBody CartCheckoutQueryDto dto);
 }

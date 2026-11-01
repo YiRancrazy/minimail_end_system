@@ -15,13 +15,13 @@ import lombok.Data;
 @Data
 public class UserUpdateDto {
 
-  @NotBlank(message = "nickname cannot be blank")
-  @Size(min = 1, max = 100, message = "nickname length must be between 1 and 100")
-  private String nickname;
+    @NotBlank(message = "nickname cannot be blank")
+    @Size(min = 1, max = 100, message = "nickname length must be between 1 and 100")
+    private String nickname;
 
-  @Pattern(regexp = "^1[3-9]\\d{9}$", message = "phone number format is invalid")
-  private String phone;
+    @Pattern(regexp = "^1[3-9]\\d{9}$", message = "phone number format is invalid")
+    private String phone;
 
-  @Email(message = "email format is invalid")
-  private String email;
+    @Email(message = "email format is invalid")
+    private String email;
 }

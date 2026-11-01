@@ -18,7 +18,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class OrderTrendPointDto {
 
-  private String date;
-  private Long count;
-  private BigDecimal amount;
+    private String date;
+    private Long count;
+    private BigDecimal amount;
 }

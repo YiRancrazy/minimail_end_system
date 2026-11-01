@@ -17,13 +17,13 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class CartCheckoutItemDto {
 
-  @NotNull(message = "购物车条目ID不能为空")
-  private Long cartItemId;
+    @NotNull(message = "购物车条目ID不能为空")
+    private Long cartItemId;
 
-  @NotNull(message = "SKU ID不能为空")
-  private Long skuId;
+    @NotNull(message = "SKU ID不能为空")
+    private Long skuId;
 
-  @NotNull(message = "购买数量不能为空")
-  @Min(value = 1, message = "购买数量至少为1")
-  private Integer quantity;
+    @NotNull(message = "购买数量不能为空")
+    @Min(value = 1, message = "购买数量至少为1")
+    private Integer quantity;
 }

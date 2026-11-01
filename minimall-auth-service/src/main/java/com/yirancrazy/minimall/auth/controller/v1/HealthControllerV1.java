@@ -11,13 +11,13 @@ import org.springframework.web.bind.annotation.GetMapping;
  */
 public class HealthControllerV1 {
 
-  /**
-   * 返回认证服务固定的存活标识。
-   *
-   * @return 成功响应，数据为 {@code auth-ok}
-   */
-  @GetMapping("/health")
-  public Result<String> health() {
-    return Result.success("auth-ok");
-  }
+    /**
+     * 返回认证服务固定的存活标识。
+     *
+     * @return 成功响应，数据为 {@code auth-ok}
+     */
+    @GetMapping("/health")
+    public Result<String> health() {
+        return Result.success("auth-ok");
+    }
 }

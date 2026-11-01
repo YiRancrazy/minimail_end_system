@@ -20,12 +20,12 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableFeignClients(basePackages = "com.yirancrazy.minimall.api.feign")
 @EnableScheduling
 public class GoodsApplication {
-  /**
-   * 启动商品服务并加载 Mapper、Feign 客户端和定时任务设施。
-   *
-   * @param args Spring Boot 启动参数
-   */
-  public static void main(String[] args) {
-    SpringApplication.run(GoodsApplication.class, args);
-  }
+    /**
+     * 启动商品服务并加载 Mapper、Feign 客户端和定时任务设施。
+     *
+     * @param args Spring Boot 启动参数
+     */
+    public static void main(String[] args) {
+        SpringApplication.run(GoodsApplication.class, args);
+    }
 }

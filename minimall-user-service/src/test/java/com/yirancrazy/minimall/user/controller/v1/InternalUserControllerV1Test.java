@@ -18,24 +18,24 @@ import org.junit.jupiter.api.Test;
  */
 public class InternalUserControllerV1Test {
 
-  private UserService userService;
-  private InternalUserControllerV1 controller;
+    private UserService userService;
+    private InternalUserControllerV1 controller;
 
-  /**
-   * 初始化用户服务替身和待测控制器。
-   */
-  @BeforeEach
-  void setUp() {
-    userService = mock(UserService.class);
-    controller = new InternalUserControllerV1(userService);
-  }
+    /**
+     * 初始化用户服务替身和待测控制器。
+     */
+    @BeforeEach
+    void setUp() {
+        userService = mock(UserService.class);
+        controller = new InternalUserControllerV1(userService);
+    }
 
-  /** 验证内部建档：前置 UserService 替身，提交 userId=9001，预期 00000 且调用 provision. */
-  @Test
-  void testProvisionCallsService() {
-    Result<Void> result = controller.provision(new UserProvisionDto(9001L));
+    /** 验证内部建档：前置 UserService 替身，提交 userId=9001，预期 00000 且调用 provision. */
+    @Test
+    void testProvisionCallsService() {
+        Result<Void> result = controller.provision(new UserProvisionDto(9001L));
 
-    assertEquals("00000", result.getCode());
-    verify(userService).provision(9001L);
-  }
+        assertEquals("00000", result.getCode());
+        verify(userService).provision(9001L);
+    }
 }

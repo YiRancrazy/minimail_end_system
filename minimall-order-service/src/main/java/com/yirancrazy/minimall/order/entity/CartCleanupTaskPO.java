@@ -19,17 +19,17 @@ import lombok.EqualsAndHashCode;
 @TableName("t_order_cart_cleanup_task")
 public class CartCleanupTaskPo extends BasePo {
 
-  private String orderGroupNo;
+    private String orderGroupNo;
 
-  private Long userId;
+    private Long userId;
 
-  private String itemsJson;
+    private String itemsJson;
 
-  private Integer status;
+    private Integer status;
 
-  private Integer retryCount;
+    private Integer retryCount;
 
-  private LocalDateTime nextRetryAt;
+    private LocalDateTime nextRetryAt;
 
-  private String lastError;
+    private String lastError;
 }

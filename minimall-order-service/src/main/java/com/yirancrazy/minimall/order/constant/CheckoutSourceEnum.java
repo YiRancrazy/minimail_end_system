@@ -9,6 +9,6 @@ package com.yirancrazy.minimall.order.constant;
  * @DateTime: 2026/10/23
  */
 public enum CheckoutSourceEnum {
-  CART,
-  BUY_NOW
+    CART,
+    BUY_NOW
 }

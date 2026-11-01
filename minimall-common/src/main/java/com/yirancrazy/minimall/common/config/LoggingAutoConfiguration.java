@@ -13,13 +13,13 @@ import org.springframework.context.annotation.Bean;
 @AutoConfiguration
 public class LoggingAutoConfiguration {
 
-  /**
-   * 创建并注册统一日志切面实例。
-   *
-   * @return 新的 LoggingAspect Bean
-   */
-  @Bean
-  public LoggingAspect loggingAspect() {
-    return new LoggingAspect();
-  }
+    /**
+     * 创建并注册统一日志切面实例。
+     *
+     * @return 新的 LoggingAspect Bean
+     */
+    @Bean
+    public LoggingAspect loggingAspect() {
+        return new LoggingAspect();
+    }
 }

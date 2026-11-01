@@ -15,6 +15,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class StockAvailabilityDto {
 
-  private Long skuId;
-  private Long available;
+    private Long skuId;
+    private Long available;
 }

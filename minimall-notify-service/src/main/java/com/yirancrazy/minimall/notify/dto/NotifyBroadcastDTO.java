@@ -13,21 +13,21 @@ import lombok.Data;
 @Data
 public class NotifyBroadcastDto {
 
-  @NotNull(message = "recipientType cannot be null")
-  private Integer recipientType;
+    @NotNull(message = "recipientType cannot be null")
+    private Integer recipientType;
 
-  @NotNull(message = "messageType cannot be null")
-  private Integer messageType;
+    @NotNull(message = "messageType cannot be null")
+    private Integer messageType;
 
-  @NotBlank(message = "title cannot be blank")
-  private String title;
+    @NotBlank(message = "title cannot be blank")
+    private String title;
 
-  @NotBlank(message = "content cannot be blank")
-  private String content;
+    @NotBlank(message = "content cannot be blank")
+    private String content;
 
-  private Long senderId;
+    private Long senderId;
 
-  private String bizId;
+    private String bizId;
 
-  private Long targetId;
+    private Long targetId;
 }

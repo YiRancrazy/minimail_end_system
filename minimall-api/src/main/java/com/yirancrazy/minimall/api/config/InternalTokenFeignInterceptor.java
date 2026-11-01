@@ -11,28 +11,28 @@ import feign.RequestTemplate;
  */
 public class InternalTokenFeignInterceptor implements RequestInterceptor {
 
-  private static final String INTERNAL_TOKEN_HEADER = "X-Internal-Token";
+    private static final String INTERNAL_TOKEN_HEADER = "X-Internal-Token";
 
-  private final String internalToken;
+    private final String internalToken;
 
-  /**
-   * 构造内部令牌拦截器.
-   *
-   * @param internalToken 服务间访问令牌
-   */
-  public InternalTokenFeignInterceptor(String internalToken) {
-    this.internalToken = internalToken;
-  }
-
-  /**
-   * 内部令牌非空时将其写入 X-Internal-Token 请求头.
-   *
-   * @param template Feign 请求模板
-   */
-  @Override
-  public void apply(RequestTemplate template) {
-    if (internalToken != null && !internalToken.isBlank()) {
-      template.header(INTERNAL_TOKEN_HEADER, internalToken);
+    /**
+     * 构造内部令牌拦截器.
+     *
+     * @param internalToken 服务间访问令牌
+     */
+    public InternalTokenFeignInterceptor(String internalToken) {
+        this.internalToken = internalToken;
     }
-  }
+
+    /**
+     * 内部令牌非空时将其写入 X-Internal-Token 请求头.
+     *
+     * @param template Feign 请求模板
+     */
+    @Override
+    public void apply(RequestTemplate template) {
+        if (internalToken != null && !internalToken.isBlank()) {
+            template.header(INTERNAL_TOKEN_HEADER, internalToken);
+        }
+    }
 }

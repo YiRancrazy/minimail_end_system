@@ -13,18 +13,18 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 public class LoginDto {
-  @NotBlank private String account;
+    @NotBlank private String account;
 
-  @NotBlank private String password;
+    @NotBlank private String password;
 
-  /**
-   * 创建包含登录凭据的入参对象，供服务测试和直接构造场景使用。
-   *
-   * @param account 登录账号
-   * @param password 明文登录密码，仅在认证校验期间使用
-   */
-  public LoginDto(String account, String password) {
-    this.account = account;
-    this.password = password;
-  }
+    /**
+     * 创建包含登录凭据的入参对象，供服务测试和直接构造场景使用。
+     *
+     * @param account 登录账号
+     * @param password 明文登录密码，仅在认证校验期间使用
+     */
+    public LoginDto(String account, String password) {
+        this.account = account;
+        this.password = password;
+    }
 }

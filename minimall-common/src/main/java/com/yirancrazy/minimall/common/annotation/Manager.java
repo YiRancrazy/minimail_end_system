@@ -19,10 +19,10 @@ import org.springframework.stereotype.Service;
 @Documented
 @Service
 public @interface Manager {
-  /**
-   * 指定注册到 Spring 容器中的 Bean 名称。
-   *
-   * @return Bean 名称；空字符串表示使用 Spring 默认命名策略
-   */
-  String value() default "";
+    /**
+     * 指定注册到 Spring 容器中的 Bean 名称。
+     *
+     * @return Bean 名称；空字符串表示使用 Spring 默认命名策略
+     */
+    String value() default "";
 }

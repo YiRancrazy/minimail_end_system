@@ -20,37 +20,37 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/internal/user/manage")
 public class InternalUserManageControllerV1 {
 
-  private final UserService userService;
+    private final UserService userService;
 
-  /**
-   * 注入用户业务服务。
-   *
-   * @param userService 用户服务
-   */
-  public InternalUserManageControllerV1(UserService userService) {
-    this.userService = userService;
-  }
+    /**
+     * 注入用户业务服务。
+     *
+     * @param userService 用户服务
+     */
+    public InternalUserManageControllerV1(UserService userService) {
+        this.userService = userService;
+    }
 
-  /**
-   * 为平台管理场景按游标分页查询用户。
-   *
-   * @param query 游标、每页数量和可选昵称关键字
-   * @return 已脱敏的用户管理视图分页结果
-   */
-  @GetMapping
-  public Result<CursorPageVo<UserManageVo>> page(InternalPageQuery query) {
-    return Result.success(userService.pageManage(query));
-  }
+    /**
+     * 为平台管理场景按游标分页查询用户。
+     *
+     * @param query 游标、每页数量和可选昵称关键字
+     * @return 已脱敏的用户管理视图分页结果
+     */
+    @GetMapping
+    public Result<CursorPageVo<UserManageVo>> page(InternalPageQuery query) {
+        return Result.success(userService.pageManage(query));
+    }
 
-  /**
-   * 查询指定用户的管理详情。
-   *
-   * @param userId 目标用户 ID
-   * @return 用户管理视图
-   * @throws com.yirancrazy.minimall.common.exception.BizException 用户不存在时抛出
-   */
-  @GetMapping("/{userId}")
-  public Result<UserManageVo> detail(@PathVariable("userId") Long userId) {
-    return Result.success(userService.getManageDetail(userId));
-  }
+    /**
+     * 查询指定用户的管理详情。
+     *
+     * @param userId 目标用户 ID
+     * @return 用户管理视图
+     * @throws com.yirancrazy.minimall.common.exception.BizException 用户不存在时抛出
+     */
+    @GetMapping("/{userId}")
+    public Result<UserManageVo> detail(@PathVariable("userId") Long userId) {
+        return Result.success(userService.getManageDetail(userId));
+    }
 }

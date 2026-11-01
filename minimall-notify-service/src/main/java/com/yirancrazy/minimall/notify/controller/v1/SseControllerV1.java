@@ -21,18 +21,18 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 @RequiredArgsConstructor
 public class SseControllerV1 {
 
-  private final SseHub sseHub;
+    private final SseHub sseHub;
 
-  /**
-   * 为请求头用户建立 SSE 通知连接；可选 userIdParam 存在时必须与请求头用户一致.
-   *
-   * @param userId 由 X-User-Id 请求头传入的用户编号
-   * @param userIdParam 可选的订阅用户编号查询参数
-   * @return 注册成功的 SSE 发射器
-   */
-  @GetMapping(produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-  public SseEmitter subscribe(
-      @RequestHeader("X-User-Id") Long userId, @RequestParam(required = false) Long userIdParam) {
-    return sseHub.register(userId, userIdParam);
-  }
+    /**
+     * 为请求头用户建立 SSE 通知连接；可选 userIdParam 存在时必须与请求头用户一致.
+     *
+     * @param userId 由 X-User-Id 请求头传入的用户编号
+     * @param userIdParam 可选的订阅用户编号查询参数
+     * @return 注册成功的 SSE 发射器
+     */
+    @GetMapping(produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter subscribe(
+            @RequestHeader("X-User-Id") Long userId, @RequestParam(required = false) Long userIdParam) {
+        return sseHub.register(userId, userIdParam);
+    }
 }

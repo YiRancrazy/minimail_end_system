@@ -14,4 +14,4 @@ import com.yirancrazy.minimall.user.mapper.UserFavoriteMapper;
  */
 @Manager
 public class UserFavoriteManagerImpl extends ServiceImpl<UserFavoriteMapper, UserFavoritePo>
-    implements UserFavoriteManager {}
+        implements UserFavoriteManager {}

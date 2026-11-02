@@ -288,7 +288,7 @@ CREATE TABLE IF NOT EXISTS t_order (
         COMMENT '状态：1=待支付 2=已支付 3=已发货 4=已完成 5=已取消 6=退款中 7=已退款',
     refund_from_status      TINYINT         NULL COMMENT '退款前状态，用于退款失败回退',
     client_ip               VARCHAR(45)     NULL COMMENT '客户端IP',
-    idempotency_key         CHAR(36)        NULL COMMENT '幂等键（唯一）',
+    idempotency_key         VARCHAR(96)     NULL COMMENT '幂等键（唯一）',
     version                 INT             NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
     is_deleted              TINYINT         DEFAULT 0 COMMENT '是否删除：NULL=已删除 0=未删除',
     create_time             DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
@@ -587,13 +587,15 @@ CREATE TABLE IF NOT EXISTS t_notify_complaint (
     status              TINYINT         DEFAULT 0 COMMENT '状态：0=待处理 1=处理中 2=已解决 3=驳回',
     handler_id          BIGINT          NULL COMMENT '处理人ID',
     handler_result      TEXT            NULL COMMENT '处理结果',
+    idempotency_key     VARCHAR(96)     NULL COMMENT '幂等键（唯一）',
     version             INT             NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
     is_deleted          TINYINT         DEFAULT 0 COMMENT '是否删除：NULL=已删除 0=未删除',
     create_time         DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time         DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (id),
     INDEX idx_complainant (complainant_type, complainant_id),
-    INDEX idx_notify_complaint_status (status)
+    INDEX idx_notify_complaint_status (status),
+    UNIQUE KEY uk_notify_complaint_idem (idempotency_key, is_deleted)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='投诉表';
 
 CREATE TABLE IF NOT EXISTS t_notify_comment (

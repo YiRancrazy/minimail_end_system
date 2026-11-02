@@ -33,6 +33,8 @@ import org.junit.jupiter.api.Test;
  */
 class OrderCheckoutServiceImplTest {
 
+    private static final String IDEMPOTENCY_KEY = "checkout-request-1";
+
     private OrderService orderService;
     private CartCleanupService cartCleanupService;
     private OrderRemoteGateway orderRemoteGateway;
@@ -57,13 +59,14 @@ class OrderCheckoutServiceImplTest {
         OrderCheckoutDto dto = cartCheckoutDto(List.of(9001L));
         List<CartCheckoutItemDto> cleanupItems = List.of(new CartCheckoutItemDto(9001L, 100L, 2));
         when(orderRemoteGateway.cartCheckoutSnapshot(any())).thenReturn(Result.success(cleanupItems));
-        when(orderService.checkout(eq(7L), any(), eq(cleanupItems), any()))
+        when(orderService.checkout(eq(7L), any(), eq(cleanupItems), any(), eq(IDEMPOTENCY_KEY)))
                 .thenReturn(new CheckoutResultDto(100L, "OG1", 200L));
 
-        assertEquals(100L, service.checkout(7L, dto));
+        assertEquals(100L, service.checkout(7L, dto, IDEMPOTENCY_KEY));
 
         verify(orderRemoteGateway).cartCheckoutSnapshot(any());
-        verify(orderService).checkout(eq(7L), any(), eq(cleanupItems), any());
+        verify(orderService)
+                .checkout(eq(7L), any(), eq(cleanupItems), any(), eq(IDEMPOTENCY_KEY));
         verify(cartCleanupService).tryCleanup(200L);
     }
 
@@ -71,10 +74,10 @@ class OrderCheckoutServiceImplTest {
     @Test
     void testCheckoutBuyNowDoesNotRequestCartSnapshot() {
         OrderCheckoutDto dto = buyNowDto();
-        when(orderService.checkout(eq(7L), any(), eq(List.of()), any()))
+        when(orderService.checkout(eq(7L), any(), eq(List.of()), any(), eq(IDEMPOTENCY_KEY)))
                 .thenReturn(new CheckoutResultDto(100L, "OG1", null));
 
-        assertEquals(100L, service.checkout(7L, dto));
+        assertEquals(100L, service.checkout(7L, dto, IDEMPOTENCY_KEY));
 
         verify(orderRemoteGateway, never()).cartCheckoutSnapshot(any());
         verify(cartCleanupService, never()).tryCleanup(any());
@@ -86,19 +89,21 @@ class OrderCheckoutServiceImplTest {
         final OrderCheckoutDto dto = cartCheckoutDto(List.of(9001L));
         List<CartCheckoutItemDto> cleanupItems = List.of(new CartCheckoutItemDto(9001L, 100L, 2));
         when(orderRemoteGateway.cartCheckoutSnapshot(any())).thenReturn(Result.success(cleanupItems));
-        when(orderService.checkout(eq(7L), any(), eq(cleanupItems), any()))
+        when(orderService.checkout(eq(7L), any(), eq(cleanupItems), any(), eq(IDEMPOTENCY_KEY)))
                 .thenReturn(new CheckoutResultDto(100L, "OG1", 200L));
         when(cartCleanupService.tryCleanup(200L))
                 .thenThrow(new IllegalStateException("cleanup failed"));
 
-        assertEquals(100L, service.checkout(7L, dto));
+        assertEquals(100L, service.checkout(7L, dto, IDEMPOTENCY_KEY));
     }
 
     /** 验证结算缺失来源抛出参数无效. */
     @Test
     void testCheckoutMissingSourceThrowsParameterInvalid() {
         BizException exception =
-                assertThrows(BizException.class, () -> service.checkout(7L, new OrderCheckoutDto()));
+                assertThrows(
+                        BizException.class,
+                        () -> service.checkout(7L, new OrderCheckoutDto(), IDEMPOTENCY_KEY));
 
         assertEquals(CommonCode.PARAM_INVALID, exception.getCode());
     }

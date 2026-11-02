@@ -45,11 +45,12 @@ public class ComplaintServiceImpl implements ComplaintService {
      *
      * @param complainantId 当前登录用户编号
      * @param dto 投诉双方、关联订单、类型、标题和正文
+     * @param idempotencyKey 格式化后的投诉幂等键
      * @return 新投诉主键
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Long create(Long complainantId, ComplaintCreateDto dto) {
+    public Long create(Long complainantId, ComplaintCreateDto dto, String idempotencyKey) {
         ComplaintPo po = new ComplaintPo();
         po.setComplainantType(dto.getComplainantType());
         po.setComplainantId(complainantId);
@@ -60,6 +61,7 @@ public class ComplaintServiceImpl implements ComplaintService {
         po.setTitle(dto.getTitle());
         po.setContent(dto.getContent());
         po.setStatus(ComplaintStatusEnum.PENDING.intCode());
+        po.setIdempotencyKey(idempotencyKey);
         complaintManager.save(po);
         log.info("投诉已创建，id={}，complainantId={}", po.getId(), complainantId);
         return po.getId();

@@ -1,6 +1,9 @@
 package com.yirancrazy.minimall.common.config;
 
-import com.yirancrazy.minimall.common.aspect.IdempotentAspect;
+import com.yirancrazy.minimall.common.aspect.IdempotencyAspect;
+import com.yirancrazy.minimall.common.handle.IdempotencyReplayHandler;
+import com.yirancrazy.minimall.common.registry.IdempotencyReplayHandlerRegistry;
+import java.util.List;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -20,16 +23,32 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 @ConditionalOnClass(StringRedisTemplate.class)
 @ConditionalOnBean(StringRedisTemplate.class)
 @AutoConfigureAfter(RedisAutoConfiguration.class)
-public class IdempotentAutoConfiguration {
+public class IdempotencyAutoConfiguration {
+
+    /**
+     * 创建幂等重放处理器注册表。
+     *
+     * @param handlers Spring 容器中的全部幂等重放处理器
+     * @return 幂等重放处理器注册表
+     */
+    @Bean
+    public IdempotencyReplayHandlerRegistry idempotencyReplayHandlerRegistry(
+            List<IdempotencyReplayHandler> handlers) {
+        return new IdempotencyReplayHandlerRegistry(handlers);
+    }
 
     /**
      * 创建并注册使用 Redis 存储幂等键的切面。
      *
      * @param redisTemplate Spring 容器中的字符串 Redis 模板
-     * @return 已注入 Redis 依赖的幂等切面
+     * @param replayHandlerRegistry 幂等重放处理器注册表
+     * @return 已注入 Redis 和重放注册表的幂等切面
      */
     @Bean
-    public IdempotentAspect idempotentAspect(StringRedisTemplate redisTemplate) {
-        return new IdempotentAspect(redisTemplate);
+    public IdempotencyAspect idempotentAspect(
+            StringRedisTemplate redisTemplate,
+            IdempotencyReplayHandlerRegistry replayHandlerRegistry) {
+
+        return new IdempotencyAspect(redisTemplate, replayHandlerRegistry);
     }
 }

@@ -2,13 +2,19 @@ package com.yirancrazy.minimall.common.aspect;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.yirancrazy.minimall.common.annotation.Idempotent;
+import com.yirancrazy.minimall.common.annotation.Idempotency;
 import com.yirancrazy.minimall.common.exception.BizException;
+import com.yirancrazy.minimall.common.registry.IdempotencyReplayHandlerRegistry;
 import com.yirancrazy.minimall.common.result.CommonCode;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.reflect.MethodSignature;
@@ -16,12 +22,14 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -34,16 +42,17 @@ import org.springframework.web.context.request.ServletRequestAttributes;
  */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
-class IdempotentAspectTest {
+class IdempotencyAspectTest {
 
     private static final String HEADER = "X-Idempotency-Key";
 
     @Mock private StringRedisTemplate redisTemplate;
     @Mock private ValueOperations<String, String> valueOperations;
+    @Mock private IdempotencyReplayHandlerRegistry replayHandlerRegistry;
     @Mock private ProceedingJoinPoint pjp;
     @Mock private MethodSignature signature;
 
-    private IdempotentAspect aspect;
+    private IdempotencyAspect aspect;
 
     /**
      * @Author: yirancrazy@gmail.com
@@ -85,7 +94,7 @@ class IdempotentAspectTest {
          *
          * @return 固定成功值 ok
          */
-        @Idempotent
+        @Idempotency
         public Object headerOnly() {
             return "ok";
         }
@@ -96,7 +105,7 @@ class IdempotentAspectTest {
          * @param dto 包含订单号的测试参数
          * @return 固定成功值 ok
          */
-        @Idempotent(key = "#dto.orderNo")
+        @Idempotency(key = "#dto.orderNo")
         public Object spelKey(Dto dto) {
             return "ok";
         }
@@ -106,8 +115,20 @@ class IdempotentAspectTest {
          *
          * @return 固定成功值 ok
          */
-        @Idempotent(key = "fixed-key")
+        @Idempotency(key = "fixed-key")
         public Object literalKey() {
+            return "ok";
+        }
+
+        /**
+         * 使用字面量前缀加内嵌变量组成模板幂等键。
+         *
+         * @param userId 模拟用户 ID
+         * @param idempotencyKey 模拟客户端幂等键
+         * @return 固定成功值 ok
+         */
+        @Idempotency(key = "order:checkout:#userId:#idempotencyKey")
+        public Object templateKey(Long userId, String idempotencyKey) {
             return "ok";
         }
     }
@@ -115,14 +136,18 @@ class IdempotentAspectTest {
     /**
      * 测试目标：为每个用例准备 Redis 操作和切面依赖。
      * 测试场景与前置条件：Mockito 注入 RedisTemplate、ValueOperations、JoinPoint 和签名。
-     * 关键步骤：配置通用返回值并创建 IdempotentAspect。预期结果：切面可直接执行且签名可读取。
+     * 关键步骤：配置通用返回值并创建 IdempotencyAspect。预期结果：切面可直接执行且签名可读取。
      */
     @BeforeEach
     void setUp() {
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(valueOperations.setIfAbsent(anyString(), anyString(), anyLong(), any()))
+                .thenReturn(true);
         when(pjp.getSignature()).thenReturn(signature);
         when(signature.toShortString()).thenReturn("Target.headerOnly()");
-        aspect = new IdempotentAspect(redisTemplate);
+        RequestContextHolder.setRequestAttributes(
+                new ServletRequestAttributes(new MockHttpServletRequest()));
+        aspect = new IdempotencyAspect(redisTemplate, replayHandlerRegistry);
     }
 
     /**
@@ -139,38 +164,47 @@ class IdempotentAspectTest {
     @Test
     void testFirstRequestWithHeaderKeyProceeds() throws Throwable {
         when(signature.getMethod()).thenReturn(Target.class.getMethod("headerOnly"));
-        when(valueOperations.setIfAbsent("idempotent:k1", "1", 24L, TimeUnit.HOURS)).thenReturn(true);
         when(pjp.proceed()).thenReturn("ok");
         setHeader("k1");
 
-        Object result = aspect.checkIdempotent(pjp);
+        Object result = aspect.checkIdempotency(pjp);
 
         assertEquals("ok", result);
-        verify(valueOperations).setIfAbsent("idempotent:k1", "1", 24L, TimeUnit.HOURS);
+        verify(valueOperations)
+                .setIfAbsent(
+                        eq("idempotency:k1"),
+                        anyString(),
+                        eq(24L),
+                        eq(TimeUnit.HOURS));
         verify(pjp).proceed();
     }
 
     /** * 验证重复请求被拒绝；键k1已占用；调用幂等切面；预期返回重复错误且目标不执行. */
     @Test
-    void testRepeatRequestThrowsIdempotentKeyReused() throws Throwable {
+    void testRepeatRequestThrowsIdempotencyKeyReused() throws Throwable {
         when(signature.getMethod()).thenReturn(Target.class.getMethod("headerOnly"));
-        when(valueOperations.setIfAbsent("idempotent:k1", "1", 24L, TimeUnit.HOURS)).thenReturn(false);
+        when(valueOperations.setIfAbsent(
+                        eq("idempotency:k1"),
+                        anyString(),
+                        eq(24L),
+                        eq(TimeUnit.HOURS)))
+                .thenReturn(false);
         setHeader("k1");
 
-        BizException ex = assertThrows(BizException.class, () -> aspect.checkIdempotent(pjp));
+        BizException ex = assertThrows(BizException.class, () -> aspect.checkIdempotency(pjp));
 
-        assertEquals(CommonCode.IDEMPOTENT_KEY_REUSED, ex.getCode());
+        assertEquals(CommonCode.IDEMPOTENCY_KEY_REUSED, ex.getCode());
         verify(pjp, never()).proceed();
     }
 
     /** * 验证缺失幂等键拒绝执行；无注解键且无请求头；调用幂等切面；预期返回键缺失错误. */
     @Test
-    void testMissingKeyThrowsIdempotentKeyNotExist() throws Throwable {
+    void testMissingKeyThrowsIdempotencyKeyNotExist() throws Throwable {
         when(signature.getMethod()).thenReturn(Target.class.getMethod("headerOnly"));
 
-        BizException ex = assertThrows(BizException.class, () -> aspect.checkIdempotent(pjp));
+        BizException ex = assertThrows(BizException.class, () -> aspect.checkIdempotency(pjp));
 
-        assertEquals(CommonCode.IDEMPOTENT_KEY_NOT_EXIST, ex.getCode());
+        assertEquals(CommonCode.IDEMPOTENCY_KEY_NOT_EXIST, ex.getCode());
         verify(pjp, never()).proceed();
     }
 
@@ -178,13 +212,24 @@ class IdempotentAspectTest {
     @Test
     void testBusinessFailureReleasesKeyForRetry() throws Throwable {
         when(signature.getMethod()).thenReturn(Target.class.getMethod("headerOnly"));
-        when(valueOperations.setIfAbsent("idempotent:k1", "1", 24L, TimeUnit.HOURS)).thenReturn(true);
         when(pjp.proceed()).thenThrow(new RuntimeException("boom"));
         setHeader("k1");
 
-        assertThrows(RuntimeException.class, () -> aspect.checkIdempotent(pjp));
+        assertThrows(RuntimeException.class, () -> aspect.checkIdempotency(pjp));
 
-        verify(redisTemplate).delete("idempotent:k1");
+        ArgumentCaptor<String> tokenCaptor = ArgumentCaptor.forClass(String.class);
+        verify(valueOperations)
+                .setIfAbsent(
+                        eq("idempotency:k1"),
+                        tokenCaptor.capture(),
+                        eq(24L),
+                        eq(TimeUnit.HOURS));
+
+        verify(redisTemplate)
+                .execute(
+                        org.mockito.ArgumentMatchers.<RedisScript<Long>>any(),
+                        eq(List.of("idempotency:k1")),
+                        eq(tokenCaptor.getValue()));
     }
 
     /** * 验证SpEL键解析；参数订单号为ON-001；调用幂等切面；预期使用订单号对应键. */
@@ -193,26 +238,50 @@ class IdempotentAspectTest {
         Dto dto = new Dto("ON-001");
         when(pjp.getArgs()).thenReturn(new Object[] {dto});
         when(signature.getMethod()).thenReturn(Target.class.getMethod("spelKey", Dto.class));
-        when(valueOperations.setIfAbsent("idempotent:ON-001", "1", 24L, TimeUnit.HOURS))
-                .thenReturn(true);
         when(pjp.proceed()).thenReturn("ok");
 
-        aspect.checkIdempotent(pjp);
+        aspect.checkIdempotency(pjp);
 
-        verify(valueOperations).setIfAbsent("idempotent:ON-001", "1", 24L, TimeUnit.HOURS);
+        verify(valueOperations)
+                .setIfAbsent(
+                        eq("idempotency:ON-001"),
+                        anyString(),
+                        eq(24L),
+                        eq(TimeUnit.HOURS));
+    }
+
+    /** * 验证模板键解析；用户ID为1且请求键为req-1；调用幂等切面；预期拼接为组合键. */
+    @Test
+    void testTemplateKeyCombinesLiteralAndVariables() throws Throwable {
+        when(pjp.getArgs()).thenReturn(new Object[] {1L, "req-1"});
+        when(signature.getMethod())
+                .thenReturn(Target.class.getMethod("templateKey", Long.class, String.class));
+        when(pjp.proceed()).thenReturn("ok");
+
+        aspect.checkIdempotency(pjp);
+
+        verify(valueOperations)
+                .setIfAbsent(
+                        eq("idempotency:order:checkout:1:req-1"),
+                        anyString(),
+                        eq(24L),
+                        eq(TimeUnit.HOURS));
     }
 
     /** * 验证字面量键解析；注解键为fixed-key；调用幂等切面；预期使用固定键值. */
     @Test
     void testLiteralKeyUsesLiteralValue() throws Throwable {
         when(signature.getMethod()).thenReturn(Target.class.getMethod("literalKey"));
-        when(valueOperations.setIfAbsent("idempotent:fixed-key", "1", 24L, TimeUnit.HOURS))
-                .thenReturn(true);
         when(pjp.proceed()).thenReturn("ok");
 
-        aspect.checkIdempotent(pjp);
+        aspect.checkIdempotency(pjp);
 
-        verify(valueOperations).setIfAbsent("idempotent:fixed-key", "1", 24L, TimeUnit.HOURS);
+        verify(valueOperations)
+                .setIfAbsent(
+                        eq("idempotency:fixed-key"),
+                        anyString(),
+                        eq(24L),
+                        eq(TimeUnit.HOURS));
     }
 
     /**

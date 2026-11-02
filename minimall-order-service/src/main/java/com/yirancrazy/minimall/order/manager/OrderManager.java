@@ -77,4 +77,12 @@ public interface OrderManager extends IService<OrderPo> {
      * @return 符合条件的订单列表。
      */
     List<OrderPo> listExpiredPendingOrders(Integer status, Long lastId, Integer pageSize);
+
+    /**
+     * 根据幂等号查询订单。
+     *
+      * @param idempotencyKey 幂等号
+      * @return 订单
+      */
+    OrderPo getOrderByIdempotencyKey(String idempotencyKey);
 }

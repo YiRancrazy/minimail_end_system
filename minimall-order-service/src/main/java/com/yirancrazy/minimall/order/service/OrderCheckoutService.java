@@ -1,5 +1,6 @@
 package com.yirancrazy.minimall.order.service;
 
+import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.order.dto.OrderCheckoutDto;
 
 /**
@@ -19,8 +20,9 @@ public interface OrderCheckoutService {
      *
      * @param userId 用户 ID，必须对应当前订单归属
      * @param dto 用户结算请求
+     * @param idempotencyKey 幂等键
      * @return 新订单 ID 的统一响应。
      * @throws BizException 结算参数、快照、库存或订单创建失败。
      */
-    Long checkout(Long userId, OrderCheckoutDto dto);
+    Long checkout(Long userId, OrderCheckoutDto dto, String idempotencyKey);
 }

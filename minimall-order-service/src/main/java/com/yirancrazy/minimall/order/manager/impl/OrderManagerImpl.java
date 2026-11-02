@@ -115,4 +115,12 @@ public class OrderManagerImpl extends ServiceImpl<OrderMapper, OrderPo> implemen
                         .last(pageSize != null, "LIMIT " + pageSize);
         return orderMapper.selectList(wrappers);
     }
+
+    @Override
+    public OrderPo getOrderByIdempotencyKey(String idempotencyKey) {
+        Wrapper<OrderPo> wrappers =
+                new LambdaQueryWrapper<OrderPo>()
+                        .eq(OrderPo::getIdempotencyKey, idempotencyKey);
+        return orderMapper.selectOne(wrappers);
+    }
 }

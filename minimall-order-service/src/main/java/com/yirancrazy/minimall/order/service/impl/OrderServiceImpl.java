@@ -285,7 +285,7 @@ public class OrderServiceImpl implements OrderService {
      */
     @Override
     public Long checkout(Long userId, List<OrderCheckoutItemDto> items, ReceiverDto receiver) {
-        return checkout(userId, items, List.of(), receiver).getOrderId();
+        return checkout(userId, items, List.of(), receiver, null).getOrderId();
     }
 
     /**
@@ -306,7 +306,8 @@ public class OrderServiceImpl implements OrderService {
             Long userId,
             List<OrderCheckoutItemDto> items,
             List<CartCheckoutItemDto> cleanupItems,
-            ReceiverDto receiver) {
+            ReceiverDto receiver,
+            String idempotencyKey) {
         Map<Long, Integer> quantityBySku = mergeCheckoutItems(items);
         List<Long> skuIds = new ArrayList<>(quantityBySku.keySet());
         Map<Long, SkuSnapshotDto> snapshots = loadCheckoutSnapshots(skuIds);
@@ -358,6 +359,7 @@ public class OrderServiceImpl implements OrderService {
         po.setStatus(OrderStatusEnum.PENDING.intCode());
         po.setOrderGroupNo(orderGroupNo);
         po.setReceiverSnapshotJson(toReceiverSnapshotJson(receiver));
+        po.setIdempotencyKey(idempotencyKey);
         orderManager.save(po);
 
         for (OrderItemPo itemPo : orderItems) {

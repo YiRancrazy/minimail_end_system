@@ -27,6 +27,8 @@ import java.util.Collections;
 import java.util.List;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 /**
  * @Author: yirancrazy@gmail.com
@@ -81,7 +83,7 @@ public class ComplaintServiceImplTest {
         dto.setTitle("商品质量问题");
         dto.setContent("收到的商品与描述不符");
 
-        Long id = service.create(100L, dto);
+        Long id = service.create(100L, dto, "complaint:create:100:req-1");
 
         assertNotNull(id);
         verify(complaintManager).save(any(ComplaintPo.class));
@@ -103,9 +105,28 @@ public class ComplaintServiceImplTest {
         dto.setTitle("测试");
         dto.setContent("内容");
 
-        service.create(100L, dto);
+        service.create(100L, dto, "complaint:create:100:req-2");
 
         verify(complaintManager).save(any(ComplaintPo.class));
+    }
+
+    /** * 验证创建投诉时持久化格式化后的幂等键. */
+    @Test
+    void testCreatePersistsIdempotencyKey() {
+        ComplaintCreateDto dto = new ComplaintCreateDto();
+        dto.setComplainantType(1);
+        dto.setDefendantType(2);
+        dto.setDefendantId(200L);
+        dto.setOrderNo("ORDER001");
+        dto.setComplaintType(ComplaintTypeEnum.QUALITY.getCode());
+        dto.setTitle("商品质量问题");
+        dto.setContent("收到商品与描述不符");
+
+        service.create(100L, dto, "complaint:create:100:req-1");
+
+        ArgumentCaptor<ComplaintPo> captor = ArgumentCaptor.forClass(ComplaintPo.class);
+        verify(complaintManager).save(captor.capture());
+        assertEquals("complaint:create:100:req-1", captor.getValue().getIdempotencyKey());
     }
 
     /**

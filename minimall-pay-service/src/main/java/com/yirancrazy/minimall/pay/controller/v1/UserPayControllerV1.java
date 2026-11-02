@@ -1,9 +1,10 @@
 package com.yirancrazy.minimall.pay.controller.v1;
 
-import com.yirancrazy.minimall.common.annotation.Idempotent;
+import com.yirancrazy.minimall.common.annotation.Idempotency;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.pay.dto.AlipayCallbackDto;
 import com.yirancrazy.minimall.pay.dto.PayCreateDto;
+import com.yirancrazy.minimall.pay.handle.PayCreateReplayHandler;
 import com.yirancrazy.minimall.pay.service.PayService;
 import com.yirancrazy.minimall.pay.vo.PayTransactionVo;
 import com.yirancrazy.minimall.pay.vo.PaymentParamsVo;
@@ -52,7 +53,11 @@ public class UserPayControllerV1 {
      * @return 新建或复用的支付单主键
      */
     @PostMapping("/create")
-    @Idempotent(key = "#dto.orderNo", expire = 30, unit = TimeUnit.SECONDS)
+    @Idempotency(
+            key = "#dto.orderNo",
+            replayType = PayCreateReplayHandler.REPLAY_TYPE,
+            expire = 30,
+            unit = TimeUnit.SECONDS)
     public Result<Long> create(
             @Valid @RequestBody PayCreateDto dto,
             @RequestHeader("X-User-Id") Long userId,

@@ -111,7 +111,9 @@ class UserOrderControllerV1Test {
     /** 验证结算返回已创建. */
     @Test
     void testCheckoutReturnsCreated() throws Exception {
-        when(checkoutService.checkout(anyLong(), any())).thenReturn(100L);
+        when(checkoutService.checkout(
+                        anyLong(), any(), eq("order:checkout:1:checkout-test-key")))
+                .thenReturn(100L);
         OrderCheckoutDto dto = new OrderCheckoutDto();
         dto.setCheckoutSource(CheckoutSourceEnum.BUY_NOW);
         dto.setItems(java.util.List.of(new OrderCheckoutItemDto(1L, 2)));
@@ -119,11 +121,19 @@ class UserOrderControllerV1Test {
                 .perform(
                         post("/api/v1/user/orders/checkout")
                                 .header("X-User-Id", 1L)
+                                .header("X-Idempotency-Key", "checkout-test-key")
+                                .requestAttr(
+                                        "idempotencyKey",
+                                        "order:checkout:1:checkout-test-key")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(mapper.writeValueAsString(dto)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data").value(100));
-        verify(checkoutService).checkout(anyLong(), any());
+        verify(checkoutService)
+                .checkout(
+                        1L,
+                        dto,
+                        "order:checkout:1:checkout-test-key");
     }
 
     /** 验证结算缺少来源时返回 HTTP 400. */
@@ -133,10 +143,11 @@ class UserOrderControllerV1Test {
                 .perform(
                         post("/api/v1/user/orders/checkout")
                                 .header("X-User-Id", 1L)
+                                .header("X-Idempotency-Key", "checkout-test-key")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("{\"cartItemIds\":[9]}"))
                 .andExpect(status().isBadRequest());
-        verify(checkoutService, never()).checkout(anyLong(), any());
+        verify(checkoutService, never()).checkout(anyLong(), any(), any());
     }
 
     /** 验证创建使用请求头返回已创建. */

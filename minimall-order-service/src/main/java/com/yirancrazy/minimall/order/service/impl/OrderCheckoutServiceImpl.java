@@ -52,11 +52,11 @@ public class OrderCheckoutServiceImpl implements OrderCheckoutService {
      * @throws BizException 结算参数、快照、库存或订单创建失败。
      */
     @Override
-    public Long checkout(Long userId, OrderCheckoutDto dto) {
+    public Long checkout(Long userId, OrderCheckoutDto dto, String idempotencyKey) {
         CheckoutPreparation preparation = prepare(userId, dto);
         CheckoutResultDto result =
                 orderService.checkout(
-                        userId, preparation.orderItems, preparation.cleanupItems, dto.getReceiver());
+                        userId, preparation.orderItems, preparation.cleanupItems, dto.getReceiver(), idempotencyKey);
         if (result == null || result.getOrderId() == null) {
             throw new BizException(CommonCode.SYS_ERROR, "订单创建失败");
         }

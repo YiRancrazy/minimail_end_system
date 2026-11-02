@@ -20,9 +20,10 @@ public interface ComplaintService {
      *
      * @param complainantId 当前登录用户编号
      * @param dto 投诉双方、关联订单及投诉内容
+     * @param idempotencyKey 格式化后的投诉幂等键
      * @return 新建投诉主键
      */
-    Long create(Long complainantId, ComplaintCreateDto dto);
+    Long create(Long complainantId, ComplaintCreateDto dto, String idempotencyKey);
 
     /**
      * 按游标倒序查询投诉实体，并支持状态、订单号、投诉人和被投诉人过滤.

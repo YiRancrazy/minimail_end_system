@@ -17,15 +17,24 @@ import java.util.concurrent.TimeUnit;
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-public @interface Idempotent {
+public @interface Idempotency {
 
     /**
-     * 指定幂等键表达式。非空且以 {@code #} 开头时按 SpEL 从方法参数求值，否则按字面量使用；
+     * 指定幂等键表达式。不含 {@code #} 时按字面量使用；以 {@code #} 开头时整体按 SpEL 求值；
+     * 其他含 {@code #} 的内容按模板处理，将内嵌变量替换为求值结果，如
+     * {@code order:checkout:#userId:#idempotencyKey}。
      * 为空时回退到请求头 X-Idempotency-Key，仍为空则切面拒绝执行。
      *
-     * @return SpEL 表达式或字面量键；空字符串表示使用请求头键
+     * @return 字面量、SpEL 或模板表达式；空字符串表示使用请求头键
      */
     String key() default "";
+
+    /**
+     * 指定幂等键的重试类型，用于区分不同重试类型的幂等键。
+     *
+     * @return 幂等键的重试类型
+     */
+    String replayType() default "";
 
     /**
      * 指定幂等键在 Redis 中的保留时长，时长耗尽前相同幂等键无法再次执行目标方法。

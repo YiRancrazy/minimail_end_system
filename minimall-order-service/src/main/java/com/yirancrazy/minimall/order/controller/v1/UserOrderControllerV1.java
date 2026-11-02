@@ -1,6 +1,6 @@
 package com.yirancrazy.minimall.order.controller.v1;
 
-import com.yirancrazy.minimall.common.annotation.Idempotent;
+import com.yirancrazy.minimall.common.annotation.Idempotency;
 import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CommonCode;
 import com.yirancrazy.minimall.common.result.CursorPageVo;
@@ -8,6 +8,7 @@ import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.order.dto.OrderCheckoutDto;
 import com.yirancrazy.minimall.order.dto.OrderCreateDto;
 import com.yirancrazy.minimall.order.dto.OrderPageDto;
+import com.yirancrazy.minimall.order.handle.OrderCheckoutReplayHandler;
 import com.yirancrazy.minimall.order.service.OrderCheckoutService;
 import com.yirancrazy.minimall.order.service.OrderService;
 import com.yirancrazy.minimall.order.vo.OrderLogisticsVo;
@@ -15,20 +16,15 @@ import com.yirancrazy.minimall.order.vo.OrderStatusCountsVo;
 import com.yirancrazy.minimall.order.vo.OrderVo;
 import jakarta.validation.Valid;
 import java.util.List;
+
+import org.springframework.data.annotation.Id;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.context.request.RequestAttributes;
+import org.springframework.web.context.request.RequestContextHolder;
 
 /**
  * @Author: yirancrazy@gmail.com
@@ -101,7 +97,7 @@ public class UserOrderControllerV1 {
     @Deprecated
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @Idempotent
+    @Idempotency
     public Result<Long> create(
             @RequestHeader("X-User-Id") Long userId, @Valid @RequestBody OrderCreateDto dto) {
         return Result.success(
@@ -120,10 +116,17 @@ public class UserOrderControllerV1 {
      */
     @PostMapping("/checkout")
     @ResponseStatus(HttpStatus.CREATED)
-    @Idempotent
+//    @Idempotency(business = "order:", type = "checkout:",id="#userId:", key = "#idempotencyKey")
+    @Idempotency(key = "order:checkout:#userId:#idempotencyKey", replayType = OrderCheckoutReplayHandler.REPLAY_TYPE)
     public Result<Long> checkout(
-            @RequestHeader("X-User-Id") Long userId, @Valid @RequestBody OrderCheckoutDto dto) {
-        return Result.success(orderCheckoutService.checkout(userId, dto));
+            @RequestHeader("X-User-Id") Long userId,
+            @RequestHeader("X-Idempotency-Key") String idempotencyKey,
+            @Valid @RequestBody OrderCheckoutDto dto) {
+
+        // 去除真正格式化后的 idempotencyKey
+        idempotencyKey = (String) RequestContextHolder.currentRequestAttributes()
+                .getAttribute("idempotencyKey", RequestAttributes.SCOPE_REQUEST);
+        return Result.success(orderCheckoutService.checkout(userId, dto, idempotencyKey));
     }
 
     /**
@@ -240,7 +243,7 @@ public class UserOrderControllerV1 {
      * @throws BizException 订单不存在、归属不匹配或状态不允许申请退款。
      */
     @PostMapping("/{orderId}/refund")
-    @Idempotent
+    @Idempotency
     public Result<Void> refund(@PathVariable Long orderId, @RequestHeader("X-User-Id") Long userId) {
         orderService.refund(orderId, userId);
         return Result.success(null);

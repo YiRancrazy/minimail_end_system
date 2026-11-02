@@ -37,4 +37,6 @@ public class ComplaintPo extends BasePo {
     private Long handlerId;
 
     private String handlerResult;
+
+    private String idempotencyKey;
 }

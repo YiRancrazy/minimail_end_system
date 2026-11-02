@@ -4,6 +4,7 @@ import com.yirancrazy.minimall.api.dto.cart.CartCheckoutItemDto;
 import com.yirancrazy.minimall.api.dto.order.OrderCommentEligibilityDto;
 import com.yirancrazy.minimall.api.dto.order.OrderPaySnapshotDto;
 import com.yirancrazy.minimall.api.dto.order.RefundCallbackDto;
+import com.yirancrazy.minimall.common.exception.BizException;
 import com.yirancrazy.minimall.common.result.CursorPageVo;
 import com.yirancrazy.minimall.order.dto.CheckoutResultDto;
 import com.yirancrazy.minimall.order.dto.OrderCheckoutItemDto;
@@ -90,6 +91,7 @@ public interface OrderService {
      * @param items 订单 SKU 与数量明细
      * @param cleanupItems 结算成功后待清理的购物车条目快照
      * @param receiver 收货信息快照
+     * @param idempotencyKey 防重键
      * @return 订单主键或包含清理任务 ID 的结算结果。
      * @throws BizException 条目为空或非法、跨商家、快照缺失、库存不足、ID 或支付流水创建失败。
      */
@@ -97,7 +99,8 @@ public interface OrderService {
             Long userId,
             List<OrderCheckoutItemDto> items,
             List<CartCheckoutItemDto> cleanupItems,
-            ReceiverDto receiver);
+            ReceiverDto receiver,
+            String idempotencyKey);
 
     /**
      * 把待支付订单推进为已支付并写入支付成功事件。

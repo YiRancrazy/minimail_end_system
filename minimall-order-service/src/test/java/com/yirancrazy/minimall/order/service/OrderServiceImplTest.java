@@ -1163,9 +1163,13 @@ public class OrderServiceImplTest {
         List<OrderCheckoutItemDto> orderItems = List.of(new OrderCheckoutItemDto(100L, 2));
         List<CartCheckoutItemDto> cleanupItems = List.of(new CartCheckoutItemDto(9001L, 100L, 2));
 
-        CheckoutResultDto result = service.checkout(7L, orderItems, cleanupItems, null);
+        CheckoutResultDto result =
+                service.checkout(7L, orderItems, cleanupItems, null, "checkout-request-1");
 
         assertEquals(3001L, result.getCartCleanupTaskId());
+        ArgumentCaptor<OrderPo> orderCaptor = ArgumentCaptor.forClass(OrderPo.class);
+        verify(manager).save(orderCaptor.capture());
+        assertEquals("checkout-request-1", orderCaptor.getValue().getIdempotencyKey());
         ArgumentCaptor<CartCleanupTaskPo> captor = ArgumentCaptor.forClass(CartCleanupTaskPo.class);
         verify(cartCleanupTaskManager).save(captor.capture());
         CartCleanupTaskPo task = captor.getValue();
@@ -1182,7 +1186,12 @@ public class OrderServiceImplTest {
     @Test
     void testCheckoutWithoutCleanupItemsDoesNotCreateTask() {
         CheckoutResultDto result =
-                service.checkout(7L, List.of(new OrderCheckoutItemDto(100L, 1)), List.of(), null);
+                service.checkout(
+                        7L,
+                        List.of(new OrderCheckoutItemDto(100L, 1)),
+                        List.of(),
+                        null,
+                        "checkout-request-1");
 
         assertNull(result.getCartCleanupTaskId());
         verify(cartCleanupTaskManager, never()).save(any());
@@ -1202,7 +1211,13 @@ public class OrderServiceImplTest {
         BizException exception =
                 assertThrows(
                         BizException.class,
-                        () -> service.checkout(1L, List.of(itemA, itemB), cleanupItems, null));
+                        () ->
+                                service.checkout(
+                                        1L,
+                                        List.of(itemA, itemB),
+                                        cleanupItems,
+                                        null,
+                                        "checkout-request-1"));
 
         assertEquals(OrderCodeEnum.ORDER_MULTI_MERCHANT_NOT_ALLOWED.getCode(), exception.getCode());
         verify(orderRemoteGateway, never()).nextId(anyString());

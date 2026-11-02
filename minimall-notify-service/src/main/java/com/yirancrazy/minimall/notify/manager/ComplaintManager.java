@@ -9,4 +9,13 @@ import com.yirancrazy.minimall.notify.entity.ComplaintPo;
  * @Version: 1.0
  * @DateTime: 2026/10/16
  */
-public interface ComplaintManager extends IService<ComplaintPo> {}
+public interface ComplaintManager extends IService<ComplaintPo> {
+
+    /**
+     * 按幂等键查询投诉记录。
+     *
+     * @param idempotencyKey 格式化后的投诉幂等键
+     * @return 已有投诉；不存在时返回 null
+     */
+    ComplaintPo findByIdempotencyKey(String idempotencyKey);
+}

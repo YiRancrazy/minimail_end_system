@@ -177,6 +177,38 @@ public class ServiceSchemaMigrationTest {
         }
     }
 
+    /** * 验证投诉幂等键索引拒绝重复业务键. */
+    @Test
+    void testComplaintIdempotencyIndexRejectsDuplicateKey() throws SQLException {
+        try (Connection root =
+                DriverManager.getConnection(
+                        MYSQL.getJdbcUrl(), MYSQL.getUsername(), MYSQL.getPassword())) {
+            createSchemas(root);
+            migrate("notify");
+        }
+        try (Connection notify =
+                DriverManager.getConnection(
+                        schemaUrl("notify"), MYSQL.getUsername(), MYSQL.getPassword())) {
+            assertEquals(
+                    List.of("idempotency_key", "is_deleted"),
+                    readIndexColumns(
+                            notify,
+                            "notify_db",
+                            "t_notify_complaint",
+                            "uk_notify_complaint_idem"));
+            insertComplaint(notify, 1001L, "complaint:create:100:req-1");
+            SQLException exception =
+                    assertThrows(
+                            SQLException.class,
+                            () ->
+                                    insertComplaint(
+                                            notify,
+                                            1002L,
+                                            "complaint:create:100:req-1"));
+            assertEquals("23000", exception.getSQLState());
+        }
+    }
+
     private void createSchemas(Connection connection) throws SQLException {
         try (Statement statement = connection.createStatement()) {
             for (String domain : EXPECTED_TABLES.keySet()) {
@@ -203,14 +235,21 @@ public class ServiceSchemaMigrationTest {
 
     private List<String> readIndexColumns(Connection connection, String schema, String indexName)
             throws SQLException {
+        return readIndexColumns(connection, schema, "t_stock_journal", indexName);
+    }
+
+    private List<String> readIndexColumns(
+            Connection connection, String schema, String tableName, String indexName)
+            throws SQLException {
         List<String> columns = new ArrayList<>(4);
         String sql =
                 "SELECT column_name FROM information_schema.statistics "
-                        + "WHERE table_schema = ? AND table_name = 't_stock_journal' "
+                        + "WHERE table_schema = ? AND table_name = ? "
                         + "AND index_name = ? ORDER BY seq_in_index";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setString(1, schema);
-            statement.setString(2, indexName);
+            statement.setString(2, tableName);
+            statement.setString(3, indexName);
             try (ResultSet resultSet = statement.executeQuery()) {
                 while (resultSet.next()) {
                     columns.add(resultSet.getString(1));
@@ -218,6 +257,21 @@ public class ServiceSchemaMigrationTest {
             }
         }
         return columns;
+    }
+
+    private void insertComplaint(
+            Connection connection, Long id, String idempotencyKey) throws SQLException {
+        String sql =
+                "INSERT INTO t_notify_complaint "
+                        + "(id, complainant_type, complainant_id, defendant_type, "
+                        + "defendant_id, complaint_type, title, content, status, "
+                        + "idempotency_key, is_deleted) "
+                        + "VALUES (?, 1, 100, 2, 200, 'QUALITY', 'test', 'test', 0, ?, 0)";
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setLong(1, id);
+            statement.setString(2, idempotencyKey);
+            statement.executeUpdate();
+        }
     }
 
     private void insertReleaseJournal(Connection connection, Long skuId, String orderNo)

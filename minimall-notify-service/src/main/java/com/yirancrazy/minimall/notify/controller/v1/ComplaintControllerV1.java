@@ -1,14 +1,17 @@
 package com.yirancrazy.minimall.notify.controller.v1;
 
-import com.yirancrazy.minimall.common.annotation.Idempotent;
+import com.yirancrazy.minimall.common.annotation.Idempotency;
 import com.yirancrazy.minimall.common.result.CursorPageVo;
 import com.yirancrazy.minimall.common.result.Result;
 import com.yirancrazy.minimall.notify.dto.ComplaintCreateDto;
 import com.yirancrazy.minimall.notify.dto.ComplaintHandleDto;
 import com.yirancrazy.minimall.notify.dto.ComplaintPageDto;
+import com.yirancrazy.minimall.notify.handle.ComplaintCreateReplayHandler;
 import com.yirancrazy.minimall.notify.service.ComplaintService;
 import com.yirancrazy.minimall.notify.vo.ComplaintVo;
 import jakarta.validation.Valid;
+import org.springframework.web.context.request.RequestAttributes;
+import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -42,14 +45,25 @@ public class ComplaintControllerV1 {
      * 创建一条待处理投诉，投诉人编号取自可信请求头，并启用仓库统一幂等切面.
      *
      * @param complainantId 当前请求用户编号
+     * @param idempotencyKey 客户端幂等键
      * @param dto 投诉双方、关联订单、类型、标题和正文
      * @return 新投诉主键
      */
     @PostMapping
-    @Idempotent
+    @Idempotency(
+            key = "complaint:create:#complainantId:#idempotencyKey",
+            replayType = ComplaintCreateReplayHandler.REPLAY_TYPE)
     public Result<Long> create(
-            @RequestHeader("X-User-Id") Long complainantId, @Valid @RequestBody ComplaintCreateDto dto) {
-        return Result.success(complaintService.create(complainantId, dto));
+            @RequestHeader("X-User-Id") Long complainantId,
+            @RequestHeader("X-Idempotency-Key") String idempotencyKey,
+            @Valid @RequestBody ComplaintCreateDto dto) {
+        idempotencyKey =
+                (String)
+                        RequestContextHolder.currentRequestAttributes()
+                                .getAttribute(
+                                        "idempotencyKey",
+                                        RequestAttributes.SCOPE_REQUEST);
+        return Result.success(complaintService.create(complainantId, dto, idempotencyKey));
     }
 
     /**

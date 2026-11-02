@@ -1,5 +1,6 @@
 package com.yirancrazy.minimall.pay.manager.impl;
 
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.yirancrazy.minimall.common.annotation.Manager;
 import com.yirancrazy.minimall.pay.dto.PayStatementResultDto;
@@ -19,6 +20,21 @@ import java.time.LocalDateTime;
 @Manager
 public class PayManagerImpl extends ServiceImpl<PayTransactionMapper, PayTransactionPo>
         implements PayManager {
+
+    /**
+     * 查询订单号对应的最新支付流水。
+     *
+     * @param orderNo 业务订单号
+     * @return 最新支付流水；不存在时返回 null
+     */
+    @Override
+    public PayTransactionPo findLatestByOrderNo(String orderNo) {
+        return getOne(
+                Wrappers.<PayTransactionPo>lambdaQuery()
+                        .eq(PayTransactionPo::getOrderNo, orderNo)
+                        .orderByDesc(PayTransactionPo::getId)
+                        .last("LIMIT 1"));
+    }
 
     /**
      * 委托 Mapper 聚合支付成功金额、退款金额和交易笔数。

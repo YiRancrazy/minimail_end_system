@@ -16,6 +16,14 @@ import java.time.LocalDateTime;
 public interface PayManager extends IService<PayTransactionPo> {
 
     /**
+     * 查询订单号对应的最新支付流水。
+     *
+     * @param orderNo 业务订单号
+     * @return 最新支付流水；不存在时返回 null
+     */
+    PayTransactionPo findLatestByOrderNo(String orderNo);
+
+    /**
      * 聚合指定时间范围内的支付成功金额、退款金额和交易笔数。
      * `merchantId` 为空时统计全平台。
      *
